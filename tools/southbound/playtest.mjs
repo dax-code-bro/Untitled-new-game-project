@@ -110,6 +110,7 @@ if (scenario === 'capture') {
   const FPS = +(process.env.FPS || 24);
   const script = JSON.parse(fs.readFileSync(process.env.SCRIPT || path.join(here, 'capture.json'), 'utf8'));
   const framesDir = path.join(out, 'frames');
+  const shotEvery = +(process.env.SHOT_EVERY || 1);
   fs.mkdirSync(framesDir, { recursive: true });
   await sb(() => window.SB.freeze(true));
   let f = 0;
@@ -125,13 +126,18 @@ if (scenario === 'capture') {
       if (st.exit) S.exitCar();
       if (st.look) S.lookAt(...st.look);
       if (st.region) S.showRegion();
+      if (st.wanted !== undefined) S.setWanted(st.wanted);
+      if (st.weapon) S.weapon(st.weapon);
+      if (st.facePed) S.faceNearestPed();
+      if (st.carjack) S.carjack();
     }, seg.setup);
     await sb((o) => window.SB.setOverride(o), seg.input || {});
     const n = Math.round((seg.seconds || 1) * FPS);
     for (let i = 0; i < n; i++, f++) {
       await sb((dt) => window.SB.step(1, dt), 1 / FPS);
-      await page.screenshot({ path: path.join(framesDir, `f${String(f).padStart(5, '0')}.jpg`), type: 'jpeg', quality: 88, timeout: 120000 });
-      if (f % 48 === 0) console.log('frame', f, JSON.stringify(await sb(() => window.SB.state)));
+      if (f % shotEvery === 0) await page.screenshot({ path: path.join(framesDir, `f${String(f).padStart(5, '0')}.jpg`), type: 'jpeg', quality: 88, timeout: 120000 });
+      if (seg.facePedEvery && i % seg.facePedEvery === 0) await sb(() => window.SB.faceNearestPed());
+      if (f % 48 === 0) console.log('frame', f, JSON.stringify(await sb(() => ({ ...window.SB.state, wanted: window.SB.wanted, cops: window.SB.cops, peds: window.SB.peds }))));
     }
   }
   console.log('captured', f, 'frames');

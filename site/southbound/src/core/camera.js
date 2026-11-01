@@ -26,6 +26,7 @@ export class CameraRig {
     const modeK = [1, 1.6, 0.7][this.mode];
 
     let height = 1.55, dist = 4.6 * this.zoom * modeK, side = 0.45;
+    if (opts.aiming) { dist = 2.2; side = 0.75; height = 1.6; }
     if (opts.vehicle) {
       height = 1.5 + opts.vehicle.spec.width * 0.2;
       dist = (6.8 + opts.vehicle.spec.len * 0.35 + Math.min(Math.abs(opts.speed) * 0.05, 2.2)) * this.zoom * modeK;
@@ -37,7 +38,8 @@ export class CameraRig {
         this.pitch += (0.16 - this.pitch) * Math.min(1, dt * 1.5);
       }
     }
-    this.dist = lerp(this.dist, dist, Math.min(1, dt * 4));
+    this.dist = lerp(this.dist, dist, Math.min(1, dt * (opts.aiming ? 12 : 4)));
+    this.side = lerp(this.side ?? side, side, Math.min(1, dt * 10)); side = this.side;
     const tgt = this.target.set(focus.x, focus.y + height, focus.z);
     const fx = Math.sin(this.yaw), fz = Math.cos(this.yaw);
     const cp = Math.cos(this.pitch), sp = Math.sin(this.pitch);
@@ -55,7 +57,7 @@ export class CameraRig {
       cam.position.y += (Math.random() - 0.5) * this.shake * 0.3;
     }
     cam.lookAt(tgt.x - fz * side * 0.4, tgt.y, tgt.z + fx * side * 0.4);
-    const fov = this.settings.fov + (opts.vehicle ? Math.min(Math.abs(opts.speed) * 0.25, 12) : 0);
-    if (Math.abs(cam.fov - fov) > 0.05) { cam.fov = lerp(cam.fov, fov, Math.min(1, dt * 3)); cam.updateProjectionMatrix(); }
+    const fov = this.settings.fov + (opts.vehicle ? Math.min(Math.abs(opts.speed) * 0.25, 12) : 0) - (opts.aiming ? 14 : 0);
+    if (Math.abs(cam.fov - fov) > 0.05) { cam.fov = lerp(cam.fov, fov, Math.min(1, dt * (opts.aiming ? 10 : 3))); cam.updateProjectionMatrix(); }
   }
 }

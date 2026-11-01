@@ -98,7 +98,15 @@
 
 <!-- HUD -->
 <section id="hud">
-  <div class="mini-wrap"><canvas id="minimap" width="200" height="200"></canvas></div>
+  <div class="mini-wrap"><canvas id="minimap" width="200" height="200"></canvas>
+    <div id="bars"><i id="hpbar"></i><i id="armorbar"></i></div></div>
+  <div id="topright">
+    <div id="weapon"><span id="wicon">👊</span><b id="ammo"></b></div>
+    <div id="money">$0</div>
+    <div id="wanted"><i>★</i><i>★</i><i>★</i><i>★</i><i>★</i></div>
+  </div>
+  <div id="crosshair"></div>
+  <div id="bigmsg"><b></b><span></span></div>
   <div id="speedo"><b id="speed">0</b><span id="speedunit">MPH</span></div>
   <div id="clock"></div>
   <div id="region"></div>
@@ -112,6 +120,11 @@
 <section id="touch">
   <div id="lookpad"></div>
   <div id="stick"><div id="knob"></div></div>
+  <div class="tbtns combat">
+    <button data-btn="fire">💥</button>
+    <button data-btn="aim">🎯</button>
+    <button data-btn="weapon">🔫</button>
+  </div>
   <div class="tbtns">
     <button data-btn="enter">🚗</button>
     <button data-btn="jump">⤒</button>

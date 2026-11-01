@@ -1,0 +1,7 @@
+[
+  {"setup": {"hour": 16.5, "teleport": [652, 1010, 0], "look": [0, 0.15], "weapon": "pistol"}, "input": {}, "seconds": 4},
+  {"setup": {"facePed": true}, "input": {"aim": true}, "seconds": 0.6, "facePedEvery": 2},
+  {"input": {"aim": true, "fire": true}, "seconds": 2.5, "facePedEvery": 2},
+  {"setup": {"wanted": 3}, "input": {}, "seconds": 28},
+  {"input": {"aim": true}, "seconds": 2}
+]

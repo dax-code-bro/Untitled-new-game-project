@@ -28,6 +28,10 @@ frame rate. Dynamic resolution keeps the frame rate at that target.
 | Sprint | Shift | L3 | » button (or push the stick fully) |
 | Jump / handbrake | Space | A / RB | ⤒ button |
 | Enter / exit vehicle | F | Y | 🚗 button |
+| Aim | Right mouse / E | LT | 🎯 (toggle) |
+| Fire / punch | Left mouse / Ctrl | RT | 💥 |
+| Switch weapon | Q / 1 / 2 | X | 🔫 |
+| Reload | R | | auto |
 | Horn | H | | |
 | Camera distance | V, mouse wheel | | |
 | Map | M | | 🗺️ button |

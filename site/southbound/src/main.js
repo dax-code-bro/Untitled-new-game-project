@@ -14,6 +14,10 @@ import { CollisionWorld } from './world/collision.js';
 import { Player } from './entities/player.js';
 import { Vehicle } from './entities/vehicle.js';
 import { Traffic } from './entities/traffic.js';
+import { Peds } from './entities/peds.js';
+import { Combat, WEAPONS } from './entities/combat.js';
+import { Police } from './entities/police.js';
+import { loadLibrary } from './assets/library.js';
 import { Input } from './core/input.js';
 import { CameraRig } from './core/camera.js';
 import { createPost } from './core/post.js';
@@ -97,20 +101,22 @@ async function createGame(progress) {
   progress(0.92, 'Lighting the sky');
   await nextFrame();
   const sky = createSky(renderer, scene, q);
+  progress(0.93, 'Loading people and vehicles');
+  const lib = await loadLibrary(q, (p, t) => progress(0.93 + p * 0.04, t));
 
   // ---- actors
-  const player = new Player(scene);
+  const player = new Player(scene, lib, 'm_casual');
   const spawn = { x: CITY.x0 - 26, z: CITY.z0 + 3 * CITY.pitch + 3 };
   player.pos.set(spawn.x, collision.surface(spawn.x, spawn.z, 50), spawn.z);
   player.heading = Math.PI / 2;
   const parked = [];
-  const myCar = new Vehicle('sports', 0xc2410f, q);
+  const myCar = new Vehicle(lib, 'sedan-sports');
   myCar.pos.set(CITY.x0 - 14, CITY.height + 0.1, spawn.z - 6);
   myCar.heading = Math.PI / 2;
   myCar.sync(0);
   scene.add(myCar.group);
   parked.push(myCar);
-  const traffic = new Traffic(graph, q, scene);
+  const traffic = new Traffic(graph, q, scene, lib);
   const basePreset = PRESETS[settings.preset] || PRESETS.high;
 
   const input = new Input(canvas, $('#touch'), settings);
@@ -118,6 +124,9 @@ async function createGame(progress) {
   rig.yaw = player.heading;
   const audio = new GameAudio(settings);
   audio.start();
+  const peds = new Peds(lib, q, scene, collision, settings);
+  const combat = new Combat(scene, hm, collision, settings, audio);
+  const police = new Police(lib, scene, hm, collision, graph, peds, audio);
   const hud = new HUD($('#hud'), hm, graph, city.buildings, settings);
 
   // headlight for the player's car at night
@@ -158,6 +167,7 @@ async function createGame(progress) {
   // ---- state
   const S = {
     mode: 'foot', vehicle: null, paused: false, override: null,
+    money: 500, dead: 0, dmgFlash: 0, aimHold: 0, hitMarker: false,
     fps: 60, frameMs: 16, frames: 0, fpsTimer: 0, lowTimer: 0, highTimer: 0, resTimer: 0,
   };
   const stats = { drawCalls: 0, tris: 0 };
@@ -173,7 +183,45 @@ async function createGame(progress) {
   $('#pause-map').onclick = () => { setPaused(false); hud.toggleMap(); };
   $('#quit').onclick = () => location.reload();
 
-  hud.toast('Welcome to Calvera. Walk to the orange car and press F (or tap 🚗) to drive.', 6);
+  hud.toast(settings.isTouch
+    ? 'Welcome to Calvera. Tap 🚗 near a car to drive · 🔫 switch weapon · 🎯 aim · 💥 fire'
+    : 'Welcome to Calvera. F: drive · Q: switch weapon · Right mouse: aim · Left mouse: fire', 7);
+
+  // ---- combat, wanted level, death & arrest
+  const HOSPITAL = { x: CITY.x0 + CITY.nx * CITY.pitch + 24, z: CITY.z0 + 2 * CITY.pitch, name: 'Port Calvera Medical Center' };
+  const PRECINCT = { x: CITY.x0 - 24, z: CITY.z0 + 1 * CITY.pitch, name: 'Calvera PD · Central Precinct' };
+  const hurtPlayer = (amount) => {
+    if (S.dead) return;
+    if (S.mode === 'car') { S.vehicle.health -= amount * 0.6; player.damage(amount * 0.35); }
+    else player.damage(amount);
+    S.dmgFlash = Math.min(1, S.dmgFlash + 0.35);
+  };
+  police.onPlayerHit = (amount) => hurtPlayer(amount);
+  const respawn = (at, title, sub, fee) => {
+    S.dead = 4.5;
+    hud.bigMessage(title, sub, 4);
+    setTimeout(() => {
+      if (S.mode === 'car') exitVehicle();
+      police.clear();
+      S.money = Math.max(0, S.money - fee);
+      player.health = 100; player.armor = title === 'ARRESTED' ? player.armor : 0;
+      player.pos.set(at.x, collision.surface(at.x, at.z, 200), at.z);
+      player.vel.set(0, 0, 0);
+      player.h.play('Idle_Loop', 0, 1, true);
+      rig.yaw = player.heading;
+      hud.toast(`${sub}. You paid $${fee}.`, 4);
+    }, 3000);
+  };
+  police.onBusted = () => { if (!S.dead) { player.h.play('Idle_Loop', 0.2, 1, true); respawn(PRECINCT, 'ARRESTED', PRECINCT.name, Math.round(100 + S.money * 0.1)); } };
+  const reportHit = (hit) => {
+    if (!hit || hit.kind !== 'ped') return;
+    const cop = hit.ped.role === 'cop';
+    if (hit.killed) police.crime(cop ? 'copKill' : 'kill');
+    else police.crime(cop ? 'copShot' : 'assault');
+    S.hitMarker = true;
+  };
+  const witnesses = (pos, r) => peds.list.some((p) => p.mode !== 'dead' && p.pos.distanceTo(pos) < r);
+  const aimDir = new THREE.Vector3(), muzzle = new THREE.Vector3();
 
   const tmpV = new THREE.Vector3();
   const focus = new THREE.Vector3();
@@ -184,8 +232,14 @@ async function createGame(progress) {
       const sp = fromTraffic.speed;
       traffic.release(fromTraffic);
       v.vel.set(Math.sin(v.heading) * sp, Math.cos(v.heading) * sp);
+      // carjacking: the driver is thrown out and runs
+      const sx = Math.cos(v.heading), sz = -Math.sin(v.heading);
+      peds.spawnAt(v.pos.x + sx * 2.2, v.pos.z + sz * 2.2, player.pos);
+      if (witnesses(v.pos, 30) || police.nearPolice(60)) police.crime('carjack');
     } else parked.splice(parked.indexOf(v), 1);
     S.mode = 'car'; S.vehicle = v;
+    combat.gun.visible = false;
+    v.onHitPed = (p, killed) => { if (killed) police.crime(p.role === 'cop' ? 'copKill' : 'kill'); else police.crime('assault'); peds.panic(p.pos, 25); };
     player.char.root.visible = false;
     hud.toast(`${v.spec.name}`, 2.5);
   }
@@ -224,8 +278,42 @@ async function createGame(progress) {
     worldUniforms.uTime.value += dt;
 
     let prompt = '';
+    if (S.dead > 0) {
+      // dead / arrested: freeze controls while the message shows
+      S.dead -= dt;
+      for (const k of ['moveX', 'moveY', 'throttle', 'brake', 'fire', 'firePressed', 'aim', 'jump', 'enter', 'weapon']) a[k] = 0;
+      if (player.health <= 0 && player.h.current !== player.h.actions.Death01) player.h.play('Death01', 0.1, 1, true);
+    } else if (player.health <= 0) {
+      respawn(HOSPITAL, 'YOU DIED', HOSPITAL.name, Math.min(S.money, Math.round(100 + S.money * 0.1)));
+      player.h.play('Death01', 0.1, 1, true);
+    }
+    if (a.weapon && S.mode === 'foot') combat.cycle();
+    if (a.reload && combat.reload()) player.h.play('Pistol_Reload', 0.1, 1, true);
+    const armed = combat.weapon === 'pistol';
+    if (armed && (a.fire || a.firePressed)) S.aimHold = 0.7;
+    S.aimHold = Math.max(0, S.aimHold - dt);
+    if (S.aimHold > 0 && armed) a.aim = true;
+    combat.update(dt);
     if (S.mode === 'foot') {
-      player.update(dt, a, rig.yaw, hm, collision);
+      player.update(dt, a, rig.yaw, hm, collision, armed);
+      camera.getWorldDirection(aimDir);
+      combat.holdGun(player.h, player.aiming ? aimDir : new THREE.Vector3(Math.sin(player.heading), -0.6, Math.cos(player.heading)), armed && S.dead <= 0);
+      const targets = { peds, vehicles: [...traffic.cars.map((c) => c.v), ...police.cars.map((c) => c.v), ...parked] };
+      if (armed && a.fire && player.aiming && combat.cooldown <= 0 && S.dead <= 0) {
+        combat.muzzleWorld(muzzle);
+        const hit = combat.attack(camera.position.clone(), aimDir.clone(), muzzle.clone(), targets, player.pos);
+        if (hit) {
+          player.h.play('Pistol_Shoot', 0.04, 1.6, true);
+          reportHit(hit);
+          if (witnesses(player.pos, 45)) police.crime('shots');
+          peds.panic(player.pos, 45);
+          if (hit.kind === 'vehicle' && hit.vehicle.type === 'police') police.crime('copShot');
+        }
+      } else if (!armed && a.firePressed && S.dead <= 0) {
+        const fwd = new THREE.Vector3(Math.sin(player.heading), 0, Math.cos(player.heading));
+        const hit = combat.attack(player.pos, fwd, null, targets, player.pos);
+        if (hit) { player.h.play(Math.random() < 0.5 ? 'Punch_Jab' : 'Punch_Cross', 0.06, 1.3, true); reportHit(hit); if (hit.ped) peds.panic(hit.ped.pos, 15); }
+      }
       // nearby car?
       let best = null, bd = 4.2, fromTraffic = null;
       for (const v of parked) { const d = v.pos.distanceTo(player.pos); if (d < bd) { bd = d; best = v; } }
@@ -253,11 +341,21 @@ async function createGame(progress) {
       focus.copy(v.pos);
     }
     for (const p of parked) { p.night = sky.night; p.sync(dt); }
+    if (S.vehicle && S.vehicle.health <= 0 && !S.vehicle.wrecked) { S.vehicle.wrecked = true; hud.toast('The engine is wrecked — get out (F)', 4); }
+    if (S.vehicle?.wrecked) { S.vehicle.vel.multiplyScalar(Math.exp(-3 * dt)); }
+
+    const onFoot = S.mode === 'foot' ? player.pos : null;
+    peds.update(dt, focus, onFoot, [S.vehicle, ...police.cars.map((c) => c.v), ...traffic.cars.map((c) => c.v)], (amt) => { S.money += amt; hud.toast(`+$${amt}`, 1.2); });
+    police.update(dt, { pos: focus, inCar: S.mode === 'car', speed: S.mode === 'car' ? S.vehicle.speed : player.speed, vehicle: S.vehicle });
+    if (player.health > 0 && player.health < 100 && S.dead <= 0) player.health = Math.min(100, player.health + dt * (police.wanted ? 0 : 0.6));
+    S.dmgFlash = Math.max(0, S.dmgFlash - dt * 0.8);
+    if (post) post.grade.uniforms.uDamage.value = Math.max(S.dmgFlash, player.health < 25 ? 0.35 : 0);
 
     traffic.max = Math.round(basePreset.traffic * settings.trafficDensity);
-    traffic.update(dt, focus, S.vehicle, S.mode === 'foot' ? player.pos : null, sky.night);
+    traffic.update(dt, focus, S.vehicle, S.mode === 'foot' ? player.pos : null, sky.night,
+      [...peds.list.filter((p) => p.mode !== 'dead' && p.pos.distanceTo(focus) < 120), ...police.cars.map((c) => c.v)]);
     sky.update(dt, settings.timeScale, focus);
-    rig.update(dt, a, focus, { vehicle: S.vehicle, heading: S.vehicle?.heading, speed: S.vehicle?.speed || 0, lastLook: input.lastLookTime }, collision);
+    rig.update(dt, a, focus, { vehicle: S.vehicle, heading: S.vehicle?.heading, speed: S.vehicle?.speed || 0, lastLook: input.lastLookTime, aiming: S.mode === 'foot' && player.aiming && armed }, collision);
 
     const dd = basePreset.drawDistance * settings.drawDistance;
     terrain.update(camera.position, dd);
@@ -291,9 +389,14 @@ async function createGame(progress) {
     hud.update(dt, {
       pos: focus, yaw: rig.yaw, heading: S.mode === 'car' ? S.vehicle.heading : player.heading,
       driving: S.mode === 'car', speed: S.vehicle?.speed || 0, hour: sky.hour, day: sky.day, prompt,
-      traffic: traffic.cars.map((c) => c.v.pos),
+      traffic: traffic.cars.map((c) => c.v.pos), police: police.cars.map((c) => c.v.pos),
+      health: player.health, armor: player.armor, money: S.money, wanted: police.wanted, wantedLost: police.lost,
+      weaponIcon: WEAPONS[combat.weapon].icon,
+      ammo: combat.weapon === 'pistol' ? (combat.reloading > 0 ? 'RELOADING' : `${combat.ammo.pistol.clip} / ${combat.ammo.pistol.reserve}`) : '',
+      aiming: S.mode === 'foot' && player.aiming && armed, hitMarker: S.hitMarker,
       fpsText: `${Math.round(S.fps)} FPS · ${q.label} · ${renderer.domElement.width}×${renderer.domElement.height}\n${stats.drawCalls} draws · ${(stats.tris / 1e6).toFixed(2)}M tris`,
     });
+    S.hitMarker = false;
   }
 
   // Road-following autopilot (demo camera / future cruise control)
@@ -383,6 +486,30 @@ async function createGame(progress) {
       rig.yaw = heading;
     },
     lookAt(yaw, pitch) { rig.yaw = yaw; rig.pitch = pitch; },
+    setWanted(n) { police.wanted = n; police.cool = 0; },
+    // aim the camera at the nearest pedestrian (for automated playtests)
+    faceNearestPed(maxD = 40) {
+      let best = null, bd = maxD;
+      for (const p of peds.list) { if (p.mode === 'dead' || p.role === 'cop') continue; const d = p.pos.distanceTo(player.pos); if (d < bd) { bd = d; best = p; } }
+      if (!best) return false;
+      rig.yaw = Math.atan2(best.pos.x - player.pos.x, best.pos.z - player.pos.z);
+      rig.pitch = 0.05; player.heading = rig.yaw;
+      return +bd.toFixed(1);
+    },
+    carjack() {
+      const c = traffic.nearest(player.pos, 400);
+      if (!c) return false;
+      const sx = Math.cos(c.v.heading), sz = -Math.sin(c.v.heading);
+      player.pos.set(c.v.pos.x - sx * 2.4, c.v.pos.y, c.v.pos.z - sz * 2.4);
+      enterVehicle(c.v, c);
+      return true;
+    },
+    get wanted() { return police.wanted; },
+    get cops() { return { cars: police.cars.length, officers: peds.list.filter((p) => p.role === 'cop' && p.mode !== 'dead').length }; },
+    giveMoney(n) { S.money += n; },
+    weapon(w) { combat.weapon = w; },
+    get peds() { return peds.list.length; },
+    hurt(n) { hurtPlayer(n); },
     // Put the current vehicle on the nearest road, facing `heading`, and let the autopilot drive.
     autoDrive(x, z, heading, speed) {
       if (S.mode !== 'car') return false;

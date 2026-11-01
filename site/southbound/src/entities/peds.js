@@ -1,0 +1,217 @@
+// Pedestrians: walk the sidewalks of Port Calvera and Mill Creek, cross at
+// corners, chat, panic and flee from gunfire, get hit, die and drop cash.
+import * as THREE from 'three';
+import { Human, locomotion } from './human.js';
+import { CITY, TOWN } from '../world/layout.js';
+import { mulberry32, wrapAngle, clamp } from '../util.js';
+
+const CORNERS = [[-1, -1], [1, -1], [1, 1], [-1, 1]];
+const INSET = 1.7;
+
+function cornerPos(G, i, j, c) {
+  const half = (G.pitch - G.street) / 2 - INSET;
+  const cx = G.x0 + i * G.pitch + G.pitch / 2, cz = G.z0 + j * G.pitch + G.pitch / 2;
+  return [cx + CORNERS[c][0] * half, cz + CORNERS[c][1] * half];
+}
+
+export class Peds {
+  constructor(lib, quality, scene, collision, settings) {
+    this.lib = lib; this.scene = scene; this.collision = collision; this.settings = settings;
+    this.max = { Phone: 10, Low: 14, Medium: 26, High: 38, Ultra: 55 }[quality.label] ?? 24;
+    this.list = [];
+    this.pickups = [];
+    this.rnd = mulberry32(911);
+    this.frame = 0;
+    const cashGeo = new THREE.BoxGeometry(0.35, 0.08, 0.2);
+    this.cashMat = new THREE.MeshStandardMaterial({ color: 0x3aa35a, emissive: 0x1a5a2a, emissiveIntensity: 0.6 });
+    this.cashGeo = cashGeo;
+  }
+
+  spawn(focus, minR, maxR) {
+    const rnd = this.rnd;
+    for (let tries = 0; tries < 40; tries++) {
+      const G = Math.hypot(focus.x - (TOWN.x0 + 144), focus.z - (TOWN.z0 + 108)) < 400 ? TOWN : CITY;
+      const i = (rnd() * G.nx) | 0, j = (rnd() * G.nz) | 0, c = (rnd() * 4) | 0;
+      const [x, z] = cornerPos(G, i, j, c);
+      const d = Math.hypot(x - focus.x, z - focus.z);
+      if (d < minR || d > maxR) continue;
+      const id = this.lib.peopleIds[(rnd() * this.lib.peopleIds.length) | 0];
+      const h = new Human(this.lib, id);
+      const p = {
+        h, G, i, j, corner: c, dir: rnd() < 0.5 ? 1 : -1, mode: 'walk', hp: 100,
+        pos: new THREE.Vector3(x, G.height + 0.22, z), heading: 0, speed: 1.3 + rnd() * 0.5,
+        target: null, timer: 0, threat: null, idleT: 10 + rnd() * 30, radius: 0.35, acc: 0,
+      };
+      this.nextTarget(p);
+      p.h.root.position.copy(p.pos);
+      this.scene.add(h.root);
+      this.list.push(p);
+      return p;
+    }
+    return null;
+  }
+
+  // A ped at an exact spot, running from `threat` (e.g. a carjacked driver)
+  spawnAt(x, z, threat) {
+    const id = this.lib.peopleIds[(this.rnd() * this.lib.peopleIds.length) | 0];
+    const h = new Human(this.lib, id);
+    let G = CITY, i = 0, j = 0;
+    for (const g of [CITY, TOWN]) {
+      const gi = Math.floor((x - g.x0) / g.pitch), gj = Math.floor((z - g.z0) / g.pitch);
+      if (gi >= 0 && gj >= 0 && gi < g.nx && gj < g.nz) { G = g; i = gi; j = gj; }
+    }
+    const p = { h, G, i, j, corner: 0, dir: 1, mode: 'flee', hp: 100, pos: new THREE.Vector3(x, this.collision.surface(x, z, 300), z),
+      heading: 0, speed: 1.4, target: cornerPos(G, i, j, 0), timer: 9, threat: threat.clone(), idleT: 20, radius: 0.35, acc: 0 };
+    h.root.position.copy(p.pos);
+    this.scene.add(h.root);
+    this.list.push(p);
+    return p;
+  }
+
+  nextTarget(p) {
+    const r = this.rnd();
+    const [sx, sz] = CORNERS[p.corner];
+    p.crossing = false;
+    if (r < 0.28) {
+      // cross a street to the neighbouring block
+      const viaX = this.rnd() < 0.5;
+      const ni = p.i + (viaX ? sx : 0), nj = p.j + (viaX ? 0 : sz);
+      if (ni >= 0 && nj >= 0 && ni < p.G.nx && nj < p.G.nz) {
+        const ns = viaX ? [-sx, sz] : [sx, -sz];
+        p.i = ni; p.j = nj; p.corner = CORNERS.findIndex((c) => c[0] === ns[0] && c[1] === ns[1]);
+        p.crossing = true;
+      }
+    }
+    if (!p.crossing) p.corner = (p.corner + p.dir + 4) % 4;
+    p.target = cornerPos(p.G, p.i, p.j, p.corner);
+  }
+
+  // Everyone near `pos` runs away from it
+  panic(pos, radius = 35) {
+    for (const p of this.list) {
+      if (p.mode === 'dead' || p.role === 'cop') continue;
+      if (p.pos.distanceTo(pos) < radius) { p.mode = 'flee'; p.threat = pos.clone(); p.timer = 8 + this.rnd() * 6; }
+    }
+  }
+
+  damage(p, amount, from) {
+    if (p.mode === 'dead') return false;
+    p.hp -= amount;
+    if (p.hp <= 0) {
+      p.mode = 'dead'; p.timer = 30; p.speed = 0;
+      p.h.play('Death01', 0.12, 1, true);
+      if (this.rnd() < 0.8) this.dropCash(p.pos, p.role === 'cop' ? 40 : 10 + ((this.rnd() * 70) | 0));
+      return true;
+    }
+    p.h.play('Hit_Chest', 0.08, 1.2, true);
+    if (p.role === 'cop') return false;
+    p.mode = 'flee'; p.threat = from ? from.clone() : p.pos.clone(); p.timer = 10;
+    return false;
+  }
+
+  dropCash(pos, amount) {
+    const m = new THREE.Mesh(this.cashGeo, this.cashMat);
+    m.position.copy(pos).add(new THREE.Vector3(0.4, 0.15, 0.3));
+    this.scene.add(m);
+    this.pickups.push({ mesh: m, amount, t: 60 });
+  }
+
+  // Closest living ped hit by a ray (for gunfire). Returns {p, t, head}
+  raycast(origin, dir, maxT) {
+    let best = null;
+    const oc = new THREE.Vector3();
+    for (const p of this.list) {
+      if (p.mode === 'dead') continue;
+      // capsule approximated as a vertical segment (feet..head) with radius
+      oc.copy(p.pos).sub(origin);
+      const t = clamp(oc.dot(dir), 0, maxT);
+      const cx = origin.x + dir.x * t, cy = origin.y + dir.y * t, cz = origin.z + dir.z * t;
+      const dy = cy - p.pos.y;
+      if (dy < 0 || dy > 1.85) continue;
+      const d = Math.hypot(cx - p.pos.x, cz - p.pos.z);
+      if (d < 0.38 && (!best || t < best.t)) best = { p, t, head: dy > 1.55 };
+    }
+    return best;
+  }
+
+  update(dt, focus, player, cars, onCash) {
+    this.frame++;
+    if (this.list.filter((p) => p.mode !== 'dead' && p.role !== 'cop').length < this.max) this.spawn(focus, this.list.length < this.max * 0.5 ? 6 : 45, 115);
+    for (let k = this.list.length - 1; k >= 0; k--) {
+      const p = this.list[k];
+      const d = Math.hypot(p.pos.x - focus.x, p.pos.z - focus.z);
+      if (d > 150 || (p.mode === 'dead' && (p.timer -= dt) <= 0)) {
+        this.scene.remove(p.h.root); p.h.dispose(); this.list.splice(k, 1); continue;
+      }
+      this.think(p, dt, player);
+      // cars hitting peds
+      for (const v of cars) {
+        if (!v || p.mode === 'dead') continue;
+        const dx = p.pos.x - v.pos.x, dz = p.pos.z - v.pos.z;
+        const sp = Math.abs(v.speed);
+        if (dx * dx + dz * dz < (v.radius + 0.9) ** 2 && sp > 3 && Math.abs(p.pos.y - v.pos.y) < 2) {
+          const killed = this.damage(p, sp * 9, v.pos);
+          p.pos.x += Math.sign(dx || 1) * 1.2; p.pos.z += Math.sign(dz || 1) * 1.2;
+          if (v.onHitPed) v.onHitPed(p, killed);
+        }
+      }
+      // animation LOD: full rate nearby, reduced far away
+      p.h.root.visible = d < 150;
+      p.acc += dt;
+      const every = d < 50 ? 1 : d < 100 ? 3 : 6;
+      if (p.h.root.visible && this.frame % every === 0) { p.h.update(p.acc); p.acc = 0; }
+      p.h.root.position.copy(p.pos);
+      p.h.root.rotation.y = p.heading;
+    }
+    // cash pickups
+    for (let k = this.pickups.length - 1; k >= 0; k--) {
+      const c = this.pickups[k];
+      c.mesh.rotation.y += dt * 3;
+      if ((c.t -= dt) <= 0) { this.scene.remove(c.mesh); this.pickups.splice(k, 1); continue; }
+      if (player && c.mesh.position.distanceTo(player) < 1.6) { onCash(c.amount); this.scene.remove(c.mesh); this.pickups.splice(k, 1); }
+    }
+  }
+
+  think(p, dt, player) {
+    if (p.mode === 'dead') return;
+    if (p.role === 'cop') { if (this.copThink) this.copThink(p, dt); return; }
+    let want = 0;
+    if (p.mode === 'flee') {
+      p.timer -= dt;
+      const ax = p.pos.x - p.threat.x, az = p.pos.z - p.threat.z;
+      p.heading += wrapAngle(Math.atan2(ax, az) - p.heading) * Math.min(1, dt * 6);
+      want = 6.2;
+      if (p.timer <= 0) { p.mode = 'return'; p.target = cornerPos(p.G, p.i, p.j, p.corner); }
+    } else if (p.mode === 'idle') {
+      p.timer -= dt;
+      p.h.play('Idle_Talking_Loop', 0.3);
+      if (p.timer <= 0) { p.mode = 'walk'; p.idleT = 15 + this.rnd() * 40; }
+    } else {
+      const tx = p.target[0] - p.pos.x, tz = p.target[1] - p.pos.z;
+      const dist = Math.hypot(tx, tz);
+      if (dist < 0.6) {
+        if (p.mode === 'return') p.mode = 'walk';
+        this.nextTarget(p);
+      } else p.heading += wrapAngle(Math.atan2(tx, tz) - p.heading) * Math.min(1, dt * 5);
+      want = p.mode === 'return' ? 2.8 : p.speed;
+      if (p.mode === 'walk' && !p.crossing && (p.idleT -= dt) <= 0) { p.mode = 'idle'; p.timer = 3 + this.rnd() * 6; want = 0; }
+    }
+    if (want > 0) {
+      p.pos.x += Math.sin(p.heading) * want * dt;
+      p.pos.z += Math.cos(p.heading) * want * dt;
+      if (p.mode === 'flee') {
+        const r = this.collision.resolve(p.pos.x, p.pos.z, 0.35, p.pos.y, 1.8);
+        p.pos.x = r.x; p.pos.z = r.z;
+        if (r.hit) p.heading += 0.9 * dt * 4;
+      }
+      p.pos.y = this.collision.surface(p.pos.x, p.pos.z, p.pos.y + 0.5);
+      const [clip, sp] = locomotion(want);
+      p.h.play(clip, 0.25, sp);
+    }
+    // keep out of the player's way
+    if (player) {
+      const dx = p.pos.x - player.x, dz = p.pos.z - player.z, d = Math.hypot(dx, dz);
+      if (d < 0.7 && d > 1e-3) { p.pos.x += (dx / d) * (0.7 - d); p.pos.z += (dz / d) * (0.7 - d); }
+    }
+  }
+}

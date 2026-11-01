@@ -1,13 +1,14 @@
 // AI traffic: cars follow lanes on the road graph, keep their distance,
 // slow for turns, and stop for the player.
 import * as THREE from 'three';
-import { Vehicle, randomCarType, PAINTS } from './vehicle.js';
+import { Vehicle, randomCarType } from './vehicle.js';
 import { mulberry32, polylineLengths, lerp, wrapAngle, clamp } from '../util.js';
 
 const LANE = { street: 3.0, highway: 3.0 };
 
 export class Traffic {
-  constructor(graph, quality, scene) {
+  constructor(graph, quality, scene, lib) {
+    this.lib = lib;
     this.graph = graph;
     this.quality = quality;
     this.scene = scene;
@@ -40,7 +41,7 @@ export class Traffic {
       const e = edges[(this.rnd() * edges.length) | 0];
       const d = Math.hypot(e.mid[0] - center.x, e.mid[1] - center.z);
       if (d < minR || d > maxR) continue;
-      const v = new Vehicle(randomCarType(this.rnd), PAINTS[(this.rnd() * PAINTS.length) | 0], this.quality);
+      const v = new Vehicle(this.lib, randomCarType(this.rnd));
       const car = { v, e, dir: this.rnd() < 0.5 ? 1 : -1, s: this.rnd() * e.len, speed: 0, pref: 0.85 + this.rnd() * 0.25, stun: 0, init: true };
       car.speed = e.speed * car.pref * 0.8;
       this.place(car, 1);
@@ -88,19 +89,20 @@ export class Traffic {
     return best;
   }
 
-  update(dt, focus, playerVehicle, playerOnFoot, night) {
+  update(dt, focus, playerVehicle, playerOnFoot, night, extraObstacles = []) {
     // keep the population topped up around the player
     if (this.cars.length < this.max) this.spawn(focus, this.cars.length < this.max * 0.6 ? 20 : 220, 480);
     for (let i = this.cars.length - 1; i >= 0; i--) {
       const c = this.cars[i];
       if (Math.hypot(c.v.pos.x - focus.x, c.v.pos.z - focus.z) > 620) {
         this.scene.remove(c.v.group);
-        c.v.paint.dispose(); c.v.tail.dispose();
+        c.v.dispose();
         this.cars.splice(i, 1);
       }
     }
     const obstacles = this.cars.map((c) => c.v);
     if (playerVehicle) obstacles.push(playerVehicle);
+    for (const o of extraObstacles) obstacles.push(o);
     for (const c of this.cars) {
       const v = c.v;
       const fx = Math.sin(v.heading), fz = Math.cos(v.heading);
