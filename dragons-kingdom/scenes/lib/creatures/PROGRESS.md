@@ -4,6 +4,48 @@ Owner paths: `scenes/lib/creatures/`, `scenes/lookdev/creatures-*.js` (+ creatur
 README.md in this folder is the full description of how the models are built; this file is
 only the state of the work.
 
+## REALISM ROUND 2 - session 4 (2026-11-01, short budgeted session)
+Stills (draft) under `scratchpad/eng1/creatures/r2s4/`: `v1/1B-03_042.png`, `v1/X3-15_040.png` (director's VERDOR_GROUNDS,
+1B now with the director's darker LOOK1B), `1b03_s3v2_s4v1.png` (1B-03 session 3 v2 | now), `x315_s3v1_s4v1.png` (X3-15
+session 3 v1 | now), `x315_s4v1_crop.png` (1:1 eye crop), `hero/` (creatures-charcoal-check.js at draft, see below).
+Harnesses: `r2s4/fing.mjs <pose> [json]` (left-wing finger joints + tips, root frame), `r2s4/proj.mjs` / `proj2.mjs`
+(Charcoal placed as in 1B-03 - CH [44,-66], G 9, face 190 as rotation.y - and every vertex projected through the
+1B-03 camera; lists which mesh / membrane patch / skin bone lands in the spike box).
+Done (code):
+- Finger tips folded UP: Charcoal `fold.lowCurl` [-6, 4, 16] -> [-6, 0, -8] (anatomy.js; the low stand / crouch
+  k <= 0.5 fold): tips 3.1-3.7 m -> 4.4-4.5 m, level with the finger bundle instead of drooping. `mount` and `lie`
+  (poses.js, all dragons) fold curl [-2, 14, 30] -> [-2, 10, 2]: Charcoal's tips 1.1-2.0 m -> 2.4-2.7 m (no tip
+  points down past the wrist/thigh any more). Seat / rig marks untouched (thorax and wrists unchanged).
+- Head seams: new skin param `headCav` (uLook3.z, default 1 = old): scales dkCav on the head (colour darkening, AO,
+  crevice roughness/dust all follow). Charcoal headCav 0.3, headDome 8 -> 12, headLook2.z 0.85 -> 0.6.
+- New lookdev scene `scenes/lookdev/creatures-charcoal-check.js` (charcoal-front + charcoal-head only, 1 s each).
+RESULTS (looked at):
+- 1B-03 spikes: STILL THERE after the finger fold (`1b03_s3v2_s4v1.png`, the two thin points left of Remi hang the
+  same). DIAGNOSED with proj2.mjs: they are NOT finger tips. The spike box (x 225-300, y 230-400 of 960x540) holds
+  the elbow (w_L_1 projects to 259,221) and the knee (hl_L_1 at 277,297); the hanging vertices are membrane patch 4
+  (aWing.z = 4: the plagiopatagium, finger V to the thigh/shin), skinned 0.55-0.86 to `hl_L_1` (the shin), lowest at
+  world y 10.6 (1.6 m above the turf). Drape gravity 0.05 -> 0.015 made them LOWER (10.36), so it is not sag: the
+  membrane's leg-attached edge follows the shin down from the knee in the crouch (reverted the gravity test).
+- X3-15: seams now mid-dark grey instead of black grout, plates flatter (`x315_s3v1_s4v1.png`). Still reads as a
+  flagstone mosaic: plate tops are uniform flat mid grey, no per-plate value/height variation.
+- Hero check (`r2s4/hero_fix1b_vs_s4.png`: approved fix1b | now, front top / head bottom; `hero_head_crop.png` 1:1):
+  with bodySpec 0.35 + headCav 0.3 Charcoal reads near-black with legible fine scales and a faint sheen, no grey
+  film, no grout lines - keeps (improves) the approved look. The front shot's pose differs from fix1b because of the
+  LOW-stance round (expected), and the head shot's framing now puts the eye at the top edge (shot camera, not
+  material) - re-aim `charcoal-head` in creatures-shots.js if it is used for review again.
+- npm test: 49 tests, 48 pass, 0 fail, 1 skipped, exit 0.
+NEXT (exact):
+1. 1B-03 spikes = patch-4 membrane on the shin. In wing.js / creature.js skin weights: weight the patch-4 vertices near
+   the leg attachment to the THIGH (hl_L_0) rather than the shin (a bat's plagiopatagium meets the leg high, at the
+   knee/ankle line, and is tucked flat when the leg folds), or in drape.js pin/tuck patch 4's leg edge (pull vertices
+   within ~1.5 m of the knee up toward the knee-thigh line). Re-run proj2.mjs: target lowest patch-4 vertex >= 12.0
+   world y and no vertices below the knee in the box; then re-still 1B-03.
+2. X3-15: add per-plate albedo value jitter (+-15%) and darker plate tops for Charcoal (head albedo toward near-black,
+   sRGB ~30-40 in this ECU), a little per-plate height variation (headRelief per cell), fine pitting on tops; the seam
+   is OK now. Reference: Nile monitor / saltwater crocodile head ECU (cranial scutes are irregular, not cobble tiles).
+3. X3-02 grey (session 3 item 3) still open: albedo x0 diagnostic.
+4. Session 2 items 4-5 (memFoldOcc for Leaf/Starlight; Leaf/Starlight mount contacts, displacement hierarchy, gait).
+
 ## REALISM ROUND 2 - session 3 (2026-10-31, short budgeted session)
 Stills (draft, director's VERDOR_GROUNDS set, `node scenes/lib/director/tools/still.mjs <job> --preset draft --out DIR`)
 under `scratchpad/eng1/creatures/r2s3/`: `v1/` (X3-15@0.48, 1B-03, X3-02), `v2/` (1B-03, X3-02 after the stronger

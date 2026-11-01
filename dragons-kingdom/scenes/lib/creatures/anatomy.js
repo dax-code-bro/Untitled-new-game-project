@@ -151,7 +151,7 @@ export const DESIGNS = {
     stand: { hip: 10.6, shoulder: 11.0, forearmLean: 10, humerusRise: 16, neckRise: 40, neckTop: 10, headPitch: -12, tailDroop: 18,
       low: { belly: 0.5, mtAng: 54 } },
     // (albatross: the long folded wings lie along the back, the tips crossing over the tail base)
-    fold: { curl: [-4, 2, 6], inward: 0.16, wrap: 0.1, outUp: 0.5, lowCurl: [-6, 4, 16], low: { outUp: 0.15, inward: 0.12, wrap: 0.06 } }, bulk: { leg: 1.2, arm: 1.15, neck: 1.0 },
+    fold: { curl: [-4, 2, 6], inward: 0.16, wrap: 0.1, outUp: 0.5, lowCurl: [-6, 0, -8], low: { outUp: 0.15, inward: 0.12, wrap: 0.06 } }, bulk: { leg: 1.2, arm: 1.15, neck: 1.0 },
     // raptor feet: long toes, big curved talons, a large opposable hallux with the biggest talon
     leg: { femur: 4.0, tibia: 4.8, mt: 2.8, toe: 3.1, claw: 1.3, d: [3.6, 2.3, 2.15, 1.4, 1.2], mtAng: 55, heelPad: 0.4, hallux: 0.62, toeR: 0.3, raptor: 1 },
     wing: { humerus: 8.6, forearm: 16.4, d: [3.0, 2.0, 1.25, 0.85],

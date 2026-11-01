@@ -51,7 +51,7 @@ export function lookParams(THREE, look) {
       // small granules ringing the eye, big plates (supraoculars) among smaller ones, thin seams,
       // flat plates; fine granules on the lids. And the body: dry keratin occludes its own sky sheen
       // (bodySpec), so Charcoal reads black, not mid grey, in flat noon light (director X3-02 / 1B-03))
-      headLook2: [2.6, 0.38, 0.85, 0.55], headDome: 8.0, bodySpec: 0.35,
+      headLook2: [2.6, 0.38, 0.6, 0.55], headDome: 12.0, headCav: 0.3, bodySpec: 0.35,
       // body scale profile: flat tops (dome exponent), a keel along each scale, wide soft grooves
       vor: [6.0, 0.3, 0.14, 1.35],
       // old healed scars [a.xyz, halfWidth, b.xyz, strength] in L units (rest pose): left flank, right neck, right shoulder, left thigh
@@ -264,7 +264,7 @@ function skinMaterial(THREE, P, ctx) {
     // eye centre in rest space (|x|, y, z) and eye radius (set from ctx.anat.eyes)
     uEyeC: { value: new THREE.Vector4(0, 0, 0, 0) },
     // body specular occlusion (1 = none; dry pitted keratin, as uHeadSpec for the head), head plate dome exponent
-    uLook3: { value: new THREE.Vector4(P.bodySpec ?? 1.0, P.headDome ?? 5.0, 0, 0) },
+    uLook3: { value: new THREE.Vector4(P.bodySpec ?? 1.0, P.headDome ?? 5.0, P.headCav ?? 1.0, 0) },
   };
   {
     const e = ctx.anat && ctx.anat.eyes && ctx.anat.eyes[0];
@@ -463,6 +463,7 @@ void dkSkin(inout vec3 albedo) {
   float crown = mix(vcr, S.wear, chainM);
   float sid = mix(vid, S.id, chainM);
   dkCav = cav * detK * soften;
+  dkCav *= mix(1.0, uLook3.z, isHead);   // (r2 s4) headCav: weaker dark seams on the head (no grout lines)
   // --- colour
   vec3 col = uBase;
   col = mix(col, uDorsal, smoothstep(0.6, 0.0, latD) * 0.6 * (1.0 - isHead));

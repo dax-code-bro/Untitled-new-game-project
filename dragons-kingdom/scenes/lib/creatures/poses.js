@@ -782,7 +782,7 @@ export function lie(c, o = {}) {
       // (fix round 1: the forearms lay forward like a lion's forelegs - a sphinx) the upper arm
       // back along the flank, the forearm low along the side of the chest to the wrist pad beside
       // the base of the neck, the hand folded back along it, the fingers back along the flank
-      plantBack(pb, F, side, { hum: o.hum ?? [0.5, 0.1, 0.86], reach: 0.98, wristIn: -0.02, padK: 0.75, fold: { curl: [-2, 14, 30], mcFan: 0, fanDown: 0, handBack: 3, levelK: true, outUp: 0.35, ...(o.fold || {}) } });
+      plantBack(pb, F, side, { hum: o.hum ?? [0.5, 0.1, 0.86], reach: 0.98, wristIn: -0.02, padK: 0.75, fold: { curl: [-2, 10, 2], mcFan: 0, fanDown: 0, handBack: 3, levelK: true, outUp: 0.35, ...(o.fold || {}) } });
       void S; void w;
     }
   }
@@ -850,7 +850,7 @@ export function mount(c, o = {}) {
     // folded right under: the foot flat beside the belly a little ahead of the hip, the knee up
     // and forward along the flank (pole), the hock behind it near the turf
     legIK(pb, F, side, [sd * Math.max(d.hipX * 1.2, (d.footX ?? 0) * 1.1), d.toeL * 0.13, hip[2] + d.fem * 0.62], { mtAng: o.mtAng ?? 35, fwd: [sd * 0.1, 0, 1], pole: [sd * 0.45, 0.8, 0.4], curl: o.toeCurl ?? 0.05 });
-    plantBack(pb, F, side, { hum: o.hum ?? [0.5, 0.06, 0.86], reach: 0.98, wristIn: -0.02, padK: 0.8, fold: { curl: [-2, 14, 30], mcFan: 0, fanDown: 0, handBack: 3, levelK: true, outUp: 0.35, ...(o.fold || {}) } });
+    plantBack(pb, F, side, { hum: o.hum ?? [0.5, 0.06, 0.86], reach: 0.98, wristIn: -0.02, padK: 0.8, fold: { curl: [-2, 10, 2], mcFan: 0, fanDown: 0, handBack: 3, levelK: true, outUp: 0.35, ...(o.fold || {}) } });
   }
   common(pb, { ...o, jaw: (o.jaw ?? 0) + 0.01 * br, lidRelax: o.lidRelax ?? 0.2 }, t);
   drape(pb, 'lie');
