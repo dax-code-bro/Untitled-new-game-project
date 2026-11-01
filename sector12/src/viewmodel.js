@@ -158,7 +158,7 @@ export class Viewmodel {
       this.armMat.glove = new THREE.MeshStandardMaterial({ color: 0xb0aa90, map: t, bumpMap: b, bumpScale: 1.2, roughness: 0.86 });
     }
     this.armMat.strap = this.armMat.strap || new THREE.MeshStandardMaterial({ color: 0x3a3a34, roughness: 0.7 });
-    this.armMat.plate = this.armMat.plate || new THREE.MeshStandardMaterial({ color: 0x1b1c1e, roughness: 0.42, metalness: 0.1 });
+    this.armMat.plate = this.armMat.plate || new THREE.MeshStandardMaterial({ color: 0x1b1c1e, roughness: 0.62, metalness: 0.05 });
     this.armMat.skin = this.armMat.skin || new THREE.MeshStandardMaterial({ color: 0xc89a78, roughness: 0.55 });
     if (!this.armMat.dial) {
       const c = document.createElement('canvas'); c.width = c.height = 128;
@@ -633,11 +633,28 @@ export class Viewmodel {
     const reach = (ARM.upper + ARM.fore) * 0.97;
     // the wrist sits behind the grip point along the weapon
     const wrist = V().copy(target).addScaledVector(fwd, -0.075).addScaledVector(up, 0.012);
-    const sh = shoulder.clone();
-    if (sh.distanceTo(wrist) > reach) sh.copy(wrist).add(V().subVectors(sh, wrist).setLength(reach)); // shoulders follow out of view
-    const elbow = V(), end = V();
+    // hand: +Z along fingers (the weapon's forward, tipped down into the grip), +Y back of the hand
+    const hf0 = onGun ? V().copy(fwd).addScaledVector(up, -0.6).normalize() : V().copy(fwd).normalize();
+    const palmC = V().copy(wrist).addScaledVector(hf0, 0.055);
     const pole = V(R ? 0.6 : -0.6, -1, 0.25);
-    ik(sh, wrist, ARM.upper, ARM.fore, pole, elbow, end);
+    const elbow = V(), end = V(), hf = V().copy(hf0), w = V().copy(wrist);
+    let sh;
+    // a real wrist only bends so far: keep the hand within ~38 degrees of the forearm (otherwise the
+    // back of the wrist pokes out and from behind the hand reads as a round lump), then move the
+    // wrist so the palm stays on the grip and solve the arm again
+    for (let pass = 0; pass < 2; pass++) {
+      sh = shoulder.clone();
+      if (sh.distanceTo(w) > reach) sh.copy(w).add(V().subVectors(sh, w).setLength(reach)); // shoulders follow out of view
+      ik(sh, w, ARM.upper, ARM.fore, pole, elbow, end);
+      const fa = V().subVectors(end, elbow).normalize();
+      hf.copy(hf0);
+      const bend = hf.angleTo(fa), MAXB = 0.66;
+      if (bend <= MAXB) break;
+      const axis = V().crossVectors(fa, hf);
+      if (axis.lengthSq() < 1e-8) break;
+      hf.copy(fa).applyAxisAngle(axis.normalize(), MAXB);
+      w.copy(palmC).addScaledVector(hf, -0.055);
+    }
     const m = this.arm;
     const place = (mesh, a, b, z) => {
       const y = V().subVectors(b, a).normalize();
@@ -648,8 +665,6 @@ export class Viewmodel {
     };
     place(R ? m.upR : m.upL, sh, elbow, V(0, 1, 0));
     place(R ? m.foR : m.foL, elbow, end, V(0, 1, 0));
-    // hand: +Z along fingers (the weapon's forward, tipped down into the grip), +Y back of the hand
-    const hf = onGun ? V().copy(fwd).addScaledVector(up, -0.6).normalize() : V().copy(fwd).normalize();
     const hu = onGun ? V().copy(up).applyAxisAngle(fwd, roll) : V().copy(up);
     const z = hf, y = V().copy(hu).addScaledVector(z, -hu.dot(z)).normalize(), x = V().crossVectors(y, z);
     (R ? m.hR : m.hL).matrix.makeBasis(x, y, z).setPosition(end);

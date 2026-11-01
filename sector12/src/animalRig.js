@@ -16,9 +16,9 @@ const smooth = (t) => t * t * (3 - 2 * t);
 const SPECIES = {
   deer: { hf: 0.95, hh: 0.92, len: 0.8, r: 0.2, rh: 0.17, w: 0.72, neck: [0.42, 0.95], head: [0.3, 0.075], snout: 0.55, ear: [0.13, 0.04], tail: [0.12, 0.035, 0.6], hoof: true, gait: [1.1, 3.4], antler: 'deer', belly: 0xd8cbb0, tailWhite: true },
   moose: { hf: 1.85, hh: 1.65, len: 1.4, r: 0.42, rh: 0.33, w: 0.68, neck: [0.5, 0.35], head: [0.62, 0.13], snout: 0.62, ear: [0.18, 0.06], tail: [0.1, 0.05, 0.9], hoof: true, gait: [1.4, 4], antler: 'palmate', hump: 0.14, dewlap: true },
-  wolf: { hf: 0.78, hh: 0.74, len: 0.72, r: 0.17, rh: 0.13, w: 0.7, neck: [0.28, 0.55], head: [0.26, 0.075], snout: 0.55, ear: [0.09, 0.035, true], tail: [0.42, 0.05, 1.0], hoof: false, gait: [1.2, 3.6], bushy: true, belly: 0xb9ad98 },
-  sandwolf: { hf: 0.74, hh: 0.71, len: 0.7, r: 0.16, rh: 0.12, w: 0.68, neck: [0.27, 0.55], head: [0.25, 0.07], snout: 0.55, ear: [0.1, 0.035, true], tail: [0.4, 0.045, 1.0], hoof: false, gait: [1.2, 3.6], bushy: true, belly: 0xe0cfa8 },
-  coyote: { hf: 0.6, hh: 0.58, len: 0.56, r: 0.13, rh: 0.1, w: 0.66, neck: [0.22, 0.55], head: [0.21, 0.06], snout: 0.58, ear: [0.09, 0.03, true], tail: [0.35, 0.04, 1.1], hoof: false, gait: [1.1, 3.4], bushy: true },
+  wolf: { hf: 0.62, hh: 0.6, len: 0.76, r: 0.19, rh: 0.15, w: 0.68, neck: [0.24, 0.3], head: [0.26, 0.075], snout: 0.55, ear: [0.09, 0.035, true], tail: [0.42, 0.05, 1.0], hoof: false, gait: [1.2, 3.6], bushy: true, belly: 0xb9ad98 },
+  sandwolf: { hf: 0.6, hh: 0.58, len: 0.74, r: 0.18, rh: 0.14, w: 0.66, neck: [0.23, 0.3], head: [0.25, 0.07], snout: 0.55, ear: [0.1, 0.035, true], tail: [0.4, 0.045, 1.0], hoof: false, gait: [1.2, 3.6], bushy: true, belly: 0xe0cfa8 },
+  coyote: { hf: 0.48, hh: 0.47, len: 0.58, r: 0.145, rh: 0.115, w: 0.66, neck: [0.19, 0.32], head: [0.21, 0.06], snout: 0.58, ear: [0.09, 0.03, true], tail: [0.35, 0.04, 1.1], hoof: false, gait: [1.1, 3.4], bushy: true },
   bear: { hf: 1.0, hh: 0.95, len: 1.1, r: 0.4, rh: 0.36, w: 0.85, neck: [0.25, 0.2], head: [0.36, 0.13], snout: 0.42, ear: [0.06, 0.04], tail: [0.08, 0.04, 0.8], hoof: false, plantigrade: true, gait: [1.0, 2.8], hump: 0.12 },
   raccoon: { hf: 0.24, hh: 0.3, len: 0.36, r: 0.12, rh: 0.12, w: 0.85, neck: [0.07, 0.3], head: [0.13, 0.055], snout: 0.45, ear: [0.04, 0.02], tail: [0.3, 0.04, 0.6], hoof: false, plantigrade: true, gait: [1.2, 3], ringTail: true, mask: true },
   rabbit: { hf: 0.13, hh: 0.16, len: 0.2, r: 0.075, rh: 0.085, w: 0.85, neck: [0.04, 0.8], head: [0.09, 0.042], snout: 0.35, ear: [0.11, 0.022], tail: [0.04, 0.03, -0.5], hoof: false, gait: [0.6, 1.2], hop: true, puff: true },
@@ -100,11 +100,11 @@ function speciesGeometry(species, S) {
   body.translate(0, 0, -r * 0.08);
   const bp = { fur: [body], belly: [] };
   const belly = limb(prof.slice(2, 8).map(([y, rr]) => [y, rr * 0.96]), D.w * 0.98, 0.7, 14);
-  bp.belly.push(at(belly, 0, 0, -r * 0.33));
+  bp.belly.push(at(belly, 0, 0, -r * 0.24)); // tucked in: a lighter underside, not a separate strip
   if (D.hump) { const h = new THREE.SphereGeometry(r * 0.75, 12, 8); h.scale(D.w, 1.2, 0.8); bp.fur.push(at(h, 0, len * 0.92, r * 0.55 + D.hump * k)); }
   G.body = mergeParts(bp);
   // neck along +Y, Z up
-  const nl = D.neck[0] * k, nr = r * (species === 'bear' ? 0.75 : species === 'moose' ? 0.55 : 0.48);
+  const nl = D.neck[0] * k, nr = r * (species === 'bear' ? 0.75 : species === 'moose' ? 0.55 : D.bushy && !D.hop ? 0.64 : 0.48); // canines: thick neck with a ruff
   G.neck = mergeParts({ fur: [limb([[-nr * 0.6, 0], [-nr * 0.4, nr * 1.15], [nl * 0.5, nr * 0.95], [nl, nr * 0.75], [nl + nr * 0.4, 0]], D.w * 0.95, 1, 12)], belly: [], dark: D.dewlap ? [at(new THREE.ConeGeometry(nr * 0.4, nr * 1.4, 8), 0, nl * 0.8, -nr * 1.1, Math.PI)] : [] });
   // head: origin at the back of the skull, +Y along the snout, +Z up
   const hl = D.head[0] * k, hr = D.head[1] * k;
@@ -127,7 +127,7 @@ function speciesGeometry(species, S) {
   if (D.antler) for (const g of antlerGeo(D.antler, k * (D.antler === 'palmate' ? 0.8 : 1.0))) hp.antler.push(at(g.rotateX(Math.PI / 2).rotateZ(Math.PI), 0, hr * 0.8, hr * 0.8));
   G.head = mergeParts(hp);
   // legs: upper / lower / foot, along +Y from the proximal joint
-  const legR = r * (species === 'bear' ? 0.42 : species === 'moose' ? 0.3 : 0.27);
+  const legR = r * (species === 'bear' ? 0.42 : species === 'moose' ? 0.3 : D.bushy && !D.hop ? 0.31 : 0.27);
   G.upper = (L) => mergeParts({ fur: [limb([[-legR * 0.5, 0], [-legR * 0.2, legR * 1.15], [L * 0.6, legR * 0.85], [L, legR * 0.6], [L + legR * 0.25, 0]], 0.85, 1, 10)] });
   G.lower = (L) => mergeParts({ fur: [limb([[-legR * 0.25, 0], [0, legR * 0.55], [L, legR * 0.42], [L + legR * 0.15, 0]], 0.9, 1, 8)] });
   G.foot = () => {
@@ -139,9 +139,10 @@ function speciesGeometry(species, S) {
   const tl = D.tail[0] * k, tr = D.tail[1] * k;
   const tailMat = D.tailWhite ? 'white' : 'fur';
   G.tail = (i, n) => {
-    const r0 = tr * (D.bushy ? 0.7 + Math.sin(((i + 0.5) / n) * Math.PI) * 0.9 : 1 - i / n * 0.5), r1 = tr * (D.bushy ? 0.7 + Math.sin(((i + 1) / n) * Math.PI) * 0.9 : 1 - (i + 1) / n * 0.5);
+    const r0 = tr * (D.bushy ? 0.7 + Math.sin((i / n) * Math.PI * 0.9 + 0.25) * 0.9 : 1 - i / n * 0.5), r1 = tr * (D.bushy ? 0.7 + Math.sin(((i + 1) / n) * Math.PI * 0.9 + 0.25) * 0.9 : 1 - (i + 1) / n * 0.5);
     const seg = tl / n;
-    const g = limb([[-r0 * 0.5, 0], [0, r0], [seg, r1], [seg + r1 * 0.5, 0]], 1, 1, 8);
+    // segments match radius at the joints and have rounded, overlapping ends so the tail doesn't look banded
+    const g = limb([[-r0 * 0.6, 0], [-r0 * 0.3, r0 * 0.88], [0, r0], [seg, r1], [seg + r1 * 0.3, r1 * 0.88], [seg + r1 * 0.6, 0]], 1, 1, 10);
     const mat = D.ringTail && i % 2 ? 'ring' : D.puff ? 'white' : tailMat;
     return mergeParts({ [mat]: [g] });
   };
@@ -290,6 +291,9 @@ export class QuadRig {
     if (this.graze) hdir = V(0, -1, 0).addScaledVector(bd, 0.4).normalize();
     if (s.look && !this.graze) {
       const tgt = V().subVectors(s.look, pos).sub(headBase).normalize();
+      // necks don't fold straight back: a watching animal tips its head up only so far
+      const maxUp = D.hoof ? 0.55 : 0.35;
+      if (tgt.y > maxUp) { const hz = Math.hypot(tgt.x, tgt.z) || 1e-6; const k = Math.sqrt(1 - maxUp * maxUp) / hz; tgt.set(tgt.x * k, maxUp, tgt.z * k); }
       if (tgt.dot(f) > -0.2) hdir.lerp(tgt, 0.7).normalize();
     }
     this.headDir.lerp(hdir, Math.min(1, dt * 6)).normalize();

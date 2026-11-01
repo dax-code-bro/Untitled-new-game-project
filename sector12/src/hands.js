@@ -74,18 +74,30 @@ export class Hand {
     const palm = [];
     const p0 = rbox(0.084, 0.03, 0.098, 0.012);
     const pp = p0.attributes.position;
-    for (let i = 0; i < pp.count; i++) { const x = pp.getX(i), z = pp.getZ(i); pp.setY(i, pp.getY(i) - x * x * 1.6 + (z > 0.03 ? -0.003 : 0)); }
+    // anatomical palm: narrow at the wrist, widest across the knuckles, back of the hand domed,
+    // thicker on the thumb side (thenar), tendons/knuckle ridge towards the fingers
+    for (let i = 0; i < pp.count; i++) {
+      const x = pp.getX(i), y = pp.getY(i), z = pp.getZ(i);
+      const t = Math.min(1, Math.max(0, (z + 0.049) / 0.098));
+      const taper = 0.7 + 0.3 * Math.sin(t * Math.PI / 2);
+      const top = y > 0 ? 1 : 0, nx = x / 0.042;
+      let yy = y - x * x * 1.6 + (z > 0.03 ? -0.003 : 0);
+      yy += top * 0.005 * (1 - nx * nx);                                  // dome
+      yy += top * 0.0025 * Math.max(0, Math.cos(nx * Math.PI * 2)) * t * t; // tendon ridges
+      if (y < 0 && s * x > 0) yy -= 0.006 * (s * nx) * (1 - t);           // thenar bulk
+      pp.setXYZ(i, x * taper, yy * (0.85 + 0.15 * t), z);
+    }
     p0.computeVertexNormals();
     palm.push(at(p0, 0, 0, 0.05));
     palm.push(at(new THREE.SphereGeometry(0.015, 12, 8).scale(1, 0.6, 1.4), s * 0.026, -0.01, 0.032)); // thenar pad
     palm.push(at(new THREE.SphereGeometry(0.012, 10, 8).scale(1, 0.55, 1.5), -s * 0.03, -0.01, 0.045)); // hypothenar
-    palm.push(at(seg([[-0.01, 0.0], [-0.008, 0.04], [0.02, 0.043], [0.03, 0.0]], 1.05, 0.72, 14), 0, 0, -0.012)); // wrist
+    palm.push(at(seg([[-0.05, 0.0], [-0.048, 0.034], [-0.01, 0.031], [0.02, 0.032], [0.03, 0.0]], 1.0, 0.72, 16), 0, 0, -0.008)); // wrist + gauntlet running into the sleeve
     this.root.add(new THREE.Mesh(merge(palm), mats.glove));
-    const hard = [at(rbox(0.078, 0.01, 0.022, 0.0045), 0, 0.013, 0.087, -0.1), at(rbox(0.056, 0.006, 0.05, 0.003), 0, 0.0145, 0.042)];
+    const hard = [at(rbox(0.078, 0.01, 0.022, 0.0045), 0, 0.013, 0.087, -0.1), at(rbox(0.05, 0.005, 0.044, 0.0025), 0, 0.0205, 0.046, 0.06)];
     for (let i = 0; i < 4; i++) hard.push(at(rbox(0.015, 0.007, 0.016, 0.0035), s * (0.027 - i * 0.0185), 0.018, 0.09, -0.15));
     this.root.add(new THREE.Mesh(merge(hard), mats.plate));
-    const band = seg([[-0.01, 0.0], [-0.009, 0.041], [0.011, 0.041], [0.012, 0.0]], 1.0, 0.66, 20);
-    this.root.add(new THREE.Mesh(merge([at(band, 0, 0, 0.0), at(rbox(0.024, 0.012, 0.026, 0.004), s * 0.03, 0.026, 0.0)]), mats.strap)); // velcro wrist strap
+    const band = seg([[-0.01, 0.0], [-0.009, 0.034], [0.011, 0.034], [0.012, 0.0]], 1.0, 0.68, 20);
+    this.root.add(new THREE.Mesh(merge([at(band, 0, 0, 0.0), at(rbox(0.022, 0.01, 0.024, 0.004), s * 0.022, 0.022, 0.0)]), mats.strap)); // velcro wrist strap
     // ---- fingers: knuckle -> proximal -> middle -> distal
     this.fingers = FINGERS.map((F, fi) => {
       const base = new THREE.Group();
@@ -152,7 +164,7 @@ export class Hand {
     this.thumbCurl = ease(this.thumbCurl, curls[0] + squeeze * 0.05, k);
     const [tb, t1, t2] = this.thumbJoints;
     // the thumb swings across the palm (opposition) and folds at its two joints
-    tb.rotation.set(0.3 + this.opp * 0.35, s * (0.42 - this.opp * 0.32), s * (0.45 + this.opp * 0.65), 'YXZ');
+    tb.rotation.set(0.3 + this.opp * 0.5, s * (0.35 - this.opp * 1.15), s * (0.25 + this.opp * 0.35), 'YXZ');
     t1.rotation.x = this.thumbCurl * 0.85;
     t2.rotation.x = this.thumbCurl * 1.05;
   }
@@ -164,7 +176,7 @@ export function sleeveGeometry(kind, L = kind === 'upper' ? 0.33 : 0.3) {
   // upper: shoulder -> elbow; fore: elbow -> just short of the wrist, where the glove's cuff takes over
   const prof = kind === 'upper'
     ? [[-0.03, 0.0], [-0.02, 0.066], [0.05, 0.072], [L * 0.45, 0.066], [L * 0.75, 0.06], [L - 0.02, 0.056], [L, 0.0]]
-    : [[-0.02, 0.0], [-0.01, 0.058], [0.08, 0.061], [L * 0.55, 0.055], [L - 0.05, 0.05], [L - 0.028, 0.049], [L - 0.02, 0.0]];
+    : [[-0.02, 0.0], [-0.01, 0.051], [0.08, 0.053], [L * 0.55, 0.045], [L - 0.05, 0.038], [L - 0.028, 0.037], [L - 0.02, 0.0]];
   const g = new THREE.LatheGeometry(prof.map(([y, r]) => new THREE.Vector2(Math.max(0.0005, r), y)), 24, 0, Math.PI * 2);
   g.scale(1, 1, 0.92);
   // fabric folds: rings bunched towards the joints, plus some lumpy noise
@@ -199,10 +211,10 @@ export function shoulderGeometry() {
 
 export function cuffGeometry(L = 0.3) {
   const parts = [];
-  const cuff = new THREE.LatheGeometry([[0.0, 0.052], [0.008, 0.054], [0.028, 0.054], [0.034, 0.05]].map(([y, r]) => new THREE.Vector2(r, y)), 24);
+  const cuff = new THREE.LatheGeometry([[0.0, 0.039], [0.008, 0.041], [0.028, 0.041], [0.034, 0.037]].map(([y, r]) => new THREE.Vector2(r, y)), 24);
   cuff.scale(1, 1, 0.9);
   parts.push(at(cuff, 0, L - 0.075, 0));
-  parts.push(at(rbox(0.03, 0.026, 0.012, 0.004), 0.04, L - 0.06, 0.03)); // velcro tab
+  parts.push(at(rbox(0.028, 0.024, 0.01, 0.004), 0.032, L - 0.06, 0.026)); // velcro tab
   return merge(parts);
 }
 
@@ -217,8 +229,8 @@ export function elbowPadGeometry(L = 0.33) {
 // a field watch on the left wrist: strap, case, glowing dial
 export function watchGeometry(L = 0.3) {
   const y = L - 0.042;
-  const strap = new THREE.TorusGeometry(0.045, 0.006, 6, 24); strap.rotateX(Math.PI / 2); strap.scale(1, 1, 0.88); strap.translate(0, y, 0);
-  const watchCase = new THREE.CylinderGeometry(0.018, 0.019, 0.01, 20); watchCase.rotateX(Math.PI / 2); watchCase.translate(0, y, 0.044);
-  const dial = new THREE.CircleGeometry(0.015, 20); dial.translate(0, y, 0.0496);
+  const strap = new THREE.TorusGeometry(0.037, 0.005, 6, 24); strap.rotateX(Math.PI / 2); strap.scale(1, 1, 0.88); strap.translate(0, y, 0);
+  const watchCase = new THREE.CylinderGeometry(0.018, 0.019, 0.01, 20); watchCase.rotateX(Math.PI / 2); watchCase.translate(0, y, 0.037);
+  const dial = new THREE.CircleGeometry(0.015, 20); dial.translate(0, y, 0.0426);
   return { band: merge([strap, watchCase]), dial };
 }
