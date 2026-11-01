@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+<meta name="theme-color" content="#120d0a" />
+<title>Southbound</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;600;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="style.css" />
+<script type="importmap">
+{ "imports": { "three": "./vendor/three/build/three.module.js", "three/addons/": "./vendor/three/addons/" } }
+</script>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<!-- Start screen -->
+<section id="menu" class="screen show">
+  <div class="menu-bg"></div>
+  <div class="menu-inner">
+    <h1 class="logo">SOUTHBOUND</h1>
+    <p class="tag">The State of Calvera · Gulf Coast</p>
+
+    <div id="step-platform" class="step show">
+      <h2>What are you playing on?</h2>
+      <div class="big-choices">
+        <button class="big" data-platform="phone"><span class="ico">📱</span><b>Phone / Tablet</b><small>Tuned to hold a smooth 60 FPS</small></button>
+        <button class="big" data-platform="pc"><span class="ico">🖥️</span><b>PC / Laptop</b><small>Pushes your graphics card — up to 4K</small></button>
+      </div>
+    </div>
+
+    <div id="step-pc" class="step">
+      <h2>Your graphics card</h2>
+      <p class="detected" id="detected"></p>
+      <label class="field"><span>GPU</span><select id="gpu"></select></label>
+      <div class="presets" id="presets"></div>
+      <div class="row2">
+        <label class="field"><span>Resolution</span>
+          <select id="res">
+            <option value="native">Native (screen)</option>
+            <option value="2160">4K · 3840×2160</option>
+            <option value="1440">1440p</option>
+            <option value="1080">1080p</option>
+            <option value="720">720p</option>
+          </select></label>
+        <label class="field"><span>Target FPS</span>
+          <select id="targetfps">
+            <option value="60">60</option><option value="90">90</option><option value="100">100</option>
+            <option value="120">120</option><option value="144">144</option>
+          </select></label>
+      </div>
+      <p class="hint">Dynamic resolution keeps the frame rate at your target by adjusting render resolution when the action gets heavy.</p>
+    </div>
+
+    <div id="step-phone" class="step">
+      <h2>Phone mode</h2>
+      <p class="hint">Lower resolution, shorter shadows, fewer trees, no grass or heavy post-effects — locked to a smooth 60 FPS so your phone stays cool.</p>
+    </div>
+
+    <div class="actions">
+      <button id="back" class="ghost" style="display:none">← Back</button>
+      <button id="open-settings" class="ghost">Settings</button>
+      <button id="play" class="primary" disabled>Play</button>
+    </div>
+    <p class="rating">Planned rating: 17+ · Content filters in Settings</p>
+  </div>
+</section>
+
+<!-- Loading -->
+<section id="loading" class="screen">
+  <div class="load-inner">
+    <h1 class="logo small">SOUTHBOUND</h1>
+    <div class="bar"><i id="loadbar"></i></div>
+    <p id="loadtext">Loading…</p>
+    <p class="tip" id="tip"></p>
+  </div>
+</section>
+
+<!-- HUD -->
+<section id="hud">
+  <div class="mini-wrap"><canvas id="minimap" width="200" height="200"></canvas></div>
+  <div id="speedo"><b id="speed">0</b><span id="speedunit">MPH</span></div>
+  <div id="clock"></div>
+  <div id="region"></div>
+  <div id="prompt"></div>
+  <div id="toast"></div>
+  <div id="fps"></div>
+  <div id="bigmapwrap"><canvas id="bigmap" width="900" height="900"></canvas><p>Press M to close</p></div>
+</section>
+
+<!-- Touch controls -->
+<section id="touch">
+  <div id="lookpad"></div>
+  <div id="stick"><div id="knob"></div></div>
+  <div class="tbtns">
+    <button data-btn="enter">🚗</button>
+    <button data-btn="jump">⤒</button>
+    <button data-btn="sprint">»</button>
+  </div>
+  <div class="tbtns top">
+    <button data-btn="map">🗺️</button>
+    <button data-btn="pause">❚❚</button>
+  </div>
+</section>
+
+<!-- Pause -->
+<section id="pause" class="screen overlay">
+  <div class="panel">
+    <h2>Paused</h2>
+    <button id="resume" class="primary">Resume</button>
+    <button id="pause-settings">Settings</button>
+    <button id="pause-map">Map</button>
+    <button id="quit">Quit to title</button>
+    <div class="controls-help">
+      <h3>Controls</h3>
+      <p><b>WASD</b> move / drive · <b>Mouse</b> look · <b>Shift</b> sprint · <b>Space</b> jump / handbrake</p>
+      <p><b>F</b> enter / exit vehicle · <b>H</b> horn · <b>V</b> camera · <b>M</b> map · <b>Esc</b> pause</p>
+      <p>Gamepad supported: sticks, triggers to drive, A jump, Y enter.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Settings -->
+<section id="settings" class="screen overlay">
+  <div class="panel wide">
+    <div class="set-head"><h2>Settings</h2><button id="close-settings" class="ghost">✕</button></div>
+    <nav id="tabs"></nav>
+    <div id="setbody"></div>
+    <div class="set-foot">
+      <span id="restart-note"></span>
+      <button id="restart" class="primary" style="display:none">Restart world to apply</button>
+    </div>
+  </div>
+</section>
+
+<script type="module" src="src/main.js"></script>
+</body>
+</html>
