@@ -1,0 +1,12 @@
+[
+  {"setup": {"hour": 17.2, "teleport": [652, 1060, 0], "look": [0, 0.12], "region": true}, "input": {}, "seconds": 1.5},
+  {"input": {"moveY": 1}, "seconds": 3},
+  {"setup": {"weapon": "pistol", "facePed": true}, "input": {"aim": true}, "seconds": 1.0, "facePedEvery": 3},
+  {"input": {"aim": true, "fire": true}, "seconds": 2.0, "facePedEvery": 3},
+  {"setup": {"wanted": 3}, "input": {"aim": true}, "seconds": 0.6},
+  {"input": {"moveY": 1, "sprint": true}, "seconds": 4},
+  {"setup": {"carjack": true}, "input": {}, "seconds": 0.8},
+  {"input": {"moveY": 1, "throttle": 1}, "seconds": 4},
+  {"input": {"moveX": 1, "moveY": 0.7, "throttle": 0.7, "handbrake": true}, "seconds": 1.2},
+  {"input": {"moveY": 1, "throttle": 1}, "seconds": 5}
+]
