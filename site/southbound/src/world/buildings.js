@@ -89,7 +89,7 @@ float sbRough; float sbMetal; vec3 sbEmit;
     vec3 warm = mix(vec3(1.0,0.72,0.42), vec3(0.85,0.9,1.0), step(0.8, sbHash(cid+3.3)));
     if (shop) { lit = 1.0; warm = vec3(1.0, 0.85, 0.6); }
     float litWin = mix(isWin * lit * (0.6 + 0.4*sbHash(cid+seed*2.0)), winSz.x*winSz.y*0.3, aliasFade);
-    sbEmit = warm * litWin * uNight * (shop ? 0.9 : (style < 0.5 ? 0.3 : 0.45));
+    sbEmit = warm * litWin * uNight * (shop ? 0.42 : (style < 0.5 ? 0.26 : 0.36));
   }
 }`)
       .replace('#include <roughnessmap_fragment>', 'float roughnessFactor = sbRough;')

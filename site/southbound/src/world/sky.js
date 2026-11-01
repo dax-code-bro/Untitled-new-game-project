@@ -149,7 +149,7 @@ export function createSky(renderer, scene, quality) {
         sun.color.setRGB(1.0, lerp(0.55, 0.96, warm), lerp(0.3, 0.9, warm));
         sun.intensity = 3.2 * day;
       }
-      hemi.intensity = lerp(0.35, 0.7, day);
+      hemi.intensity = lerp(0.5, 0.7, day);
       hemi.color.setRGB(lerp(0.22, 0.75, day), lerp(0.28, 0.85, day), lerp(0.55, 1.0, day));
 
       fogColorAt(h, fogCol);
@@ -171,7 +171,7 @@ export function createSky(renderer, scene, quality) {
         if (envRT) envRT.dispose();
         envRT = next;
         scene.environment = envRT.texture;
-        scene.environmentIntensity = lerp(0.06, 0.22, day);
+        scene.environmentIntensity = lerp(0.12, 0.22, day);
       }
     },
   };

@@ -45,6 +45,16 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 - [x] HUD: health/armor under the radar, money, wanted stars, weapon + ammo, police on the radar
 - [x] Game ships as one bundled script so it runs on older phones (tools/southbound/build.mjs)
 
+## Phase 1.6 — Cinematic graphics pass (done)
+
+- [x] Photo-scanned CC0 surfaces (ambientCG) in GPU-compressed KTX2 for terrain, roads, sidewalks, brick and concrete walls
+- [x] Terrain: height-blended layers, anti-tiling, triplanar cliffs, normal maps
+- [x] Height fog with sun glow (golden-hour haze), cloud layer
+- [x] Post chain (pmndrs postprocessing + N8AO): AO, sun shafts, DOF (Ultra), bloom, AgX tone mapping, colour grade, grain
+- [ ] Realistic tree models (current trees are simple shapes; need a CC0 photogrammetry tree pack)
+- [ ] Rain / wet roads with reflections, volumetric clouds
+- [ ] Higher-detail cars and characters
+
 ## Phase 2 — World depth
 
 - [ ] Expand map to more of the continent's southern side (multiple states/regions)
