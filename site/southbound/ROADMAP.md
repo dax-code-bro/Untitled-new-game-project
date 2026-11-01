@@ -87,6 +87,16 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 
 ---
 
+## Known issues / next fixes
+
+- Frame rates have only been measured in a software renderer (the cloud box has
+  no GPU). Real phone and PC frame rates still need testing on actual devices.
+- Characters are simple shapes for now (no skinned models).
+- Cars can't be damaged yet. Collisions push and slow you down.
+- Traffic has no traffic lights, so cars cross intersections without stopping
+  for each other.
+- Buildings are solid for now. The interior system is Phase 2.
+
 ## Session log
 
 - **Session 1:** Phase 1 built. External asset sites are blocked by the cloud

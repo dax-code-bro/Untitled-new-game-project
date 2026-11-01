@@ -231,8 +231,9 @@ export class Heightmap {
         const x = -half + i * cell, k = j * n + i, y = h[k];
         const w = Math.max(0, wl[k]);
         const nearWater = y < w + 1.4 || y < 2.2;
-        const sand = nearWater ? 1 : smoothstep(3.5, 2.2, y - Math.max(w, 0));
-        const forest = forestMask(x, z);
+        const bay = bayouMask(x, z);
+        const sand = (nearWater ? 1 : smoothstep(3.5, 2.2, y - Math.max(w, 0))) * (1 - bay * 0.85);
+        const forest = Math.max(forestMask(x, z), bay * 0.9);
         const dry = clamp(plainsMask(x, z) * 0.9 + fbm(x * 0.004, z * 0.004, 2, 51) * 0.6, 0, 1) * (1 - forest);
         let paved = splat[k * 4 + 3] / 255;
         if (x > cx0 && x < cx1 && z > cz0 && z < cz1) paved = 1;

@@ -148,7 +148,7 @@ float sbRough; float sbBump;
   grass = mix(grass, vec3(0.22,0.30,0.09), micro*0.5);
   vec3 dry   = mix(vec3(0.50,0.42,0.20), vec3(0.62,0.52,0.28), macro);
   vec3 forest= mix(vec3(0.13,0.11,0.06), vec3(0.17,0.20,0.08), sbNoise(vWPos.xz*0.15));
-  vec3 sand  = mix(vec3(0.70,0.62,0.45), vec3(0.80,0.72,0.55), sbNoise(vWPos.xz*0.3));
+  vec3 sand  = mix(vec3(0.58,0.50,0.36), vec3(0.66,0.58,0.42), sbNoise(vWPos.xz*0.3));
   vec3 mud   = vec3(0.24,0.20,0.14);
   vec3 rock  = mix(vec3(0.36,0.34,0.32), vec3(0.52,0.49,0.45), sbFbm(vec2(vWPos.x+vWPos.z, vWPos.y*3.0)*0.08));
   vec3 paved = mix(vec3(0.085,0.085,0.09), vec3(0.12,0.12,0.125), micro);

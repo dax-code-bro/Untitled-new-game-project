@@ -1,0 +1,10 @@
+[
+  {"setup": {"hour": 17.6, "teleport": [234, 1051, 1.5708], "look": [1.5708, 0.12], "region": true}, "input": {"moveY": 1, "moveX": 0.15}, "seconds": 2.0},
+  {"setup": {"enter": true}, "input": {}, "seconds": 0.5},
+  {"setup": {"auto": [250, 952, -1.6, 26], "region": true}, "input": {}, "seconds": 7},
+  {"setup": {"auto": [-110, 860, -2.0, 24], "region": true}, "input": {}, "seconds": 4},
+  {"setup": {"hour": 21.4, "auto": [644, 1300, 3.1416, 18], "region": true}, "input": {}, "seconds": 5},
+  {"setup": {"hour": 8.2, "auto": [-720, -1020, 3.1416, 22], "region": true}, "input": {}, "seconds": 5},
+  {"setup": {"hour": 18.2, "auto": [1300, -400, 3.1416, 26], "region": true}, "input": {}, "seconds": 5},
+  {"setup": {"hour": 11, "exit": true, "teleport": [-1350, -1250, 0.7], "look": [0.7, 0.1], "region": true}, "input": {"moveY": 1, "sprint": true}, "seconds": 4}
+]

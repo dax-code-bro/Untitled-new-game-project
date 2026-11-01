@@ -19,7 +19,7 @@ import { CameraRig } from './core/camera.js';
 import { createPost } from './core/post.js';
 import { GameAudio } from './core/audio.js';
 import { HUD } from './ui/hud.js';
-import { nextFrame, clamp } from './util.js';
+import { nextFrame, clamp, wrapAngle } from './util.js';
 
 const $ = (s) => document.querySelector(s);
 const settings = loadSettings();
@@ -61,6 +61,7 @@ async function createGame(progress) {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: q.aa === 'msaa', powerPreference: 'high-performance', stencil: false });
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.0;
+  renderer.info.autoReset = false;
   renderer.shadowMap.enabled = q.shadows > 0;
   renderer.shadowMap.type = q.shadows >= 3 ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
   const scene = new THREE.Scene();
@@ -209,8 +210,10 @@ async function createGame(progress) {
     // fps tracking (real frame time, before clamping)
     S.frames++; S.fpsTimer += dt;
     if (S.fpsTimer >= 0.5) { S.fps = S.frames / S.fpsTimer; S.frames = 0; S.fpsTimer = 0; }
-    dt = Math.min(dt, 0.05);
+    tick(Math.min(dt, 0.05));
+  }
 
+  function tick(dt) {
     const a = input.poll();
     if (S.override) Object.assign(a, S.override);
     if (a.pause) setPaused(!S.paused);
@@ -234,7 +237,8 @@ async function createGame(progress) {
       focus.copy(player.pos);
     } else {
       const v = S.vehicle;
-      v.physics(dt, { throttle: a.throttle, brake: a.brake, steer: -a.moveX, handbrake: a.handbrake }, hm, collision);
+      const ctl = S.auto ? autopilot(v, dt) : { throttle: a.throttle, brake: a.brake, steer: -a.moveX, handbrake: a.handbrake };
+      v.physics(dt, ctl, hm, collision);
       for (const p of parked) {
         const dx = p.pos.x - v.pos.x, dz = p.pos.z - v.pos.z, d = Math.hypot(dx, dz);
         if (d < 3.2 && d > 1e-3) { v.pos.x -= (dx / d) * (3.2 - d); v.pos.z -= (dz / d) * (3.2 - d); v.vel.multiplyScalar(0.7); v.impact = Math.max(v.impact, 3); }
@@ -262,7 +266,7 @@ async function createGame(progress) {
     scene.fog.density = 1.6 / Math.max(dd, 400) * (1 + sky.night * 0.6);
     grassUniforms.uSunDir.value.copy(sky.sunDir);
     grassUniforms.uSunColor.value.copy(sky.sun.color).multiplyScalar(sky.sun.intensity * 0.35);
-    grassUniforms.uAmbient.value.copy(sky.hemi.color).multiplyScalar(sky.hemi.intensity * 0.6);
+    grassUniforms.uAmbient.value.copy(sky.hemi.color).multiplyScalar(0.12 + sky.hemi.intensity * 0.9);
     grassUniforms.uFogColor.value.copy(scene.fog.color);
     grassUniforms.uFogDensity.value = scene.fog.density;
 
@@ -291,9 +295,61 @@ async function createGame(progress) {
     });
   }
 
+  // Road-following autopilot (demo camera / future cruise control)
+  const _p = {};
+  function edgePos(st, ahead) {
+    const e = st.e, d = st.dir > 0 ? st.s + ahead : e.len - st.s - ahead;
+    traffic.sampleEdge(e, d, _p);
+    const tx = _p.tx * st.dir, tz = _p.tz * st.dir;
+    return { x: _p.x - tz * 3, z: _p.z + tx * 3, tx, tz };
+  }
+  function autopilot(v, dt) {
+    const st = S.auto;
+    // advance s by projecting the car onto the edge
+    let best = st.s, bd = Infinity;
+    for (let k = -10; k <= 30; k += 1) {
+      const q = edgePos(st, k);
+      const d = Math.hypot(q.x - v.pos.x, q.z - v.pos.z);
+      if (d < bd) { bd = d; best = st.s + k; }
+    }
+    st.s = Math.max(0, best);
+    if (st.s > st.e.len - 4) {
+      const nodeId = st.dir > 0 ? st.e.b : st.e.a;
+      const node = graph.nodes.get(nodeId);
+      const cur = edgePos(st, 0);
+      let pick = null, score = -2;
+      for (const id of node.edges) {
+        if (id === st.e.id) continue;
+        const e = graph.edges[id], dir = e.a === nodeId ? 1 : -1;
+        const q = edgePos({ e, dir, s: 0 }, 10);
+        const sc = (cur.tx * q.tx + cur.tz * q.tz) + (st.turn || 0) * (cur.tz * q.tx - cur.tx * q.tz);
+        if (sc > score) { score = sc; pick = { e, dir }; }
+      }
+      if (pick) { st.e = pick.e; st.dir = pick.dir; st.s = 0; } else { st.dir *= -1; st.s = 0; }
+    }
+    const look = 10 + Math.abs(v.speed) * 0.6;
+    const t = edgePos(st, look);
+    const want = Math.atan2(t.x - v.pos.x, t.z - v.pos.z);
+    const steer = clamp(wrapAngle(want - v.heading) * 2.4, -1, 1);
+    const target = (st.speed || st.e.speed * 1.15) * (1 - Math.min(Math.abs(steer), 1) * 0.45);
+    const err = target - v.speed;
+    return { throttle: err > 0 ? clamp(err * 0.3, 0, 1) : 0, brake: err < -2 ? clamp(-err * 0.15, 0, 1) : 0, steer, handbrake: false };
+  }
+  function nearestRoad(x, z) {
+    let best = null, bd = Infinity;
+    for (const e of graph.edges) {
+      for (let i = 0; i < e.pts.length; i++) {
+        const d = Math.hypot(e.pts[i][0] - x, e.pts[i][1] - z);
+        if (d < bd) { bd = d; best = { e, s: e.acc[i] }; }
+      }
+    }
+    return best;
+  }
+
   function render() {
+    renderer.info.reset();
     if (post) post.render(); else renderer.render(scene, camera);
-    stats.drawCalls = renderer.info.render.calls;
+    stats.drawCalls = renderer.info.render.calls;  // all passes this frame
     stats.tris = renderer.info.render.triangles;
   }
 
@@ -326,6 +382,25 @@ async function createGame(progress) {
       rig.yaw = heading;
     },
     lookAt(yaw, pitch) { rig.yaw = yaw; rig.pitch = pitch; },
+    // Put the current vehicle on the nearest road, facing `heading`, and let the autopilot drive.
+    autoDrive(x, z, heading, speed) {
+      if (S.mode !== 'car') return false;
+      const r = nearestRoad(x, z);
+      const v = S.vehicle;
+      const fx = Math.sin(heading), fz = Math.cos(heading);
+      traffic.sampleEdge(r.e, r.s, _p);
+      const dir = _p.tx * fx + _p.tz * fz >= 0 ? 1 : -1;
+      S.auto = { e: r.e, dir, s: dir > 0 ? r.s : r.e.len - r.s, speed };
+      const q = edgePos(S.auto, 0);
+      v.pos.set(q.x, collision.surface(q.x, q.z, (_p.y || 0) + 3), q.z);
+      v.heading = Math.atan2(q.tx, q.tz);
+      v.vel.set(q.tx * (speed || 15), q.tz * (speed || 15));
+      v.airborne = false; v.vy = 0;
+      rig.yaw = v.heading;
+      return true;
+    },
+    stopAuto() { S.auto = null; },
+    exitCar() { if (S.mode === 'car') { S.auto = null; S.vehicle.vel.set(0, 0); exitVehicle(); } },
     enterNearest() {
       let best = null, bd = 30;
       for (const v of parked) { const d = v.pos.distanceTo(player.pos); if (d < bd) { bd = d; best = v; } }
@@ -337,8 +412,10 @@ async function createGame(progress) {
     },
     pause: setPaused,
     freeze(f) { S.frozen = f; },
+    // Advance the game by exactly n fixed steps (used to capture smooth video on slow machines)
+    step(n = 1, dt = 1 / 30) { for (let i = 0; i < n; i++) tick(dt); S.fps = 1 / dt; },
     toggleMap: () => hud.toggleMap(),
-    showRegion: () => { hud.lastRegion = ''; },
+    showRegion: () => { hud.lastRegion = ''; hud.toastTimer = 0.001; },
     renderer, scene, camera,
   };
   window.SB = api;

@@ -30,6 +30,14 @@ export function createSky(renderer, scene, quality) {
   u.mieCoefficient.value = 0.005;
   u.mieDirectionalG.value = 0.82;
   scene.add(sky);
+  // Night: pull the sky toward deep blue instead of the model's muddy brown
+  const skyNight = { value: 0 };
+  sky.material.uniforms.uSkyNight = skyNight;
+  sky.material.fragmentShader = sky.material.fragmentShader
+    .replace('void main() {', 'uniform float uSkyNight;\nvoid main() {')
+    .replace('gl_FragColor = vec4( retColor, 1.0 );', `vec3 nightCol = mix(vec3(0.004,0.007,0.02), vec3(0.02,0.035,0.07), pow(1.0 - max(direction.y, 0.0), 3.0));
+			retColor = mix(retColor, nightCol, uSkyNight);
+			gl_FragColor = vec4( retColor, 1.0 );`);
 
   // Separate scene for building the environment (reflection) map
   const envScene = new THREE.Scene();
@@ -94,6 +102,7 @@ export function createSky(renderer, scene, quality) {
       const day = smoothstep(-0.08, 0.12, elev);
       state.night = 1 - smoothstep(-0.12, 0.05, elev);
       worldUniforms.uNight.value = state.night;
+      skyNight.value = 1 - smoothstep(-0.2, 0.02, elev);
 
       // Sun / moon key light
       const moonDir = sunDir.clone().negate();
@@ -115,7 +124,7 @@ export function createSky(renderer, scene, quality) {
         sun.color.setRGB(1.0, lerp(0.55, 0.96, warm), lerp(0.3, 0.9, warm));
         sun.intensity = 3.2 * day;
       }
-      hemi.intensity = lerp(0.08, 0.55, day);
+      hemi.intensity = lerp(0.12, 0.7, day);
       hemi.color.setRGB(lerp(0.25, 0.75, day), lerp(0.3, 0.85, day), lerp(0.5, 1.0, day));
 
       fogColorAt(h, fogCol);
@@ -137,7 +146,7 @@ export function createSky(renderer, scene, quality) {
         if (envRT) envRT.dispose();
         envRT = next;
         scene.environment = envRT.texture;
-        scene.environmentIntensity = lerp(0.12, 1.0, day);
+        scene.environmentIntensity = lerp(0.015, 0.22, day);
       }
     },
   };

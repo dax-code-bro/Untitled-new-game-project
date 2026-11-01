@@ -41,7 +41,7 @@ export function createPost(renderer, scene, camera, quality) {
     composer.addPass(ao);
   }
   if (quality.bloom) {
-    bloom = new UnrealBloomPass(new THREE.Vector2(size.x / 2, size.y / 2), 0.28, 0.45, 0.88);
+    bloom = new UnrealBloomPass(new THREE.Vector2(size.x / 2, size.y / 2), 0.2, 0.4, 0.92);
     composer.addPass(bloom);
   }
   composer.addPass(new OutputPass());

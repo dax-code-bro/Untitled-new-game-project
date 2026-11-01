@@ -62,6 +62,8 @@ float sbRough; float sbMetal; vec3 sbEmit;
     if (shop) { float sf = fract(u/6.0); isWin = step(0.08, sf)*step(sf, 0.92)*step(v, 3.6); }
     // keep windows off the very top of each wall
     isWin *= step(v, vSize.y - 0.8);
+    float aliasFade = smoothstep(0.25, 0.6, max(fwidth(g.x), fwidth(g.y)));
+    isWin = mix(isWin, winSz.x*winSz.y, aliasFade);
     float facade = 0.85 + 0.15*sbNoise(vec2(u, v)*0.7) - grime*0.12;
     // brick courses
     if (style > 1.5 && style < 2.5) facade *= 0.92 + 0.08*step(0.5, fract(v*6.0 + step(0.5, fract(u*2.0))*0.5));
@@ -76,10 +78,11 @@ float sbRough; float sbMetal; vec3 sbEmit;
     diffuseColor.rgb = mix(wall, glass, isWin);
     sbRough = mix(0.88, 0.08, isWin);
     sbMetal = isWin * (style < 0.5 ? 0.85 : 0.5);
-    float lit = step(0.45 - uNight*0.15, sbHash(cid*1.7 + seed));
+    float lit = step(0.62, sbHash(cid*1.7 + seed));
     vec3 warm = mix(vec3(1.0,0.72,0.42), vec3(0.85,0.9,1.0), step(0.8, sbHash(cid+3.3)));
     if (shop) { lit = 1.0; warm = vec3(1.0, 0.85, 0.6); }
-    sbEmit = warm * isWin * lit * uNight * (shop ? 2.5 : 1.6) * (0.6 + 0.4*sbHash(cid+seed*2.0));
+    float litWin = mix(isWin * lit * (0.6 + 0.4*sbHash(cid+seed*2.0)), winSz.x*winSz.y*0.3, aliasFade);
+    sbEmit = warm * litWin * uNight * (shop ? 0.9 : 0.5);
   }
 }`)
       .replace('#include <roughnessmap_fragment>', 'float roughnessFactor = sbRough;')

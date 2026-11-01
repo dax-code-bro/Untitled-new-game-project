@@ -104,6 +104,39 @@ if (scenario === 'smoke') {
   console.log('state', JSON.stringify(await sb(() => window.SB.state)));
 }
 
+if (scenario === 'capture') {
+  // Fixed-step capture: every video frame is exactly 1/FPS of game time,
+  // so the result plays smoothly no matter how slow this machine renders.
+  const FPS = +(process.env.FPS || 24);
+  const script = JSON.parse(fs.readFileSync(process.env.SCRIPT || path.join(here, 'capture.json'), 'utf8'));
+  const framesDir = path.join(out, 'frames');
+  fs.mkdirSync(framesDir, { recursive: true });
+  await sb(() => window.SB.freeze(true));
+  let f = 0;
+  for (const seg of script) {
+    if (seg.setup) await sb((st) => {
+      const S = window.SB;
+      if (st.hour !== undefined) S.setHour(st.hour);
+      if (st.teleport) S.teleport(...st.teleport);
+      if (st.look) S.lookAt(...st.look);
+      if (st.enter) S.enterNearest();
+      if (st.auto) S.autoDrive(...st.auto);
+      if (st.stopAuto) S.stopAuto();
+      if (st.exit) S.exitCar();
+      if (st.look) S.lookAt(...st.look);
+      if (st.region) S.showRegion();
+    }, seg.setup);
+    await sb((o) => window.SB.setOverride(o), seg.input || {});
+    const n = Math.round((seg.seconds || 1) * FPS);
+    for (let i = 0; i < n; i++, f++) {
+      await sb((dt) => window.SB.step(1, dt), 1 / FPS);
+      await page.screenshot({ path: path.join(framesDir, `f${String(f).padStart(5, '0')}.jpg`), type: 'jpeg', quality: 88, timeout: 120000 });
+      if (f % 48 === 0) console.log('frame', f, JSON.stringify(await sb(() => window.SB.state)));
+    }
+  }
+  console.log('captured', f, 'frames');
+}
+
 fs.writeFileSync(path.join(out, `log-${preset}-${scenario}.txt`), errors.join('\n') || 'no console errors');
 console.log(errors.length ? errors.slice(0, 20).join('\n') : 'no console errors');
 await context.close();

@@ -60,6 +60,9 @@ export class HUD {
     }
     ctx.fillStyle = 'rgba(40,40,46,0.9)';
     for (const b of buildings) ctx.fillRect(toMap(b.x - b.w / 2), toMap(b.z - b.d / 2), Math.max(1, b.w / s), Math.max(1, b.d / s));
+    this.miniMap = document.createElement('canvas');
+    this.miniMap.width = this.miniMap.height = MAP;
+    this.miniMap.getContext('2d').drawImage(c, 0, 0);
     ctx.font = 'bold 22px system-ui, sans-serif';
     ctx.textAlign = 'center';
     ctx.lineWidth = 4;
@@ -96,7 +99,7 @@ export class HUD {
     const k = 1 / (s * zoom);
     mm.scale(k * s, k * s);
     mm.translate(-(st.pos.x + WORLD.half) / s, -(st.pos.z + WORLD.half) / s);
-    mm.drawImage(this.worldMap, 0, 0);
+    mm.drawImage(this.miniMap, 0, 0);
     mm.fillStyle = '#ff5a3c';
     for (const c of st.traffic) mm.fillRect((c.x + WORLD.half) / s - 1.2, (c.z + WORLD.half) / s - 1.2, 2.4, 2.4);
     mm.restore();
