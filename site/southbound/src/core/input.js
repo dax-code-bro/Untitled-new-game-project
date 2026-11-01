@@ -29,6 +29,12 @@ export class Input {
       this.look.x += e.movementX; this.look.y += e.movementY; this.lastLookTime = performance.now();
     });
     addEventListener('wheel', (e) => { this.wheel += Math.sign(e.deltaY); }, { passive: true });
+    this.mouse = new Set();
+    this.mousePressed = new Set();
+    canvas.addEventListener('mousedown', (e) => { if (this.locked) { this.mouse.add(e.button); this.mousePressed.add(e.button); } });
+    addEventListener('mouseup', (e) => this.mouse.delete(e.button));
+    canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+    this.touchAim = false;
 
     if (touchRoot) this.setupTouch(touchRoot);
   }
@@ -68,7 +74,11 @@ export class Input {
     addEventListener('touchend', end); addEventListener('touchcancel', end);
     root.querySelectorAll('[data-btn]').forEach((b) => {
       const id = b.dataset.btn;
-      b.addEventListener('touchstart', (e) => { this.touchButtons.add(id); this.touchPressed.add(id); e.preventDefault(); }, { passive: false });
+      b.addEventListener('touchstart', (e) => {
+        this.touchButtons.add(id); this.touchPressed.add(id);
+        if (id === 'aim') { this.touchAim = !this.touchAim; b.classList.toggle('on', this.touchAim); }
+        e.preventDefault();
+      }, { passive: false });
       b.addEventListener('touchend', () => this.touchButtons.delete(id));
     });
   }
@@ -98,6 +108,11 @@ export class Input {
       lookX: this.look.x, lookY: this.look.y,
       zoom: this.wheel,
       throttle: 0, brake: 0,
+      aim: this.mouse.has(2) || this.touchAim || k('KeyE'),
+      fire: this.mouse.has(0) || this.btn('fire') || k('ControlLeft'),
+      firePressed: this.mousePressed.has(0) || this.btnHit('fire') || this.hit('ControlLeft'),
+      weapon: this.hit('KeyQ') || this.hit('Digit1') || this.hit('Digit2') || this.btnHit('weapon'),
+      reload: this.hit('KeyR'),
     };
     // gamepad
     const pads = navigator.getGamepads ? navigator.getGamepads() : [];
@@ -114,6 +129,11 @@ export class Input {
       if (g.buttons[9]?.pressed && !this._padStart) a.pause = true;
       a.handbrake = a.handbrake || g.buttons[0]?.pressed || g.buttons[5]?.pressed;
       a.sprint = a.sprint || g.buttons[10]?.pressed;
+      if ((g.buttons[6]?.value || 0) > 0.5) a.aim = true;
+      if ((g.buttons[7]?.value || 0) > 0.5) { a.fire = true; a.firePressed = a.firePressed || !this._padRT; }
+      this._padRT = (g.buttons[7]?.value || 0) > 0.5;
+      if (g.buttons[2]?.pressed && !this._padX) a.weapon = true;
+      this._padX = g.buttons[2]?.pressed;
       this._padA = g.buttons[0]?.pressed; this._padY = g.buttons[3]?.pressed; this._padStart = g.buttons[9]?.pressed;
     }
     a.moveX = Math.max(-1, Math.min(1, a.moveX));
@@ -124,6 +144,7 @@ export class Input {
     this.wheel = 0;
     this.pressed.clear();
     this.touchPressed.clear();
+    this.mousePressed.clear();
     return a;
   }
 }

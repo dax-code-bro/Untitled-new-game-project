@@ -25,6 +25,11 @@ export class HUD {
     this.toastTimer = 0;
     this.mapOpen = false;
     this.worldMap = this.renderWorldMap(hm, graph, buildings);
+    this.hp = this.el('#hpbar'); this.armorEl = this.el('#armorbar');
+    this.moneyEl = this.el('#money'); this.wantedEl = this.el('#wanted'); this.stars = [...this.wantedEl.children];
+    this.wicon = this.el('#wicon'); this.ammoEl = this.el('#ammo');
+    this.cross = this.el('#crosshair'); this.big = this.el('#bigmsg');
+    this.shownMoney = -1;
   }
 
   renderWorldMap(hm, graph, buildings) {
@@ -80,6 +85,14 @@ export class HUD {
 
   toast(msg, secs = 3) { this.toastEl.textContent = msg; this.toastEl.classList.add('show'); this.toastTimer = secs; }
 
+  bigMessage(title, sub, secs = 4) {
+    this.big.querySelector('b').textContent = title;
+    this.big.querySelector('span').textContent = sub;
+    this.big.classList.add('show');
+    clearTimeout(this._big);
+    this._big = setTimeout(() => this.big.classList.remove('show'), secs * 1000);
+  }
+
   toggleMap() {
     this.mapOpen = !this.mapOpen;
     this.big.parentElement.classList.toggle('open', this.mapOpen);
@@ -102,6 +115,10 @@ export class HUD {
     mm.drawImage(this.miniMap, 0, 0);
     mm.fillStyle = '#ff5a3c';
     for (const c of st.traffic) mm.fillRect((c.x + WORLD.half) / s - 1.2, (c.z + WORLD.half) / s - 1.2, 2.4, 2.4);
+    if (st.police) {
+      mm.fillStyle = (performance.now() / 250) % 2 < 1 ? '#3b7bff' : '#ff3b3b';
+      for (const c of st.police) mm.fillRect((c.x + WORLD.half) / s - 2, (c.z + WORLD.half) / s - 2, 4, 4);
+    }
     mm.restore();
     // player arrow
     mm.save();
@@ -148,6 +165,23 @@ export class HUD {
     if (this.toastTimer > 0 && (this.toastTimer -= dt) <= 0) this.toastEl.classList.remove('show');
     this.promptEl.textContent = st.prompt || '';
     this.promptEl.classList.toggle('show', !!st.prompt);
+    // action HUD
+    if (st.health !== undefined) {
+      this.hp.style.setProperty('--v', `${Math.max(0, st.health)}%`);
+      this.hp.classList.toggle('low', st.health < 25);
+      this.armorEl.style.setProperty('--v', `${Math.max(0, st.armor)}%`);
+      if (st.money !== this.shownMoney) {
+        if (st.money > this.shownMoney && this.shownMoney >= 0) { this.moneyEl.classList.remove('gain'); void this.moneyEl.offsetWidth; this.moneyEl.classList.add('gain'); }
+        this.shownMoney = st.money;
+        this.moneyEl.textContent = '$' + st.money.toLocaleString('en-US');
+      }
+      this.stars.forEach((el, i) => el.classList.toggle('on', i < st.wanted));
+      this.wantedEl.classList.toggle('flash', !!st.wantedLost);
+      this.wicon.textContent = st.weaponIcon;
+      this.ammoEl.textContent = st.ammo || '';
+      this.cross.classList.toggle('show', !!st.aiming);
+      if (st.hitMarker) { this.cross.classList.add('hit'); clearTimeout(this._hm); this._hm = setTimeout(() => this.cross.classList.remove('hit'), 120); }
+    }
     this.fpsEl.style.display = this.settings.showFps ? 'block' : 'none';
     if (this.settings.showFps) this.fpsEl.textContent = st.fpsText;
   }

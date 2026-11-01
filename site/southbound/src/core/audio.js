@@ -98,6 +98,33 @@ export class GameAudio {
       o.connect(g); g.connect(this.amb); o.start(s); o.stop(s + 0.06);
     }
   }
+  gunshot(vol = 1) {
+    if (!this.ctx) return;
+    const ctx = this.ctx, t = ctx.currentTime;
+    const src = ctx.createBufferSource(); src.buffer = this.noiseBuf;
+    const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.setValueAtTime(5000, t); f.frequency.exponentialRampToValueAtTime(300, t + 0.25);
+    const g = ctx.createGain(); g.gain.setValueAtTime(0.9 * vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+    src.connect(f); f.connect(g); g.connect(this.sfx); src.start(t, Math.random()); src.stop(t + 0.4);
+    const o = ctx.createOscillator(), og = ctx.createGain();
+    o.frequency.setValueAtTime(140, t); o.frequency.exponentialRampToValueAtTime(40, t + 0.12);
+    og.gain.setValueAtTime(0.7 * vol, t); og.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+    o.connect(og); og.connect(this.sfx); o.start(t); o.stop(t + 0.16);
+  }
+  siren(level) {
+    if (!this.ctx) return;
+    if (!this.sirenOsc) {
+      const ctx = this.ctx;
+      this.sirenOsc = ctx.createOscillator(); this.sirenOsc.type = 'triangle';
+      this.sirenLfo = ctx.createOscillator(); this.sirenLfo.frequency.value = 0.55;
+      const depth = ctx.createGain(); depth.gain.value = 330;
+      this.sirenLfo.connect(depth); depth.connect(this.sirenOsc.frequency);
+      this.sirenOsc.frequency.value = 980;
+      this.sirenGain = ctx.createGain(); this.sirenGain.gain.value = 0;
+      this.sirenOsc.connect(this.sirenGain); this.sirenGain.connect(this.sfx);
+      this.sirenOsc.start(); this.sirenLfo.start();
+    }
+    this.sirenGain.gain.setTargetAtTime(level * level * 0.09, this.ctx.currentTime, 0.2);
+  }
   thud(k) {
     const ctx = this.ctx, t = ctx.currentTime;
     const src = ctx.createBufferSource(); src.buffer = this.noiseBuf;

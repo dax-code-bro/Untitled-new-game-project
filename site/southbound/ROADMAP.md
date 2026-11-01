@@ -33,6 +33,18 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 - [x] HUD: minimap, speedometer, clock, region banner, FPS
 - [x] Automated playtest: screenshots + video (tools/playtest.js)
 
+## Phase 1.5 — Open-source asset pass (GTA-style) (done)
+
+- [x] Animated people from Quaternius CC0 packs (12 outfits), 24 retargeted animations
+- [x] Kenney CC0 Car Kit: 13 vehicles incl. police, taxi, ambulance, fire truck, garbage truck
+- [x] Pedestrians on city/town sidewalks: cross streets, chat, flee gunfire, get hit, die, drop cash
+- [x] Combat: fists + pistol, aiming camera, crosshair, hit detection, muzzle flash, tracers, blood (Content filter aware)
+- [x] Wanted level (1–5 stars), police cruisers with sirens that chase you, officers who get out and shoot
+- [x] Arrest and death with respawn at precinct / hospital, money, health and armor
+- [x] Carjacking: the driver gets thrown out and runs off
+- [x] HUD: health/armor under the radar, money, wanted stars, weapon + ammo, police on the radar
+- [x] Game ships as one bundled script so it runs on older phones (tools/southbound/build.mjs)
+
 ## Phase 2 — World depth
 
 - [ ] Expand map to more of the continent's southern side (multiple states/regions)
@@ -53,9 +65,9 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 | Bows | 19 | 0 |
 | Sniper rifles | 13 | 0 |
 | Marksman rifles | 45 | 0 |
-| Pistols | 63 | 0 |
+| Pistols | 63 | 1 |
 | Weapon attachments | 193+ | 0 |
-| Land vehicles | 93 | 1 (+traffic variants) |
+| Land vehicles | 93 | 13 |
 | Water vehicles | 16 | 0 |
 | Air vehicles | 11 | 0 |
 | Car upgrades (per car) | 63 | 0 |
@@ -68,7 +80,7 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 
 ## Phase 4 — Systems
 
-- [ ] Combat: shooting, aiming, cover, damage model
+- [~] Combat: shooting and aiming done; cover, more weapons, vehicle damage model to do
 - [ ] Hunting: animals with AI, tracking, skinning, trophies
 - [ ] Fishing: casting, fish species by water type, reel mini-game
 - [ ] Economy: money, shops, property ownership
