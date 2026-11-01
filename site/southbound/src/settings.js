@@ -18,21 +18,21 @@ export const PRESETS = {
   },
   medium: {
     label: 'Medium', maxPixelRatio: 1.25, minScale: 0.65, targetFps: 60,
-    terrainSegs: 512, treeCount: 18000, grass: 25000, drawDistance: 1600,
+    terrainSegs: 512, treeCount: 18000, grass: 0, drawDistance: 1600,
     shadows: 2, shadowMap: 2048, shadowRange: 100,
     bloom: true, ao: false, aa: 'smaa', traffic: 28, physicalPaint: true,
     anisotropy: 8, envEvery: 12, grassRadius: 32,
   },
   high: {
     label: 'High', maxPixelRatio: 2, minScale: 0.7, targetFps: 90,
-    terrainSegs: 768, treeCount: 32000, grass: 60000, drawDistance: 2400,
+    terrainSegs: 768, treeCount: 32000, grass: 0, drawDistance: 2400,
     shadows: 3, shadowMap: 4096, shadowRange: 140,
     bloom: true, ao: false, aa: 'smaa', traffic: 45, physicalPaint: true,
     anisotropy: 16, envEvery: 8, grassRadius: 45,
   },
   ultra: {
     label: 'Ultra', maxPixelRatio: 3, minScale: 0.75, targetFps: 90,
-    terrainSegs: 1024, treeCount: 55000, grass: 120000, drawDistance: 3600,
+    terrainSegs: 1024, treeCount: 55000, grass: 0, drawDistance: 3600,
     shadows: 3, shadowMap: 4096, shadowRange: 200,
     bloom: true, ao: true, aa: 'smaa', traffic: 70, physicalPaint: true,
     anisotropy: 16, envEvery: 5, grassRadius: 60,
@@ -123,7 +123,7 @@ export function resolveQuality(s) {
   if (s.ao !== null) p.ao = s.ao;
   if (s.shadows !== null) p.shadows = s.shadows;
   if (s.aa !== null) p.aa = s.aa;
-  if (s.grass === false) p.grass = 0;
+  if (s.grass === true) p.grass = { medium: 25000, high: 60000, ultra: 120000 }[s.preset] || 0;
   p.treeCount = Math.round(p.treeCount * s.treeDensity);
   p.traffic = Math.round(p.traffic * s.trafficDensity);
   p.drawDistance *= s.drawDistance;

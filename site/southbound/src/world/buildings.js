@@ -17,12 +17,18 @@ const PALETTES = {
 };
 
 function makeFacadeMaterial(surf) {
-  const real = surf && surf.bricks.real ? 1 : 0;
+  const real = surf && surf.glass.real ? 1 : 0;
+  const S = (k) => (surf ? surf[k].size : 3).toFixed(2);
   const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8, metalness: 0.0 });
   mat.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, worldUniforms);
-    shader.uniforms.tBrick = { value: surf ? surf.bricks.color : null };
-    shader.uniforms.tConc = { value: surf ? surf.concrete.color : null };
+    const T = (k, m) => ({ value: surf ? surf[k][m] : null });
+    Object.assign(shader.uniforms, {
+      tGlassC: T('glass', 'color'), tGlassN: T('glass', 'normal'), tGlassR: T('glass', 'rough'), tGlassM: T('glass', 'metal'), tGlassE: T('glass', 'emit'),
+      tOffC: T('office', 'color'), tOffN: T('office', 'normal'), tOffE: T('office', 'emit'),
+      tBrickC: T('bricks', 'color'), tBrickN: T('bricks', 'normal'),
+      tConC: T('concrete', 'color'), tPlasC: T('plaster', 'color'),
+    });
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>', '#include <common>\nattribute vec4 aInfo;\nvarying vec3 vWPos; varying vec3 vWNrm; varying vec4 vInfo; varying vec3 vSize;')
       .replace('#include <begin_vertex>', `#include <begin_vertex>
@@ -34,66 +40,105 @@ vSize = vec3(length(sbIM[0].xyz), length(sbIM[1].xyz), length(sbIM[2].xyz));`);
     shader.fragmentShader = shader.fragmentShader
       .replace('#include <common>', `#include <common>
 varying vec3 vWPos; varying vec3 vWNrm; varying vec4 vInfo; varying vec3 vSize;
-uniform float uNight; uniform sampler2D tBrick; uniform sampler2D tConc;
+uniform float uNight;
+uniform sampler2D tGlassC, tGlassN, tGlassR, tGlassM, tGlassE, tOffC, tOffN, tOffE, tBrickC, tBrickN, tConC, tPlasC;
 ${GLSL_NOISE}
-float sbRough; float sbMetal; vec3 sbEmit;
+float sbRough; float sbMetal; vec3 sbEmit; vec3 sbNt; vec3 sbT;
 `)
       .replace('#include <color_fragment>', `#include <color_fragment>
 {
   float style = vInfo.x; float baseY = vInfo.y; float seed = vInfo.z;
   vec3 base = diffuseColor.rgb;
   vec3 n = normalize(vWNrm);
-  sbRough = 0.85; sbMetal = 0.0; sbEmit = vec3(0.0);
-  float grime = sbFbm(vWPos.xz*0.05 + vWPos.y*0.03);
+  sbRough = 0.85; sbMetal = 0.0; sbEmit = vec3(0.0); sbNt = vec3(0.0, 0.0, 1.0);
+  sbT = abs(n.x) > 0.5 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
+  bool useTex = ${real}.0 > 0.5;
   if (n.y > 0.5) {
-    // roof
-    diffuseColor.rgb = (style > 3.5 && style < 4.5) ? base : mix(vec3(0.20,0.20,0.21), vec3(0.32,0.31,0.30), grime);
+    // roofs: weathered concrete / tar
+    vec3 con = useTex ? texture2D(tConC, vWPos.xz / ${S('concrete')}).rgb : vec3(0.5);
+    diffuseColor.rgb = (style > 3.5 && style < 4.5) ? base * (0.7 + 0.4 * con.r) : con * vec3(0.42, 0.41, 0.4);
+    sbRough = 0.92;
   } else if (n.y < -0.5) {
-    diffuseColor.rgb = base*0.4;
+    diffuseColor.rgb = base * 0.3;
   } else {
     float u = abs(n.x) > 0.5 ? vWPos.z : vWPos.x;
     float v = vWPos.y - baseY;
-    // window grid per style
-    vec2 cellSz = style < 0.5 ? vec2(1.6, 3.6) : style < 1.5 ? vec2(3.0, 3.6) : style < 2.5 ? vec2(3.2, 3.3) : style < 3.5 ? vec2(9.0, 6.0) : style < 4.5 ? vec2(3.6, 3.0) : vec2(4.0, 4.0);
-    vec2 winSz  = style < 0.5 ? vec2(0.92, 0.88) : style < 1.5 ? vec2(0.62, 0.55) : style < 2.5 ? vec2(0.42, 0.5) : style < 3.5 ? vec2(0.3, 0.18) : style < 4.5 ? vec2(0.32, 0.42) : vec2(0.75, 0.55);
-    vec2 g = vec2(u, v - (style < 3.5 ? 1.0 : 0.6)) / cellSz;
-    vec2 cid = floor(g); vec2 f = fract(g);
-    vec2 w = step(abs(f - 0.5), winSz*0.5);
-    float isWin = w.x*w.y * step(0.0, g.y);
-    // ground-floor shopfronts in the city
-    bool shop = (style < 2.5 || style > 4.5) && v < 4.2 && v > 0.3;
-    if (shop) { float sf = fract(u/6.0); isWin = step(0.08, sf)*step(sf, 0.92)*step(v, 3.6); }
-    // keep windows off the very top of each wall
-    isWin *= step(v, vSize.y - 0.8);
-    float aliasFade = smoothstep(0.25, 0.6, max(fwidth(g.x), fwidth(g.y)));
-    isWin = mix(isWin, winSz.x*winSz.y, aliasFade);
-    float facade = 0.85 + 0.15*sbNoise(vec2(u, v)*0.7) - grime*0.12;
-    // brick courses
-    if (style > 1.5 && style < 2.5) facade *= 0.92 + 0.08*step(0.5, fract(v*6.0 + step(0.5, fract(u*2.0))*0.5));
-    // siding boards
-    if (style > 3.5 && style < 4.5) facade *= 0.9 + 0.1*smoothstep(0.0, 0.1, fract(v*4.0));
-    // horizontal floor bands on towers/offices
-    if (style < 1.5) facade *= 0.85 + 0.15*step(0.12, fract(v/3.6));
-    vec3 wall = base * facade;
-    if (${real}.0 > 0.5) {
-      if (style > 1.5 && style < 2.5) wall = mix(wall, texture2D(tBrick, vec2(u, v) / 1.6).rgb * (0.7 + 0.5 * base), 0.8);
-      else { float cl = dot(texture2D(tConc, vec2(u, v) / 3.0).rgb, vec3(0.333)); wall *= 0.6 + 0.65 * cl; }
+    vec2 uvm = vec2(u, v);
+    // ground-floor shopfronts in the city (styles 0-2 and shops)
+    bool shop = (style < 2.5 || style > 4.5) && v < 4.4 && v > 0.25;
+    if (useTex && style < 0.5 && !shop) {
+      // photographed glass curtain wall
+      vec2 uv = uvm / vec2(${S('glass')}, ${S('glass')} * 1.2);
+      diffuseColor.rgb = texture2D(tGlassC, uv).rgb;
+      sbRough = texture2D(tGlassR, uv).g;
+      sbMetal = texture2D(tGlassM, uv).g;
+      sbNt = texture2D(tGlassN, uv).xyz * 2.0 - 1.0;
+      sbEmit = texture2D(tGlassE, uv).rgb * uNight * 1.4;
+    } else if (useTex && style < 1.5 && !shop) {
+      // photographed office facade (windows lit at night from its emission map)
+      vec2 uv = uvm / ${S('office')} + vec2(seed * 0.37, 0.0);
+      vec3 oc = texture2D(tOffC, uv).rgb;
+      float detail = dot(texture2D(tConC, uvm / ${S('concrete')}).rgb, vec3(0.333));
+      diffuseColor.rgb = oc * (0.85 + 0.3 * detail);
+      sbRough = 0.55;
+      sbNt = texture2D(tOffN, uv).xyz * 2.0 - 1.0;
+      sbEmit = texture2D(tOffE, uv).rgb * uNight * 2.2;
+    } else {
+      // brick / concrete / plaster walls with real window openings
+      vec3 wall = base;
+      if (useTex) {
+        if (style > 1.5 && style < 2.5) { wall = texture2D(tBrickC, uvm / ${S('bricks')}).rgb; sbNt = texture2D(tBrickN, uvm / ${S('bricks')}).xyz * 2.0 - 1.0; }
+        else if (style > 2.5 && style < 3.5) wall = texture2D(tConC, uvm / ${S('concrete')}).rgb * base * 1.6;
+        else wall = texture2D(tPlasC, uvm / ${S('plaster')}).rgb * base * 1.35;
+      }
+      vec2 cellSz = style < 2.5 ? vec2(3.2, 3.4) : style < 3.5 ? vec2(9.0, 6.0) : style < 4.5 ? vec2(3.6, 3.0) : vec2(4.0, 4.0);
+      vec2 winSz  = style < 2.5 ? vec2(0.42, 0.5) : style < 3.5 ? vec2(0.3, 0.18) : style < 4.5 ? vec2(0.32, 0.42) : vec2(0.75, 0.55);
+      vec2 g = vec2(u, v - (style < 3.5 ? 1.0 : 0.6)) / cellSz;
+      vec2 cid = floor(g); vec2 f = fract(g);
+      vec2 d = abs(f - 0.5) - winSz * 0.5;
+      float isWin = step(max(d.x, d.y), 0.0) * step(0.0, g.y) * step(v, vSize.y - 0.8);
+      float frame = isWin * (1.0 - step(max(d.x, d.y), -0.03));
+      float shopId = floor(u / 6.0);
+      if (shop) {
+        float sf = fract(u / 6.0);
+        isWin = step(0.06, sf) * step(sf, 0.94) * step(v, 3.7);
+        // mullions every 1.5 m and a transom bar
+        float mull = step(abs(fract(u / 1.5) - 0.5), 0.02) + step(abs(v - 2.9), 0.04);
+        frame = isWin * clamp(mull, 0.0, 1.0);
+      }
+      float aliasFade = smoothstep(0.25, 0.6, max(fwidth(g.x), fwidth(g.y)));
+      isWin = mix(isWin, winSz.x * winSz.y, aliasFade);
+      float h = sbHash(cid + seed * 13.1);
+      vec3 glass = mix(vec3(0.03, 0.04, 0.05), vec3(0.1, 0.12, 0.14), h);
+      if (shop) glass = mix(vec3(0.05, 0.05, 0.05), vec3(0.16, 0.14, 0.12), sbHash(vec2(shopId, seed)));
+      diffuseColor.rgb = mix(wall, glass, isWin);
+      diffuseColor.rgb = mix(diffuseColor.rgb, shop ? vec3(0.12) : vec3(0.75), frame);
+      sbRough = mix(0.9, 0.06, isWin);
+      sbMetal = isWin * 0.4;
+      if (isWin > 0.5) sbNt = vec3(0.0, 0.0, 1.0);
+      float lit = step(0.72, sbHash(cid * 1.7 + seed));
+      vec3 warm = mix(vec3(1.0, 0.72, 0.42), vec3(0.85, 0.9, 1.0), step(0.8, sbHash(cid + 3.3)));
+      if (shop) {
+        float sh = sbHash(vec2(shopId * 3.1, seed));
+        lit = step(0.35, sh);  // about a third of shops are closed at night
+        warm = mix(vec3(1.0, 0.82, 0.58), vec3(0.85, 0.92, 1.0), step(0.75, sh));
+        warm *= 0.55 + 0.45 * smoothstep(3.6, 0.6, v) * (0.8 + 0.2 * sbNoise(vec2(u * 0.8, v)));
+      }
+      float litWin = mix(isWin * lit * (0.6 + 0.4 * sbHash(cid + seed * 2.0)), winSz.x * winSz.y * 0.28, aliasFade);
+      sbEmit = warm * litWin * (1.0 - frame) * uNight * (shop ? 0.22 : 0.4);
     }
-    float h = sbHash(cid + seed*13.1);
-    vec3 glass = mix(vec3(0.05,0.07,0.09), vec3(0.14,0.18,0.22), h);
-    if (style < 0.5) glass = mix(vec3(0.10,0.16,0.22), vec3(0.22,0.30,0.36), h);
-    diffuseColor.rgb = mix(wall, glass, isWin);
-    sbRough = mix(0.88, 0.08, isWin);
-    sbMetal = isWin * (style < 0.5 ? 0.85 : 0.5);
-    float lit = step(0.74, sbHash(cid*1.7 + seed));
-    vec3 warm = mix(vec3(1.0,0.72,0.42), vec3(0.85,0.9,1.0), step(0.8, sbHash(cid+3.3)));
-    if (shop) { lit = 1.0; warm = vec3(1.0, 0.85, 0.6); }
-    float litWin = mix(isWin * lit * (0.6 + 0.4*sbHash(cid+seed*2.0)), winSz.x*winSz.y*0.3, aliasFade);
-    sbEmit = warm * litWin * uNight * (shop ? 0.42 : (style < 0.5 ? 0.26 : 0.36));
   }
 }`)
       .replace('#include <roughnessmap_fragment>', 'float roughnessFactor = sbRough;')
       .replace('#include <metalnessmap_fragment>', 'float metalnessFactor = sbMetal;')
+      .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
+{
+  vec3 N = normalize(vWNrm);
+  if (abs(N.y) < 0.5) {
+    vec3 nw = normalize(sbT * sbNt.x + vec3(0.0, 1.0, 0.0) * sbNt.y + N * max(sbNt.z, 0.2));
+    normal = normalize((viewMatrix * vec4(nw, 0.0)).xyz);
+  }
+}`)
       .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += sbEmit;');
   };
   return mat;

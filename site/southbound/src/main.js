@@ -67,7 +67,7 @@ async function createGame(progress) {
   const q = resolveQuality(settings);
   const canvas = $('#game');
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: q.aa === 'msaa', powerPreference: 'high-performance', stencil: false });
-  renderer.toneMapping = THREE.AgXToneMapping;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.0;
   renderer.info.autoReset = false;
   renderer.shadowMap.enabled = q.shadows > 0;

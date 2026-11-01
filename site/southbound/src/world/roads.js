@@ -84,18 +84,28 @@ export function createRoads(graph, hm, quality, scene, collision, surf) {
   const roadMat = (marks) => {
     const m = new THREE.MeshStandardMaterial({ map: marks, roughness: 0.9, metalness: 0, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
     if (!real) return m;
+    const A = surf.asphalt, sz = A.size.toFixed(2);
     m.onBeforeCompile = (sh) => {
-      sh.uniforms.tAsph = { value: surf.asphalt.color };
-      sh.uniforms.tAsphR = { value: surf.asphalt.rough };
+      sh.uniforms.tAsph = { value: A.color }; sh.uniforms.tAsphN = { value: A.normal };
+      sh.uniforms.tAsphR = { value: A.rough }; sh.uniforms.tAsphAO = { value: A.ao };
       sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vRW;')
         .replace('#include <begin_vertex>', '#include <begin_vertex>\nvRW = (modelMatrix * vec4(transformed, 1.0)).xyz;');
-      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec3 vRW; uniform sampler2D tAsph; uniform sampler2D tAsphR; float sbPaint;')
+      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', `#include <common>
+varying vec3 vRW; uniform sampler2D tAsph; uniform sampler2D tAsphN; uniform sampler2D tAsphR; uniform sampler2D tAsphAO; float sbPaint;`)
         .replace('#include <map_fragment>', `
-          vec3 asph = texture2D(tAsph, vRW.xz / 3.5).rgb * mix(0.75, 1.0, texture2D(tAsph, vRW.xz / 41.0).g * 1.6);
+          vec2 auv = vRW.xz / ${sz};
+          vec3 asph = texture2D(tAsph, auv).rgb * texture2D(tAsphAO, auv).r;
           vec4 mk = texture2D(map, vMapUv);
           sbPaint = mk.a;
-          diffuseColor.rgb *= mix(asph * 0.8, mk.rgb, mk.a);`)
-        .replace('#include <roughnessmap_fragment>', 'float roughnessFactor = mix(texture2D(tAsphR, vRW.xz / 3.5).g * 0.35 + 0.62, 0.55, sbPaint);');
+          diffuseColor.rgb *= mix(asph, mk.rgb * (0.75 + 0.25 * asph.g * 2.0), mk.a);`)
+        .replace('#include <roughnessmap_fragment>', 'float roughnessFactor = mix(texture2D(tAsphR, auv).g, 0.6, sbPaint);')
+        .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
+          {
+            vec3 nt = texture2D(tAsphN, auv).xyz * 2.0 - 1.0;
+            nt.xy *= 1.0 - sbPaint * 0.6;
+            vec3 nw = normalize(vec3(nt.x, max(nt.z, 0.2), nt.y));
+            normal = normalize((viewMatrix * vec4(nw, 0.0)).xyz);
+          }`);
     };
     m.transparent = false;
     return m;
