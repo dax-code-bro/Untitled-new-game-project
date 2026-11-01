@@ -336,7 +336,7 @@ export function splatAt(x, z, h, ny, out) {
   if (d < 0.82 && h < WORLD.lake + 1.5) { const k = smooth(WORLD.lake + 1.5, WORLD.lake - 0.5, h); dirt += k; wet = Math.max(wet, k); forest *= 1 - k; jungle *= 1 - k; }
   // dirt roads (packed snow keeps some white up north)
   const rd = roadDist(x, z);
-  if (rd < 5) { const rk = smooth(5, 2.2, rd); const keep = 1 - rk * (snow > 0 ? 0.6 : 1); forest *= keep; jungle *= keep; sand *= keep; snow *= 1 - rk * 0.6; dirt = dirt * keep + rk; }
+  if (rd < 5) { const rk = smooth(5, 2.2, rd); const keep = 1 - rk * (snow > 0 ? 0.6 : 1); forest *= keep; jungle *= keep; sand *= keep; snow *= 1 - rk * 0.3; dirt = dirt * keep + rk * (snow > 0 ? 0.3 : 1); }
   let sum = forest + jungle + sand + snow + dirt;
   if (sum > 1) { forest /= sum; jungle /= sum; sand /= sum; snow /= sum; dirt /= sum; sum = 1; }
   const rock = smooth(0.84, 0.64, ny) * (1 - smooth(4, 1, h) * (d > 0.85 ? 1 : 0));

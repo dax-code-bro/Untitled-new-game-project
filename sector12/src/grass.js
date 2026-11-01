@@ -23,7 +23,7 @@ const NN = TILE / NODE + 1;
 const KINDS = ['lawn', 'tall', 'dry', 'weed', 'flower'];
 const K = { lawn: 0, tall: 1, dry: 2, weed: 3, flower: 4 };
 const NZ = makeNoise(4242);
-const BLOOMS = [[1, 0.85, 0.2], [1, 1, 1], [0.75, 0.45, 1], [1, 0.35, 0.3], [0.45, 0.6, 1], [1, 0.6, 0.15]];
+const BLOOMS = [[0.85, 0.72, 0.2], [0.85, 0.85, 0.82], [0.62, 0.4, 0.82], [0.85, 0.32, 0.27], [0.42, 0.52, 0.85], [0.85, 0.52, 0.15]];
 
 // ---------------------------------------------------------------- card textures
 function card(n, draw) {
@@ -186,7 +186,8 @@ export class Grass {
     out[3] = reg === 'e' ? 0.65 + f2 * 0.3 : smooth(-0.1, 0.5, f2) * 0.8 + S[0] * 0.2;
     out[4] = smooth(-0.5, 0.4, -f1);
     out[5] = smooth(0.2, 0.55, f3);
-    out[6] = Math.sin(x / 37 + Math.sin(z / 53)) * Math.sin(z / 29 + Math.sin(x / 61));
+    // wildflower meadows: open ground only, not the shaded forest floor
+    out[6] = Math.sin(x / 37 + Math.sin(z / 53)) * Math.sin(z / 29 + Math.sin(x / 61)) * (1 - Math.min(1, S[0] * 1.6 + S[1]));
     return out;
   }
 
@@ -219,7 +220,7 @@ export class Grass {
       const r = rng();
       let kind;
       if (r < dry * 0.85) kind = K.dry;
-      else if (meadow > 0.35 && lush > 0.3 && rng() < 0.3) kind = K.flower;
+      else if (meadow > 0.35 && lush > 0.3 && rng() < 0.2) kind = K.flower;
       else if (rng() < weed * 0.35) kind = K.weed;
       else if (rng() < tall * 0.75) kind = K.tall;
       else kind = K.lawn;
@@ -228,7 +229,12 @@ export class Grass {
       const sh = sw * (0.75 + rng() * 0.5) * (kind === K.lawn ? 0.8 + tall * 0.6 : 1);
       // colour: lush green to sun-yellowed, a little per-clump noise
       let cr, cg, cb;
-      if (kind === K.flower) { const b = BLOOMS[Math.floor(rng() * BLOOMS.length)]; [cr, cg, cb] = b; }
+      if (kind === K.flower) {
+        // one or two species per patch (a slow field picks them), not a random confetti of colours
+        const field = Math.sin(x / 41 + Math.cos(z / 57) * 2) * 0.5 + 0.5;
+        const bi = rng() < 0.8 ? Math.floor(field * BLOOMS.length * 0.999) : Math.floor(rng() * BLOOMS.length);
+        [cr, cg, cb] = BLOOMS[bi];
+      }
       else {
         const k2 = 0.88 + rng() * 0.24;
         cr = (0.78 + (1 - lush) * 0.38) * k2; cg = (0.98 - (1 - lush) * 0.05) * k2; cb = (0.72 - (1 - lush) * 0.2) * k2;

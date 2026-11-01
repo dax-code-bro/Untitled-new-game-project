@@ -54,7 +54,7 @@ export const ANIMALS = {
   raccoon: { name: 'Raccoon', hp: 30, speed: 4.5, size: 0.6, behavior: 'flee', color: 0x5f5a55, meat: 1, hide: 1 },
   deer: { name: 'Deer', hp: 110, speed: 11, size: 1.6, behavior: 'flee', color: 0x9a6a3a, meat: 3, hide: 2, antlers: true },
   coyote: { name: 'Coyote', hp: 60, speed: 9, size: 1.0, behavior: 'hunt', aggro: 18, dmg: 9, color: 0x9a8262, meat: 1, hide: 1 },
-  wolf: { name: 'Wolf', hp: 90, speed: 10, size: 1.3, behavior: 'hunt', aggro: 45, dmg: 14, color: 0x5d5f63, pack: [2, 4], meat: 2, hide: 2 },
+  wolf: { name: 'Wolf', hp: 90, speed: 10, size: 1.3, behavior: 'hunt', aggro: 45, dmg: 14, color: 0x74695a, pack: [2, 4], meat: 2, hide: 2 },
   sandwolf: { name: 'Sand Wolf', hp: 80, speed: 10.5, size: 1.25, behavior: 'hunt', aggro: 55, dmg: 13, color: 0xc2a06a, pack: [2, 3], meat: 2, hide: 2 },
   bear: { name: 'Bear', hp: 420, speed: 9, size: 2.2, behavior: 'defend', aggro: 22, dmg: 38, color: 0x3f2c1e, meat: 6, hide: 4 },
   moose: { name: 'Moose', hp: 380, speed: 8.5, size: 2.6, behavior: 'defend', aggro: 10, dmg: 30, color: 0x4a3622, meat: 6, hide: 4, antlers: true, bigAntlers: true },

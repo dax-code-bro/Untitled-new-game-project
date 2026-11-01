@@ -16,8 +16,8 @@ const smooth = (t) => t * t * (3 - 2 * t);
 const SPECIES = {
   deer: { hf: 0.95, hh: 0.92, len: 0.8, r: 0.2, rh: 0.17, w: 0.72, neck: [0.42, 0.95], head: [0.3, 0.075], snout: 0.55, ear: [0.13, 0.04], tail: [0.12, 0.035, 0.6], hoof: true, gait: [1.1, 3.4], antler: 'deer', belly: 0xd8cbb0, tailWhite: true },
   moose: { hf: 1.85, hh: 1.65, len: 1.4, r: 0.42, rh: 0.33, w: 0.68, neck: [0.5, 0.35], head: [0.62, 0.13], snout: 0.62, ear: [0.18, 0.06], tail: [0.1, 0.05, 0.9], hoof: true, gait: [1.4, 4], antler: 'palmate', hump: 0.14, dewlap: true },
-  wolf: { hf: 0.78, hh: 0.74, len: 0.72, r: 0.17, rh: 0.13, w: 0.7, neck: [0.28, 0.55], head: [0.26, 0.075], snout: 0.55, ear: [0.09, 0.035, true], tail: [0.42, 0.05, 1.0], hoof: false, gait: [1.2, 3.6], bushy: true },
-  sandwolf: { hf: 0.74, hh: 0.71, len: 0.7, r: 0.16, rh: 0.12, w: 0.68, neck: [0.27, 0.55], head: [0.25, 0.07], snout: 0.55, ear: [0.1, 0.035, true], tail: [0.4, 0.045, 1.0], hoof: false, gait: [1.2, 3.6], bushy: true },
+  wolf: { hf: 0.78, hh: 0.74, len: 0.72, r: 0.17, rh: 0.13, w: 0.7, neck: [0.28, 0.55], head: [0.26, 0.075], snout: 0.55, ear: [0.09, 0.035, true], tail: [0.42, 0.05, 1.0], hoof: false, gait: [1.2, 3.6], bushy: true, belly: 0xb9ad98 },
+  sandwolf: { hf: 0.74, hh: 0.71, len: 0.7, r: 0.16, rh: 0.12, w: 0.68, neck: [0.27, 0.55], head: [0.25, 0.07], snout: 0.55, ear: [0.1, 0.035, true], tail: [0.4, 0.045, 1.0], hoof: false, gait: [1.2, 3.6], bushy: true, belly: 0xe0cfa8 },
   coyote: { hf: 0.6, hh: 0.58, len: 0.56, r: 0.13, rh: 0.1, w: 0.66, neck: [0.22, 0.55], head: [0.21, 0.06], snout: 0.58, ear: [0.09, 0.03, true], tail: [0.35, 0.04, 1.1], hoof: false, gait: [1.1, 3.4], bushy: true },
   bear: { hf: 1.0, hh: 0.95, len: 1.1, r: 0.4, rh: 0.36, w: 0.85, neck: [0.25, 0.2], head: [0.36, 0.13], snout: 0.42, ear: [0.06, 0.04], tail: [0.08, 0.04, 0.8], hoof: false, plantigrade: true, gait: [1.0, 2.8], hump: 0.12 },
   raccoon: { hf: 0.24, hh: 0.3, len: 0.36, r: 0.12, rh: 0.12, w: 0.85, neck: [0.07, 0.3], head: [0.13, 0.055], snout: 0.45, ear: [0.04, 0.02], tail: [0.3, 0.04, 0.6], hoof: false, plantigrade: true, gait: [1.2, 3], ringTail: true, mask: true },

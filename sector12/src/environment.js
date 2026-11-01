@@ -89,8 +89,8 @@ export class Environment {
     if (L.sand > 0) A.horizon.lerp(SKY.sand.clone().multiplyScalar(0.3 + day * 0.7), Math.min(1, L.sand));
     if (L.snow > 0.3) A.horizon.lerp(SKY.snow.clone().multiplyScalar(0.3 + day * 0.7), Math.min(1, L.snow));
     A.lightColor.copy(night > 0.5 ? SKY.moon : A.sunColor);
-    A.sunI = (day * 3.4 * (1 - oc * 0.7) + night * 0.45) * (1 - L.sand * 0.5);
-    A.hemiI = 0.06 + day * 0.18 + night * 0.12;
+    A.sunI = (day * 3.4 * (1 - oc * 0.7) + night * 1.1 * (1 - oc * 0.5)) * (1 - L.sand * 0.5);
+    A.hemiI = 0.06 + day * 0.18 + night * 0.32;
     A.envI = 0.12 + day * 0.85;
     A.ambientGround.copy(A.horizon).multiplyScalar(0.35);
     A.night = night;

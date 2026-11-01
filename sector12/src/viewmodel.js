@@ -138,7 +138,25 @@ export class Viewmodel {
     this.armMat.sleeve = this.armMat.sleeve || new THREE.MeshStandardMaterial({ roughness: 0.92 });
     this.armMat.sleeve.map = camoTexture(pal);
     this.armMat.sleeve.needsUpdate = true;
-    this.armMat.glove = this.armMat.glove || new THREE.MeshStandardMaterial({ color: 0x55513f, roughness: 0.8 });
+    if (!this.armMat.glove) {
+      // woven nylon back, synthetic-leather palm: fine grain + seams so the glove doesn't read as smooth plastic
+      const n = 256, c = document.createElement('canvas'); c.width = c.height = n;
+      const g = c.getContext('2d');
+      g.fillStyle = '#807a62'; g.fillRect(0, 0, n, n);
+      const img = g.getImageData(0, 0, n, n), D = img.data;
+      for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+        const i = (y * n + x) * 4, weave = ((x >> 1) + (y >> 1)) & 1 ? 9 : -9, grain = (Math.random() - 0.5) * 34;
+        for (let k = 0; k < 3; k++) D[i + k] = Math.max(0, Math.min(255, D[i + k] + weave + grain));
+      }
+      g.putImageData(img, 0, 0);
+      g.strokeStyle = 'rgba(30,28,22,0.75)'; g.lineWidth = 2;
+      for (const y of [n * 0.18, n * 0.52, n * 0.86]) { g.beginPath(); g.moveTo(0, y); g.lineTo(n, y); g.stroke(); }
+      g.setLineDash([3, 3]); g.strokeStyle = 'rgba(190,180,150,0.5)'; g.lineWidth = 1;
+      for (const y of [n * 0.18 + 4, n * 0.52 + 4, n * 0.86 + 4]) { g.beginPath(); g.moveTo(0, y); g.lineTo(n, y); g.stroke(); }
+      const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 4;
+      const b = new THREE.CanvasTexture(c); b.wrapS = b.wrapT = THREE.RepeatWrapping;
+      this.armMat.glove = new THREE.MeshStandardMaterial({ color: 0xb0aa90, map: t, bumpMap: b, bumpScale: 1.2, roughness: 0.86 });
+    }
     this.armMat.strap = this.armMat.strap || new THREE.MeshStandardMaterial({ color: 0x3a3a34, roughness: 0.7 });
     this.armMat.plate = this.armMat.plate || new THREE.MeshStandardMaterial({ color: 0x1b1c1e, roughness: 0.42, metalness: 0.1 });
     this.armMat.skin = this.armMat.skin || new THREE.MeshStandardMaterial({ color: 0xc89a78, roughness: 0.55 });
@@ -221,8 +239,8 @@ export class Viewmodel {
     // ---- base pose (gun origin, in root units) for hip / ADS / sprint
     const kind = this.kind;
     const dual = kind === 'dual', melee = kind === 'melee';
-    const hip = dual ? V(0, -0.19, -0.5) : melee ? V(0.19, -0.22, -0.45) : kind === 'pistol' ? V(0.14, -0.17, -0.46) : V(0.14, -0.17, -0.38);
-    const ads = dual ? V(0, -0.17, -0.44) : V(0, -this.sightY, kind === 'pistol' ? -0.42 : d.id === 'bg850' ? -0.2 : -0.27);
+    const hip = dual ? V(0, -0.19, -0.5) : melee ? V(0.19, -0.22, -0.45) : kind === 'pistol' ? V(0.14, -0.17, -0.5) : V(0.14, -0.17, -0.38);
+    const ads = dual ? V(0, -0.17, -0.44) : V(0, -this.sightY, kind === 'pistol' ? -0.53 : d.id === 'bg850' ? -0.2 : -0.27);
     const pos = V().copy(hip).lerp(ads, sm(a));
     let rx = 0, ry = 0, rz = 0;
     // walking bob: a figure-eight, much smaller while aiming
@@ -296,7 +314,7 @@ export class Viewmodel {
     else if (left.target) gripL = left.target;
     else if (ud.fore) gripL = toRoot(ud.fore.clone().add(P.pump && ud.fore.distanceTo(P.pump.position) < 0.15 ? V(0, 0, P.pump.position.z - P.pump.userData.rest.p.z) : V()));
     else if (melee) gripL = null;
-    else gripL = toRoot(ud.grip.clone().add(V(-0.03, -0.012, 0.005)));
+    else gripL = toRoot(ud.grip.clone().add(V(-0.026, -0.028, 0.004))); // support hand wraps under the firing hand
     if (right.target) gripR.copy(right.target);
     // reaching out to grab / open something with the support hand
     if (this.reachT > 0 && !medK && !(st.reload > 0) && !dual) {
@@ -307,8 +325,11 @@ export class Viewmodel {
       left.fwd = V(0.1, -0.2, -1).normalize(); left.up = V(0, 1, 0);
     }
     const gunFwd = V(0, 0, -1).applyQuaternion(this.model.quaternion), gunUp = V(0, 1, 0).applyQuaternion(this.model.quaternion);
-    this.solveArm('R', V(0.23, -0.41, -0.02), gripR, gunFwd, gunUp, true);
-    if (gripL) { this.arm.upL.visible = this.arm.foL.visible = this.arm.hL.visible = true; this.solveArm('L', V(-0.26, -0.43, -0.04), gripL, left.fwd || gunFwd, left.up || gunUp, true); }
+    // a pistol is held with the back of the firing hand turned out to the side and the support hand
+    // rolled under it, so from behind you see the slide over two interlocked hands, not two fists
+    const pistolHold = (kind === 'pistol' || kind === 'revolver') && !right.target;
+    this.solveArm('R', V(0.23, -0.41, -0.02), gripR, gunFwd, gunUp, true, pistolHold ? -0.85 : -0.5);
+    if (gripL) { this.arm.upL.visible = this.arm.foL.visible = this.arm.hL.visible = true; this.solveArm('L', V(-0.26, -0.43, -0.04), gripL, left.fwd || gunFwd, left.up || gunUp, true, pistolHold && !left.target && !left.fwd ? 1.1 : 0.5); }
     else this.arm.upL.visible = this.arm.foL.visible = this.arm.hL.visible = false;
     if (this.med) { this.med.matrix.copy(this.arm.hL.matrix).multiply(new THREE.Matrix4().makeTranslation(0.0, -0.03, 0.08)); this.med.matrixWorldNeedsUpdate = true; }
     // ---- fingers
@@ -607,7 +628,7 @@ export class Viewmodel {
   }
 
   // ---------------------------------------------------------------- IK arms (root space)
-  solveArm(side, shoulder, target, fwd, up, onGun) {
+  solveArm(side, shoulder, target, fwd, up, onGun, roll = R_DEFAULT(side)) {
     const R = side === 'R';
     const reach = (ARM.upper + ARM.fore) * 0.97;
     // the wrist sits behind the grip point along the weapon
@@ -629,12 +650,14 @@ export class Viewmodel {
     place(R ? m.foR : m.foL, elbow, end, V(0, 1, 0));
     // hand: +Z along fingers (the weapon's forward, tipped down into the grip), +Y back of the hand
     const hf = onGun ? V().copy(fwd).addScaledVector(up, -0.6).normalize() : V().copy(fwd).normalize();
-    const hu = onGun ? V().copy(up).applyAxisAngle(fwd, R ? -0.5 : 0.5) : V().copy(up);
+    const hu = onGun ? V().copy(up).applyAxisAngle(fwd, roll) : V().copy(up);
     const z = hf, y = V().copy(hu).addScaledVector(z, -hu.dot(z)).normalize(), x = V().crossVectors(y, z);
     (R ? m.hR : m.hL).matrix.makeBasis(x, y, z).setPosition(end);
     (R ? m.hR : m.hL).matrixWorldNeedsUpdate = true;
   }
 }
+
+const R_DEFAULT = (side) => (side === 'R' ? -0.5 : 0.5);
 
 let FLASH = null;
 function flashTexture() {

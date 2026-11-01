@@ -341,6 +341,8 @@ export class Graphics {
     this.hemi.groundColor.copy(a.ambientGround);
     this.hemi.intensity = a.hemiI;
     this.scene.environmentIntensity = a.envI;
+    // the eye adapts in the dark: open the exposure up at night so moonlit ground still reads
+    this.renderer.toneMappingExposure = 0.9 + a.night * 0.7;
     // clouds
     if (this.clouds) {
       this.clouds.position.set(this.camera.position.x, 2600, this.camera.position.z);

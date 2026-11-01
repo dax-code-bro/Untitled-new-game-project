@@ -6,6 +6,7 @@ import { heightAt, normalAt, regionAt, POIS, roadDist } from './terrain.js';
 import { waterLevelAt } from './physics.js';
 import { mulberry32, makeNoise } from './noise.js';
 import { windHook, coverageHook } from './materials.js';
+import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 
 const CELL = 128;
 let LOAD_R = 760;
@@ -186,14 +187,18 @@ function fernModel(rng) {
 
 const N3 = makeNoise(4242);
 function rockModel(rng, { snow = false, tint = [1, 1, 1], flat = 0.7 } = {}) {
-  const g = new THREE.IcosahedronGeometry(1, 3);
+  // welded so normals are smooth: the unwelded icosahedron shaded every triangle flat and read as low-poly
+  let g = new THREE.IcosahedronGeometry(1, 3);
+  g.deleteAttribute('normal'); g.deleteAttribute('uv');
+  g = mergeVertices(g);
   const p = g.attributes.position, v = new THREE.Vector3();
   const seed = rng() * 100;
   for (let i = 0; i < p.count; i++) {
     v.fromBufferAttribute(p, i);
     const n = N3(v.x * 1.3 + seed, v.z * 1.3 + v.y) * 0.22 + N3(v.x * 3.1 + seed, v.y * 3.1 - v.z) * 0.08;
+    // a little terracing for split-rock planes, softened so it isn't stair-stepped
     const facet = Math.round((1 + n) * 6) / 6;
-    v.multiplyScalar(facet);
+    v.multiplyScalar(facet * 0.45 + (1 + n) * 0.55 + N3(v.x * 7 + seed, v.z * 7 - v.y) * 0.025);
     v.y *= flat;
     p.setXYZ(i, v.x * 1.3, v.y + 0.25, v.z);
   }
@@ -262,6 +267,28 @@ function impostor(m, crownY, crownR, trunkR) {
   return { trunk, leaves: lg };
 }
 
+// conifers far away: crossed triangular cards that keep the cone silhouette (no flat cap, which read as an umbrella)
+function coneImpostor(m, h, snowy) {
+  const parts = [];
+  const trunk = prep(bark(0.75 * h / 28, 0.22 * h / 28, h * 0.95, 5, 1));
+  const y0 = h * 0.2, y1 = h * 1.0, R = h * 0.27;
+  // each crossed plane is a stack of overlapping tiers (the needle card is a clamped texture, so it
+  // can't tile); tiers narrow towards the tip
+  const tiers = 6, th = (y1 - y0) / tiers;
+  for (let i = 0; i < 3; i++) {
+    for (let k = 0; k < tiers; k++) {
+      const t = k / tiers, w = R * 2 * (1.05 - t * 0.9);
+      const g = new THREE.PlaneGeometry(w, th * 1.7);
+      g.translate(0, y0 + th * (k + 0.6), 0);
+      g.rotateY((i / 3) * Math.PI + k * 0.4);
+      parts.push(prep(g, snowy ? (k % 2 ? [1.45, 1.5, 1.55] : [1.05, 1.1, 1.1]) : [0.95, 1, 0.95]));
+    }
+  }
+  const lg = merge(parts);
+  sphereNormals(lg, new THREE.Vector3(0, h * 0.5, 0), 0.6);
+  return { trunk, leaves: lg };
+}
+
 // what grows where: [type, count per cell, minScale, maxScale, collider radius at scale 1, collider height]
 const FLORA = {
   s: [['pine', 46, 0.8, 1.6, 0.6, 30], ['oak', 16, 0.8, 1.3, 0.55, 7], ['bush', 55, 0.6, 1.4, 0, 0], ['rock', 9, 0.8, 3.2, 0.9, 1.1], ['log', 6, 0.8, 1.2, 0, 0], ['fern', 20, 0.7, 1.2, 0, 0]],
@@ -298,7 +325,7 @@ export class Scatter {
     const leafMat = { pine: M.needles, snowpine: M.needles, oak: M.leaves, jungle: M.jungle, palm: M.fronds, bush: M.bush, fern: M.fern };
     const trunkMat = { rock: rockM, snowrock: rockM, sandrock: rockM, cactus: cactusM };
     const far = {
-      pine: impostor(models.pine, 17, 5.5, 0.7), snowpine: impostor(models.snowpine, 8.5, 3.2, 0.4),
+      pine: coneImpostor(models.pine, 28, false), snowpine: coneImpostor(models.snowpine, 14, true),
       oak: impostor(models.oak, 8, 4.5, 0.5), jungle: impostor(models.jungle, 16, 7, 0.7), palm: impostor(models.palm, 10, 3.5, 0.25),
     };
     this.meshes = {};
