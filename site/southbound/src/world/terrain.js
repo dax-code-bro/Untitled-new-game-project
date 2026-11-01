@@ -120,9 +120,10 @@ export function createTerrain(hm, quality, scene, surf) {
 function makeTerrainMaterial(quality, surf) {
   const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.92, metalness: 0 });
   const useN = surf && surf.hasNormals ? 1 : 0;
+  const L = ['grass', 'dry', 'forest', 'sand', 'rock'];
+  const size = (k) => (surf ? surf[k].size : 3).toFixed(2);
   mat.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, worldUniforms);
-    const L = ['grass', 'dry', 'forest', 'sand', 'rock'];
     for (const k of L) {
       shader.uniforms[`t_${k}C`] = { value: surf ? surf[k].color : null };
       shader.uniforms[`t_${k}N`] = { value: surf ? surf[k].normal : null };
@@ -136,73 +137,73 @@ varying vec3 vWPos; varying vec3 vWNrm;
 uniform sampler2D uSplatTex; uniform float uWorldHalf; uniform float uNight;
 ${L.map((k) => `uniform sampler2D t_${k}C; uniform sampler2D t_${k}N;`).join('\n')}
 ${GLSL_NOISE}
-float sbRough; vec3 sbNrm;
-// two scales + rotation to hide tiling
-vec3 tileC(sampler2D t, vec2 p, float macro){
-  vec3 a = texture2D(t, p / 5.0).rgb;
-  vec2 q = mat2(0.8, -0.6, 0.6, 0.8) * p / 19.0;
-  vec3 b = texture2D(t, q).rgb;
-  return mix(a, b, 0.35) * (0.82 + 0.36 * macro);
+float sbRough; vec3 sbNrm; float sbFar;
+// Faithful sample at true scale. Far away, blend in a rotated 4x-larger
+// sample to hide repetition (never near the camera, where it would blur).
+vec3 layerC(sampler2D t, vec2 p, float scale){
+  vec3 a = texture2D(t, p / scale).rgb;
+  if (sbFar > 0.001) {
+    vec3 b = texture2D(t, mat2(0.8, -0.6, 0.6, 0.8) * p / (scale * 4.3)).rgb;
+    a = mix(a, b, sbFar * 0.5);
+  }
+  return a;
 }
-vec3 tileN(sampler2D t, vec2 p){ return texture2D(t, p / 5.0).xyz * 2.0 - 1.0; }
-vec3 triC(sampler2D t, vec3 p, vec3 w){
-  return texture2D(t, p.zy / 9.0).rgb * w.x + texture2D(t, p.xz / 9.0).rgb * w.y + texture2D(t, p.xy / 9.0).rgb * w.z;
-}
+vec3 layerN(sampler2D t, vec2 p, float scale){ return texture2D(t, p / scale).xyz * 2.0 - 1.0; }
 `)
       .replace('#include <color_fragment>', `#include <color_fragment>
 {
   vec2 wuv = (vWPos.xz + uWorldHalf) / (2.0*uWorldHalf);
   vec4 sp = texture2D(uSplatTex, clamp(wuv, 0.0, 1.0));
-  bool outside = abs(vWPos.x) > uWorldHalf || abs(vWPos.z) > uWorldHalf;
-  if (outside) sp = vec4(vWPos.y < 2.0 ? 1.0 : 0.0, 0.35, 0.3, 0.0);
+  if (abs(vWPos.x) > uWorldHalf || abs(vWPos.z) > uWorldHalf) sp = vec4(vWPos.y < 2.0 ? 1.0 : 0.0, 0.35, 0.3, 0.0);
   float dist = length(vWPos - cameraPosition);
-  float macro = sbFbm(vWPos.xz*0.011);
+  sbFar = smoothstep(30.0, 160.0, dist);
   vec3 n = normalize(vWNrm);
   float slope = 1.0 - clamp(n.y, 0.0, 1.0);
   vec2 p = vWPos.xz;
 
-  vec3 cG = tileC(t_grassC, p, macro);
-  vec3 cD = tileC(t_dryC, p, macro);
-  vec3 cF = tileC(t_forestC, p, macro);
-  vec3 cS = tileC(t_sandC, p * 0.7, macro);
+  vec3 cG = layerC(t_grassC, p, ${size('grass')});
+  vec3 cD = layerC(t_dryC, p, ${size('dry')});
+  vec3 cF = layerC(t_forestC, p, ${size('forest')});
+  vec3 cS = layerC(t_sandC, p, ${size('sand')});
+  // rock: triplanar so cliffs don't stretch
   vec3 tw = pow(abs(n), vec3(4.0)); tw /= (tw.x + tw.y + tw.z);
-  vec3 cR = triC(t_rockC, vWPos, tw) * (0.85 + 0.3 * macro);
+  float rs = ${size('rock')};
+  vec3 cR = texture2D(t_rockC, vWPos.zy / rs).rgb * tw.x + texture2D(t_rockC, vWPos.xz / rs).rgb * tw.y + texture2D(t_rockC, vWPos.xy / rs).rgb * tw.z;
 
-  // layer weights, sharpened by each texture's brightness (height-blend)
-  float wR = smoothstep(0.26, 0.5, slope + (macro - 0.5) * 0.18);
-  float wS = sp.r, wF = sp.g * 0.9, wD = sp.b;
+  // splat weights, sharpened by each texture's own brightness (height blend)
+  float wR = smoothstep(0.30, 0.52, slope);
+  float wS = sp.r, wF = sp.g, wD = sp.b;
   float wG = max(0.0, 1.0 - wS - wF - wD);
-  vec4 h = vec4(dot(cG, vec3(0.33)), dot(cD, vec3(0.33)), dot(cF, vec3(0.33)), dot(cS, vec3(0.33)));
-  vec4 w = vec4(wG, wD, wF, wS) * pow(h + 0.35, vec4(3.0)) + 1e-4;
+  vec4 h = vec4(dot(cG, vec3(0.333)), dot(cD, vec3(0.333)), dot(cF, vec3(0.333)), dot(cS, vec3(0.333)));
+  vec4 w = vec4(wG, wD, wF, wS) * pow(h + 0.25, vec4(4.0)) + 1e-5;
   w /= (w.x + w.y + w.z + w.w);
   vec3 c = cG * w.x + cD * w.y + cF * w.z + cS * w.w;
   c = mix(c, cR, wR);
-  float snow = smoothstep(190.0, 230.0, vWPos.y + macro*30.0) * (1.0 - smoothstep(0.35,0.6,slope));
-  c = mix(c, vec3(0.92,0.94,0.97), snow);
-  vec3 paved = mix(vec3(0.07,0.07,0.075), vec3(0.11,0.11,0.115), sbNoise(vWPos.xz*0.9));
-  c = mix(c, paved, sp.a);
-  if (vWPos.y < 0.0) c *= vec3(0.75, 0.8, 0.78);
+  // only far away: gentle large-scale variation so hills don't look uniform
+  c *= mix(1.0, 0.9 + 0.2 * sbFbm(vWPos.xz * 0.008), sbFar);
+  float snow = smoothstep(190.0, 230.0, vWPos.y) * (1.0 - smoothstep(0.35, 0.6, slope));
+  c = mix(c, vec3(0.9, 0.92, 0.95), snow);
+  c = mix(c, vec3(0.09, 0.09, 0.095), sp.a);
   diffuseColor.rgb = c;
-  sbRough = mix(0.96, 0.8, sp.a) - snow * 0.4 - w.w * 0.05;
+  sbRough = mix(0.97, 0.85, sp.a) - snow * 0.4 - wR * 0.12;
 
-  // detail normals (fade with distance to avoid sparkle)
   vec3 nt = vec3(0.0, 0.0, 1.0);
   if (${useN}.0 > 0.5) {
-    nt = tileN(t_grassN, p) * w.x + tileN(t_dryN, p) * w.y + tileN(t_forestN, p) * w.z + tileN(t_sandN, p * 0.7) * w.w;
-    vec3 nr = texture2D(t_rockN, (abs(n.x) > abs(n.z) ? vWPos.zy : vWPos.xy) / 9.0).xyz * 2.0 - 1.0;
+    nt = layerN(t_grassN, p, ${size('grass')}) * w.x + layerN(t_dryN, p, ${size('dry')}) * w.y
+       + layerN(t_forestN, p, ${size('forest')}) * w.z + layerN(t_sandN, p, ${size('sand')}) * w.w;
+    vec3 nr = texture2D(t_rockN, (abs(n.x) > abs(n.z) ? vWPos.zy : vWPos.xy) / rs).xyz * 2.0 - 1.0;
     nt = mix(nt, nr, wR);
-    nt.xy *= (1.0 - smoothstep(40.0, 260.0, dist)) * (1.0 - sp.a) * 1.4;
+    nt.xy *= (1.0 - sbFar * 0.7) * (1.0 - sp.a);
   }
   sbNrm = nt;
 }`)
       .replace('#include <roughnessmap_fragment>', 'float roughnessFactor = sbRough;')
       .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
 {
-  // world-aligned tangent frame for ground textures projected on XZ
   vec3 N = normalize(vWNrm);
   vec3 T = normalize(vec3(1.0, 0.0, 0.0) - N * N.x);
   vec3 B = normalize(cross(N, T));
-  vec3 nw = normalize(T * sbNrm.x - B * sbNrm.y + N * max(sbNrm.z, 0.2));
+  vec3 nw = normalize(T * sbNrm.x - B * sbNrm.y + N * max(sbNrm.z, 0.15));
   normal = normalize((viewMatrix * vec4(nw, 0.0)).xyz);
 }`);
   };

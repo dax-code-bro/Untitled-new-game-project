@@ -15,7 +15,7 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor)
   vec3 c = inputColor.rgb;
   float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
   // split toning: cool teal shadows, warm highlights (the classic cinematic look)
-  vec3 shadows = vec3(0.92, 1.0, 1.06), highs = vec3(1.06, 1.0, 0.9);
+  vec3 shadows = vec3(0.97, 1.0, 1.03), highs = vec3(1.03, 1.0, 0.96);
   c *= mix(shadows, highs, smoothstep(0.15, 0.75, l));
   c = mix(vec3(l), c, uSat);
   c = (c - 0.5) * uContrast + 0.5;
@@ -32,7 +32,7 @@ class GradeEffect extends Effect {
     super('GradeEffect', GRADE_FRAG, {
       uniforms: new Map([
         ['uWarm', new THREE.Uniform(0.015)], ['uDamage', new THREE.Uniform(0)],
-        ['uSat', new THREE.Uniform(1.12)], ['uContrast', new THREE.Uniform(1.06)], ['uNight', new THREE.Uniform(0)],
+        ['uSat', new THREE.Uniform(1.03)], ['uContrast', new THREE.Uniform(1.02)], ['uNight', new THREE.Uniform(0)],
       ]),
     });
   }
@@ -49,7 +49,7 @@ export function createPost(renderer, scene, camera, quality) {
   if (quality.ao || high) {
     ao = new N8AOPostPass(scene, camera, size.x, size.y);
     Object.assign(ao.configuration, {
-      aoRadius: 2.2, distanceFalloff: 1.2, intensity: 2.2, color: new THREE.Color(0, 0, 0),
+      aoRadius: 1.6, distanceFalloff: 1.0, intensity: 1.4, color: new THREE.Color(0, 0, 0),
       halfRes: quality.label !== 'Ultra', aoSamples: quality.label === 'Ultra' ? 16 : 8, denoiseSamples: 8,
     });
     composer.addPass(ao);
@@ -71,14 +71,14 @@ export function createPost(renderer, scene, camera, quality) {
     composer.addPass(new EffectPass(camera, dof));
   }
 
-  const bloom = quality.bloom ? new BloomEffect({ mipmapBlur: true, intensity: 0.55, luminanceThreshold: 0.9, luminanceSmoothing: 0.25, radius: 0.7 }) : null;
+  const bloom = quality.bloom ? new BloomEffect({ mipmapBlur: true, intensity: 0.4, luminanceThreshold: 0.95, luminanceSmoothing: 0.25, radius: 0.7 }) : null;
   if (bloom) composer.addPass(new EffectPass(camera, bloom));
 
   const grade = new GradeEffect();
-  const tone = new ToneMappingEffect({ mode: ToneMappingMode.AGX });
-  const vignette = new VignetteEffect({ offset: 0.32, darkness: 0.55 });
+  const tone = new ToneMappingEffect({ mode: ToneMappingMode.ACES_FILMIC });
+  const vignette = new VignetteEffect({ offset: 0.38, darkness: 0.32 });
   const grain = new NoiseEffect({ blendFunction: BlendFunction.OVERLAY, premultiply: false });
-  grain.blendMode.opacity.value = 0.06;
+  grain.blendMode.opacity.value = 0.025;
   composer.addPass(new EffectPass(camera, tone, grade, vignette, grain));
   if (quality.aa === 'smaa') composer.addPass(new EffectPass(camera, new SMAAEffect({ preset: SMAAPreset.HIGH })));
 

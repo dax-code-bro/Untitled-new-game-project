@@ -42,8 +42,10 @@ export async function loadLibrary(quality, progress = () => {}) {
     g.scene.traverse((o) => {
       if (o.isMesh) {
         o.castShadow = true; o.receiveShadow = true;
-        // Kenney cars use one colour-map atlas; give them a bit of gloss.
-        o.material.roughness = 0.45; o.material.metalness = 0.15;
+        // Kenney cars use one colour-map atlas; render it as clear-coated paint
+        const old = o.material;
+        o.material = new THREE.MeshPhysicalMaterial({ map: old.map, color: old.color, roughness: 0.32, metalness: 0.25, clearcoat: 1, clearcoatRoughness: 0.06 });
+        old.dispose();
       }
     });
     lib.cars[id] = g.scene;
