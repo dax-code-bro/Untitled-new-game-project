@@ -51,8 +51,15 @@ function setPaused(p) {
 }
 const persist = () => Save.store(save);
 // render distance defaults to what the graphics preset can carry
-const VIEW_DEFAULT = { low: 900, medium: 1500, high: 2500, ultra: 4000 };
-const viewDist = () => save.settings.viewDist || VIEW_DEFAULT[save.settings.quality || 'high'] || 2500;
+const VIEW_DEFAULT = { low: 2000, medium: 3500, high: 6000, ultra: 9000 };
+// render distances were raised a lot: lift an older saved slider value up to the new default once
+if (!save.settings.vdBoost) {
+  const d = VIEW_DEFAULT[save.settings.quality || 'high'] || 6000;
+  if (save.settings.viewDist && save.settings.viewDist < d) save.settings.viewDist = d;
+  save.settings.vdBoost = 1;
+  persist();
+}
+const viewDist = () => save.settings.viewDist || VIEW_DEFAULT[save.settings.quality || 'high'] || 6000;
 const showViewDist = () => { $('viewdist').value = viewDist(); $('vdval').textContent = `${(viewDist() / 1000).toFixed(1)} km`; };
 
 // ---------------------------------------------------------------- title

@@ -289,6 +289,8 @@ function coneImpostor(m, h, snowy) {
   return { trunk, leaves: lg };
 }
 
+const SMALL = { bush: 1, fern: 1, log: 1, deadbush: 1, rock: 1, snowrock: 1, sandrock: 1 };
+
 // what grows where: [type, count per cell, minScale, maxScale, collider radius at scale 1, collider height]
 const FLORA = {
   s: [['pine', 46, 0.8, 1.6, 0.6, 30], ['oak', 16, 0.8, 1.3, 0.55, 7], ['bush', 55, 0.6, 1.4, 0, 0], ['rock', 9, 0.8, 3.2, 0.9, 1.1], ['log', 6, 0.8, 1.2, 0, 0], ['fern', 20, 0.7, 1.2, 0, 0]],
@@ -342,7 +344,7 @@ export class Scatter {
       this.cap[key] = cap;
     };
     for (const [type, mdl] of Object.entries(models)) {
-      const nearCap = Math.round(5000 * this.density), farCap = Math.round(30000 * this.density);
+      const nearCap = Math.round(5000 * this.density), farCap = Math.round(45000 * this.density);
       const tm = trunkMat[type] || barkM;
       if (mdl.trunk) mk(`${type}_near`, mdl.trunk, tm, nearCap, true);
       if (mdl.leaves) mk(`${type}_near`, mdl.leaves, leafMat[type], nearCap, true);
@@ -426,36 +428,64 @@ export class Scatter {
     // near/far split moves with you, so rebuild periodically as well
     this.lastRebuildPos = this.lastRebuildPos || pos.clone();
     if (this.lastRebuildPos.distanceTo(pos) > 25) this.dirty = true;
-    if (this.dirty && (this.rebuildT <= 0 || !this.queue.length)) { this.rebuild(pos); this.rebuildT = 0.5; }
+    if (this.dirty && !this.rb && (this.rebuildT <= 0 || !this.queue.length)) { this.startRebuild(pos); this.rebuildT = 0.5; }
+    if (this.rb) this.stepRebuild(2.5);
   }
 
-  rebuild(pos) {
+  // Re-sort every instance into near (full model) / far (stand-in) sets around pos. With long render
+  // distances that is tens of thousands of trees, so it runs a few milliseconds per frame into staging
+  // buffers and is swapped in all at once when complete (no hitch while walking).
+  startRebuild(pos) {
     this.dirty = false;
     this.lastRebuildPos = pos.clone();
     const counts = {};
-    const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = new THREE.Vector3(), p = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);
     for (const k in this.meshes) counts[k] = 0;
-    for (const c of this.cells.values()) {
+    this.stage = this.stage || {};
+    this.rb = { pos: pos.clone(), cells: [...this.cells.values()], ci: 0, counts };
+  }
+
+  stepRebuild(budgetMs) {
+    const rb = this.rb;
+    if (!rb) return;
+    const t0 = performance.now(), px = rb.pos.x, pz = rb.pos.z, counts = rb.counts, stage = this.stage;
+    while (rb.ci < rb.cells.length) {
+      const c = rb.cells[rb.ci++];
       for (const it of c.items) {
-        const near = Math.hypot(it.x - pos.x, it.z - pos.z) < NEAR_R;
-        const k = `${it.type}_${near ? 'near' : 'far'}`;
-        const list = this.meshes[k];
-        if (!list || counts[k] >= this.cap[k]) continue;
-        q.setFromAxisAngle(up, it.rot);
-        sc.setScalar(it.s);
-        p.set(it.x, it.y, it.z);
-        m4.compose(p, q, sc);
-        for (const m of list) m.setMatrixAt(counts[k], m4);
-        counts[k]++;
+        const dx = it.x - px, dz = it.z - pz, dist = Math.sqrt(dx * dx + dz * dz), near = dist < NEAR_R;
+        // with a long render distance, ground clutter past a few hundred metres is sub-pixel: skip it
+        if (!near && dist > 450 && SMALL[it.type] && !(it.s > 1.6)) continue;
+        const k = near ? it.kn || (it.kn = it.type + '_near') : it.kf || (it.kf = it.type + '_far');
+        const n = counts[k];
+        if (n === undefined || n >= this.cap[k]) continue;
+        let a = stage[k];
+        if (!a || a.length < (n + 1) * 16) { const g = new Float32Array(Math.min(this.cap[k], Math.max(1024, (n + 1) * 2)) * 16); if (a) g.set(a); a = stage[k] = g; }
+        // uniform scale + rotation about Y, written straight into the column-major matrix
+        const S = it.s, co = Math.cos(it.rot) * S, si = Math.sin(it.rot) * S, o = n * 16;
+        a[o] = co; a[o + 1] = 0; a[o + 2] = -si; a[o + 3] = 0;
+        a[o + 4] = 0; a[o + 5] = S; a[o + 6] = 0; a[o + 7] = 0;
+        a[o + 8] = si; a[o + 9] = 0; a[o + 10] = co; a[o + 11] = 0;
+        a[o + 12] = it.x; a[o + 13] = it.y; a[o + 14] = it.z; a[o + 15] = 1;
+        counts[k] = n + 1;
+      }
+      if (performance.now() - t0 > budgetMs) return;
+    }
+    // complete: swap in
+    for (const k in this.meshes) {
+      const n = counts[k];
+      for (const m of this.meshes[k]) {
+        if (n) m.instanceMatrix.array.set(stage[k].subarray(0, n * 16));
+        m.count = n; m.instanceMatrix.needsUpdate = true;
       }
     }
-    for (const k in this.meshes) for (const m of this.meshes[k]) { m.count = counts[k]; m.instanceMatrix.needsUpdate = true; }
+    this.rb = null;
   }
+
+  rebuild(pos) { this.startRebuild(pos); this.stepRebuild(Infinity); }
 
   // render distance: detailed trees close by, cut-out stand-ins farther, nothing past the limit
   setViewDistance(vd) {
     NEAR_R = Math.min(320, Math.max(70, vd * 0.11));
-    LOAD_R = Math.min(1500, Math.max(250, vd * 0.42));
+    LOAD_R = Math.min(2800, Math.max(250, vd * 0.45));
     this.center = null;
     this.dirty = true;
   }

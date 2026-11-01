@@ -112,7 +112,7 @@ export class Game {
   // cut-outs), grass density, shadows, people and animals. Past the render distance the land is a
   // coarse outline fading into haze.
   setViewDistance(vd) {
-    vd = Math.max(300, Math.min(6000, vd || 2500));
+    vd = Math.max(300, Math.min(12000, vd || 6000));
     this.viewDist = vd;
     this.terrain.viewDist = vd;
     this.scatter.setViewDistance(vd);
