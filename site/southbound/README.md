@@ -47,6 +47,19 @@ frame rate. Dynamic resolution keeps the frame rate at that target.
 | Gulf Shore | Beaches along the south coast |
 | Sierra Norte | Hills and peaks to the north |
 
+## Building
+
+`index.html` loads `game.js`, a single bundled script that also runs on
+older browsers (no import-map/module support needed). After changing
+anything in `src/`, rebuild it and commit `game.js`:
+
+```bash
+cd tools/southbound && npm install && npm run build
+```
+
+`dev.html` loads the source files directly as modules for quick iteration
+(needs a modern browser).
+
 ## Code layout
 
 ```

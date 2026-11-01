@@ -40,6 +40,7 @@ const settingsPanel = setupSettingsPanel(settings, (key) => game?.applyLive(key)
 $('#open-settings').onclick = () => settingsPanel.open();
 $('#close-settings').onclick = () => settingsPanel.close();
 setupMenu(settings, () => start());
+window.__sbReady = true;
 
 async function start() {
   $('#menu').classList.remove('show');
