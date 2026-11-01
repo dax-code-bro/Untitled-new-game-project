@@ -1,0 +1,73 @@
+<!doctype html><html><body style="margin:0">
+<script type="importmap">{"imports":{"three":"/three/build/three.module.js","three/addons/":"/three/examples/jsm/"}}</script>
+<script type="module">
+// Bakes ez-tree (MIT, Daniel Greenheck) trees into compact geometry GLBs and
+// distant-view impostor sprites. Driven by bake-vegetation.mjs.
+import * as THREE from 'three';
+import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
+import { Tree } from '/ez-tree/build/ez-tree.es.js';
+
+const VARIANTS = [
+  { id: 'pine_a', preset: 'Pine Large', seed: 44166, bark: 'pine', leaf: 'pine' },
+  { id: 'pine_b', preset: 'Pine Large', seed: 9311, bark: 'pine', leaf: 'pine' },
+  { id: 'pine_c', preset: 'Pine Medium', seed: 1207, bark: 'pine', leaf: 'pine' },
+  { id: 'oak_a', preset: 'Oak Large', seed: 51515, bark: 'oak', leaf: 'oak' },
+  { id: 'oak_b', preset: 'Oak Medium', seed: 2468, bark: 'oak', leaf: 'oak' },
+  { id: 'ash_a', preset: 'Ash Large', seed: 777, bark: 'willow', leaf: 'ash' },
+  { id: 'ash_b', preset: 'Ash Medium', seed: 3131, bark: 'willow', leaf: 'ash' },
+  { id: 'bush_a', preset: 'Bush 1', seed: 11, bark: 'oak', leaf: 'oak' },
+  { id: 'bush_c', preset: 'Bush 3', seed: 33, bark: 'oak', leaf: 'oak' },
+];
+const exporter = new GLTFExporter();
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true, alpha: true });
+renderer.setSize(256, 512);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+document.body.appendChild(renderer.domElement);
+
+async function run() {
+  await new Promise((r) => setTimeout(r, 3000)); // ez-tree decodes its embedded textures
+  const out = { variants: [] };
+  for (const v of VARIANTS) {
+    const t = new Tree();
+    t.loadPreset(v.preset);
+    t.options.seed = v.seed;
+    t.generate();
+    // ez-tree builds a tall model (~50-100 units); normalise to metres later from height
+    const box = new THREE.Box3().setFromObject(t);
+    const h = box.max.y - box.min.y;
+    const meshes = t.children.filter((o) => o.isMesh);
+    const bark = meshes.find((m) => m.name === 'branches') || meshes[0];
+    const leaves = meshes.find((m) => m !== bark);
+    // geometry-only GLB: materials are rebuilt in the game from shared textures
+    const scene = new THREE.Scene();
+    for (const [name, m] of [['bark', bark], ['leaves', leaves]]) {
+      const g = m.geometry.clone();
+      for (const k of Object.keys(g.attributes)) if (!['position', 'normal', 'uv'].includes(k)) g.deleteAttribute(k);
+      const mm = new THREE.Mesh(g, new THREE.MeshBasicMaterial());
+      mm.name = name;
+      scene.add(mm);
+    }
+    const glb = await exporter.parseAsync(scene, { binary: true });
+    const b64 = btoa(Array.from(new Uint8Array(glb), (c) => String.fromCharCode(c)).join(''));
+    // impostor: side view, orthographic, transparent background
+    const isc = new THREE.Scene();
+    isc.add(new THREE.HemisphereLight(0xdfeeff, 0x4a4030, 1.4));
+    const sun = new THREE.DirectionalLight(0xfff2dd, 2.6); sun.position.set(0.4, 1, 0.8); isc.add(sun);
+    const view = t.clone(); isc.add(view);
+    const w = Math.max(box.max.x - box.min.x, box.max.z - box.min.z);
+    const half = Math.max(w / 2, h / 4) * 1.04;
+    const cam = new THREE.OrthographicCamera(-half, half, box.max.y + h * 0.01, box.max.y - half * 4, 0.1, 1000);
+    cam.position.set((box.min.x + box.max.x) / 2, 0, 400); cam.lookAt((box.min.x + box.max.x) / 2, 0, 0);
+    renderer.setClearColor(0x000000, 0);
+    renderer.render(isc, cam);
+    const png = renderer.domElement.toDataURL('image/png');
+    let tris = 0; meshes.forEach((m) => { tris += m.geometry.index.count / 3; });
+    out.variants.push({ id: v.id, preset: v.preset, bark: t.options.bark.type, leaf: t.options.leaves.type, leafTint: t.options.leaves.tint, barkTint: t.options.bark.tint, height: h, width: w, half, top: box.max.y, tris, glb: b64, impostor: png,
+      leafAlphaTest: leaves.material.alphaTest ?? 0.5 });
+  }
+  window.result = out;
+  window.done = true;
+}
+run().catch((e) => { window.result = { error: String(e.stack || e) }; window.done = true; });
+</script></body></html>

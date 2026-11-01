@@ -2,6 +2,7 @@
 import { ImprovedNoise } from 'three/addons/math/ImprovedNoise.js';
 import { WORLD, CITY, TOWN, LAKE, FOREST, PLAINS, BAYOU, CHANNELS, coastZ, lakeRadius } from './layout.js';
 import { clamp, lerp, smoothstep, distToSeg, nextFrame } from '../util.js';
+import { erode } from './erosion.js';
 
 const perlin = new ImprovedNoise();
 const N = (x, z, s) => perlin.noise(x, z, s);
@@ -80,13 +81,30 @@ export class Heightmap {
     return Math.max(0, this.wl[gz * this.n + gx]);
   }
 
-  async generate(progress) {
+  async generate(progress, opts = {}) {
     const { n, half, cell, h } = this;
     // 1. Base terrain
     for (let j = 0; j < n; j++) {
       const z = -half + j * cell;
       for (let i = 0; i < n; i++) h[j * n + i] = baseHeight(-half + i * cell, z);
       if ((j & 63) === 0) { progress(0.05 + 0.35 * j / n, 'Raising the land'); await nextFrame(); }
+    }
+    // 1b. Hydraulic erosion: gullies, ridges and valley floors
+    progress(0.4, 'Eroding hills and valleys');
+    await nextFrame();
+    const drops = opts.erosionDrops ?? 220000;
+    for (let pass = 0; pass < 4; pass++) {
+      erode(this.h, n, { drops: drops / 4, seed: 7 + pass });
+      progress(0.4 + 0.04 * (pass + 1), 'Eroding hills and valleys');
+      await nextFrame();
+    }
+    // soften grid-scale rills the drops leave (keeps the big gullies and valleys)
+    for (let pass = 0; pass < 2; pass++) {
+      const src = h.slice();
+      for (let j = 1; j < n - 1; j++) for (let i = 1; i < n - 1; i++) {
+        const k = j * n + i;
+        h[k] = src[k] * 0.4 + (src[k - 1] + src[k + 1] + src[k - n] + src[k + n]) * 0.1 + (src[k - n - 1] + src[k - n + 1] + src[k + n - 1] + src[k + n + 1]) * 0.05;
+      }
     }
     // 2. Flatten the city, the town, and the lake basin
     TOWN.height = Math.round(this.height(TOWN.x0 + 144, TOWN.z0 + 108)) + 1;

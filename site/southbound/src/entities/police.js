@@ -149,7 +149,7 @@ export class Police {
     c.deployed = true;
     const v = c.v, sx = Math.cos(v.heading), sz = -Math.sin(v.heading);
     for (const side of [-1, 1]) {
-      const h = new Human(this.lib, 'm_swat');
+      const h = new Human(this.lib, 'mh_cop');
       const x = v.pos.x + sx * side * (v.spec.width / 2 + 0.8), z = v.pos.z + sz * side * (v.spec.width / 2 + 0.8);
       const p = { h, role: 'cop', mode: 'walk', hp: 120, pos: new THREE.Vector3(x, this.collision.surface(x, z, v.pos.y + 1), z),
         heading: v.heading, speed: 0, radius: 0.35, acc: 0, timer: 0, G: null };

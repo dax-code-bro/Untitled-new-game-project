@@ -51,9 +51,12 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 - [x] Terrain: height-blended layers, anti-tiling, triplanar cliffs, normal maps
 - [x] Height fog with sun glow (golden-hour haze), cloud layer
 - [x] Post chain (pmndrs postprocessing + N8AO): AO, sun shafts, DOF (Ultra), bloom, AgX tone mapping, colour grade, grain
-- [ ] Realistic tree models (current trees are simple shapes; need a CC0 photogrammetry tree pack)
+- [x] Realistic trees and bushes (ez-tree, baked): 3D near the camera, impostor sprites far away
+- [x] Grass clumps and scanned rocks as ground cover
+- [x] Hydraulic erosion on the terrain (gullies, ridges, valley floors)
+- [x] Realistic player, pedestrians and police built from CC0 MakeHuman assets
 - [ ] Rain / wet roads with reflections, volumetric clouds
-- [ ] Higher-detail cars and characters
+- [ ] Higher-detail cars (Kenney cars are still stylised)
 
 ## Phase 2 — World depth
 

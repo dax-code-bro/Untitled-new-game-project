@@ -1,11 +1,12 @@
-// Loads the CC0 model packs (Quaternius people + animations, Kenney cars) and
+// Loads the CC0 model packs (MakeHuman people, Quaternius animations, Kenney cars) and
 // prepares them: animations are retargeted once per skeleton family.
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { bakeClips, UAL_TO_MODULAR } from './retarget.js';
+import { bakeClips, UAL_TO_MH } from './retarget.js';
 
-export const PEOPLE_ALL = ['m_casual', 'm_casual2', 'm_suit', 'm_worker', 'm_punk', 'm_beach', 'f_casual', 'f_formal', 'f_suit', 'f_worker', 'f_punk', 'm_swat'];
-export const PEOPLE_LITE = ['m_casual', 'm_suit', 'f_casual', 'f_formal', 'm_swat'];
+// Realistic people built from CC0 MakeHuman assets (tools/southbound/build-human.py)
+export const PEOPLE_ALL = ['mh_m1', 'mh_m2', 'mh_m3', 'mh_m4', 'mh_f1', 'mh_f2', 'mh_cop'];
+export const PEOPLE_LITE = ['mh_m2', 'mh_f1', 'mh_cop'];
 
 // Real-world lengths + handling for each Kenney vehicle
 export const VEHICLES = {
@@ -24,6 +25,17 @@ export const VEHICLES = {
   'garbage-truck': { name: 'City Sanitation', len: 8.2, accel: 5.5, top: 32, grip: 5, weight: 0.4 },
 };
 
+function tunePerson(scene) {
+  scene.traverse((o) => {
+    if (!o.isMesh) return;
+    o.castShadow = true; o.receiveShadow = true;
+    const m = o.material;
+    if (m.name === 'skin') m.roughness = 0.5;
+    if (m.name === 'eyes') m.roughness = 0.05;
+    if (m.alphaTest > 0) { m.alphaTest = 0.4; m.side = THREE.DoubleSide; }
+  });
+}
+
 export async function loadLibrary(quality, progress = () => {}) {
   const loader = new GLTFLoader();
   const base = 'assets/';
@@ -33,7 +45,7 @@ export async function loadLibrary(quality, progress = () => {}) {
   let done = 0;
   const step = (what) => progress(++done / total, what);
 
-  const lib = { people: {}, cars: {}, clips: {}, peopleIds: people.filter((p) => p !== 'm_swat') };
+  const lib = { people: {}, cars: {}, clips: {}, peopleIds: people.filter((p) => p !== 'mh_cop') };
 
   const anims = await loader.loadAsync(base + 'anims/ual.glb');
   step('Loading animations');
@@ -53,16 +65,23 @@ export async function loadLibrary(quality, progress = () => {}) {
   }));
   await Promise.all(people.map(async (id) => {
     const g = await loader.loadAsync(`${base}people/${id}.glb`);
-    g.scene.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = false; } });
-    lib.people[id] = { scene: g.scene, family: id[0] === 'f' ? 'women' : 'men' };
+    tunePerson(g.scene);
+    if (id === 'mh_cop') {
+      // police uniform: dark navy shirt and trousers
+      g.scene.traverse((o) => { if (o.isMesh && o.material.name === 'suit') { o.material = o.material.clone(); o.material.color.set(0x34405a); } });
+    }
+    lib.people[id] = { scene: g.scene, family: id.startsWith('mh_f') ? 'mh_f' : 'mh_m' };
     step('Loading people');
   }));
-  // Retarget the animation library once per skeleton family
-  for (const fam of ['men', 'women']) {
+  // The player
+  const hero = await loader.loadAsync(base + 'people/hero.glb');
+  tunePerson(hero.scene);
+  lib.people.hero = { scene: hero.scene, family: 'mh_m' };
+  // Retarget the animation library once per body type (men/women differ in height)
+  for (const fam of ['mh_m', 'mh_f']) {
     const sample = Object.values(lib.people).find((p) => p.family === fam);
     if (!sample) continue;
-    const clips = bakeClips(anims.scene, anims.animations, sample.scene, UAL_TO_MODULAR);
-    lib.clips[fam] = Object.fromEntries(clips.map((c) => [c.name, c]));
+    lib.clips[fam] = Object.fromEntries(bakeClips(anims.scene, anims.animations, sample.scene, UAL_TO_MH).map((c) => [c.name, c]));
   }
   return lib;
 }

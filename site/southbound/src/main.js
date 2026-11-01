@@ -80,7 +80,7 @@ async function createGame(progress) {
   await nextFrame();
   const hm = new Heightmap();
   const graph = buildRoadGraph();
-  await hm.generate(progress);
+  await hm.generate(progress, { erosionDrops: q.label === 'Phone' ? 80000 : q.label === 'Low' ? 140000 : 240000 });
   hm.shapeRoads(graph);
   progress(0.6, 'Paving roads and highways');
   await nextFrame();
@@ -101,7 +101,7 @@ async function createGame(progress) {
   const city = createBuildings(hm, q, scene, collision, surf);
   progress(0.84, 'Growing Pinewood Hollow');
   await nextFrame();
-  const veg = createVegetation(hm, q, scene, collision, city.cityBlocks);
+  const veg = await createVegetation(hm, q, scene, collision, city.cityBlocks, (p) => progress(0.84 + p * 0.07, 'Growing forests'));
   addSidewalkColliders(collision);
   progress(0.92, 'Lighting the sky');
   await nextFrame();
@@ -110,7 +110,7 @@ async function createGame(progress) {
   const lib = await loadLibrary(q, (p, t) => progress(0.93 + p * 0.04, t));
 
   // ---- actors
-  const player = new Player(scene, lib, 'm_casual');
+  const player = new Player(scene, lib, 'hero');
   const spawn = { x: CITY.x0 - 26, z: CITY.z0 + 3 * CITY.pitch + 3 };
   player.pos.set(spawn.x, collision.surface(spawn.x, spawn.z, 50), spawn.z);
   player.heading = Math.PI / 2;
