@@ -1,0 +1,129 @@
+// Keyboard + mouse, touch (virtual joystick, look pad, buttons) and gamepad.
+export class Input {
+  constructor(canvas, touchRoot, settings) {
+    this.settings = settings;
+    this.keys = new Set();
+    this.pressed = new Set(); // edge-triggered this frame
+    this.look = { x: 0, y: 0 };
+    this.wheel = 0;
+    this.move = { x: 0, y: 0 };
+    this.touchMove = { x: 0, y: 0 };
+    this.touchButtons = new Set();
+    this.touchPressed = new Set();
+    this.lastLookTime = 0;
+    this.locked = false;
+    this.canvas = canvas;
+
+    addEventListener('keydown', (e) => {
+      if (e.repeat) return;
+      this.keys.add(e.code);
+      this.pressed.add(e.code);
+      if (['Space', 'ArrowUp', 'ArrowDown', 'Tab'].includes(e.code)) e.preventDefault();
+    });
+    addEventListener('keyup', (e) => this.keys.delete(e.code));
+    addEventListener('blur', () => this.keys.clear());
+    canvas.addEventListener('click', () => { if (!settings.isTouch && canvas.requestPointerLock) canvas.requestPointerLock(); });
+    document.addEventListener('pointerlockchange', () => { this.locked = document.pointerLockElement === canvas; });
+    addEventListener('mousemove', (e) => {
+      if (!this.locked) return;
+      this.look.x += e.movementX; this.look.y += e.movementY; this.lastLookTime = performance.now();
+    });
+    addEventListener('wheel', (e) => { this.wheel += Math.sign(e.deltaY); }, { passive: true });
+
+    if (touchRoot) this.setupTouch(touchRoot);
+  }
+
+  setupTouch(root) {
+    const stick = root.querySelector('#stick'), knob = root.querySelector('#knob'), pad = root.querySelector('#lookpad');
+    let stickId = null, lookId = null, sx = 0, sy = 0, lx = 0, ly = 0;
+    const R = 55;
+    stick.addEventListener('touchstart', (e) => {
+      const t = e.changedTouches[0]; stickId = t.identifier;
+      const r = stick.getBoundingClientRect(); sx = r.left + r.width / 2; sy = r.top + r.height / 2;
+      e.preventDefault();
+    }, { passive: false });
+    pad.addEventListener('touchstart', (e) => {
+      const t = e.changedTouches[0]; lookId = t.identifier; lx = t.clientX; ly = t.clientY; e.preventDefault();
+    }, { passive: false });
+    addEventListener('touchmove', (e) => {
+      for (const t of e.changedTouches) {
+        if (t.identifier === stickId) {
+          let dx = t.clientX - sx, dy = t.clientY - sy;
+          const d = Math.hypot(dx, dy);
+          if (d > R) { dx *= R / d; dy *= R / d; }
+          knob.style.transform = `translate(${dx}px, ${dy}px)`;
+          this.touchMove.x = dx / R; this.touchMove.y = -dy / R;
+        } else if (t.identifier === lookId) {
+          this.look.x += (t.clientX - lx) * 2.2; this.look.y += (t.clientY - ly) * 2.2;
+          lx = t.clientX; ly = t.clientY; this.lastLookTime = performance.now();
+        }
+      }
+    }, { passive: true });
+    const end = (e) => {
+      for (const t of e.changedTouches) {
+        if (t.identifier === stickId) { stickId = null; this.touchMove.x = this.touchMove.y = 0; knob.style.transform = ''; }
+        if (t.identifier === lookId) lookId = null;
+      }
+    };
+    addEventListener('touchend', end); addEventListener('touchcancel', end);
+    root.querySelectorAll('[data-btn]').forEach((b) => {
+      const id = b.dataset.btn;
+      b.addEventListener('touchstart', (e) => { this.touchButtons.add(id); this.touchPressed.add(id); e.preventDefault(); }, { passive: false });
+      b.addEventListener('touchend', () => this.touchButtons.delete(id));
+    });
+  }
+
+  down(code) { return this.keys.has(code); }
+  hit(code) { return this.pressed.has(code); }
+  btn(id) { return this.touchButtons.has(id); }
+  btnHit(id) { return this.touchPressed.has(id); }
+
+  // Gather everything into one action state for this frame.
+  poll() {
+    const k = (c) => this.keys.has(c);
+    let mx = (k('KeyD') || k('ArrowRight') ? 1 : 0) - (k('KeyA') || k('ArrowLeft') ? 1 : 0);
+    let my = (k('KeyW') || k('ArrowUp') ? 1 : 0) - (k('KeyS') || k('ArrowDown') ? 1 : 0);
+    mx += this.touchMove.x; my += this.touchMove.y;
+    const a = {
+      moveX: mx, moveY: my,
+      sprint: k('ShiftLeft') || k('ShiftRight') || this.btn('sprint') || Math.hypot(this.touchMove.x, this.touchMove.y) > 0.92,
+      walk: k('AltLeft') || k('CapsLock'),
+      jump: this.hit('Space') || this.btnHit('jump'),
+      handbrake: k('Space') || this.btn('jump'),
+      enter: this.hit('KeyF') || this.hit('Enter') || this.btnHit('enter'),
+      map: this.hit('KeyM') || this.btnHit('map'),
+      pause: this.hit('Escape') || this.hit('KeyP') || this.btnHit('pause'),
+      camera: this.hit('KeyV'),
+      horn: k('KeyH'),
+      lookX: this.look.x, lookY: this.look.y,
+      zoom: this.wheel,
+      throttle: 0, brake: 0,
+    };
+    // gamepad
+    const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+    for (const g of pads) {
+      if (!g) continue;
+      const dz = (v) => (Math.abs(v) < 0.15 ? 0 : v);
+      a.moveX += dz(g.axes[0]); a.moveY -= dz(g.axes[1]);
+      a.lookX += dz(g.axes[2]) * 14; a.lookY += dz(g.axes[3]) * 14;
+      if (dz(g.axes[2]) || dz(g.axes[3])) this.lastLookTime = performance.now();
+      a.throttle = Math.max(a.throttle, g.buttons[7]?.value || 0);
+      a.brake = Math.max(a.brake, g.buttons[6]?.value || 0);
+      if (g.buttons[0]?.pressed && !this._padA) a.jump = true;
+      if (g.buttons[3]?.pressed && !this._padY) a.enter = true;
+      if (g.buttons[9]?.pressed && !this._padStart) a.pause = true;
+      a.handbrake = a.handbrake || g.buttons[0]?.pressed || g.buttons[5]?.pressed;
+      a.sprint = a.sprint || g.buttons[10]?.pressed;
+      this._padA = g.buttons[0]?.pressed; this._padY = g.buttons[3]?.pressed; this._padStart = g.buttons[9]?.pressed;
+    }
+    a.moveX = Math.max(-1, Math.min(1, a.moveX));
+    a.moveY = Math.max(-1, Math.min(1, a.moveY));
+    a.throttle = Math.max(a.throttle, Math.max(0, a.moveY));
+    a.brake = Math.max(a.brake, Math.max(0, -a.moveY));
+    this.look.x = this.look.y = 0;
+    this.wheel = 0;
+    this.pressed.clear();
+    this.touchPressed.clear();
+    return a;
+  }
+}

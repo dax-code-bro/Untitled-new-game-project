@@ -1,0 +1,110 @@
+[
+ {
+  "name": "01-spawn-city-street",
+  "x": 234,
+  "z": 1051,
+  "yaw": 1.5708,
+  "pitch": 0.12,
+  "hour": 10,
+  "wait": 1200
+ },
+ {
+  "name": "02-skyline-golden-hour",
+  "x": 150,
+  "z": 1330,
+  "yaw": 2.2,
+  "pitch": -0.05,
+  "hour": 18.4,
+  "wait": 1200
+ },
+ {
+  "name": "03-downtown-night",
+  "x": 644,
+  "z": 1110,
+  "yaw": 3.1416,
+  "pitch": -0.15,
+  "hour": 21.5,
+  "wait": 1200
+ },
+ {
+  "name": "04-mill-creek-town",
+  "x": -1195,
+  "z": -288,
+  "yaw": 1.5708,
+  "pitch": 0.1,
+  "hour": 16,
+  "wait": 1200
+ },
+ {
+  "name": "05-lake-arden",
+  "x": -150,
+  "z": -770,
+  "yaw": 3.4,
+  "pitch": 0.1,
+  "hour": 8.5,
+  "wait": 1200
+ },
+ {
+  "name": "06-pinewood-forest",
+  "x": -1350,
+  "z": -1250,
+  "yaw": 0.7,
+  "pitch": 0.05,
+  "hour": 11,
+  "wait": 1200
+ },
+ {
+  "name": "07-redgrass-plains",
+  "x": 1150,
+  "z": -700,
+  "yaw": -2.5,
+  "pitch": 0.1,
+  "hour": 17.5,
+  "wait": 1200
+ },
+ {
+  "name": "08-bayou-verde",
+  "x": -1450,
+  "z": 1150,
+  "yaw": 0.3,
+  "pitch": 0.1,
+  "hour": 7.2,
+  "wait": 1200
+ },
+ {
+  "name": "09-river-bridge",
+  "x": -40,
+  "z": 990,
+  "yaw": -2.75,
+  "pitch": 0.05,
+  "hour": 12.5,
+  "wait": 1200
+ },
+ {
+  "name": "10-gulf-shore-sunset",
+  "x": 600,
+  "z": 1440,
+  "yaw": 3.1416,
+  "pitch": 0.0,
+  "hour": 17.7,
+  "wait": 1200
+ },
+ {
+  "name": "11-sierra-norte",
+  "x": 400,
+  "z": -1650,
+  "yaw": 3.1416,
+  "pitch": 0.0,
+  "hour": 14,
+  "wait": 1200
+ },
+ {
+  "name": "12-full-map",
+  "x": 234,
+  "z": 1051,
+  "yaw": 1.5708,
+  "hour": 10,
+  "map": true,
+  "wait": 1200
+ }
+]
