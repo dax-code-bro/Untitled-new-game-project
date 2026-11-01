@@ -230,7 +230,7 @@ export function detailMaterial(T, { metal = false } = {}) {
 export function heightTexture() {
   const data = new Uint8Array(4 * 4).fill(0);
   const t = new THREE.DataTexture(data, 2, 2, THREE.RGBAFormat);
-  t.magFilter = t.minFilter = THREE.LinearFilter; // smooth shorelines (nearest made them blocky)
+  t.magFilter = t.minFilter = THREE.NearestFilter; // packed 16-bit heights: the water shader interpolates them itself
   t.needsUpdate = true;
   return { value: t };
 }
