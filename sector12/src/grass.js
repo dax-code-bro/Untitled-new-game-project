@@ -127,7 +127,7 @@ export class Grass {
     if (!this.enabled) return;
     this.uR = { value: this.R };
     const mk = (tex, key, h) => {
-      const m = coverageHook(windHook(new THREE.MeshStandardMaterial({ map: tex, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.88 }), { height: h, sway: 0.16, flutter: 0.03, key }));
+      const m = coverageHook(windHook(new THREE.MeshStandardMaterial({ map: tex, alphaTest: 0.5, alphaToCoverage: true, side: THREE.DoubleSide, roughness: 0.88 }), { height: h, sway: 0.16, flutter: 0.03, key }));
       m.userData.hooks.push((s) => {
         s.uniforms.uGrassR = this.uR;
         s.vertexShader = s.vertexShader

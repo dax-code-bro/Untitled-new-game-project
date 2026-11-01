@@ -10,8 +10,8 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
 
 export const QUALITY = {
-  low: { label: 'Low', pixelRatio: 1, csm: 1, shadowSize: 1024, shadowFar: 140, post: false, msaa: 0, smaa: false, bloom: false, grass: 0.35, texSize: 256, flora: 0.75, clouds: true },
-  medium: { label: 'Medium', pixelRatio: 1, csm: 2, shadowSize: 1024, post: true, msaa: 0, smaa: true, bloom: true, grass: 0.55, texSize: 512, flora: 0.8, clouds: true },
+  low: { label: 'Low', pixelRatio: 1, csm: 1, shadowSize: 1024, shadowFar: 140, post: false, msaa: 0, smaa: false, bloom: false, grass: 0.35, texSize: 512, flora: 0.75, clouds: true },
+  medium: { label: 'Medium', pixelRatio: 1, csm: 2, shadowSize: 1024, post: true, msaa: 2, smaa: true, bloom: true, grass: 0.55, texSize: 512, flora: 0.8, clouds: true },
   high: { label: 'High', pixelRatio: 1, csm: 3, shadowSize: 2048, post: true, msaa: 4, smaa: false, bloom: true, grass: 1, texSize: 512, flora: 1, clouds: true },
   ultra: { label: 'Ultra', pixelRatio: 2, csm: 4, shadowSize: 4096, post: true, msaa: 4, smaa: true, bloom: true, grass: 1.6, texSize: 1024, flora: 1.25, clouds: true },
 };
@@ -138,7 +138,7 @@ export class Graphics {
     this.qualityKey = qualityKey;
     this.patched = new WeakSet();
     this.time = 0;
-    renderer.setPixelRatio(Math.min(devicePixelRatio, this.q.pixelRatio));
+    this.applyPixelRatio(innerWidth, innerHeight);
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -252,7 +252,21 @@ export class Graphics {
     if (this.q.smaa) this.composer.addPass(new SMAAPass(size.x, size.y));
   }
 
+  // Render at the screen's real sharpness: on phones and high-density displays (2-3 device pixels per
+  // CSS pixel) a fixed ratio of 1 drew the game at a half to a third of the panel's resolution and
+  // stretched it, which looked pixelated and retro. Each preset gets a megapixel budget instead.
+  applyPixelRatio(w, h) {
+    const B = { low: [2, 1.8], medium: [2, 2.4], high: [2, 3.7], ultra: [3, 8.3] }[this.qualityKey] || [2, 3.7];
+    const dpr = window.devicePixelRatio || 1;
+    const budget = Math.sqrt((B[1] * 1e6) / Math.max(1, w * h));
+    const pr = Math.max(Math.min(1, dpr), Math.min(dpr, B[0], budget));
+    this.renderer.setPixelRatio(pr);
+    if (this.composer) this.composer.setPixelRatio(pr);
+    return pr;
+  }
+
   resize(w, h) {
+    this.applyPixelRatio(w, h);
     this.renderer.setSize(w, h);
     if (this.composer) this.composer.setSize(w, h);
     if (this.csm) this.csm.updateFrustums();

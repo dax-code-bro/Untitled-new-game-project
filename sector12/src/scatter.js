@@ -307,7 +307,7 @@ export class Scatter {
     LOAD_R = 520 + 240 * Math.min(1.2, this.density);
     const rng = mulberry32(777);
     const barkM = windHook(new THREE.MeshStandardMaterial({ map: T.bark.map, normalMap: T.bark.nr, roughnessMap: T.bark.rough, vertexColors: true }), { height: 30, sway: 0.25, flutter: 0, key: 'bark' });
-    const leafM = (tex, h, key) => coverageHook(windHook(new THREE.MeshStandardMaterial({ map: tex, alphaTest: 0.45, side: THREE.DoubleSide, roughness: 0.75, vertexColors: true }), { height: h, sway: 0.45, flutter: 0.05, key }));
+    const leafM = (tex, h, key) => coverageHook(windHook(new THREE.MeshStandardMaterial({ map: tex, alphaTest: 0.45, alphaToCoverage: true, side: THREE.DoubleSide, roughness: 0.75, vertexColors: true }), { height: h, sway: 0.45, flutter: 0.05, key }));
     const rockM = new THREE.MeshStandardMaterial({ map: T.rock.map, normalMap: T.rock.nr, roughnessMap: T.rock.rough, vertexColors: true });
     const cactusM = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.55, normalMap: T.bark.nr, normalScale: new THREE.Vector2(0.3, 0.3) });
     const M = {

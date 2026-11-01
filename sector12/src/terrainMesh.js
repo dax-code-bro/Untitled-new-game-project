@@ -66,7 +66,7 @@ export class Terrain {
   onHeightmap(m) {
     this.heightDone = true;
     const t = new THREE.DataTexture(m.px, m.w, m.w, THREE.RGBAFormat);
-    t.magFilter = t.minFilter = THREE.NearestFilter;
+    t.magFilter = t.minFilter = THREE.LinearFilter; // smooth shorelines (nearest made them blocky)
     t.needsUpdate = true;
     this.heightTex.value = t;
   }
