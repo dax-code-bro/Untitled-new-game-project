@@ -241,7 +241,10 @@ function materialFor(m, header, opts) {
     case 'eye': return eyeMaterial({ ...mt, headU: opts.headU });
     case 'brow': case 'lash': case 'haircard': return cardMaterial({ ...mt, colorMap: m.kind === 'haircard', cut: m.kind === 'brow' ? [0.0, 0.03] : [0.06, 0.3], front: m.kind === 'lash', headU: opts.headU });
     case 'hair': return hairStrandMaterial(mt);
-    case 'teeth': case 'tongue': return simpleTexturedMaterial({ ...mt, mouthU: opts.mouthU, headU: opts.headU, mouth: m.name === 'teeth' || m.kind === 'tongue', teeth: m.name === 'teeth' });
+    case 'teeth': case 'tongue':
+      // LOOK r2c: the caruncle (inner eye corner) is wet pink mucosa, not the brown-red of the cache colour
+      if (m.name === 'caruncle') return simpleTexturedMaterial({ ...mt, color: [0.78, 0.45, 0.45], clearcoat: 1.0, rough: Math.min(mt.rough ?? 0.5, 0.35), headU: opts.headU });
+      return simpleTexturedMaterial({ ...mt, mouthU: opts.mouthU, headU: opts.headU, mouth: m.name === 'teeth' || m.kind === 'tongue', teeth: m.name === 'teeth' });
     case 'cloth': return clothMaterial({ ...mt, wrinkle: mt.wrinkle ?? (m.name === 'shirt' ? 1 : 0) });
     default: return propMaterial(mt);
   }

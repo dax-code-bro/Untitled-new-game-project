@@ -5,7 +5,7 @@
 // before '_' (abby_sling -> abby). PROVISIONAL until Daxtyn approves.
 export const SKIN_LOOK = {
   // Abby is a CHILD: fine, clear skin, light sun freckles over the nose and cheeks, little under-eye
-  abby: { freckles: 0.55, underEye: 0.3, chromo: 0.9 },
+  abby: { freckles: 0.55, underEye: 0.3, chromo: 0.9, lipSat: 0.4 },   // r2c: a child's lips, no lipstick read
   // Remi, adult: outdoor rider - more blood / pigment variation, some under-eye
   remi: { freckles: 0.2, underEye: 0.55, chromo: 1.2 },
   // Alexandria, middle-aged, sleepless (the jug of wine by the window): darker under the eyes

@@ -159,7 +159,14 @@ float tearLine(vec3 p, float lidM) { vec3 e = distance(p, uEyeL) < distance(p, u
   // (aux2.g spans the whole lid zone, 14 mm above to 14 mm below the eye centre: only the rim that
   // touches the globe - ~12.5 mm from the eyeball centre, measured on abby - holds the tear line)
   float dy = p.y - e.y;
-  return lidM * smoothstep(-0.0012, -0.0028, dy) * (1.0 - smoothstep(-0.0075, -0.0095, dy)) * (1.0 - smoothstep(0.0133, 0.0146, distance(p, e))); }
+  // LOOK r2c: the offline lid-margin mask (aux2.g) sits on the rim's inner face, against the globe -
+  // painted, it covered no visible pixel (the r2b 'one dot'). The lower lid is nearly concentric with
+  // the eyeball, so the visible rim is a distance band: 13.0-13.6 mm from the eye centre on abby
+  // (painted in 1 mm rings). The band is kept narrow and peaks at the inner edge (the water line)
+  float d = distance(p, e);
+  float rim = smoothstep(0.0127, 0.0131, d) * (1.0 - smoothstep(0.0133, 0.0139, d));
+  float m = max(lidM, rim) * step(0.006, p.z - e.z);
+  return m * smoothstep(-0.0012, -0.0028, dy) * (1.0 - smoothstep(-0.0075, -0.0095, dy)); }
 uniform vec3 uTone, uScalp, uBeard; uniform float uBeardFull; uniform float uSat, uRed, uPores, uAge, uSSS, uSeed, uDirt, uFlush, uLid, uMouthOpen; uniform vec3 uHeadFwd, uLipM, uLipUp;
 varying vec3 vObjP; varying float vAO; varying float vThick; varying vec4 vAux; varying vec4 vAux2; varying vec4 vAux3; varying vec3 vAlbG; varying float vMouth;
 vec3 skinSmoothN; float skinThin; vec3 skinTransCol;`)
@@ -296,7 +303,11 @@ skinSmoothN = normal;
   float h = 0.0;
   if (fadeP > 0.0) {
     float c = hCell(vObjP * poreScale + uSeed);
-    h -= (1.0 - smoothstep(0.0, 0.45, c)) * 0.00023 * fadeP * (1.0 - vAux.r) * (1.0 - 0.5 * vAux3.g);
+    // LOOK r2c: pore depth varies over ~1 cm (a uniform field read as orange peel at 4K under a
+    // lamp) and the cheeks (aux2.r) are finer than the nose / T-zone
+    float pv = 0.65 * hN3(vObjP * 95.0 + uSeed) + 0.35 * hN3(vObjP * 230.0 + uSeed);
+    float pd = mix(0.35, 1.2, smoothstep(0.2, 0.8, pv)) * (1.0 - 0.4 * vAux2.r);
+    h -= (1.0 - smoothstep(0.0, 0.45, c)) * 0.00023 * pd * fadeP * (1.0 - vAux.r) * (1.0 - 0.5 * vAux3.g);
     h += (hN3(vObjP * 3800.0) - 0.5) * 0.00003 * fadeP;
   }
   // lips (aux.r): fine vertical grooves (~1 mm apart, wavy), not a smooth plastic surface
@@ -411,8 +422,10 @@ void RE_Direct_Skin( const in IncidentLight directLight0, const in vec3 geometry
   // (without it the lower lid met the eyeball dry, a doll's eye)
   { float tl = tearLine(vObjP, smoothstep(0.25, 0.7, vAux2.g));
     float front = smoothstep(-0.1, 0.35, dot(directLight.direction, uHeadFwd));
-    float fv = 0.04 + 0.96 * pow(1.0 - saturate(dot(normalize(directLight.direction + geometryViewDir), geometryViewDir)), 5.0);
-    reflectedLight.directSpecular += directLight.color * tl * front * fv * 10.0; }
+    // (r2c: a broad lobe, not a Fresnel mirror term - the meniscus is concave, so some part of it
+    // faces any light in front; strongest when the light is near the camera axis)
+    float lv = saturate(dot(directLight.direction, geometryViewDir));
+    reflectedLight.directSpecular += directLight.color * tl * front * (0.1 + 0.45 * lv * lv); }
   // LOOK r2: light scattered through the skin comes out redder and more saturated just inside the
   // terminator (the 'blood line' of a face lit by one lamp). Keep it small: at 0.32 x diffuse it painted
   // an orange band down the side of the nose
@@ -532,7 +545,7 @@ export function cardMaterial(o = {}) {
   // MakeHuman lash cards draw them as thick as the upper row, which reads as eyeliner
   // uCut: alpha below the first value is dropped, full at the second (faint card texels printed
   // translucent streaks past the eye corner; brows keep a fainter cut so their soft card stays)
-  const U = { uAlphaChannel: { value: o.alphaChannel ?? 3 }, uAlphaGain: { value: o.alphaGain ?? 1.0 }, uShift: { value: o.shift ?? 0.08 }, uLower: { value: o.lower ?? 0.4 },
+  const U = { uAlphaChannel: { value: o.alphaChannel ?? 3 }, uAlphaGain: { value: o.alphaGain ?? 1.0 }, uShift: { value: o.shift ?? 0.08 }, uLower: { value: o.lower ?? 0.25 },
     uCut: { value: new THREE.Vector2(...(o.cut || [0.08, 0.45])) }, uHeadFwd: headUniform(o) };
   mat.userData.card = U;
   const front = !!o.front;      // lashes: no back light (FRONT_GLSL)
@@ -599,6 +612,9 @@ export function simpleTexturedMaterial(o = {}) {
   { vec3 ind = reflectedLight.indirectDiffuse; float li = dot(ind, vec3(0.2126, 0.7152, 0.0722));
     reflectedLight.indirectDiffuse = mix(ind, li * ${teeth ? 'vec3(1.18, 0.98, 0.9)' : 'vec3(1.32, 0.9, 0.8)'}, 0.9); }
   reflectedLight.directDiffuse *= mix(vec3(1.0), ${teeth ? 'vec3(1.04, 1.0, 0.9)' : 'vec3(1.12, 0.94, 0.9)'}, smoothstep(0.003, 0.012, vMouth));
+  ${teeth ? `// LOOK r2c: jaw closed (uMouthOpen ~0) the teeth sit in the lips' shadow - a lit sliver read as a
+  // yellow-green line between closed lips; any speech opening (> ~0.06) restores the full light
+  mOcc *= mix(0.35, 1.0, smoothstep(0.0, 0.06, uMouthOpen));` : ''}
   reflectedLight.indirectDiffuse *= mOcc; reflectedLight.directDiffuse *= mOcc;
   reflectedLight.indirectSpecular *= mOcc * mOcc * 0.25; reflectedLight.directSpecular *= mOcc * mOcc;
   // the environment seen by the teeth is the inside of the lips, not the sky / the field: an

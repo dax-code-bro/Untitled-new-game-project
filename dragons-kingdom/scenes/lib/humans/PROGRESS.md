@@ -616,3 +616,50 @@ Render recipe: humans-dev.json `{ "id": "abby", "accumulate": false, "still": tr
 "focusEye": true }`, `node render/render.mjs --still scenes/lookdev/humans-dev.js --time 1.5 --preset
 final --png <scratch>/x.png` (~60 s on this CPU box); crops with ffmpeg `-vf crop=1100:330:1300:1300`
 (eyes) and `crop=900:360:1300:1780` (lips). Restore humans-dev.json afterwards.
+
+## LOOK round 2c (2026-11-01, short session) - tear line found, child lips, teeth, pores, lashes, caruncle
+
+DIAGNOSED (debug paint after `#include <dithering_fragment>` in skinMaterial, draft renders):
+- The tear line's mask was the problem, not the lobe. The offline lid-margin mask `aux2.g`
+  (humanbuild.py face_masks: 0.8-3.6 mm off the eyeball surface) lies on the rim's INNER face, against the
+  globe: painted red it covered no visible pixel (eye macro at 8 px/mm). The eye-centre uniforms are right
+  (bone p, drape pose). Painting distance in 1 mm rings showed the lower lid is nearly concentric with the
+  eyeball; the visible lower rim is the 13.0-13.6 mm band from the eye centre on abby.
+FIXED (materials.js / look.js / loader.js, runtime only, no rebuild):
+1. `tearLine()`: mask = max(aux2.g, distance band 12.7-13.9 mm) x in front (z > centre + 6 mm) x the old
+   dy window; highlight = colour x (0.1 + 0.45 (L.V)^2) x front (broad lobe, no Fresnel mirror). Now a faint
+   pale line along the lower rim (k3_eyeR_x3.png), not one dot. Abby-measured band: CHECK on remi /
+   alexandria (adult eyes / lids may sit at another radius - paint the rings, see recipe below).
+2. look.js abby `lipSat: 0.4` (child: peach-pink, no coral / lipstick read; k3_lips.png).
+3. Teeth: jaw closed the teeth take x0.35 light, back to full by uMouthOpen 0.06 (any speech opening).
+   The yellow-green sliver between the closed lips is now a dark line (faint teal tint remains at its middle).
+   RISK: uMouthOpen is jaw-only (face.js line ~100) - a smile that parts the lips with the jaw closed shows
+   dim teeth. REQUEST performance: add a lip-part term to mouthU, or a separate uniform, if smiles need it.
+4. Pores: depth x mix(0.35, 1.2) over a ~1 cm two-octave noise field, x0.6 on the cheeks (aux2.r).
+   At 4K under the lamp the right cheek still reads pebbly - next: also reduce `poreScale` contrast in
+   colour (the 'pores read in the colour' block) and the roughness stipple on the cheeks.
+5. cardMaterial lower-lash opacity default 0.4 -> 0.25. Far eye's lower lashes still a dotted row at 4K
+   (k3_eyes.png left eye): next try 0.15 and/or a wider alpha cut for lw = 1.
+6. caruncle: loader materialFor overrides colour (0.78, 0.45, 0.45), clearcoat 1.0, rough <= 0.35.
+   NOT yet verified on a crop (the inner corner still looks dark red-brown at 4K wide close-up: the baked
+   AO floor 0.65 + mouth-less simple material) - check with the eye-macro camera below.
+selftest-perf all passed (lip colour zone unchanged); npm test 48 pass / 0 fail / 1 skipped.
+
+Renders looked at (scratch, not committed):
+/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/look4/
+d2.png (lid mask painted: none visible), d3_crop.png (distance rings), d4.png (aux2.g / aux2.b / aux.r masks),
+k3.png (4K final, focusEye, lamp) + k3_eyes.png, k3_lips.png, k3_eyeR_x3.png.
+Eye-macro camera for lid / caruncle / lash checks (humans-dev.json, preview ~80 s, draft ~25 s):
+`{ "id": "abby", "accumulate": false, "still": true, "light": "lamp", "cam": { "tgt": "eye.L", "off": [0,0,0],
+"az": 20, "el": 0, "dist": 0.16, "fov": 22, "fstop": 8 } }` (note: focus stays on the head target, set
+"focusEye": true too).
+
+NEXT (in order):
+1. Iris reads as vertical stripes / a slit at 4K (k3_eyeR_x3.png): check eyeMaterial iris texture mapping /
+   the refraction offset; the sclera is flat grey - add a little vein tint + wet spec variation.
+2. Caruncle crop check (eye macro) + the bright dot at the OUTER corner (not the tear line: present before).
+3. Lower lashes 0.15 or thinner alpha; cheek pore colour / roughness stipple at 4K.
+4. Tear line band on remi / alexandria (paint rings: temporary
+   `gl_FragColor.rgb = vec3(clamp((d-0.011)/0.008,0.,1.), step(0.5, fract(d*1000.0)), dy<0.?0.6:0.)`).
+5. The older list: stubble (Remi), hair root-to-tip + flyaways, cloth weave / hem dirt, hands at 4K,
+   Abby's child face (model change, rebuild).
