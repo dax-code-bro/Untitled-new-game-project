@@ -677,13 +677,13 @@
    "measured_at": "2026-10-27T19:55"
   },
   "X3-02": {
-   "draft_s_per_frame": 6.783,
+   "draft_s_per_frame": 9.472,
    "frames_drawn": 96,
    "cinematic": "velocity",
    "twos": false,
-   "load": 4.91,
-   "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.80GHz, SwiftShader",
-   "measured_at": "2026-10-31T00:09"
+   "load": 8.62,
+   "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.10GHz, SwiftShader",
+   "measured_at": "2026-11-01T01:39"
   },
   "X3-15": {
    "draft_s_per_frame": 12.718,
@@ -776,76 +776,76 @@
    "measured_at": "2026-11-01T00:50"
   },
   "X3-01": {
-   "draft_s_per_frame": 13.301,
+   "draft_s_per_frame": 10.328,
    "frames_drawn": 96,
    "cinematic": "velocity",
    "twos": false,
-   "load": 8.71,
+   "load": 8.81,
    "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.10GHz, SwiftShader",
-   "measured_at": "2026-10-31T09:32"
+   "measured_at": "2026-11-01T01:24"
   },
   "X3-03": {
-   "draft_s_per_frame": 12.734,
+   "draft_s_per_frame": 10.023,
    "frames_drawn": 96,
    "cinematic": "velocity",
    "twos": false,
-   "load": 8.91,
+   "load": 8.28,
    "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.10GHz, SwiftShader",
-   "measured_at": "2026-10-31T09:53"
+   "measured_at": "2026-11-01T01:55"
   },
   "1B-10": {
-   "draft_s_per_frame": 17.949,
+   "draft_s_per_frame": 13.962,
    "frames_drawn": 144,
    "cinematic": "velocity",
    "twos": false,
-   "load": 8.85,
+   "load": 9.11,
    "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.10GHz, SwiftShader",
-   "measured_at": "2026-10-31T09:53"
+   "measured_at": "2026-11-01T01:41"
   },
   "X3-05": {
-   "draft_s_per_frame": 12.537,
+   "draft_s_per_frame": 9.688,
    "frames_drawn": 72,
    "cinematic": "velocity",
    "twos": false,
-   "load": 9.35,
+   "load": 8.87,
    "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.10GHz, SwiftShader",
-   "measured_at": "2026-10-31T10:08"
+   "measured_at": "2026-11-01T02:07"
   },
   "X3-04": {
-   "draft_s_per_frame": 15.33,
+   "draft_s_per_frame": 12.447,
    "frames_drawn": 72,
    "cinematic": "velocity",
    "twos": false,
-   "load": 8.85,
+   "load": 8.57,
    "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.10GHz, SwiftShader",
-   "measured_at": "2026-10-31T10:11"
+   "measured_at": "2026-11-01T01:56"
   },
   "X3-06": {
-   "draft_s_per_frame": 17.241,
+   "draft_s_per_frame": 13.147,
    "frames_drawn": 120,
    "cinematic": "velocity",
    "twos": false,
-   "load": 8.63,
+   "load": 8.5,
    "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.10GHz, SwiftShader",
-   "measured_at": "2026-10-31T10:43"
+   "measured_at": "2026-11-01T02:22"
   },
   "X3-07": {
-   "draft_s_per_frame": 17.07,
+   "draft_s_per_frame": 12.708,
    "frames_drawn": 168,
    "cinematic": "velocity",
    "twos": false,
-   "load": 8.62,
+   "load": 8.99,
    "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.10GHz, SwiftShader",
-   "measured_at": "2026-10-31T11:07"
+   "measured_at": "2026-11-01T02:43"
   },
   "X3-08": {
-   "draft_s_per_frame": 16.317,
+   "draft_s_per_frame": 11.631,
    "frames_drawn": 108,
    "cinematic": "velocity",
    "twos": false,
-   "load": 9.18,
+   "load": 8.93,
    "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.10GHz, SwiftShader",
-   "measured_at": "2026-10-31T11:29"
+   "measured_at": "2026-11-01T02:43"
   },
   "X3-09": {
    "draft_s_per_frame": 15.039,
@@ -857,13 +857,13 @@
    "measured_at": "2026-10-31T11:31"
   },
   "X3-10": {
-   "draft_s_per_frame": 10.298,
+   "draft_s_per_frame": 9.22,
    "frames_drawn": 60,
    "cinematic": "velocity",
    "twos": false,
-   "load": 8.9,
+   "load": 8.75,
    "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.10GHz, SwiftShader",
-   "measured_at": "2026-10-31T11:40"
+   "measured_at": "2026-11-01T02:53"
   },
   "X3-11": {
    "draft_s_per_frame": 11.613,
@@ -992,9 +992,9 @@
    "measured_at": "2026-10-27T21:24"
   },
   "VERDOR_GROUNDS": {
-   "setup_s": 67.8,
+   "setup_s": 63.3,
    "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.10GHz, SwiftShader",
-   "measured_at": "2026-10-31T23:06"
+   "measured_at": "2026-11-01T01:07"
   }
  }
 }
