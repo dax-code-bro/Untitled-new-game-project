@@ -1,5 +1,51 @@
 # Sound track: progress (for the next session)
 
+## State (2026-11-01, session 4: 1B score + 1C takeoff)
+
+- Done: three new ORIGINAL cues as note data in `music/scores.mjs` (shared helpers `leafFig` = Leaf's light figure
+  A . B D - B A | F# A B D, and `pulse`), spotted in `music/cues.json`:
+  - **M4 riding grounds** (`riding_grounds`, beat 0 = 1B-02, 60 bpm so beat = 1B cut time - 4 s; faded by X3-16 +3 s):
+    D pedal with D-Bb-C chord colours (quiet tension/awe), the flute figure for Leaf and Abby at 1B-04 / 1B-10 / X3-06
+    and a clarinet answer (1B-05 gap, a falling version on X3-08 after the keeper's last line), tremolo + low horns as
+    Charcoal lowers (X3-02) and a cello climbing a D-minor scale up the rig (X3-03..05), the dawn theme's head on a soft
+    horn after "Morning." (X3-14/15), thin under the pipe (R2-01). target -20.5, duck 12.
+  - **M5 ready** (`ready`, beat 6 = 1B-13): low fifth under 1B-12, alert pizz/flute at 1B-13, the figure + harp run +
+    swell to A major as Leaf rises (1B-15), held to the last frame. target -21, duck 12.
+  - **M6 takeoff** (`takeoff`, beat 0 = 1C-01, ends by 1C-07 with a 3 s fade): Leaf's figure fast, horns/basses build
+    D-Bb-C as Charcoal gathers, tremolo + timpani roll on A (1C-04), full D major tutti with the dawn theme on the
+    massive downbeat (1C-05), higher second swell (1C-06). target -19, duck 9.
+- 1C added to the mixer: `beds.json` sets SKY_OFF_VERDOR/VERDOR_AERIAL -> vista_wind_sea, VERDOR_HARBOR/OUTER_ROCKS ->
+  sea_shore, CLING_SQUARE -> grounds_wind (placeholder, needs a square/festival bed); `fx/spots.json` 16 rows for
+  1C-01..1C-06 (claws, quick light wingbeats for Leaf, breath/membrane/vault for Charcoal, huge downbeats, turf tear,
+  stone clatter, rolling wind, settling dust); `mix.mjs` handles a cut with no voice takes (`NO_DIALOGUE`: dialogue
+  gain 0, same +2 dB master cap, `anchored: "reference"`).
+- Mixes (seen: `1B-stems.png` music spectrogram + music/dialogue/fx waveforms 0-138 s: ducks line up with every line,
+  flute figures in the gaps; `1C-takeoff.png` mix spectrogram + stems 0-30 s):
+  - `final/audio/cuts/1B/DragonsKingdom_S01E01_draft-cut_1B_sound.mp4`: **-16.1 LUFS**, -1.6 dBTP (AAC -16.2 / -1.4),
+    min dialogue margin 11.3 LU (window 25.7-31.2, the 1B-06 exchange), PASS; re-run byte-identical (sha256 b93c6923...).
+  - `final/audio/cuts/1C/DragonsKingdom_S01E01_draft-cut_1C_sound.mp4`: -23.0 LUFS over 382 s (354 s are slates with
+    wind only, anchored "reference"); the rendered takeoff 0-28 s alone measures -16.4 LUFS. TP -1.6.
+  - PROLOGUE-TITLE-1A not re-mixed this session (no change affects it: new cues/spots key to 1B/1C shots only).
+- NOT listened to by a person.
+
+## Next steps (in order)
+
+1. **Listen** to the 1B and 1C `_sound.mp4` (and 1A). By ear: M4 flute figure may be too cute against "quiet tension"
+   (lower `flute (Leaf)` velocities or drop the 1B-10 statement at beat 36.5); the X3-02 low-horn Bb chord vs
+   Charcoal's breath (fx) - both sit in the low end; the 1C-05 downbeat: music tutti + wingbeat (-9 dB peak) drive the
+   limiter at 18.5-19 s - if it pumps, lower `wingbeat` 1C-05 to -12 or M6 target to -20.
+2. After a 0.4 s gap at 6.9-7.3 s in M6 (strings end before basses entered) the basses were moved to beat 6.5 - the
+   re-render was mixed but the picture was NOT re-made: check `music.wav` 5-9 s (`--keep-work`).
+3. If the director re-times 1B, re-check M4: it has ONE sync point (1B-02) and is written on 1B's current timings
+   (comments in `scores.mjs` give beat = cut time - 4). If shots move, split M4 into per-section cues synced to
+   1B-04 / X3-01 / X3-06 / X3-14 (cue sheet supports any number of cues) instead of re-writing beats.
+4. 1C flight (1C-07..1C-19, X4-*): "Music stops; only wingbeats", "light theme" at 1C-10/1C-15/1C-18/1C-19/X4-20
+   (Leaf's figure is the light theme's seed: build a lighter version of the dawn theme with it), wind beds for
+   SKY_OFF_VERDOR (louder, with gusts) and harbour/Cling beds; spot X4 sounds (gulls, boat bell, crew, market) - synth
+   or CC0 with manifest rows first. Score only once those shots are rendered (they are slates now).
+5. Earlier open items still stand (below): numeric fx-vs-bed level check, picture sync check of spot offsets, better
+   instrument samples for the final (VSCO 2 CE CC0 via sfizz), per-line voice treatment, episode-timeline mix.
+
 ## State (2026-11-01, session 3: spot effects)
 
 - Done: **spot effects** for PROLOGUE+TITLE+1A and 1B. `fx/spots.json` (spot sheet keyed to EDL shot ids, 134 rows ->

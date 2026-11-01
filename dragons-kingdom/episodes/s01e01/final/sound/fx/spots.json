@@ -147,6 +147,22 @@
   { "shot": "1B-13", "at": 1.6, "sound": "snort", "gain_db": -31, "seed": 14402, "params": { "dur": 0.2 } },
   { "shot": "1B-15", "at": 0.4, "sound": "claws_turf", "gain_db": -26, "seed": 14501, "params": { "n": 4 } },
   { "shot": "1B-15", "at": 1.6, "sound": "hide_rub", "gain_db": -26, "pan": -0.3, "pan_to": 0.3, "seed": 14502, "params": { "dur": 1.6 }, "note": "wing unfolding" },
-  { "shot": "1B-15", "at": 1.9, "sound": "leather", "gain_db": -30, "seed": 14503, "params": { "dur": 1.0, "lo": 15, "hi": 40 } }
+  { "shot": "1B-15", "at": 1.9, "sound": "leather", "gain_db": -30, "seed": 14503, "params": { "dur": 1.0, "lo": 15, "hi": 40 } },
+  { "shot": "1C-01", "at": 0.6, "sound": "claws_turf", "gain_db": -24, "pan": -0.4, "seed": 15101, "params": { "n": 3 }, "note": "1C takeoff: Leaf pushes off" },
+  { "shot": "1C-01", "at": 1.1, "sound": "wingbeat", "gain_db": -20, "gain_to_db": -25, "pan": -0.3, "pan_to": 0.5, "seed": 15102, "params": { "dur": 0.6 }, "repeat": { "n": 5, "every_s": 0.55, "jitter_s": 0.03, "vary_db": 1 }, "note": "quick, light wingbeats" },
+  { "shot": "1C-01", "at": 0.9, "sound": "wind_grass", "gain_db": -24, "pan": -0.5, "pan_to": 0.5, "seed": 15103, "params": { "dur": 3.0 }, "note": "grass hiss" },
+  { "shot": "1C-02", "at": 0.1, "sound": "wingbeat", "gain_db": -22, "gain_to_db": -30, "pan": 0.2, "seed": 15201, "params": { "dur": 0.55 }, "repeat": { "n": 5, "every_s": 0.55, "jitter_s": 0.03 }, "note": "Leaf's beats climbing away" },
+  { "shot": "1C-02", "at": 0.6, "sound": "leather", "gain_db": -30, "seed": 15202, "params": { "dur": 0.8, "lo": 15, "hi": 40 } },
+  { "shot": "1C-03", "at": 0.8, "sound": "breath", "gain_db": -20, "seed": 15301, "params": { "size": 1, "dur": 2.6 }, "note": "Charcoal gathers (sub-bass shift)" },
+  { "shot": "1C-03", "at": 2.6, "sound": "hide_rub", "gain_db": -22, "pan": -0.5, "pan_to": 0.5, "seed": 15302, "params": { "dur": 2.6 }, "note": "leather wing membrane unfolding" },
+  { "shot": "1C-03", "at": 4.8, "sound": "weight_shift", "gain_db": -17, "seed": 15303, "params": { "size": 1, "dur": 1.6 }, "note": "the vault" },
+  { "shot": "1C-04", "at": 1.0, "sound": "wingbeat", "gain_db": -13, "pan": -0.2, "pan_to": 0.2, "seed": 15401, "params": { "dur": 1.6 }, "repeat": { "n": 2, "every_s": 1.6 }, "note": "the wings beat overhead and he passes over the lens" },
+  { "shot": "1C-05", "at": 0.5, "sound": "wingbeat", "gain_db": -9, "seed": 15501, "params": { "dur": 1.8 }, "note": "massive downbeat" },
+  { "shot": "1C-05", "at": 0.7, "sound": "weight_shift", "gain_db": -15, "seed": 15502, "params": { "size": 1, "dur": 1.4 }, "note": "turf tearing" },
+  { "shot": "1C-05", "at": 0.9, "sound": "step_stone", "gain_db": -28, "pan": -0.4, "pan_to": 0.6, "seed": 15503, "repeat": { "n": 9, "every_s": 0.13, "jitter_s": 0.05, "vary_db": 4, "alt": [{ "weight": 0.2 }, { "weight": 0.4, "soft": 1 }] }, "note": "stones clattering" },
+  { "shot": "1C-05", "at": 1.0, "sound": "wind_grass", "gain_db": -17, "pan": 0.4, "pan_to": -0.4, "seed": 15504, "params": { "dur": 4.6 }, "note": "rolling wind" },
+  { "shot": "1C-05", "at": 3.2, "sound": "wingbeat", "gain_db": -13, "seed": 15505, "params": { "dur": 1.8 } },
+  { "shot": "1C-06", "at": 0.2, "sound": "wind_grass", "gain_db": -22, "pan": -0.3, "pan_to": 0.3, "seed": 15601, "params": { "dur": 3.4 }, "note": "debris settling, dust rolling past" },
+  { "shot": "1C-06", "at": 1.7, "sound": "wingbeat", "gain_db": -18, "seed": 15602, "params": { "dur": 1.6 }, "note": "second downbeat higher up" }
  ]
 }

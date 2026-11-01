@@ -1,0 +1,205 @@
+{
+ "cut": "1C",
+ "made_with": "ffmpeg version 6.1.1-3ubuntu5 Copyright (c) 2000-2023 the FFmpeg developers",
+ "inputs": {
+  "edl": "episodes/s01e01/final/cut/edl-1C.json",
+  "cues": "episodes/s01e01/final/cut/audio-cues-1C.json",
+  "video": "episodes/s01e01/final/cut/DragonsKingdom_S01E01_draft-cut_1C.mp4",
+  "beds": "episodes/s01e01/final/sound/beds.json"
+ },
+ "duration_s": 382,
+ "targets": {
+  "integrated_lufs": -16,
+  "true_peak_dbtp_max": -1,
+  "dialogue_lufs_pre_master": -17,
+  "min_dialogue_margin_lu": 10
+ },
+ "result": {
+  "mix": "episodes/s01e01/final/audio/cuts/1C/mix.wav",
+  "I": -23,
+  "TP": -1.6,
+  "LRA": 11.4,
+  "sha256": "be829dac7ae9f240c041a0a329fb2ada76fcb54b53c857156e5c382fe9ed22c6",
+  "master_gain_db": 2,
+  "limiter_ceiling_dbfs": -1.6,
+  "dialogue_gain_db": 0,
+  "min_dialogue_margin_lu": null,
+  "anchored": "reference",
+  "pass": true
+ },
+ "muxed": {
+  "file": "episodes/s01e01/final/audio/cuts/1C/DragonsKingdom_S01E01_draft-cut_1C_sound.mp4",
+  "duration_s": 382,
+  "aac_I": -23,
+  "aac_TP": -1.6,
+  "bytes": 22132160
+ },
+ "beds": {
+  "grounds_wind": {
+   "target_lufs": -28,
+   "raw_lufs_60s": -31.3,
+   "duck_db": 6
+  },
+  "vista_wind_sea": {
+   "target_lufs": -27,
+   "raw_lufs_60s": -28.2,
+   "duck_db": 6
+  },
+  "sea_shore": {
+   "target_lufs": -23,
+   "raw_lufs_60s": -26.5,
+   "duck_db": 6
+  }
+ },
+ "music": [
+  {
+   "id": "M6 takeoff",
+   "score": "takeoff",
+   "start_s": 0,
+   "end_s": 28,
+   "sync": "beat 0 = 1C-01 +0 s",
+   "raw_lufs": -19.3,
+   "target_lufs": -19,
+   "gain_db": 0.3,
+   "duck_db": 9,
+   "fade_out_s": 3,
+   "render_sha256": "e8671ca02037b534864e4907520e6981c3fffd9cc5e0072a9009d0aa963894a7"
+  }
+ ],
+ "music_not_in_cut": [
+  "M1 dawn theme",
+  "M2 title sting",
+  "M3 hatching",
+  "M4 riding grounds",
+  "M5 ready"
+ ],
+ "music_cue_sheet": "episodes/s01e01/final/sound/music/cues.json",
+ "fx": {
+  "spot_sheet": "episodes/s01e01/final/sound/fx/spots.json",
+  "events": 33,
+  "peak_dbfs": -4.1,
+  "spaces": [
+   "open"
+  ],
+  "sha256": "ee36649572f2a03c920483394a7e21652b5d819b74de10480f1e35a27c4bfc56",
+  "spot_rows_not_in_cut": 134,
+  "by_sound": {
+   "claws_turf": 1,
+   "wingbeat": 15,
+   "wind_grass": 3,
+   "leather": 1,
+   "breath": 1,
+   "hide_rub": 1,
+   "weight_shift": 2,
+   "step_stone": 9
+  }
+ },
+ "runs": [
+  {
+   "bed": "grounds_wind",
+   "from_s": 0,
+   "to_s": 28,
+   "xf_in_s": 1.5,
+   "xf_out_s": 0.5,
+   "shots": "1C-01..1C-06 (6)"
+  },
+  {
+   "bed": "vista_wind_sea",
+   "from_s": 28,
+   "to_s": 106.5,
+   "xf_in_s": 0.5,
+   "xf_out_s": 0.5,
+   "shots": "1C-07..X4-03 (16)"
+  },
+  {
+   "bed": "sea_shore",
+   "from_s": 106.5,
+   "to_s": 116.5,
+   "xf_in_s": 0.5,
+   "xf_out_s": 0.5,
+   "shots": "X4-04..X4-05 (2)"
+  },
+  {
+   "bed": "vista_wind_sea",
+   "from_s": 116.5,
+   "to_s": 119.5,
+   "xf_in_s": 0.5,
+   "xf_out_s": 0.5,
+   "shots": "X4-06..X4-06 (1)"
+  },
+  {
+   "bed": "sea_shore",
+   "from_s": 119.5,
+   "to_s": 124.5,
+   "xf_in_s": 0.5,
+   "xf_out_s": 0.5,
+   "shots": "X4-07..X4-07 (1)"
+  },
+  {
+   "bed": "vista_wind_sea",
+   "from_s": 124.5,
+   "to_s": 128,
+   "xf_in_s": 0.5,
+   "xf_out_s": 0.5,
+   "shots": "X4-08..X4-08 (1)"
+  },
+  {
+   "bed": "sea_shore",
+   "from_s": 128,
+   "to_s": 133,
+   "xf_in_s": 0.5,
+   "xf_out_s": 0.5,
+   "shots": "X4-09..X4-09 (1)"
+  },
+  {
+   "bed": "vista_wind_sea",
+   "from_s": 133,
+   "to_s": 189.5,
+   "xf_in_s": 0.5,
+   "xf_out_s": 0.5,
+   "shots": "X4-10..X4-20 (11)"
+  },
+  {
+   "bed": "grounds_wind",
+   "from_s": 189.5,
+   "to_s": 290,
+   "xf_in_s": 0.5,
+   "xf_out_s": 0.5,
+   "shots": "X5-01..X5-18 (22)"
+  },
+  {
+   "bed": "sea_shore",
+   "from_s": 290,
+   "to_s": 302,
+   "xf_in_s": 0.5,
+   "xf_out_s": 0.5,
+   "shots": "X6-01..X6-03 (3)"
+  },
+  {
+   "bed": "vista_wind_sea",
+   "from_s": 302,
+   "to_s": 323,
+   "xf_in_s": 0.5,
+   "xf_out_s": 0.5,
+   "shots": "X6-04..X6-07 (4)"
+  },
+  {
+   "bed": "sea_shore",
+   "from_s": 323,
+   "to_s": 369,
+   "xf_in_s": 0.5,
+   "xf_out_s": 0.5,
+   "shots": "X6-08..X6-18 (11)"
+  },
+  {
+   "bed": "vista_wind_sea",
+   "from_s": 369,
+   "to_s": 382,
+   "xf_in_s": 0.5,
+   "xf_out_s": 0,
+   "shots": "X6-19..X6-20 (2)"
+  }
+ ],
+ "voice_cues": 0,
+ "speech_windows": []
+}

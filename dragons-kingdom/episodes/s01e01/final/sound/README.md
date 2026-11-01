@@ -45,6 +45,9 @@ About 2 minutes for the 6-minute cut on the 4-vCPU cloud machine (all CPU, FFmpe
 4. **Master**: dialogue + ambience + music + fx, one gain to -16 LUFS integrated, a 4x-oversampled look-ahead limiter at -1.6 dBFS,
    re-measured until true peak <= -1.1 dBTP. The words are never pushed above -15 LUFS: in a cut with sparse dialogue
    and no music yet the mix stays below -16 and the report says `anchored: "dialogue"`.
+   A cut with no voice takes (1C so far: 6 takeoff shots + slates) keeps the same +2 dB cap, so beds/music/fx sit at
+   the level they have in the dialogue cuts instead of a slate-heavy cut's wind bed being pushed to -16 (report:
+   `anchored: "reference"`; 1C's rendered takeoff, 0-28 s, measures -16.4 LUFS on its own).
 5. **Checks**: dialogue vs ambience + music + fx momentary loudness over every speech window (want >= 10 LU), stem lengths equal
    the cut, true peak of the AAC copy.
 6. **Outputs** (git-ignored) in `final/audio/cuts/<cut>/`: `mix.wav` (48 kHz 24-bit stereo), a COPY of the draft cut

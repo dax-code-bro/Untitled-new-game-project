@@ -6,11 +6,11 @@
 // the hatching cue lives on an A pedal (D minor colour, a rising chromatic cello line, a minor-ninth Bb) and turns
 // to D major (add9) when the hatchling is out.
 // GM programs (0-based): 8 celesta, 42 cello, 43 contrabass, 44 tremolo strings, 45 pizzicato, 46 harp, 47 timpani,
-// 48 strings, 49 slow strings, 60 French horn.
+// 48 strings, 49 slow strings, 60 French horn, 71 clarinet, 73 flute.
 
-const N = { D1: 26, A1: 33, D2: 38, E2: 40, G2: 43, A2: 45, D3: 50, E3: 52, Fs3: 54, G3: 55, A3: 57, Bb3: 58, B3: 59,
-  C4: 60, Cs4: 61, D4: 62, E4: 64, F4: 65, Fs4: 66, G4: 67, A4: 69, Bb4: 70, B4: 71, Cs5: 73, D5: 74, E5: 76, F5: 77,
-  Fs5: 78, A5: 81, D6: 86 };
+const N = { D1: 26, A1: 33, Bb1: 34, C2: 36, D2: 38, E2: 40, F2: 41, G2: 43, A2: 45, Bb2: 46, C3: 48, D3: 50, E3: 52,
+  F3: 53, Fs3: 54, G3: 55, A3: 57, Bb3: 58, B3: 59, C4: 60, Cs4: 61, D4: 62, E4: 64, F4: 65, Fs4: 66, G4: 67, A4: 69,
+  Bb4: 70, B4: 71, C5: 72, Cs5: 73, D5: 74, E5: 76, F5: 77, Fs5: 78, G5: 79, A5: 81, B5: 83, D6: 86 };
 const chord = (beat, dur, pitches, vel) => pitches.map((p) => [beat, dur, N[p], vel]);
 // a rising broken chord (harp), step in beats
 const arp = (beat, step, pitches, vel, dur = 2) => pitches.map((p, i) => [beat + i * step, dur, N[p], vel - i]);
@@ -88,4 +88,129 @@ const hatching = {
   ],
 };
 
-export const SCORES = { dawn_theme: dawn, title_sting: sting, hatching };
+// ---------------------------------------------------------------- shared figures for 1B / 1C
+// Leaf's figure (light, playful; flute or clarinet): A . B D - B A | F# A B D. `sp` < 1 plays it faster.
+const LEAF = [[0, 0.3, 'A4'], [0.5, 0.25, 'B4'], [0.75, 0.6, 'D5'], [1.5, 0.25, 'B4'], [2, 0.7, 'A4'],
+  [3, 0.25, 'Fs4'], [3.5, 0.25, 'A4'], [3.75, 0.25, 'B4'], [4.25, 0.9, 'D5']];
+const leafFig = (b, vel, sp = 1, shift = 0) => LEAF.map(([o, d, p], i) => [b + o * sp, d * sp, N[p] + shift, vel - (i % 3) * 3]);
+// a plucked pulse alternating between pitches, every `step` beats in [from, to)
+const pulse = (from, to, step, pitches, vel, dur = 0.4) => {
+  const out = [];
+  for (let b = from, i = 0; b < to - 1e-9; b += step, i++) out.push([b, dur, N[pitches[i % pitches.length]], vel - (i % 2) * 8]);
+  return out;
+};
+
+// ---------------------------------------------------------------- M4 riding grounds (1B-02 .. X3-16)
+// 60 bpm, beat 0 = start of 1B-02 (the pull-back from Charcoal's flank); beat = cut time - 4 s in the 1B draft cut.
+// Quiet tension and awe for Remi and the lowered Charcoal (a D pedal, slow Mixolydian/Aeolian chord colours:
+// D - Bb - C over D, never a full cadence), and Leaf's light figure on flute/clarinet for Leaf and Abby, played only
+// in the gaps between lines. Sections (beats): 0-11.5 reveal; 11.5-28.5 Leaf and Abby (1B-04..1B-06, lines at
+// 16.9-27.2 ducked); 28.5-42.5 getting ready (1B-07..1B-10, Abby mounts: the figure at 36.5); 42.5-60.5 the climb
+// (X3-01..X3-05: tremolo pedal, low horns as Charcoal lowers at 46.5, the cello climbs a D minor scale step per
+// landing, high strings at the top); 60.5-77 Leaf edges forward and is turned back (figure, then a falling clarinet
+// version after the keeper's last line, X3-08); 77-95.5 the straps (low, sparse); 97-102.5 "Morning." and the eye
+// (X3-14/15: the dawn theme's first four notes on a soft horn); 102.5-114 thin, under the pipe (R2-01); faded out by
+// X3-16 + 3 s ("the field goes quiet").
+const grounds = {
+  tempo_bpm: 60, length_beats: 118,
+  parts: [
+    { name: 'low strings', program: 49, channel: 0, volume: 104, reverb: 70, expression: 0,
+      notes: [[0, 28, N.D2, 66], [2, 26, N.A2, 52], [28.5, 14, N.D2, 50], [42.5, 4, N.D2, 60], [46.5, 4, N.Bb1, 72],
+        [50.5, 10, N.D2, 62], [60.5, 16.5, N.D2, 48], [77, 25, N.D2, 50], [102.5, 13, N.D2, 40]],
+      ramps: [[0, 6, 11, 0, 96], [42.5, 50.5, 11, 96, 112], [56, 62, 11, 112, 92], [102.5, 112, 11, 92, 50]] },
+    { name: 'slow strings', program: 49, channel: 1, volume: 100, reverb: 80, expression: 50,
+      notes: [...chord(4, 4, ['D3', 'A3', 'E4'], 50), ...chord(8, 3.5, ['Bb2', 'F3', 'D4'], 54),
+        ...chord(12, 8, ['D3', 'Fs3', 'A3'], 42), ...chord(20, 4, ['G3', 'B3', 'D4'], 40), ...chord(24, 4.5, ['A3', 'D4', 'E4'], 40),
+        ...chord(28.5, 6, ['D3', 'A3', 'C4'], 44), ...chord(34.5, 4, ['Bb2', 'D3', 'F3', 'A3'], 44), ...chord(38.5, 4, ['C3', 'E3', 'G3'], 46),
+        ...chord(60.5, 6, ['D3', 'Fs3', 'A3'], 42), ...chord(66.5, 6, ['G3', 'B3', 'D4'], 40), ...chord(72.5, 4.5, ['A3', 'D4', 'E4'], 40),
+        ...chord(77, 8, ['D3', 'A3'], 44), ...chord(85, 5, ['Bb2', 'F3', 'D4'], 44), ...chord(90, 7, ['C3', 'G3', 'E4'], 46),
+        ...chord(97.5, 5, ['D3', 'Fs3', 'A3'], 46), ...chord(103.5, 10, ['D3', 'A3'], 36)],
+      ramps: [[4, 8, 11, 50, 92], [10, 12, 11, 92, 70], [97.5, 100, 11, 70, 92], [104, 114, 11, 92, 40]] },
+    { name: 'high strings', program: 49, channel: 2, volume: 80, pan: 40, reverb: 90, expression: 60,
+      notes: [[6, 6, N.A4, 38], [54.5, 3, N.A4, 44], [57.5, 3.5, N.D5, 50], [103.5, 9, N.A4, 30]],
+      ramps: [[54.5, 61, 11, 60, 96], [61, 62, 11, 96, 60]] },
+    { name: 'flute (Leaf)', program: 73, channel: 3, volume: 92, pan: 34, reverb: 70,
+      notes: [...leafFig(11.5, 66), ...leafFig(36.5, 58), ...leafFig(60.5, 64)] },
+    { name: 'clarinet (Abby)', program: 71, channel: 4, volume: 88, pan: 48, reverb: 72,
+      notes: [[18.4, 0.3, N.Fs4, 54], [18.9, 0.3, N.A4, 52], [19.15, 0.9, N.B4, 56],
+        // X3-08 after the keeper's last line: the figure falls, then a cheeky upturn as Leaf looks back
+        [71.2, 0.4, N.D5, 56], [71.7, 0.4, N.B4, 54], [72.2, 0.4, N.A4, 52], [72.7, 1.1, N.Fs4, 52],
+        [74.2, 0.3, N.A4, 50], [74.5, 0.8, N.D5, 54]] },
+    { name: 'pizzicato', program: 45, channel: 5, volume: 86, pan: 72, reverb: 55,
+      notes: [...pulse(11.5, 21.5, 1, ['D3', 'A2'], 50), ...pulse(21.5, 28.5, 2, ['D3', 'A2'], 42), ...pulse(28.5, 42.5, 2, ['D2'], 44),
+        ...pulse(60.5, 72.5, 1, ['D3', 'A2'], 44), ...pulse(77, 95, 2, ['D2'], 40)] },
+    { name: 'tremolo strings', program: 44, channel: 6, volume: 92, reverb: 60, expression: 0,
+      notes: [[42.5, 18, N.D3, 62], [42.5, 18, N.A3, 58]], ramps: [[42.5, 48, 11, 0, 70], [50.5, 59, 11, 70, 104], [59, 61, 11, 104, 0]] },
+    { name: 'cello climb', program: 42, channel: 7, volume: 90, pan: 70, reverb: 65, expression: 84,
+      notes: ['D3', 'E3', 'F3', 'G3', 'A3', 'Bb3', 'C4', 'D4'].map((p, i) => [50.5 + i * 1.25, 1.25, N[p], 50 + i * 3]) },
+    { name: 'horns', program: 60, channel: 8, volume: 90, pan: 58, reverb: 85, expression: 90,
+      notes: [...chord(46.5, 4, ['Bb2', 'D3', 'F3'], 58),
+        // X3-14/15: "Morning." - the eye half closes: the dawn theme's first four notes, soft
+        [98.5, 2, N.D4, 52], [100.5, 1, N.E4, 50], [101.5, 1, N.Fs4, 54], [102.5, 3, N.A4, 56]],
+      ramps: [[46.5, 50.5, 11, 70, 100], [102.5, 105.5, 11, 90, 40]] },
+    { name: 'harp', program: 46, channel: 10, volume: 80, pan: 84, reverb: 90,
+      notes: [...arp(12, 0.5, ['D3', 'A3', 'D4', 'Fs4'], 44), ...arp(57.5, 0.33, ['D4', 'A4', 'D5', 'E5', 'A5'], 42),
+        ...arp(99, 0.5, ['Fs4', 'A4', 'D5'], 38)] },
+  ],
+};
+
+// ---------------------------------------------------------------- M5 ready (1B-12 .. 1B-15), into the takeoff
+// beat 6 = 1B-13 (Leaf's eye on Charcoal). Under the 1B-12 lines: a low held fifth. 1B-13: a quick pizzicato
+// and three flute notes (alert). 1B-15 (beat 12): Leaf rises - his figure, a harp run up, strings swelling from D
+// to an A major chord held at the last frame of 1B, so the 1C takeoff cue can land on D.
+const ready = {
+  tempo_bpm: 60, length_beats: 20,
+  parts: [
+    { name: 'low strings', program: 49, channel: 0, volume: 100, reverb: 70, expression: 0,
+      notes: [[0, 12, N.D2, 56], [0, 12, N.A2, 48], [12, 4, N.D2, 66], [16, 4, N.A1, 74]], ramps: [[0, 4, 11, 0, 84], [12, 18, 11, 84, 112]] },
+    { name: 'strings', program: 48, channel: 1, volume: 100, reverb: 80, expression: 60,
+      notes: [...chord(12, 4, ['D3', 'Fs3', 'A3', 'D4'], 56), ...chord(16, 4, ['A3', 'Cs4', 'E4', 'A4'], 64)],
+      ramps: [[12, 18, 11, 60, 118]] },
+    { name: 'pizzicato', program: 45, channel: 2, volume: 88, pan: 72, reverb: 55,
+      notes: [[6, 0.3, N.D4, 48], [6.25, 0.3, N.Fs4, 46], [6.5, 0.4, N.A4, 50]] },
+    { name: 'flute (Leaf)', program: 73, channel: 3, volume: 94, pan: 34, reverb: 70,
+      notes: [[7, 0.25, N.A4, 54], [7.25, 0.25, N.B4, 52], [7.5, 0.6, N.D5, 56], ...leafFig(12, 68, 0.8)] },
+    { name: 'harp', program: 46, channel: 4, volume: 86, pan: 84, reverb: 90,
+      notes: arp(12.5, 0.25, ['D3', 'A3', 'D4', 'Fs4', 'A4', 'D5', 'Fs5', 'A5'], 52, 3) },
+  ],
+};
+
+// ---------------------------------------------------------------- M6 takeoff (1C-01 .. 1C-06)
+// beat 0 = 1C-01 (60 bpm, beat = cut time in the 1C draft cut). 1C-01/02 (0-7): Leaf goes first - his figure fast
+// over bright D major strings, a clarinet answer as Abby leans into the climb. 1C-03 (7-14): Charcoal gathers and
+// his wings open: the bright strings stop, horns and basses build D - Bb - C. 1C-04 (14-18): "air pressure
+// building; silence from birds": tremolo strings rise on A with a timpani roll. 1C-05 (18): the massive downbeat -
+// full D major tutti, the dawn theme on the horns (D E F# A - B A); 1C-06 (24): a second, higher swell, then gone by
+// 1C-07 (the cut's slates; the flight cue is a later session's).
+const troll = [];
+for (let b = 15; b < 18; b += 0.125) troll.push([b, 0.125, N.A1, Math.round(30 + 60 * ((b - 15) / 3))]);
+const takeoff = {
+  tempo_bpm: 60, length_beats: 32,
+  parts: [
+    { name: 'strings', program: 48, channel: 0, volume: 104, reverb: 80, expression: 80,
+      notes: [...chord(0, 4, ['D3', 'Fs3', 'A3', 'D4'], 58), ...chord(4, 3, ['G3', 'B3', 'D4', 'G4'], 60),
+        ...chord(18, 6, ['D2', 'A2', 'D3', 'Fs3', 'A3', 'D4', 'Fs4'], 92), ...chord(24, 5, ['A2', 'E3', 'A3', 'D4', 'Fs4', 'A4', 'D5'], 86)],
+      ramps: [[6, 7, 11, 80, 30], [18, 22, 11, 120, 96], [24, 25, 11, 96, 118], [25, 29, 11, 118, 30]] },
+    { name: 'flute (Leaf)', program: 73, channel: 1, volume: 96, pan: 34, reverb: 70,
+      notes: [...leafFig(0, 72, 0.6), ...leafFig(3.4, 66, 0.6, 12).slice(0, 5)] },
+    { name: 'clarinet (Abby)', program: 71, channel: 2, volume: 88, pan: 48, reverb: 72,
+      notes: [[4.5, 0.3, N.A4, 58], [4.8, 0.3, N.B4, 58], [5.1, 0.3, N.D5, 60], [5.4, 1.2, N.E5, 62]] },
+    { name: 'basses', program: 43, channel: 3, volume: 104, reverb: 60, expression: 40,
+      notes: [[6.5, 3.5, N.D2, 80], [10, 2, N.Bb1, 84], [12, 2, N.C2, 88], [14, 4, N.A1, 92], [18, 6, N.D1, 110], [24, 5, N.A1, 96]],
+      ramps: [[6.5, 14, 11, 40, 110], [18, 24, 11, 127, 100], [25, 29, 11, 100, 0]] },
+    { name: 'horns', program: 60, channel: 4, volume: 100, pan: 58, reverb: 85, expression: 60,
+      notes: [...chord(8, 2, ['D3', 'A3'], 60), ...chord(10, 2, ['Bb2', 'D3', 'F3'], 66), ...chord(12, 2, ['C3', 'E3', 'G3'], 72),
+        ...chord(14, 4, ['A2', 'E3', 'A3'], 74),
+        [18, 2, N.D4, 100], [20, 1, N.E4, 96], [21, 1, N.Fs4, 100], [22, 2, N.A4, 106], [24, 2, N.B4, 100], [26, 3, N.A4, 94],
+        ...chord(18, 6, ['D3', 'Fs3', 'A3'], 84)],
+      ramps: [[8, 18, 11, 60, 110], [18, 19, 11, 127, 127], [26, 29, 11, 120, 0]] },
+    { name: 'tremolo strings', program: 44, channel: 5, volume: 96, reverb: 60, expression: 0,
+      notes: [[14, 4, N.A2, 70], [14, 4, N.E3, 66], [14, 4, N.A3, 64], [14, 4, N.Cs4, 62]], ramps: [[14, 18, 11, 20, 124]] },
+    { name: 'timpani', program: 47, channel: 6, volume: 108, reverb: 70, notes: [...troll, [18, 3, N.D2, 118], [24, 3, N.A1, 104]] },
+    { name: 'harp', program: 46, channel: 7, volume: 86, pan: 84, reverb: 90,
+      notes: [...arp(0, 0.25, ['D4', 'Fs4', 'A4', 'D5'], 52), ...arp(18, 0.125, ['D3', 'A3', 'D4', 'Fs4', 'A4', 'D5', 'Fs5', 'A5'], 76, 3)] },
+  ],
+};
+
+export const SCORES = { dawn_theme: dawn, title_sting: sting, hatching, riding_grounds: grounds, ready, takeoff };
+

@@ -8,7 +8,12 @@
   "VERDOR_GROUNDS": "grounds_wind",
   "BIRTHING_CHAMBER": "chamber_hush",
   "PALACE_CORRIDOR": "corridor_stone",
-  "ALEXANDRIA_ROOM": "room_sea_window"
+  "ALEXANDRIA_ROOM": "room_sea_window",
+  "SKY_OFF_VERDOR": "vista_wind_sea",
+  "VERDOR_AERIAL": "vista_wind_sea",
+  "VERDOR_HARBOR": "sea_shore",
+  "OUTER_ROCKS": "sea_shore",
+  "CLING_SQUARE": "grounds_wind"
  },
  "shots": {},
  "default_bed": "chamber_hush",

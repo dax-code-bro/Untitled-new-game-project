@@ -16,23 +16,23 @@
  },
  "result": {
   "mix": "episodes/s01e01/final/audio/cuts/1B/mix.wav",
-  "I": -18.1,
+  "I": -16.1,
   "TP": -1.6,
-  "LRA": 15.2,
-  "sha256": "ca81b50d72333ec013eb1d06c5e17319cb3997f91812ba64e9a788ea99d37c3c",
+  "LRA": 9,
+  "sha256": "b93c69232f40d2fa6c9bd15d05ae28481a6ede1d8f5ae1200ce8d8f94dcca5bb",
   "master_gain_db": 2,
   "limiter_ceiling_dbfs": -1.6,
   "dialogue_gain_db": 11.4,
-  "min_dialogue_margin_lu": 13.944,
-  "anchored": "dialogue",
+  "min_dialogue_margin_lu": 11.251,
+  "anchored": "integrated",
   "pass": true
  },
  "muxed": {
   "file": "episodes/s01e01/final/audio/cuts/1B/DragonsKingdom_S01E01_draft-cut_1B_sound.mp4",
   "duration_s": 138,
-  "aac_I": -18.1,
+  "aac_I": -16.2,
   "aac_TP": -1.4,
-  "bytes": 26564431
+  "bytes": 26559400
  },
  "beds": {
   "grounds_wind": {
@@ -41,11 +41,39 @@
    "duck_db": 6
   }
  },
- "music": [],
+ "music": [
+  {
+   "id": "M4 riding grounds",
+   "score": "riding_grounds",
+   "start_s": 4,
+   "end_s": 118,
+   "sync": "beat 0 = 1B-02 +0 s",
+   "raw_lufs": -33,
+   "target_lufs": -20.5,
+   "gain_db": 12.5,
+   "duck_db": 12,
+   "fade_out_s": 3,
+   "render_sha256": "fde2f94bf06b371a7c57f60148350a6b1c18dd8651bd0d7b40a8bedfd0764c74"
+  },
+  {
+   "id": "M5 ready",
+   "score": "ready",
+   "start_s": 120,
+   "end_s": 138,
+   "sync": "beat 6 = 1B-13 +0 s",
+   "raw_lufs": -30.4,
+   "target_lufs": -21,
+   "gain_db": 9.4,
+   "duck_db": 12,
+   "fade_out_s": 0,
+   "render_sha256": "ce52fd375fce436485cbf11e8edcc823daf9b68ec17e9cdac29f3208b3672ec9"
+  }
+ ],
  "music_not_in_cut": [
   "M1 dawn theme",
   "M2 title sting",
-  "M3 hatching"
+  "M3 hatching",
+  "M6 takeoff"
  ],
  "music_cue_sheet": "episodes/s01e01/final/sound/music/cues.json",
  "fx": {
@@ -56,7 +84,7 @@
    "open"
   ],
   "sha256": "cec535a59b6094a57337f19e01d372afd782ea7181ad7b8c985b2721801c600f",
-  "spot_rows_not_in_cut": 82,
+  "spot_rows_not_in_cut": 98,
   "by_sound": {
    "breath": 16,
    "leather": 7,
@@ -90,71 +118,71 @@
    "from_s": 20.95,
    "to_s": 22.22,
    "dialogue_M": -15.759,
-   "background_M": -32.84,
-   "margin_LU": 17.081
+   "background_M": -27.373,
+   "margin_LU": 11.614
   },
   {
    "from_s": 25.7,
    "to_s": 31.22,
    "dialogue_M": -15.397,
-   "background_M": -29.797,
-   "margin_LU": 14.401
+   "background_M": -26.648,
+   "margin_LU": 11.251
   },
   {
    "from_s": 36.3,
    "to_s": 37.175,
    "dialogue_M": -12.914,
-   "background_M": -31.051,
-   "margin_LU": 18.137
+   "background_M": -29.23,
+   "margin_LU": 16.316
   },
   {
    "from_s": 69.9,
    "to_s": 74.765,
    "dialogue_M": -15.341,
-   "background_M": -30.3,
-   "margin_LU": 14.958
+   "background_M": -29.12,
+   "margin_LU": 13.779
   },
   {
    "from_s": 85.3,
    "to_s": 87.185,
    "dialogue_M": -16.857,
-   "background_M": -32.045,
-   "margin_LU": 15.188
+   "background_M": -30.528,
+   "margin_LU": 13.671
   },
   {
    "from_s": 93,
    "to_s": 94.785,
    "dialogue_M": -13.934,
-   "background_M": -34.993,
-   "margin_LU": 21.059
+   "background_M": -32.007,
+   "margin_LU": 18.074
   },
   {
    "from_s": 101,
    "to_s": 101.725,
    "dialogue_M": -18.131,
-   "background_M": -34.686,
-   "margin_LU": 16.555
+   "background_M": -31.949,
+   "margin_LU": 13.818
   },
   {
    "from_s": 109.6,
    "to_s": 111.54,
    "dialogue_M": -16.82,
-   "background_M": -31.778,
-   "margin_LU": 14.958
+   "background_M": -31.262,
+   "margin_LU": 14.442
   },
   {
    "from_s": 120.5,
    "to_s": 125.305,
    "dialogue_M": -14.892,
-   "background_M": -28.836,
-   "margin_LU": 13.944
+   "background_M": -28.624,
+   "margin_LU": 13.731
   },
   {
    "from_s": 130,
    "to_s": 130.91,
    "dialogue_M": -14.674,
-   "background_M": -31.973,
-   "margin_LU": 17.3
+   "background_M": -30.992,
+   "margin_LU": 16.318
   }
  ]
 }

@@ -9,6 +9,15 @@
     "note": "Timpani roll into D major on the title cut; falls away so the egg scratch is alone from T-01 +6 s." },
   { "id": "M3 hatching", "score": "hatching", "sync": { "beat": 33.5, "shot": "1A-13", "offset_s": 0 },
     "target_lufs": -28, "duck_db": 7, "end_by": { "shot": "1A-15", "offset_s": 0 }, "fade_out_s": 1.2,
-    "note": "Enters under 1A-05 (fabric, breathing), tightens through the shell breaking (1A-06..1A-12), turns tender at 1A-13 (hushed), silent by the 1A-15 whisper." }
+    "note": "Enters under 1A-05 (fabric, breathing), tightens through the shell breaking (1A-06..1A-12), turns tender at 1A-13 (hushed), silent by the 1A-15 whisper." },
+  { "id": "M4 riding grounds", "score": "riding_grounds", "sync": { "beat": 0, "shot": "1B-02", "offset_s": 0 },
+    "target_lufs": -20.5, "duck_db": 12, "end_by": { "shot": "X3-16", "offset_s": 3.0 }, "fade_out_s": 3.0,
+    "note": "1B: quiet tension and awe (D pedal, D-Bb-C colours) for Remi, the climb and the lowered Charcoal; Leaf's light figure (flute, clarinet answer) for Leaf and Abby in the gaps between lines; the dawn theme's head on a soft horn at X3-14/15 ('Morning.'); thin under the pipe, gone as the field goes quiet (X3-16)." },
+  { "id": "M5 ready", "score": "ready", "sync": { "beat": 6, "shot": "1B-13", "offset_s": 0 },
+    "target_lufs": -21, "duck_db": 12,
+    "note": "Low fifth under the 1B-12 lines, Leaf alert at 1B-13, his figure and a swell to an A major chord as he rises (1B-15), held to the last frame of 1B." },
+  { "id": "M6 takeoff", "score": "takeoff", "sync": { "beat": 0, "shot": "1C-01", "offset_s": 0 },
+    "target_lufs": -19, "duck_db": 9, "end_by": { "shot": "1C-07", "offset_s": 0 }, "fade_out_s": 3.0,
+    "note": "1C-01..1C-06: Leaf's figure fast as he goes first, Charcoal gathers (horns D-Bb-C), tremolo + timpani roll as the air builds and the birds stop (1C-04), full D major tutti with the dawn theme on the massive downbeat (1C-05), a higher second swell (1C-06), gone by the 1C-07 slate." }
  ]
 }

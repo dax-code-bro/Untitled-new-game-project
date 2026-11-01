@@ -205,7 +205,9 @@ function checkLen(f) {
 }
 checkLen(dlgWav);
 const dm = measure(['-i', dlgWav], '', 'dialogue loudness');
-const dlgGain = DIALOGUE_I - dm.I;
+// a cut with no voice takes (1C so far: takeoff + slates) has nothing to anchor: no dialogue gain, no cap
+const NO_DIALOGUE = !cues.length || !Number.isFinite(dm.I) || dm.I < -60;
+const dlgGain = NO_DIALOGUE ? 0 : DIALOGUE_I - dm.I;
 say(`dialogue stem: ${dm.I} LUFS raw -> gain ${dlgGain.toFixed(2)} dB`);
 
 // ---------- 3. ambience stem ----------
@@ -268,6 +270,8 @@ const sumG = (gain, ceil) => `[0:a]volume=${dlgGain.toFixed(3)}dB,pan=stereo|c0=
   `volume=${gain.toFixed(3)}dB,aresample=${SR * 4},alimiter=limit=${dbToLin(ceil).toFixed(5)}:attack=2:release=80:level=0:latency=1,` +
   `aresample=${SR},afade=t=out:st=${f4(DUR - 0.3)}:d=0.3[m]`;
 const pre = measure(['-i', dlgWav, '-i', ambWav, '-i', musWav, '-i', fxWav], '', 'premaster', { text: sumG(0, 0).replace(/alimiter=[^,]*,/, ''), out: 'm' });
+// no dialogue: keep the same cap (beds/music/fx sit where they sit in the dialogue cuts) rather than pushing a
+// slate-heavy cut's wind bed to -16 integrated (report: anchored = 'reference')
 const gainCap = MAX_DIALOGUE_I - DIALOGUE_I;
 let gain = Math.min(TARGET_I - pre.I, gainCap), ceil = -1.6, mm = null;
 const mixWav = path.join(OUT, 'mix.wav');
@@ -311,7 +315,7 @@ const report = {
   cut: CUT, made_with: ffver, inputs: { edl: rel(EDL), cues: rel(CUES), video: rel(VIDEO), beds: 'episodes/s01e01/final/sound/beds.json' },
   duration_s: DUR, targets: { integrated_lufs: TARGET_I, true_peak_dbtp_max: MAX_TP, dialogue_lufs_pre_master: DIALOGUE_I, min_dialogue_margin_lu: 10 },
   result: { mix: rel(mixWav), I: mm.I, TP: mm.TP, LRA: mm.LRA, sha256: sha256(mixWav), master_gain_db: r3(gain), limiter_ceiling_dbfs: ceil, dialogue_gain_db: r3(dlgGain), min_dialogue_margin_lu: minMargin,
-    anchored: gain >= gainCap - 1e-9 && mm.I < TARGET_I - 0.5 ? 'dialogue' : 'integrated',
+    anchored: gain >= gainCap - 1e-9 && mm.I < TARGET_I - 0.5 ? (NO_DIALOGUE ? 'reference' : 'dialogue') : 'integrated',
     pass: mm.TP <= MAX_TP && (Math.abs(mm.I - TARGET_I) <= 0.5 || gain >= gainCap - 1e-9) && (minMargin === null || minMargin >= 10) },
   muxed,
   beds: Object.fromEntries(usedBeds.map((b) => [b, { target_lufs: BEDS.beds[b].target_lufs, raw_lufs_60s: cal[b].lufs_raw, duck_db: BEDS.beds[b].duck_db }])),
