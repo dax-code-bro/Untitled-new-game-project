@@ -196,8 +196,11 @@ export class Heightmap {
         }
       }
       e.ys = ys;
-      // Cut/fill — but leave the gap under bridges open
+      // Cut/fill — but leave the gap under bridges open. Each terrain cell
+      // follows its NEAREST road segment only (blending every nearby segment
+      // drags climbing roads' terrain upward).
       const hw = e.width / 2, reach = hw + 10;
+      const near = new Map(); // cell -> [dist, roadY]
       for (let s = 0; s < pts.length - 1; s++) {
         const [ax, az] = pts[s], [bx, bz] = pts[s + 1];
         const ga = this.height(ax, az), gb = this.height(bx, bz);
@@ -209,11 +212,14 @@ export class Heightmap {
         this.forEachCellIn(Math.min(ax, bx) - reach, Math.min(az, bz) - reach, Math.max(ax, bx) + reach, Math.max(az, bz) + reach, (k, x, z) => {
           const r = distToSeg(x, z, ax, az, bx, bz);
           if (r.d > reach) return;
-          const y = lerp(ys[s], ys[s + 1], r.t) - 0.06;
-          const w = 1 - smoothstep(hw + 1.5, reach, r.d);
-          this.h[k] = lerp(this.h[k], y, w);
-          if (r.d < hw + 1.5) this.splat[k * 4 + 3] = 255;
+          const prev = near.get(k);
+          if (!prev || r.d < prev[0]) near.set(k, [r.d, lerp(ys[s], ys[s + 1], r.t)]);
         });
+      }
+      for (const [k, [d, y]] of near) {
+        const w = 1 - smoothstep(hw + 1.5, reach, d);
+        this.h[k] = lerp(this.h[k], y - 0.15, w);
+        if (d < hw + 1.5) this.splat[k * 4 + 3] = 255;
       }
     }
   }

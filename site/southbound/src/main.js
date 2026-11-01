@@ -416,7 +416,7 @@ async function createGame(progress) {
     step(n = 1, dt = 1 / 30) { for (let i = 0; i < n; i++) tick(dt); S.fps = 1 / dt; },
     toggleMap: () => hud.toggleMap(),
     showRegion: () => { hud.lastRegion = ''; hud.toastTimer = 0.001; },
-    renderer, scene, camera,
+    renderer, scene, camera, debug: { hm, graph, collision },
   };
   window.SB = api;
 
