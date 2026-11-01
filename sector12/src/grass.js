@@ -80,10 +80,10 @@ const flowerTex = () => card(128, (g, n, r) => {
     const x = 10 + r() * (n - 20), top = n * (0.25 + r() * 0.4), lean = (r() - 0.5) * 18;
     g.strokeStyle = '#4c7a2a'; g.lineWidth = 2;
     g.beginPath(); g.moveTo(x, n); g.quadraticCurveTo(x + lean * 0.4, (n + top) / 2, x + lean, top); g.stroke();
-    g.fillStyle = '#ffffff';
+    g.fillStyle = '#cfcac0'; // petals are bright, but not paper-white (that read as glowing in low sun)
     const cx = x + lean, cy = top, pr = 3 + r() * 3;
     for (let p = 0; p < 6; p++) { const a = (p / 6) * Math.PI * 2; g.beginPath(); g.arc(cx + Math.cos(a) * pr, cy + Math.sin(a) * pr, pr * 0.75, 0, 7); g.fill(); }
-    g.fillStyle = '#e8c040'; g.beginPath(); g.arc(cx, cy, pr * 0.6, 0, 7); g.fill();
+    g.fillStyle = '#b8962e'; g.beginPath(); g.arc(cx, cy, pr * 0.6, 0, 7); g.fill();
   }
 });
 
@@ -136,6 +136,15 @@ export class Grass {
             #ifdef USE_INSTANCING
               { vec3 ipos = instanceMatrix[3].xyz; float gd = length(ipos.xz - cameraPosition.xz); transformed *= 1.0 - smoothstep(uGrassR * 0.72, uGrassR, gd); }
             #endif`);
+      });
+      // the sward shades itself: sky light falls off towards the ground inside a clump, and flowers
+      // (which sit among the blades) get a little less of it again, so they don't glow at dusk
+      m.userData.hooks.push((s) => {
+        s.fragmentShader = s.fragmentShader.replace('#include <lights_fragment_end>', `#include <lights_fragment_end>
+          #ifdef USE_MAP
+          { float ao = mix(0.4, 1.0, smoothstep(0.0, 0.85, vMapUv.y)) * ${key === 'g-flower' ? '0.75' : '1.0'};
+            reflectedLight.indirectDiffuse *= ao; reflectedLight.indirectSpecular *= ao; }
+          #endif`);
       });
       m.userData.cacheKey += '-grass';
       return m;
