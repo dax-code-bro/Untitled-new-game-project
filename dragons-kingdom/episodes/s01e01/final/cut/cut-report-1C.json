@@ -1,0 +1,1564 @@
+{
+ "title": "Dragon's Kingdom S01E01 - draft cut: 1C",
+ "made_at": "2026-11-01T18:20",
+ "shots_dir": "$DK_DIRECTOR_WORK/shots",
+ "size": "960x540",
+ "fps": 24,
+ "shots": [
+  {
+   "job": "1C-01",
+   "scene": "1C",
+   "kind": "3d",
+   "source": "rendered 2026-11-01T17:40",
+   "frames": 96,
+   "rec_in": 0,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "1C-02",
+   "scene": "1C",
+   "kind": "3d",
+   "source": "rendered 2026-11-01T17:34",
+   "frames": 72,
+   "rec_in": 96,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "1C-03",
+   "scene": "1C",
+   "kind": "3d",
+   "source": "rendered 2026-11-01T18:07",
+   "frames": 168,
+   "rec_in": 168,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "1C-04",
+   "scene": "1C",
+   "kind": "3d",
+   "source": "rendered 2026-11-01T17:51",
+   "frames": 96,
+   "rec_in": 336,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "1C-05",
+   "scene": "1C",
+   "kind": "3d",
+   "source": "rendered 2026-11-01T18:12",
+   "frames": 144,
+   "rec_in": 432,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "1C-06",
+   "scene": "1C",
+   "kind": "3d",
+   "source": "rendered 2026-11-01T18:19",
+   "frames": 96,
+   "rec_in": 576,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "1C-07",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 60,
+   "rec_in": 672,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "1C-08",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 120,
+   "rec_in": 732,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "1C-09",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 96,
+   "rec_in": 852,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "1C-10",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 144,
+   "rec_in": 948,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "1C-11",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 120,
+   "rec_in": 1092,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "1C-12",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 96,
+   "rec_in": 1212,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "1C-13",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 144,
+   "rec_in": 1308,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "1C-14",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 120,
+   "rec_in": 1452,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "1C-15",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 216,
+   "rec_in": 1572,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "1C-16",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 72,
+   "rec_in": 1788,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "1C-17",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 72,
+   "rec_in": 1860,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "1C-18",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 72,
+   "rec_in": 1932,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "1C-19",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 192,
+   "rec_in": 2004,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X4-01",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 168,
+   "rec_in": 2196,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X4-02",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 96,
+   "rec_in": 2364,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X4-03",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 96,
+   "rec_in": 2460,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X4-04",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 96,
+   "rec_in": 2556,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X4-05",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 144,
+   "rec_in": 2652,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X4-06",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 72,
+   "rec_in": 2796,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X4-07",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 120,
+   "rec_in": 2868,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X4-08",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 84,
+   "rec_in": 2988,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X4-09",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 120,
+   "rec_in": 3072,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X4-10",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 168,
+   "rec_in": 3192,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X4-11",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 84,
+   "rec_in": 3360,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X4-12",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 96,
+   "rec_in": 3444,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X4-13",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 192,
+   "rec_in": 3540,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X4-14",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 120,
+   "rec_in": 3732,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X4-15",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 108,
+   "rec_in": 3852,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X4-16",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 144,
+   "rec_in": 3960,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X4-17",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 48,
+   "rec_in": 4104,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X4-18",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 192,
+   "rec_in": 4152,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X4-19",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 84,
+   "rec_in": 4344,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X4-20",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 120,
+   "rec_in": 4428,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X5-01",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 72,
+   "rec_in": 4548,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X5-02",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 120,
+   "rec_in": 4620,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X5-03",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 192,
+   "rec_in": 4740,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X5-04",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 144,
+   "rec_in": 4932,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X5-05",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 120,
+   "rec_in": 5076,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X5-06",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 72,
+   "rec_in": 5196,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X5-07",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 108,
+   "rec_in": 5268,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X5-08",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 84,
+   "rec_in": 5376,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X5-09",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 96,
+   "rec_in": 5460,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X5-10",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 120,
+   "rec_in": 5556,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X5-11",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 72,
+   "rec_in": 5676,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X5-12",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 72,
+   "rec_in": 5748,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X5-13",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 120,
+   "rec_in": 5820,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X5-14",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 120,
+   "rec_in": 5940,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "R3-01",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 60,
+   "rec_in": 6060,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "R3-02",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 108,
+   "rec_in": 6120,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "R3-03",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 180,
+   "rec_in": 6228,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "R3-04",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 84,
+   "rec_in": 6408,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X5-15",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 120,
+   "rec_in": 6492,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X5-16",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 108,
+   "rec_in": 6612,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X5-17",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 144,
+   "rec_in": 6720,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X5-18",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 96,
+   "rec_in": 6864,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X6-01",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 144,
+   "rec_in": 6960,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X6-02",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 72,
+   "rec_in": 7104,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X6-03",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 72,
+   "rec_in": 7176,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X6-04",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 48,
+   "rec_in": 7248,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X6-05",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 288,
+   "rec_in": 7296,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X6-06",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 72,
+   "rec_in": 7584,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X6-07",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 96,
+   "rec_in": 7656,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X6-08",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 96,
+   "rec_in": 7752,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X6-09",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 96,
+   "rec_in": 7848,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X6-10",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 48,
+   "rec_in": 7944,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X6-11",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 120,
+   "rec_in": 7992,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X6-12",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 96,
+   "rec_in": 8112,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X6-13",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 72,
+   "rec_in": 8208,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X6-14",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 96,
+   "rec_in": 8280,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X6-15",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 144,
+   "rec_in": 8376,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X6-16",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 96,
+   "rec_in": 8520,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X6-17",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 168,
+   "rec_in": 8616,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X6-18",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 72,
+   "rec_in": 8784,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X6-19",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 120,
+   "rec_in": 8856,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "X6-20",
+   "scene": "1C",
+   "kind": "missing",
+   "source": "slate",
+   "frames": 192,
+   "rec_in": 8976,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  }
+ ],
+ "audio": [],
+ "output": {
+  "file": "episodes/s01e01/final/cut/DragonsKingdom_S01E01_draft-cut_1C.mp4",
+  "frames": 9168,
+  "duration_s": 382,
+  "size_mb": 9.3,
+  "assembled_s": 23
+ },
+ "summary": {
+  "rendered": 6,
+  "black": 0,
+  "slates": 75,
+  "voice_cues": 0,
+  "review_flags": 0,
+  "review_flags_accepted": 0
+ }
+}

@@ -1,6 +1,6 @@
 {
  "title": "Dragon's Kingdom S01E01 - draft cut: 1B",
- "made_at": "2026-11-01T05:36",
+ "made_at": "2026-11-01T18:19",
  "shots_dir": "$DK_DIRECTOR_WORK/shots",
  "size": "960x540",
  "fps": 24,
@@ -256,7 +256,7 @@
    "job": "X3-04",
    "scene": "1B",
    "kind": "3d",
-   "source": "rendered 2026-11-01T01:56",
+   "source": "rendered 2026-11-01T17:22",
    "frames": 72,
    "rec_in": 1404,
    "trans": [
@@ -373,7 +373,7 @@
    "job": "X3-10",
    "scene": "1B",
    "kind": "3d",
-   "source": "rendered 2026-11-01T02:53",
+   "source": "rendered 2026-11-01T17:16",
    "frames": 60,
    "rec_in": 2040,
    "trans": [
@@ -807,7 +807,7 @@
   "frames": 3312,
   "duration_s": 138,
   "size_mb": 21.6,
-  "assembled_s": 18
+  "assembled_s": 19
  },
  "summary": {
   "rendered": 32,
