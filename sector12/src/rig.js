@@ -13,6 +13,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { heightAt } from './terrain.js';
 import { buildWeapon, compactWeapon, restParts } from './weapons.js';
+import { Hand } from './hands.js';
 
 const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
 const UP = new THREE.Vector3(0, 1, 0);
@@ -310,12 +311,20 @@ function humanGeometry() {
   G.upper = () => mergeParts({ uni: [limb([[-0.03, 0.0], [-0.02, 0.05], [0.04, 0.062], [0.14, 0.055], [0.26, 0.046], [0.3, 0.0]], 1, 0.95, 12)], gear: [] });
   G.fore = () => mergeParts({ uni: [limb([[-0.02, 0.0], [-0.01, 0.046], [0.08, 0.048], [0.2, 0.04], [0.24, 0.038], [0.25, 0.0]], 1, 0.9, 12)], gear: [at(limb([[0, 0.034], [0.05, 0.036]], 1, 0.85, 12), 0, 0.22, 0)] });
   // gloved hand closed around a grip: origin at the wrist, +Z along the fingers, +Y back of the hand
-  G.hand = () => {
-    const p = { glove: [] };
-    p.glove.push(at(rboxGeo(0.075, 0.03, 0.09, 0.012), 0, 0.0, 0.05));
-    p.glove.push(at(rboxGeo(0.072, 0.045, 0.04, 0.014), 0, -0.022, 0.1, 0.5));
-    p.glove.push(at(rboxGeo(0.024, 0.024, 0.06, 0.01), -0.04, -0.012, 0.055, 0.2, -0.5));
-    return mergeParts(p);
+  // a gloved hand gripping (fingers and thumb from the articulated first-person hand, baked into one mesh)
+  G.hand = (side = 1) => {
+    const key = 'hand' + side;
+    if (G[key]) return G[key];
+    const mats = { glove: { k: 'glove' }, plate: { k: 'gear' }, skin: { k: 'skin' }, strap: { k: 'gear' } };
+    const h = new Hand(side, mats);
+    h.setPose('grip');
+    for (let i = 0; i < 40; i++) h.update(0.05);
+    h.root.matrixAutoUpdate = true;
+    h.root.updateMatrixWorld(true);
+    const p = { glove: [], gear: [], skin: [] };
+    h.root.traverse((o) => { if (o.isMesh) p[o.material.k].push(o.geometry.clone().applyMatrix4(o.matrixWorld)); });
+    G[key] = mergeParts(p);
+    return G[key];
   };
   G.thigh = (o) => {
     const p = { uni: [limb([[-0.04, 0.0], [-0.03, 0.08], [0.02, 0.092], [0.18, 0.08], [0.36, 0.062], [0.44, 0.055], [0.46, 0.0]], 1, 0.95, 14)], gear: [] };
@@ -389,7 +398,7 @@ export class HumanRig {
     };
     this.m = {
       torso: mk(G.torso(o)), head: mk(G.head(o)),
-      upL: mk(G.upper()), upR: mk(G.upper()), foL: mk(G.fore()), foR: mk(G.fore()), hL: mk(G.hand()), hR: mk(G.hand()),
+      upL: mk(G.upper()), upR: mk(G.upper()), foL: mk(G.fore()), foR: mk(G.fore()), hL: mk(G.hand(-1)), hR: mk(G.hand(1)),
       thL: mk(G.thigh()), thR: mk(G.thigh(o)), shL: mk(G.shin()), shR: mk(G.shin()), ftL: mk(G.foot()), ftR: mk(G.foot()),
     };
     this.j = Array.from({ length: 19 }, () => V());

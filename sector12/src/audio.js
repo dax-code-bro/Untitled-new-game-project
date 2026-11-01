@@ -54,6 +54,14 @@ export class AudioSys {
     }
   }
 
+  // stepper motors whining as the printer moves
+  printerHum(dist = 0) {
+    if (!this.ctx || dist > 45) return;
+    const v = 0.05 / (1 + dist / 6);
+    const f = 380 + Math.random() * 260;
+    this._tone(f, f * (0.9 + Math.random() * 0.25), 0.16, 'square', v * 0.25);
+  }
+
   stopAmbience() { if (this.windG && this.ctx) this.windG.gain.setTargetAtTime(0, this.ctx.currentTime, 0.3); }
 
   birdCall(kind, dist = 50) {

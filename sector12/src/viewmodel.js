@@ -14,6 +14,7 @@ import * as THREE from 'three';
 import { ITEMS } from './data/catalog.js';
 import { buildWeapon, compactWeapon, restParts } from './weapons.js';
 import { ik, limb, rboxGeo, at, mergeParts, camoTexture, PALETTES } from './rig.js';
+import { Hand, sleeveGeometry, cuffGeometry, elbowPadGeometry, watchGeometry } from './hands.js';
 import { lerp } from './rng.js';
 
 // kept for the POB printer display and other callers
@@ -32,58 +33,6 @@ class S1 { // scalar spring
 
 const S = 0.62; // the whole view is modelled at real size and shrunk towards the eye (less wall clipping)
 const ARM = { upper: 0.3, fore: 0.28 };
-
-// ---------------------------------------------------------------- arm + hand geometry
-let ARMGEO = null;
-function armGeometry() {
-  if (ARMGEO) return ARMGEO;
-  const G = {};
-  G.upper = mergeParts({ sleeve: [limb([[-0.03, 0.0], [-0.02, 0.06], [0.06, 0.068], [0.2, 0.06], [0.29, 0.052], [0.31, 0.0]], 1, 0.95, 16)] });
-  G.fore = mergeParts({
-    sleeve: [limb([[-0.02, 0.0], [-0.01, 0.054], [0.12, 0.056], [0.2, 0.05], [0.22, 0.0]], 1, 0.92, 16)],
-    glove: [limb([[0.18, 0.0], [0.19, 0.042], [0.27, 0.036], [0.285, 0.0]], 1, 0.85, 14)],
-    strap: [at(limb([[0, 0.046], [0.03, 0.046]], 1, 0.9, 14), 0, 0.2, 0)],
-  });
-  // gloved hand, fingers curled around a grip. origin at the wrist, +Z along the fingers, +Y back of the hand, +X thumb side (right hand)
-  const hand = (side) => {
-    const p = { glove: [], strap: [] };
-    p.glove.push(at(rboxGeo(0.082, 0.032, 0.095, 0.013), 0, 0.0, 0.05));
-    p.strap.push(at(rboxGeo(0.07, 0.02, 0.03, 0.008), 0, 0.017, 0.035));
-    for (let f = 0; f < 4; f++) {
-      const x = (f - 1.5) * 0.02 * -side, len = [0.045, 0.05, 0.047, 0.038][f];
-      let pos = V(x, -0.004, 0.095), ang = 0.35;
-      for (let k = 0; k < 3; k++) {
-        const l = len * [0.45, 0.33, 0.27][k];
-        const g = new THREE.CapsuleGeometry(0.0095 - k * 0.001, l, 3, 8);
-        g.rotateX(Math.PI / 2);
-        const dir = V(0, -Math.sin(ang), Math.cos(ang));
-        const c = V().copy(pos).addScaledVector(dir, l / 2 + 0.004);
-        g.rotateX(ang); g.translate(c.x, c.y, c.z);
-        p.glove.push(g);
-        pos.addScaledVector(dir, l + 0.006);
-        ang += 1.0;
-      }
-    }
-    // thumb wraps the other way
-    let pos = V(side * 0.04, -0.012, 0.03), dir = V(side * 0.45, -0.55, 0.7).normalize();
-    for (let k = 0; k < 2; k++) {
-      const l = 0.028;
-      const g = new THREE.CapsuleGeometry(0.011, l, 3, 8);
-      const q = new THREE.Quaternion().setFromUnitVectors(V(0, 1, 0), dir);
-      g.applyQuaternion(q);
-      const c = V().copy(pos).addScaledVector(dir, l / 2 + 0.004);
-      g.translate(c.x, c.y, c.z);
-      p.glove.push(g);
-      pos.addScaledVector(dir, l + 0.008);
-      dir = V(side * 0.0, -0.7, 0.7).normalize();
-    }
-    return mergeParts(p);
-  };
-  G.handR = hand(1);
-  G.handL = hand(-1);
-  ARMGEO = G;
-  return G;
-}
 
 // medical items shown in the left hand while treating
 function medModel(id) {
@@ -142,12 +91,25 @@ export class Viewmodel {
     this.light = new THREE.PointLight(0xffa850, 0, 10, 1.6);
     this.muzzle = new THREE.Object3D();
     // arms
-    const G = armGeometry();
+    // arms: folded fabric sleeves with cuffs and elbow pads, a watch on the left wrist, and fully
+    // articulated gloved hands (five fingers, three joints each)
     this.armMat = {};
     this.setSleeves(null);
-    const mk = (b) => { const m = new THREE.Mesh(b.geo, b.keys.map((k) => this.armMat[k])); m.matrixAutoUpdate = false; m.frustumCulled = false; m.castShadow = false; m.receiveShadow = true; this.root.add(m); return m; };
-    this.arm = { upR: mk(G.upper), foR: mk(G.fore), hR: mk(G.handR), upL: mk(G.upper), foL: mk(G.fore), hL: mk(G.handL) };
-    this.armKeys = { upper: G.upper.keys, fore: G.fore.keys, hand: G.handR.keys };
+    const M = this.armMat;
+    const group = () => { const g = new THREE.Group(); g.matrixAutoUpdate = false; this.root.add(g); return g; };
+    const mesh = (g, geo, mat) => { const m = new THREE.Mesh(geo, mat); m.frustumCulled = false; m.castShadow = false; m.receiveShadow = true; g.add(m); return m; };
+    const upperGeo = sleeveGeometry('upper'), foreGeo = sleeveGeometry('fore'), cuffGeo = cuffGeometry(), padGeo = elbowPadGeometry();
+    const mkUpper = () => { const g = group(); mesh(g, upperGeo, M.sleeve); mesh(g, padGeo, M.plate); return g; };
+    const mkFore = (watch) => {
+      const g = group(); mesh(g, foreGeo, M.sleeve); mesh(g, cuffGeo, M.sleeve);
+      if (watch) { const W = watchGeometry(); mesh(g, W.band, M.strap); mesh(g, W.dial, M.dial); }
+      return g;
+    };
+    this.handR = new Hand(1, M); this.handL = new Hand(-1, M);
+    this.root.add(this.handR.root, this.handL.root);
+    this.handR.root.traverse((o) => { o.frustumCulled = false; }); this.handL.root.traverse((o) => { o.frustumCulled = false; });
+    this.arm = { upR: mkUpper(), foR: mkFore(false), hR: this.handR.root, upL: mkUpper(), foL: mkFore(true), hL: this.handL.root };
+    this.lastKick = -9; this.idleT = 0; this.tapT = 0; this.reachT = 0;
     // springs
     this.sp = { x: new S1(140), y: new S1(140), z: new S1(160), rx: new S1(180), ry: new S1(140), rz: new S1(140) };
     this.rec = { z: new S1(320, 22), rx: new S1(260, 18), ry: new S1(200, 18), rz: new S1(200, 16) };
@@ -176,8 +138,20 @@ export class Viewmodel {
     this.armMat.sleeve = this.armMat.sleeve || new THREE.MeshStandardMaterial({ roughness: 0.92 });
     this.armMat.sleeve.map = camoTexture(pal);
     this.armMat.sleeve.needsUpdate = true;
-    this.armMat.glove = this.armMat.glove || new THREE.MeshStandardMaterial({ color: 0x2a2b26, roughness: 0.72 });
-    this.armMat.strap = this.armMat.strap || new THREE.MeshStandardMaterial({ color: 0x15161a, roughness: 0.6 });
+    this.armMat.glove = this.armMat.glove || new THREE.MeshStandardMaterial({ color: 0x55513f, roughness: 0.8 });
+    this.armMat.strap = this.armMat.strap || new THREE.MeshStandardMaterial({ color: 0x3a3a34, roughness: 0.7 });
+    this.armMat.plate = this.armMat.plate || new THREE.MeshStandardMaterial({ color: 0x1b1c1e, roughness: 0.42, metalness: 0.1 });
+    this.armMat.skin = this.armMat.skin || new THREE.MeshStandardMaterial({ color: 0xc89a78, roughness: 0.55 });
+    if (!this.armMat.dial) {
+      const c = document.createElement('canvas'); c.width = c.height = 128;
+      const g = c.getContext('2d');
+      g.fillStyle = '#0d1210'; g.beginPath(); g.arc(64, 64, 62, 0, 7); g.fill();
+      g.strokeStyle = '#9affc8'; g.lineWidth = 3;
+      for (let i = 0; i < 12; i++) { const a = (i / 12) * Math.PI * 2; g.beginPath(); g.moveTo(64 + Math.cos(a) * 48, 64 + Math.sin(a) * 48); g.lineTo(64 + Math.cos(a) * 58, 64 + Math.sin(a) * 58); g.stroke(); }
+      g.lineWidth = 5; g.beginPath(); g.moveTo(64, 64); g.lineTo(64 + 30, 64 - 18); g.stroke(); g.lineWidth = 3; g.beginPath(); g.moveTo(64, 64); g.lineTo(64 - 8, 64 - 46); g.stroke();
+      const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+      this.armMat.dial = new THREE.MeshBasicMaterial({ map: t, toneMapped: false });
+    }
   }
 
   // def: catalog def; inst: inventory instance (attachments/camo) or null for empty hands
@@ -218,6 +192,7 @@ export class Viewmodel {
     this.rec.rx.v += (3 + r * 140) * (1 - ads * 0.5);
     this.rec.ry.v += (Math.random() - 0.5) * (1 + r * 40);
     this.rec.rz.v += (Math.random() - 0.5) * (2 + r * 50);
+    this.lastKick = this.t;
     // work the action
     this.cycle = 0;
     this.ejectedThisCycle = false;
@@ -234,9 +209,10 @@ export class Viewmodel {
     this.flash.visible = this.flashT > 0;
     this.light.intensity = this.flashT > 0 ? 8 : 0;
     if (st.suit !== undefined) this.setSleeves(st.suit);
-    const visible = !!this.model && !(st.scoped && st.adsT > 0.92);
+    const visible = !(st.scoped && st.adsT > 0.92);
     this.root.visible = visible;
-    if (!this.model) return;
+    this.reachT = Math.max(0, this.reachT - dt / 0.7);
+    if (!this.model) { this.updateUnarmed(dt, st); return; }
     const d = this.def, ud = this.ud, P = this.P;
     const a = (this.adsT = st.adsT || 0);
     this.equip = Math.min(1, this.equip + dt * 2.8);
@@ -245,7 +221,7 @@ export class Viewmodel {
     // ---- base pose (gun origin, in root units) for hip / ADS / sprint
     const kind = this.kind;
     const dual = kind === 'dual', melee = kind === 'melee';
-    const hip = dual ? V(0, -0.2, -0.5) : melee ? V(0.2, -0.25, -0.45) : kind === 'pistol' ? V(0.15, -0.2, -0.48) : V(0.15, -0.2, -0.36);
+    const hip = dual ? V(0, -0.19, -0.5) : melee ? V(0.19, -0.22, -0.45) : kind === 'pistol' ? V(0.14, -0.17, -0.46) : V(0.14, -0.17, -0.38);
     const ads = dual ? V(0, -0.17, -0.44) : V(0, -this.sightY, kind === 'pistol' ? -0.42 : d.id === 'bg850' ? -0.2 : -0.27);
     const pos = V().copy(hip).lerp(ads, sm(a));
     let rx = 0, ry = 0, rz = 0;
@@ -289,7 +265,7 @@ export class Viewmodel {
     pos.y -= (1 - e) * 0.35; rx -= (1 - e) * 0.9; rz += (1 - e) * 0.4;
 
     // ---- actions
-    const left = { target: null, pose: 'fore' };
+    const left = { target: null, pose: null };
     const right = { target: null };
     this.cycle = Math.min(1, this.cycle + dt / this.cycleTime(d));
     this.workAction(dt, st, pos);
@@ -322,12 +298,64 @@ export class Viewmodel {
     else if (melee) gripL = null;
     else gripL = toRoot(ud.grip.clone().add(V(-0.03, -0.012, 0.005)));
     if (right.target) gripR.copy(right.target);
+    // reaching out to grab / open something with the support hand
+    if (this.reachT > 0 && !medK && !(st.reload > 0) && !dual) {
+      const k = bell(1 - this.reachT);
+      const grab = V(-0.06, -0.1, -0.5);
+      gripL = gripL ? V().copy(gripL).lerp(grab, k) : grab;
+      left.pose = k > 0.6 && this.reachT < 0.5 ? 'mag' : 'reach';
+      left.fwd = V(0.1, -0.2, -1).normalize(); left.up = V(0, 1, 0);
+    }
     const gunFwd = V(0, 0, -1).applyQuaternion(this.model.quaternion), gunUp = V(0, 1, 0).applyQuaternion(this.model.quaternion);
     this.solveArm('R', V(0.2, -0.42, 0.12), gripR, gunFwd, gunUp, true);
     if (gripL) { this.arm.upL.visible = this.arm.foL.visible = this.arm.hL.visible = true; this.solveArm('L', V(-0.24, -0.44, 0.05), gripL, left.fwd || gunFwd, left.up || gunUp, true); }
     else this.arm.upL.visible = this.arm.foL.visible = this.arm.hL.visible = false;
     if (this.med) { this.med.matrix.copy(this.arm.hL.matrix).multiply(new THREE.Matrix4().makeTranslation(0.0, -0.03, 0.08)); this.med.matrixWorldNeedsUpdate = true; }
+    // ---- fingers
+    const busy = st.sprint > 0 || st.reload > 0 || st.busy > 0 || this.equip < 1 || st.swing > 0 || this.inspect > 0;
+    let rp;
+    if (melee) rp = d.throwable && st.swing > 0.45 ? 'open' : 'knife';
+    else if (right.target) rp = 'pinch';
+    else if (busy) rp = 'gripSafe';
+    else if (st.trigger) rp = 'gripPull';
+    else rp = 'grip';
+    this.handR.setPose(rp);
+    let lp = left.pose;
+    if (!lp) lp = dual ? (st.trigger ? 'gripPull' : 'grip') : kind === 'pistol' ? 'cup' : 'fore';
+    this.handL.setPose(lp);
+    // idle fidget: the support hand drums its fingers on the handguard now and then
+    const still = !st.moving && !st.trigger && !(st.reload > 0) && !(st.busy > 0) && a < 0.1;
+    this.idleT = still ? this.idleT + dt : 0;
+    if (this.idleT > 5 && this.tapT <= 0 && Math.random() < dt * 0.5) this.tapT = 1;
+    this.tapT = Math.max(0, this.tapT - dt / 1.2);
+    const tap = this.tapT > 0 ? ((1 - this.tapT) * 3) % 1 : 0;
+    const squeeze = Math.max(0, 1 - (this.t - this.lastKick) * 6);
+    this.handR.update(dt, squeeze, 0);
+    this.handL.update(dt, squeeze * 0.6, lp === 'fore' ? tap : 0);
   }
+
+  // no weapon: both hands down in front, swinging gently as you walk; they reach out to use things
+  updateUnarmed(dt, st) {
+    const walk = st.moving ? 1 : 0;
+    this.moveK = lerp(this.moveK || 0, walk, Math.min(1, dt * 6));
+    const sw = Math.sin(st.bob) * 0.04 * this.moveK * (st.sprint ? 2 : 1);
+    const breathe = Math.sin(this.t * 1.6) * 0.004;
+    const k = bell(1 - this.reachT);
+    // hands held loosely in front, backs of the hands towards you, fingers relaxed
+    const rT = V(0.14 - k * 0.1, -0.2 + breathe + sw + k * 0.1, -0.38 - k * 0.16);
+    const lT = V(-0.15, -0.21 + breathe - sw, -0.36);
+    const upR = V(-0.35, 1, 0.5).normalize(), upL = V(0.35, 1, 0.5).normalize();
+    this.solveArm('R', V(0.2, -0.42, 0.12), rT, V(-0.25, -0.15 + k * 0.3, -1).normalize(), upR, false);
+    this.arm.upL.visible = this.arm.foL.visible = this.arm.hL.visible = true;
+    this.solveArm('L', V(-0.24, -0.44, 0.05), lT, V(0.25, -0.15, -1).normalize(), upL, false);
+    this.handR.setPose(k > 0.5 && this.reachT < 0.5 ? 'mag' : this.reachT > 0 ? 'open' : 'relaxed');
+    this.handL.setPose('relaxed');
+    this.handR.update(dt); this.handL.update(dt);
+    if (this.med) this.dropMed();
+  }
+
+  // the support hand reaches out (opening a crate, picking up a print, harvesting...)
+  reach() { this.reachT = 1; }
 
   cycleTime(d) {
     if (!d || d.melee) return 0.1;
@@ -396,6 +424,7 @@ export class Viewmodel {
       P.crane.rotation.z = -1.1 * sm(this.cylOpen);
       const cyl = toRoot(P.crane.position.clone().add(V(-0.03, 0.0, 0.0)));
       left.target = t < 0.5 ? lerpV(pouch, cyl, t * 2) : lerpV(cyl, pouch, (t - 0.5) * 2);
+      left.pose = t < 0.55 ? 'pinch' : 'reach';
       if (t > 0.45 && t < 0.55) this.cylIndex = Math.round(this.cylIndex) + 0; // seat the round
       return;
     }
@@ -404,6 +433,7 @@ export class Viewmodel {
       const port = toRoot((ud.magWell || V(0, -0.05, -0.05)).clone().add(V(0, -0.03, 0)));
       left.target = t < 0.45 ? lerpV(pouch, port, t / 0.45) : t < 0.65 ? V().copy(port).add(V(0, 0.02 * bell(seg(t, 0.45, 0.65)), -0.03 * seg(t, 0.45, 0.65))) : lerpV(port, pouch, (t - 0.65) / 0.35);
       left.up = V(0, -1, 0);
+      left.pose = t < 0.62 ? 'pinch' : 'reach';
       return;
     }
     if (d.mode === 'break') {
@@ -414,6 +444,7 @@ export class Viewmodel {
       if (!this.dropped && t > 0.22) { this.dropped = true; if (ud.casing !== null || d.ammoClass) this.eject('shell', 0.4); }
       const breech = toRoot(V(0, 0.0, -0.1).add(P.barrel ? V(0, 0.03, 0) : V()));
       left.target = t < 0.3 ? fore : t < 0.5 ? lerpV(fore, pouch, (t - 0.3) / 0.2) : t < 0.72 ? lerpV(pouch, breech, (t - 0.5) / 0.22) : t < 0.86 ? V().copy(breech).add(V(0, 0.05 * seg(t, 0.72, 0.86), 0)) : lerpV(breech, fore, (t - 0.86) / 0.14);
+      left.pose = t < 0.3 ? 'fore' : t < 0.48 ? 'reach' : t < 0.8 ? 'pinch' : t < 0.88 ? 'flat' : 'fore';
       return;
     }
     // magazine guns
@@ -435,10 +466,13 @@ export class Viewmodel {
       const sl = toRoot(V(0, 0.03, 0.02));
       P.slide.position.z = P.slide.userData.rest.p.z + 0.05 * bell(seg(t, 0.75, 0.9));
       left.target = t < 0.75 ? lerpV(well, sl, (t - 0.7) / 0.05) : t < 0.9 ? V().copy(sl).add(V(0, 0, 0.05 * bell(seg(t, 0.75, 0.9)))) : lerpV(sl, fore, (t - 0.9) / 0.1);
+      left.pose = t < 0.9 ? 'pinch' : 'cup';
       left.up = V(0, -1, 0);
       return;
     }
     if (P.slide && t > 0.6 && !this.reloadEmpty) P.slide.position.z = P.slide.userData.rest.p.z;
+    // fingers: reach for the mag, hold it, reach into the pouch, hold the fresh one, slap it home, pinch the handle
+    left.pose = t < 0.1 ? 'reach' : t < 0.3 ? 'mag' : t < 0.38 ? 'reach' : t < 0.6 ? 'mag' : t < 0.66 ? 'flat' : t < 0.72 && this.reloadEmpty ? 'reach' : t < 0.88 && this.reloadEmpty ? 'pinch' : 'reach';
     if (t < 0.12) left.target = lerpV(fore, well, t / 0.12);
     else if (t < 0.3) left.target = V().copy(well).add(V(0, -sm(seg(t, 0.12, 0.3)) * 0.2, 0));
     else if (t < 0.42) left.target = lerpV(V().copy(well).add(V(0, -0.2, 0)), pouch, (t - 0.3) / 0.12);
@@ -537,6 +571,7 @@ export class Viewmodel {
     if (this.medId !== id) { this.dropMed(); this.med = medModel(id); this.med.matrixAutoUpdate = false; this.root.add(this.med); this.medId = id; }
     const k = sm(seg(t, 0, 0.12)) * (1 - sm(seg(t, 0.9, 1)));
     let hand;
+    left.pose = id === 'adrenaline' || id === 'numbing' || id === 'scalpel' ? 'syringe' : id === 'tourniquet' ? 'pinch' : 'hold';
     const base = V(-0.07, -0.1, -0.42);
     if (id === 'adrenaline' || id === 'numbing') {
       // into the thigh: raise, stab, push the plunger
@@ -593,8 +628,8 @@ export class Viewmodel {
     place(R ? m.upR : m.upL, sh, elbow, V(0, 1, 0));
     place(R ? m.foR : m.foL, elbow, end, V(0, 1, 0));
     // hand: +Z along fingers (the weapon's forward, tipped down into the grip), +Y back of the hand
-    const hf = V().copy(fwd).addScaledVector(up, -0.6).normalize();
-    const hu = V().copy(up).applyAxisAngle(fwd, R ? -0.5 : 0.5);
+    const hf = onGun ? V().copy(fwd).addScaledVector(up, -0.6).normalize() : V().copy(fwd).normalize();
+    const hu = onGun ? V().copy(up).applyAxisAngle(fwd, R ? -0.5 : 0.5) : V().copy(up);
     const z = hf, y = V().copy(hu).addScaledVector(z, -hu.dot(z)).normalize(), x = V().crossVectors(y, z);
     (R ? m.hR : m.hL).matrix.makeBasis(x, y, z).setPosition(end);
     (R ? m.hR : m.hL).matrixWorldNeedsUpdate = true;

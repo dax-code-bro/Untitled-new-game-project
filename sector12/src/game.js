@@ -67,6 +67,7 @@ export class Game {
     const pobPoi = POIS.find((p) => p.id === 'pob');
     this.pob = new POB(scene, this.physics, pobPoi, this.save, {
       persist: () => ctx.persist(),
+      hum: (o) => this.audio.printerHum(o.distanceTo(this.camera.position)),
       onPrinted: (it) => { this.hud.toast(`Printed: ${ITEMS[it.id].name} — pick it up from the print bed`, '#46ffb0', 4); this.audio.printDone(); },
     });
     this.containers = [];
@@ -371,6 +372,7 @@ export class Game {
       if (this.ui) return;
       const f = this.focus;
       if (!f) return;
+      if (this.player.vm.reach) this.player.vm.reach();
       if (f.type === 'container') this.openContainer(f.c);
       else if (f.type === 'terminal') this.openUI('terminal');
       else if (f.type === 'pickup_print') this.pickupPrint();
