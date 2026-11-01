@@ -36,31 +36,70 @@ function asphalt(ctx, w, h, rnd) {
   }
 }
 
-export function createRoads(graph, hm, quality, scene, collision) {
+export function createRoads(graph, hm, quality, scene, collision, surf) {
   const rnd = mulberry32(77);
   const group = new THREE.Group();
   group.name = 'roads';
   const an = quality.anisotropy;
 
+  // Markings are painted on a transparent canvas and laid over photo-scanned asphalt.
+  const real = surf && surf.asphalt.real;
+  const base = (ctx, w, h) => { if (!real) asphalt(ctx, w, h, rnd); };
+  const wear = (ctx, w, h) => { // scuffed paint
+    ctx.globalCompositeOperation = 'destination-out';
+    for (let i = 0; i < 900; i++) { ctx.fillStyle = `rgba(0,0,0,${0.2 + rnd() * 0.5})`; ctx.fillRect(rnd() * w, rnd() * h, 1 + rnd() * 3, 1 + rnd() * 3); }
+    ctx.globalCompositeOperation = 'source-over';
+  };
   const hwTex = canvasTex(256, 512, (ctx, w, h) => {
-    asphalt(ctx, w, h, rnd);
-    ctx.fillStyle = '#d8d6cc';
+    base(ctx, w, h);
+    ctx.fillStyle = '#e4e2da';
     ctx.fillRect(w * 0.035, 0, w * 0.02, h);
     ctx.fillRect(w * 0.945, 0, w * 0.02, h);
-    ctx.fillStyle = '#d9a11c';
+    ctx.fillStyle = '#e0a51c';
     ctx.fillRect(w * 0.488, 0, w * 0.012, h);
     ctx.fillRect(w * 0.506, 0, w * 0.012, h);
+    wear(ctx, w, h);
   }, an);
   const stTex = canvasTex(256, 512, (ctx, w, h) => {
-    asphalt(ctx, w, h, rnd);
-    ctx.fillStyle = '#d9a11c';
+    base(ctx, w, h);
+    ctx.fillStyle = '#e0a51c';
     ctx.fillRect(w * 0.49, 0, w * 0.02, h * 0.5);
-    ctx.fillStyle = '#cfcfc8';
+    ctx.fillStyle = '#dcdcd4';
     ctx.fillRect(w * 0.06, 0, w * 0.012, h);
     ctx.fillRect(w * 0.928, 0, w * 0.012, h);
+    wear(ctx, w, h);
   }, an);
-  const ixTex = canvasTex(256, 256, (ctx, w, h) => asphalt(ctx, w, h, rnd), an);
-  const roadMat = (map) => new THREE.MeshStandardMaterial({ map, roughness: 0.88, metalness: 0, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+  const ixTex = canvasTex(256, 256, (ctx, w, h) => {
+    base(ctx, w, h);
+    // zebra crosswalks on all four sides of the intersection
+    ctx.fillStyle = '#e6e4dc';
+    const band = h * 0.16, stripe = w * 0.045;
+    for (let k = 0; k < 8; k++) {
+      const x = w * 0.12 + k * stripe * 1.75;
+      ctx.fillRect(x, 0, stripe, band); ctx.fillRect(x, h - band, stripe, band);
+      ctx.fillRect(0, x, band, stripe); ctx.fillRect(w - band, x, band, stripe);
+    }
+    wear(ctx, w, h);
+  }, an);
+  const roadMat = (marks) => {
+    const m = new THREE.MeshStandardMaterial({ map: marks, roughness: 0.9, metalness: 0, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+    if (!real) return m;
+    m.onBeforeCompile = (sh) => {
+      sh.uniforms.tAsph = { value: surf.asphalt.color };
+      sh.uniforms.tAsphR = { value: surf.asphalt.rough };
+      sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vRW;')
+        .replace('#include <begin_vertex>', '#include <begin_vertex>\nvRW = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec3 vRW; uniform sampler2D tAsph; uniform sampler2D tAsphR; float sbPaint;')
+        .replace('#include <map_fragment>', `
+          vec3 asph = texture2D(tAsph, vRW.xz / 3.5).rgb * mix(0.75, 1.0, texture2D(tAsph, vRW.xz / 41.0).g * 1.6);
+          vec4 mk = texture2D(map, vMapUv);
+          sbPaint = mk.a;
+          diffuseColor.rgb *= mix(asph * 0.8, mk.rgb, mk.a);`)
+        .replace('#include <roughnessmap_fragment>', 'float roughnessFactor = mix(texture2D(tAsphR, vRW.xz / 3.5).g * 0.35 + 0.62, 0.55, sbPaint);');
+    };
+    m.transparent = false;
+    return m;
+  };
   const hwMat = roadMat(hwTex), stMat = roadMat(stTex);
   const ixMat = roadMat(ixTex);
 
@@ -155,7 +194,22 @@ export function createRoads(graph, hm, quality, scene, collision) {
       slabs.push({ x, z, w: G.pitch - G.street, y: G.height });
     }
   }
-  const slabMat = new THREE.MeshStandardMaterial({ color: 0x8d8a84, roughness: 0.9 });
+  const slabMat = new THREE.MeshStandardMaterial({ color: 0x9a968f, roughness: 0.9 });
+  if (surf && surf.concrete.real) {
+    slabMat.onBeforeCompile = (sh) => {
+      sh.uniforms.tCon = { value: surf.concrete.color };
+      sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vSW;')
+        .replace('#include <begin_vertex>', '#include <begin_vertex>\nvSW = (modelMatrix * instanceMatrix * vec4(transformed, 1.0)).xyz;');
+      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec3 vSW; uniform sampler2D tCon;')
+        .replace('#include <color_fragment>', `#include <color_fragment>
+          // concrete slabs with expansion joints every 2.5 m
+          vec2 sw = vSW.xz;
+          vec3 con = texture2D(tCon, sw / 2.5).rgb;
+          vec2 j = abs(fract(sw / 2.5) - 0.5);
+          float joint = smoothstep(0.485, 0.495, max(j.x, j.y));
+          diffuseColor.rgb *= con * 1.05 * (1.0 - joint * 0.45);`);
+    };
+  }
   const slab = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0), slabMat, slabs.length);
   slabs.forEach((b, i) => { m4.compose(p.set(b.x, b.y - 0.1, b.z), q.identity(), s.set(b.w, 0.32, b.w)); slab.setMatrixAt(i, m4); });
   slab.receiveShadow = true;

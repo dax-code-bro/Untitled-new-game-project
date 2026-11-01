@@ -25,13 +25,13 @@ export const worldUniforms = {
   uWorldHalf: { value: WORLD.half },
 };
 
-export function createTerrain(hm, quality, scene) {
+export function createTerrain(hm, quality, scene, surf) {
   const group = new THREE.Group();
   group.name = 'terrain';
   const chunks = 8;
   const segs = Math.max(16, Math.round(quality.terrainSegs / chunks));
   const size = WORLD.size / chunks;
-  const mat = makeTerrainMaterial(quality);
+  const mat = makeTerrainMaterial(quality, surf);
   const nrm = new THREE.Vector3();
   const meshes = [];
 
@@ -117,11 +117,16 @@ export function createTerrain(hm, quality, scene) {
   };
 }
 
-function makeTerrainMaterial(quality) {
+function makeTerrainMaterial(quality, surf) {
   const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.92, metalness: 0 });
-  const detail = quality.anisotropy >= 8 ? 1.0 : 0.0;
+  const useN = surf && surf.hasNormals ? 1 : 0;
   mat.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, worldUniforms);
+    const L = ['grass', 'dry', 'forest', 'sand', 'rock'];
+    for (const k of L) {
+      shader.uniforms[`t_${k}C`] = { value: surf ? surf[k].color : null };
+      shader.uniforms[`t_${k}N`] = { value: surf ? surf[k].normal : null };
+    }
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>', '#include <common>\nvarying vec3 vWPos;\nvarying vec3 vWNrm;')
       .replace('#include <begin_vertex>', '#include <begin_vertex>\nvWPos = (modelMatrix * vec4(transformed,1.0)).xyz;\nvWNrm = normalize(mat3(modelMatrix) * objectNormal);');
@@ -129,8 +134,20 @@ function makeTerrainMaterial(quality) {
       .replace('#include <common>', `#include <common>
 varying vec3 vWPos; varying vec3 vWNrm;
 uniform sampler2D uSplatTex; uniform float uWorldHalf; uniform float uNight;
+${L.map((k) => `uniform sampler2D t_${k}C; uniform sampler2D t_${k}N;`).join('\n')}
 ${GLSL_NOISE}
-float sbRough; float sbBump;
+float sbRough; vec3 sbNrm;
+// two scales + rotation to hide tiling
+vec3 tileC(sampler2D t, vec2 p, float macro){
+  vec3 a = texture2D(t, p / 5.0).rgb;
+  vec2 q = mat2(0.8, -0.6, 0.6, 0.8) * p / 19.0;
+  vec3 b = texture2D(t, q).rgb;
+  return mix(a, b, 0.35) * (0.82 + 0.36 * macro);
+}
+vec3 tileN(sampler2D t, vec2 p){ return texture2D(t, p / 5.0).xyz * 2.0 - 1.0; }
+vec3 triC(sampler2D t, vec3 p, vec3 w){
+  return texture2D(t, p.zy / 9.0).rgb * w.x + texture2D(t, p.xz / 9.0).rgb * w.y + texture2D(t, p.xy / 9.0).rgb * w.z;
+}
 `)
       .replace('#include <color_fragment>', `#include <color_fragment>
 {
@@ -139,43 +156,54 @@ float sbRough; float sbBump;
   bool outside = abs(vWPos.x) > uWorldHalf || abs(vWPos.z) > uWorldHalf;
   if (outside) sp = vec4(vWPos.y < 2.0 ? 1.0 : 0.0, 0.35, 0.3, 0.0);
   float dist = length(vWPos - cameraPosition);
-  float fade = 1.0 - smoothstep(60.0, 450.0, dist);
-  float macro = sbFbm(vWPos.xz*0.012);
-  float micro = sbNoise(vWPos.xz*0.9) * fade;
-  float slope = 1.0 - clamp(vWNrm.y, 0.0, 1.0);
+  float macro = sbFbm(vWPos.xz*0.011);
+  vec3 n = normalize(vWNrm);
+  float slope = 1.0 - clamp(n.y, 0.0, 1.0);
+  vec2 p = vWPos.xz;
 
-  vec3 grass = mix(vec3(0.16,0.27,0.07), vec3(0.30,0.36,0.11), macro);
-  grass = mix(grass, vec3(0.22,0.30,0.09), micro*0.5);
-  vec3 dry   = mix(vec3(0.50,0.42,0.20), vec3(0.62,0.52,0.28), macro);
-  vec3 forest= mix(vec3(0.13,0.11,0.06), vec3(0.17,0.20,0.08), sbNoise(vWPos.xz*0.15));
-  vec3 sand  = mix(vec3(0.58,0.50,0.36), vec3(0.66,0.58,0.42), sbNoise(vWPos.xz*0.3));
-  vec3 mud   = vec3(0.24,0.20,0.14);
-  vec3 rock  = mix(vec3(0.36,0.34,0.32), vec3(0.52,0.49,0.45), sbFbm(vec2(vWPos.x+vWPos.z, vWPos.y*3.0)*0.08));
-  vec3 paved = mix(vec3(0.085,0.085,0.09), vec3(0.12,0.12,0.125), micro);
+  vec3 cG = tileC(t_grassC, p, macro);
+  vec3 cD = tileC(t_dryC, p, macro);
+  vec3 cF = tileC(t_forestC, p, macro);
+  vec3 cS = tileC(t_sandC, p * 0.7, macro);
+  vec3 tw = pow(abs(n), vec3(4.0)); tw /= (tw.x + tw.y + tw.z);
+  vec3 cR = triC(t_rockC, vWPos, tw) * (0.85 + 0.3 * macro);
 
-  vec3 c = grass;
-  c = mix(c, dry, sp.b);
-  c = mix(c, forest, sp.g*0.85);
-  vec3 shore = mix(sand, mud, smoothstep(0.3,0.7,sbNoise(vWPos.xz*0.02)) * step(3.0, vWPos.y));
-  c = mix(c, shore, sp.r);
-  c = mix(c, rock, smoothstep(0.28, 0.5, slope + (macro-0.5)*0.15));
+  // layer weights, sharpened by each texture's brightness (height-blend)
+  float wR = smoothstep(0.26, 0.5, slope + (macro - 0.5) * 0.18);
+  float wS = sp.r, wF = sp.g * 0.9, wD = sp.b;
+  float wG = max(0.0, 1.0 - wS - wF - wD);
+  vec4 h = vec4(dot(cG, vec3(0.33)), dot(cD, vec3(0.33)), dot(cF, vec3(0.33)), dot(cS, vec3(0.33)));
+  vec4 w = vec4(wG, wD, wF, wS) * pow(h + 0.35, vec4(3.0)) + 1e-4;
+  w /= (w.x + w.y + w.z + w.w);
+  vec3 c = cG * w.x + cD * w.y + cF * w.z + cS * w.w;
+  c = mix(c, cR, wR);
   float snow = smoothstep(190.0, 230.0, vWPos.y + macro*30.0) * (1.0 - smoothstep(0.35,0.6,slope));
   c = mix(c, vec3(0.92,0.94,0.97), snow);
+  vec3 paved = mix(vec3(0.07,0.07,0.075), vec3(0.11,0.11,0.115), sbNoise(vWPos.xz*0.9));
   c = mix(c, paved, sp.a);
-  if (vWPos.y < 0.0) c = mix(c, vec3(0.45,0.42,0.32), 0.4);
+  if (vWPos.y < 0.0) c *= vec3(0.75, 0.8, 0.78);
   diffuseColor.rgb = c;
-  sbRough = mix(0.95, 0.75, sp.a) - snow*0.4;
-  sbBump = (sbNoise(vWPos.xz*1.7)*0.6 + sbNoise(vWPos.xz*6.0)*0.4) * fade * ${detail.toFixed(1)} * (0.6 + slope*2.0) * (1.0 - sp.a*0.7);
+  sbRough = mix(0.96, 0.8, sp.a) - snow * 0.4 - w.w * 0.05;
+
+  // detail normals (fade with distance to avoid sparkle)
+  vec3 nt = vec3(0.0, 0.0, 1.0);
+  if (${useN}.0 > 0.5) {
+    nt = tileN(t_grassN, p) * w.x + tileN(t_dryN, p) * w.y + tileN(t_forestN, p) * w.z + tileN(t_sandN, p * 0.7) * w.w;
+    vec3 nr = texture2D(t_rockN, (abs(n.x) > abs(n.z) ? vWPos.zy : vWPos.xy) / 9.0).xyz * 2.0 - 1.0;
+    nt = mix(nt, nr, wR);
+    nt.xy *= (1.0 - smoothstep(40.0, 260.0, dist)) * (1.0 - sp.a) * 1.4;
+  }
+  sbNrm = nt;
 }`)
       .replace('#include <roughnessmap_fragment>', 'float roughnessFactor = sbRough;')
       .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
 {
-  vec3 dpdx = dFdx(-vViewPosition), dpdy = dFdy(-vViewPosition);
-  float dhx = dFdx(sbBump), dhy = dFdy(sbBump);
-  vec3 r1 = cross(dpdy, normal), r2 = cross(normal, dpdx);
-  float det = dot(dpdx, r1);
-  vec3 grad = sign(det) * (dhx*r1 + dhy*r2) * 0.35;
-  normal = normalize(abs(det)*normal - grad);
+  // world-aligned tangent frame for ground textures projected on XZ
+  vec3 N = normalize(vWNrm);
+  vec3 T = normalize(vec3(1.0, 0.0, 0.0) - N * N.x);
+  vec3 B = normalize(cross(N, T));
+  vec3 nw = normalize(T * sbNrm.x - B * sbNrm.y + N * max(sbNrm.z, 0.2));
+  normal = normalize((viewMatrix * vec4(nw, 0.0)).xyz);
 }`);
   };
   return mat;

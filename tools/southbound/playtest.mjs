@@ -52,7 +52,7 @@ await page.addInitScript((pr) => {
 
 const shot = async (name) => {
   const frozen = await page.evaluate(() => { if (window.SB) { window.SB.freeze(true); return true; } return false; });
-  await page.screenshot({ path: path.join(out, `${name}.png`), timeout: 120000 });
+  await page.screenshot({ path: path.join(out, `${name}.png`), timeout: 600000 });
   if (frozen) await page.evaluate(() => window.SB.freeze(false));
   console.log('shot', name);
 };
@@ -72,7 +72,7 @@ console.log('state', JSON.stringify(await sb(() => window.SB.state)));
 if (scenario === 'smoke') {
   await shot('01-spawn');
 } else if (scenario === 'shots') {
-  const spots = JSON.parse(fs.readFileSync(path.join(here, 'spots.json'), 'utf8'));
+  const spots = JSON.parse(fs.readFileSync(process.env.SPOTS || path.join(here, 'spots.json'), 'utf8'));
   for (const s of spots) {
     if (s.only && s.only !== preset) continue;
     await sb((s) => {

@@ -1,0 +1,7 @@
+[
+  {"setup": {"hour": 7.0, "teleport": [-150, -770, 3.4], "look": [3.4, 0.06], "region": true}, "input": {"moveY": 0.6}, "seconds": 4},
+  {"setup": {"hour": 12.6, "teleport": [652, 1060, 0], "look": [0, 0.1], "region": true}, "input": {"moveY": 1}, "seconds": 4},
+  {"setup": {"hour": 17.5, "teleport": [234, 1051, 1.5708], "enter": true}, "input": {}, "seconds": 0.3},
+  {"setup": {"auto": [740, 700, 3.1416, 24], "region": true}, "input": {}, "seconds": 6},
+  {"setup": {"hour": 17.9, "auto": [1300, -400, 3.1416, 24], "region": true}, "input": {}, "seconds": 5}
+]

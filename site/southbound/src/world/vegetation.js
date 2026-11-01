@@ -6,6 +6,7 @@ import { WORLD, CITY, coastZ } from './layout.js';
 import { forestMask, plainsMask, bayouMask } from './heightmap.js';
 import { worldUniforms } from './terrain.js';
 import { mulberry32 } from '../util.js';
+import { fogParams, FOG_GLSL } from './atmosphere.js';
 
 function part(geo, color, jitter = 0.08, rnd) {
   const g = geo.index ? geo.toNonIndexed() : geo;
@@ -181,7 +182,7 @@ function createGrass(quality, scene) {
   const pos = [], idx = [];
   const segs = 3;
   for (let i = 0; i <= segs; i++) {
-    const t = i / segs, w = 0.06 * (1 - t * 0.85);
+    const t = i / segs, w = 0.042 * (1 - t * 0.8);
     pos.push(-w, t, 0, w, t, 0);
   }
   for (let i = 0; i < segs; i++) { const a = i * 2; idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); }
@@ -192,7 +193,7 @@ function createGrass(quality, scene) {
   const off = new Float32Array(count * 2), rr = new Float32Array(count * 3);
   for (let i = 0; i < count; i++) {
     off[i * 2] = rnd() * size; off[i * 2 + 1] = rnd() * size;
-    rr[i * 3] = 0.35 + rnd() * 0.55; rr[i * 3 + 1] = rnd() * Math.PI * 2; rr[i * 3 + 2] = rnd();
+    rr[i * 3] = 0.22 + rnd() * 0.38; rr[i * 3 + 1] = rnd() * Math.PI * 2; rr[i * 3 + 2] = rnd();
   }
   geo.setAttribute('aOffset', new THREE.InstancedBufferAttribute(off, 2));
   geo.setAttribute('aRand', new THREE.InstancedBufferAttribute(rr, 3));
@@ -200,12 +201,12 @@ function createGrass(quality, scene) {
 
   const mat = new THREE.ShaderMaterial({
     side: THREE.DoubleSide,
-    uniforms: { ...worldUniforms, ...grassUniforms, uCam: { value: new THREE.Vector3() }, uSize: { value: size } },
+    uniforms: { ...worldUniforms, ...grassUniforms, uCam: { value: new THREE.Vector3() }, uSize: { value: size }, sbFogA: { value: fogParams.a }, sbFogB: { value: fogParams.b } },
     vertexShader: /* glsl */`
       attribute vec2 aOffset; attribute vec3 aRand;
       uniform vec3 uCam; uniform float uSize; uniform float uTime; uniform float uWorldHalf;
       uniform sampler2D uHeightTex; uniform sampler2D uSplatTex;
-      varying float vT; varying float vDry; varying float vFogDepth; varying float vShade;
+      varying float vT; varying float vDry; varying float vFogDepth; varying float vShade; varying vec3 vGW;
       void main(){
         vec2 wxz = uCam.xz + mod(aOffset - uCam.xz + uSize*0.5, uSize) - uSize*0.5;
         vec2 uv = (wxz + uWorldHalf)/(2.0*uWorldHalf);
@@ -223,21 +224,23 @@ function createGrass(quality, scene) {
         world.x += wind * p.y*p.y * h;
         world.z += wind * 0.6 * p.y*p.y * h;
         vT = p.y; vDry = sp.b; vShade = 0.75 + 0.25*fract(aRand.z*91.0);
+        vGW = world;
         vec4 mv = viewMatrix * vec4(world, 1.0);
         vFogDepth = -mv.z;
         gl_Position = projectionMatrix * mv;
       }`,
     fragmentShader: /* glsl */`
       uniform vec3 uSunDir; uniform vec3 uSunColor; uniform vec3 uAmbient; uniform vec3 uFogColor; uniform float uFogDensity;
-      varying float vT; varying float vDry; varying float vFogDepth; varying float vShade;
+      varying float vT; varying float vDry; varying float vFogDepth; varying float vShade; varying vec3 vGW;
+      uniform vec4 sbFogA; uniform vec4 sbFogB;
+      ${FOG_GLSL}
       void main(){
-        vec3 base = mix(vec3(0.06,0.12,0.03), vec3(0.24,0.34,0.10), vT);
-        vec3 dry = mix(vec3(0.25,0.20,0.08), vec3(0.62,0.52,0.28), vT);
+        vec3 base = mix(vec3(0.05,0.09,0.025), vec3(0.20,0.27,0.08), vT);
+        vec3 dry = mix(vec3(0.2,0.16,0.07), vec3(0.48,0.4,0.2), vT);
         vec3 col = mix(base, dry, vDry) * vShade;
         float sun = max(uSunDir.y, 0.0)*0.7 + 0.3;
         vec3 lit = col * (uAmbient + uSunColor * sun * (0.4 + 0.6*vT));
-        float f = 1.0 - exp(-uFogDensity*uFogDensity*vFogDepth*vFogDepth);
-        gl_FragColor = vec4(mix(lit, uFogColor, f), 1.0);
+        gl_FragColor = vec4(sbApplyFog(lit, vGW, cameraPosition, uFogColor, uFogDensity, sbFogA, sbFogB), 1.0);
         #include <tonemapping_fragment>
         #include <colorspace_fragment>
       }`,
