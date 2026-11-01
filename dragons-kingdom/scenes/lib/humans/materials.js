@@ -445,7 +445,15 @@ export function eyeMaterial(o = {}) {
     clearcoat: 1.0, clearcoatRoughness: 0.02,
   });
   if (o.map) mat.map = libTexture(o.map);
-  const U = { uIrisTint: { value: new THREE.Vector3(...(o.irisTint || [1, 1, 1])) }, uScleraTint: { value: new THREE.Vector3(...(o.scleraTint || [0.93, 0.87, 0.8])) }, uHeadFwd: headUniform(o) };
+  const U = { uIrisTint: { value: new THREE.Vector3(...(o.irisTint || [1, 1, 1])) }, uScleraTint: { value: new THREE.Vector3(...(o.scleraTint || [0.93, 0.87, 0.8])) }, uHeadFwd: headUniform(o),
+    // LOOK r2d: the MakeHuman eye texture's iris ends at UV radius ~0.12 (all mh_eyes maps share the layout),
+    // i.e. at vIris ~0.87 on the cache meshes (0.1387 UV per unit vIris, measured on abby / remi); the shader's
+    // limbus sat at vIris 1.0, so a pale texture-sclera ring was tinted as iris between two dark rings: at 4K
+    // the iris read as vertical stripes / a slit. All iris / limbus / cornea zones now use eyeI = vIris / uLimbus.
+    // ... and that iris was ~13 mm across (a real iris is 11-12 mm, also in a child): the texture is read
+    // through a radial zoom uIrisScale about each iris centre (texture layout, both mh_eyes atlas eyes),
+    // easing back to 1 on the sclera, and the limbus moves in to match (0.87 / 1.13 = 0.77).
+    uLimbus: { value: o.limbus ?? 0.77 }, uIrisScale: { value: o.irisScale ?? 1.13 } };
   mat.customProgramCacheKey = () => 'dk-human-eye';
   mat.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, U);
@@ -462,19 +470,42 @@ vec3 gz = gaze;
 vAO = ao; vIris = iris; vGaze = normalize(normalMatrix * gz); vEyeN = normal; vGazeO = gaze; vEyeP = position;`);
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', `#include <common>
-uniform vec3 uIrisTint, uScleraTint;
+uniform vec3 uIrisTint, uScleraTint; uniform float uLimbus, uIrisScale;
 varying float vAO; varying vec3 vGaze; varying float vIris; varying vec3 vEyeN; varying vec3 vGazeO; varying vec3 vEyeP;
 ${NOISE_GLSL}
-float eyeLidO;`)
+float eyeLidO; float eyeI;`)
       .replace('#include <lights_physical_pars_fragment>', '#include <lights_physical_pars_fragment>' + FRONT_GLSL)
       .replace('#include <map_fragment>', `#include <map_fragment>
+eyeI = vIris / uLimbus;
+#ifdef USE_MAP
+{
+  // LOOK r2d: refraction - the iris lies ~2.5 mm under the cornea apex (flat iris plane, domed cornea):
+  // seen off-axis its texels shift away from the viewer by depth * tan(refracted angle). The UV gradient
+  // comes from screen derivatives (cotangent frame) so no tangents are needed on the eye mesh.
+  float dep = 0.0026 * clamp(1.0 - eyeI * eyeI, 0.0, 1.0);
+  vec3 Vv = normalize(vViewPosition), gz = normalize(vGaze);
+  vec3 off = -(Vv - gz * dot(Vv, gz)) * dep / 1.336;
+  vec3 pp = -vViewPosition, dp1 = dFdx(pp), dp2 = dFdy(pp), Nn = normalize(vNormal);
+  vec2 du1 = dFdx(vMapUv), du2 = dFdy(vMapUv);
+  vec3 p2 = cross(dp2, Nn), p1 = cross(Nn, dp1);
+  float det = dot(dp1, p2);
+  vec2 duv = vec2(0.0);
+  if (abs(det) > 1e-14 && dep > 0.0) {
+    duv = vec2(dot(p2 * du1.x + p1 * du2.x, off), dot(p2 * du1.y + p1 * du2.y, off)) / det;
+    duv = clamp(duv, vec2(-0.02), vec2(0.02));
+  }
+  vec2 ic = distance(vMapUv, vec2(0.2935, 0.300)) < distance(vMapUv, vec2(0.705, 0.7025)) ? vec2(0.2935, 0.300) : vec2(0.705, 0.7025);
+  float zs = mix(uIrisScale, 1.0, smoothstep(0.9, 1.3, vIris));
+  diffuseColor.rgb = diffuse * texture2D(map, ic + (vMapUv - ic) * zs + duv).rgb;
+}
+#endif
 {
   // far from the iris the eye texture's atlas runs into its black background: a rolled eye
   // showed a black patch in the inner corner. Outside the limbus, dark texels become sclera.
   { float lt = dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722));
     float far = smoothstep(1.15, 1.35, vIris) * (1.0 - smoothstep(0.25, 0.45, lt));
     diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.8, 0.74, 0.7), far); }
-  float irisW = smoothstep(0.98, 0.9, vIris);           // vIris: angle from the gaze axis / limbus angle
+  float irisW = smoothstep(0.98, 0.9, eyeI);           // eyeI: angle from the gaze axis / limbus angle
   // irises in daylight read darker and less saturated than the texture (the cornea and the
   // iris' own depth): desaturate a little, then tint
   { float li = dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722));
@@ -482,14 +513,20 @@ float eyeLidO;`)
   diffuseColor.rgb *= mix(uScleraTint, uIrisTint, irisW);
   // sclera: warmer and a little pinker toward the corners (vessels), never paper white
   diffuseColor.rgb *= mix(vec3(1.0), vec3(1.0, 0.86, 0.82), smoothstep(1.6, 2.6, vIris) * (1.0 - irisW));
-  diffuseColor.rgb *= mix(1.0, 0.68, smoothstep(0.85, 1.0, vIris) * smoothstep(1.18, 1.0, vIris)); // limbal ring
+  diffuseColor.rgb *= mix(1.0, 0.68, smoothstep(0.85, 1.0, eyeI) * smoothstep(1.18, 1.0, eyeI)); // limbal ring
   // LOOK r2: sclera vessels - fine, branching, red; denser toward the corners, none on the cornea
   { float vm = (1.0 - irisW) * smoothstep(1.25, 2.3, vIris);
     vec3 q = vEyeP * 520.0 + hN3(vEyeP * 140.0) * 2.0;
     float v1 = pow(1.0 - abs(hN3(q) - 0.5) * 2.0, 14.0), v2 = pow(1.0 - abs(hN3(q * 2.3 + 7.0) - 0.5) * 2.0, 18.0) * 0.6;
     diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(0.95, 0.5, 0.48), clamp((v1 + v2) * vm * 0.6, 0.0, 0.6));
     // the sclera is never one white: a faint grey-yellow mottling
-    diffuseColor.rgb *= 1.0 + (hFbm(vEyeP * 300.0) - 0.5) * 0.12 * (1.0 - irisW); }
+    diffuseColor.rgb *= 1.0 + (hFbm(vEyeP * 300.0) - 0.5) * 0.12 * (1.0 - irisW);
+    // LOOK r2d: warm / cool variation - the thin sclera next to the limbus shows the blue-grey uvea
+    // through it, the rest of the white is ivory with broad warm (pink-yellow) patches
+    float sw = (1.0 - irisW);
+    diffuseColor.rgb *= mix(vec3(1.0), vec3(0.94, 0.97, 1.03), smoothstep(1.35, 1.0, eyeI) * sw);
+    float wc = hFbm(vEyeP * 60.0 + 11.0);
+    diffuseColor.rgb *= mix(vec3(1.0), mix(vec3(0.97, 0.99, 1.02), vec3(1.04, 0.99, 0.93), wc), sw); }
   // LOOK r2: lid and lash shadow on the eyeball. The eyeball's bind normal gives the elevation on
   // the globe (the lids follow vertical gaze, so the bind frame is the lid frame); the upper lid and
   // lashes shade a 2-3 mm band below their edge, the lower lid less, the corners deepest. Without it
@@ -501,18 +538,24 @@ float eyeLidO;`)
       .replace('#include <lights_physical_fragment>', `#include <lights_physical_fragment>
 {
   // the wet cornea is the mirror; the sclera's tear film is thinner and the lids shade it
-  float kc = smoothstep(1.2, 0.85, vIris);
-  material.clearcoat *= mix(0.4, 1.0, kc);
-  material.clearcoatRoughness = mix(0.12, 0.015, kc);
+  float kc = smoothstep(1.2, 0.85, eyeI);
+  // LOOK r2d: the sclera is wet too - a thinner, uneven tear film (sharper and stronger than before,
+  // broken up so the sky / lamp reflection on the white is a few soft glints, not a grey sheen)
+  float wf = hFbm(vEyeP * 90.0 + 3.0);
+  material.clearcoat *= mix(mix(0.55, 0.8, wf), 1.0, kc);
+  material.clearcoatRoughness = mix(mix(0.1, 0.04, smoothstep(0.35, 0.7, wf)), 0.015, kc);
   // LOOK r2: the iris lies UNDER the cornea - it is matte (the shine is the cornea's clearcoat);
   // a glossy base lobe over the iris read as a painted glass marble
   material.roughness = mix(0.32, 0.7, kc);
 }`)
       .replace('#include <clearcoat_normal_fragment_begin>', `#include <clearcoat_normal_fragment_begin>
 {
-  // cornea: over the iris the wet surface is a smaller sphere bulging along the gaze axis
-  float k = smoothstep(1.25, 0.6, vIris);
-  clearcoatNormal = normalize(clearcoatNormal + vGaze * k * 0.55);
+  // cornea: over the iris the wet surface is a smaller sphere (r ~7.8 mm on a ~12 mm globe) whose centre
+  // sits ~4 mm in front of the globe's: n_cornea = normalize(n - 0.35 gaze). LOOK r2d: this was
+  // n + 0.55 gaze, which FLATTENED the cornea into a mirror facing the gaze - one big sky reflection
+  // washed the whole iris blue-grey; the curved cornea gives a small, sharp catch-light instead.
+  float k = smoothstep(1.1, 0.85, eyeI);
+  clearcoatNormal = normalize(clearcoatNormal - vGaze * k * 0.35);
 }`)
       .replace('#include <aomap_fragment>', `#include <aomap_fragment>
 {
@@ -525,6 +568,12 @@ float eyeLidO;`)
   reflectedLight.directSpecular *= 1.0 - eyeLidO;
 #ifdef USE_CLEARCOAT
   clearcoatSpecularDirect *= 1.0 - 0.9 * eyeLidO; clearcoatSpecularIndirect *= 1.0 - 0.6 * eyeLidO;
+  // LOOK r2d: the brow, lids and lashes hide the upper sky from the eye: the cornea mirrors the horizon
+  // and the ground, the sky only in a small window. Without this the env map's bright zenith covered the
+  // whole iris with a blue-grey sheen (the iris colour and fibres were lost, the pupil read as a slit).
+  { vec3 Rv = reflect(-normalize(vViewPosition), clearcoatNormal);
+    vec3 Rw = (vec4(Rv, 0.0) * viewMatrix).xyz;
+    clearcoatSpecularIndirect *= mix(1.0, 0.22, smoothstep(-0.05, 0.45, Rw.y)); }
 #endif
 }`);
   };
@@ -545,7 +594,7 @@ export function cardMaterial(o = {}) {
   // MakeHuman lash cards draw them as thick as the upper row, which reads as eyeliner
   // uCut: alpha below the first value is dropped, full at the second (faint card texels printed
   // translucent streaks past the eye corner; brows keep a fainter cut so their soft card stays)
-  const U = { uAlphaChannel: { value: o.alphaChannel ?? 3 }, uAlphaGain: { value: o.alphaGain ?? 1.0 }, uShift: { value: o.shift ?? 0.08 }, uLower: { value: o.lower ?? 0.25 },
+  const U = { uAlphaChannel: { value: o.alphaChannel ?? 3 }, uAlphaGain: { value: o.alphaGain ?? 1.0 }, uShift: { value: o.shift ?? 0.08 }, uLower: { value: o.lower ?? 0.15 },
     uCut: { value: new THREE.Vector2(...(o.cut || [0.08, 0.45])) }, uHeadFwd: headUniform(o) };
   mat.userData.card = U;
   const front = !!o.front;      // lashes: no back light (FRONT_GLSL)

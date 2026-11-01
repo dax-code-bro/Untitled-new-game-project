@@ -663,3 +663,60 @@ NEXT (in order):
    `gl_FragColor.rgb = vec3(clamp((d-0.011)/0.008,0.,1.), step(0.5, fract(d*1000.0)), dy<0.?0.6:0.)`).
 5. The older list: stubble (Remi), hair root-to-tip + flyaways, cloth weave / hem dirt, hands at 4K,
    Abby's child face (model change, rebuild).
+
+## LOOK round 2d (2026-11-01, short session) - iris / cornea / sclera / lower lashes
+
+DIAGNOSED (eye macro, draft, debug paint of eyeI rings + texture channel):
+- The "vertical stripes / slit" iris had three causes, none in the UVs (the eye UVs are round and centred
+  on the texture iris, 0.1387 UV per unit vIris on every cache):
+  a. The MakeHuman eye texture's iris ends at UV radius ~0.12 = vIris 0.87, but the shader's limbus
+     (irisW, limbal ring, cornea zone) sat at vIris 1.0: a pale ring of texture sclera was tinted as iris
+     between the texture's dark iris edge and the shader's limbal ring = two dark arcs either side.
+  b. The iris was ~13 mm across (real 11-12 mm, also for a child): with the narrow lid aperture only a
+     horizontal band of it shows, so pupil and rings read as vertical bars.
+  c. The cornea clearcoat normal was n + 0.55 gaze: that FLATTENS the cornea into a mirror facing the
+     gaze, so one big sky reflection washed the whole iris blue-grey (pupil and colour lost).
+  There was no refraction offset at all in eyeMaterial.
+FIXED (materials.js eyeMaterial only, runtime, no rebuild; API unchanged, two new optional options):
+1. `eyeI = vIris / uLimbus` (o.limbus, default 0.77) drives irisW, the limbal ring, the cornea clearcoat
+   zone and the cornea normal. Geometry-based zones (corner warmth, vessels, lid shadow, the far-atlas
+   black fix) stay on vIris.
+2. Iris zoom: the texture is read at ic + (uv - ic) * zs, zs = o.irisScale (1.13) easing to 1 between vIris
+   0.9 and 1.3; ic = the nearer of the two mh_eyes atlas iris centres (0.2935, 0.300) / (0.705, 0.7025)
+   (measured on the textures; all six mh_eyes maps share the layout). Iris now ~11.5 mm.
+3. Refraction parallax: iris texels shift by -V_tangential * depth / 1.336, depth 2.6 mm x (1 - eyeI^2),
+   mapped to UV with a screen-derivative cotangent frame (no tangents needed), clamped to 0.02 UV.
+4. Cornea normal = normalize(n - 0.35 gaze) inside the limbus (r 7.8 mm cornea on a 12 mm globe): a
+   small sharp catch-light in the pupil now (lamp: l2_x4.png).
+5. Corneal sky occlusion: clearcoat indirect x mix(1, 0.22, smoothstep(-0.05, 0.45, R_world.y)) - the brow
+   and lids hide the zenith; the iris keeps its colour in daylight.
+6. Sclera: cool blue-grey band next to the limbus (thin sclera), broad warm/cool fbm patches, and an
+   uneven wet film (clearcoat 0.55-0.8, roughness 0.04-0.1 by a 1 cm fbm) instead of a flat 0.4 / 0.12.
+7. cardMaterial lower-lash opacity default 0.25 -> 0.15.
+selftest-perf all passed; npm test 48 pass / 0 fail / 1 skipped.
+
+Renders looked at (scratch, not committed):
+/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/look5/
+e0_x4.png (before, daylight), dbg_x4.png (eyeI rings), e2_x4.png (sky occlusion), e3_x4.png (final,
+daylight), l2_x4.png (final, lamp: round brown iris, round pupil, catch-light). Recipe: humans-dev.json
+`{ "id": "abby", "accumulate": false, "still": true, "focusEye": true, "cam": { "tgt": "eye.L", "off": [0,0,0],
+"az": 20, "el": 0, "dist": 0.16, "fov": 22, "fstop": 8 } }` (+ `"light": "lamp"`, az 30, fstop 11), draft
+~20 s; crop `crop=260:100:340:240,scale=1040:400:flags=neighbor`. humans-dev.json restored afterwards.
+
+NOT YET VERIFIED / NEXT (in order):
+1. 4K check of the eye (preview/final preset, focusEye, both lights) - the fixes were judged at draft
+   960x540 x4 crops only. Watch the derivative-based parallax for 2x2-quad blockiness at the limbus.
+2. Sclera still reads grey (daylight ~ (135,132,125) sRGB next to a much warmer skin; lamp: grey-green):
+   eyeLidO (up to 0.88 on direct diffuse) is probably too strong now that the cornea no longer mirrors
+   the sky - try 0.6 max and a warmer indirect on the sclera; compare to a photo reference.
+3. Iris still a little hazy at draft (desaturation 0.7 x irisTint): try 0.8 and a slightly lighter abby
+   irisTint; check fibres at 4K.
+4. Caruncle: at the eye macro the inner corner still reads as dark red-brown skin, no wet pink mound -
+   the caruncle mesh may be hidden behind the lid skin; paint it (debug colour) to see where it is.
+5. Bright tear-line dot under the iris in lamp light (l2_x4.png bottom centre): fine as a meniscus glint,
+   but check at 4K that it is not one hot pixel cluster.
+6. A few crowd/guard caches have the gaze axis 0.02-0.03 UV off the texture iris centre (eyes posed in
+   the build): their limbal ring (gaze-based) and texture iris (texture-based) can be ~1.5 mm apart -
+   check on guard3 / musician / crowd02 at a close-up; fix by centring eyeI on the texture iris if visible.
+7. Older list from 2c: cheek pore colour / roughness stipple at 4K, tear line on remi / alexandria,
+   stubble, hair root-to-tip, cloth weave, hands at 4K, Abby's child face (rebuild).
