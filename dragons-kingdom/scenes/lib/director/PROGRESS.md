@@ -16,8 +16,10 @@ How it works: `README.md` in this folder. Latest state first.
   - `st13/X3-10_030.png` LOOKED AT: the turf behind Remi reads as pale green turf with texture (no white);
     the keeper's coif in the right foreground is still a bright grey out-of-focus blob (white coif material;
     candidate: drop the keeper 0.3 m or pan 3 deg left so only his shoulder edge is in).
-  - X3-15 / 1B-12 deeper-toe check: see the st13 folder (`X3-15_*.png`, `1B-12_*.png`) - the still job was
-    still running when this session closed; NOT looked at yet -> first thing next session.
+  - X3-15 deeper-toe check: `st13/X3-15_040.png` LOOKED AT: the eye close-up keeps its shadow detail - every
+    scale reads, darkest plates near black but separated, blue eye clean; NOT crushed. (Creatures note, not
+    director: a few big scale plates at the right edge stand off the skin like loose chips - REQUEST creatures.)
+    1B-12 still NOT rendered (session budget) -> first thing next session.
 - 1C STARTED (first part: the six VERDOR_GROUNDS takeoff shots 1C-01..1C-06, 28 s, continuous from 1B-15):
   - registry: SCENE_CONTINUITY['1C'] + VERDOR_GROUNDS continuity '1C' (same sun as 1B: sunDir(102, 31),
     exposure 1.4). build-shots CUTS gains `edl-1C` (`final/cut/edl-1C.json/.md`, audio-cues-1C.json): 81 shots,
@@ -41,7 +43,8 @@ How it works: `README.md` in this folder. Latest state first.
     `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/director/pv13/`. Edit check `--cuts`: 5 cuts checked, 0 flagged.
   - selftest 20 pass. No 1C still rendered (budget).
 - NEXT (exact, in order):
-  1. LOOK at `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/director/st13/X3-15_*.png` and `1B-12_*.png` (deeper toe: shadow detail on Charcoal must not crush).
+  1. `node scenes/lib/director/tools/still.mjs 1B-12@0.5 --preset draft --out <scratch>/st13` and LOOK (deeper toe on the
+     long-lens two-shot: Charcoal's shadow side must not crush).
   2. 1C stills before any video: `node scenes/lib/director/tools/still.mjs 1C-01@0.7 1C-02@0.5 1C-03@0.95
      1C-04@0.35 1C-05@0.5 1C-06@0.5 --preset draft --out <scratch>/st14` (one set build per shot, ~3.5 min each).
      Check: Leaf clears Charcoal's head in 1C-01; Abby framed in 1C-02's crane; wings fill 1C-03 at the end;
