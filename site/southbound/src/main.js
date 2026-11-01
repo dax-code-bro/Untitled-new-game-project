@@ -18,6 +18,8 @@ import { Peds } from './entities/peds.js';
 import { Combat, WEAPONS } from './entities/combat.js';
 import { Police } from './entities/police.js';
 import { loadLibrary } from './assets/library.js';
+import { loadSurfaces } from './assets/textures.js';
+import { installAtmosphere } from './world/atmosphere.js';
 import { Input } from './core/input.js';
 import { CameraRig } from './core/camera.js';
 import { createPost } from './core/post.js';
@@ -61,10 +63,11 @@ async function start() {
 }
 
 async function createGame(progress) {
+  installAtmosphere();
   const q = resolveQuality(settings);
   const canvas = $('#game');
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: q.aa === 'msaa', powerPreference: 'high-performance', stencil: false });
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMapping = THREE.AgXToneMapping;
   renderer.toneMappingExposure = 1.0;
   renderer.info.autoReset = false;
   renderer.shadowMap.enabled = q.shadows > 0;
@@ -86,14 +89,16 @@ async function createGame(progress) {
   worldUniforms.uHeightTex.value = tex.heightTex;
   worldUniforms.uSplatTex.value = tex.splatTex;
   const collision = new CollisionWorld(hm);
+  progress(0.62, 'Loading photo-scanned surfaces');
+  const surf = await loadSurfaces(renderer, q, (p) => progress(0.62 + p * 0.04, 'Loading photo-scanned surfaces'));
   progress(0.66, 'Shaping the terrain');
   await nextFrame();
-  const terrain = createTerrain(hm, q, scene);
+  const terrain = createTerrain(hm, q, scene, surf);
   const water = createWater(scene);
-  const roads = createRoads(graph, hm, q, scene, collision);
+  const roads = createRoads(graph, hm, q, scene, collision, surf);
   progress(0.74, 'Building Port Calvera and Mill Creek');
   await nextFrame();
-  const city = createBuildings(hm, q, scene, collision);
+  const city = createBuildings(hm, q, scene, collision, surf);
   progress(0.84, 'Growing Pinewood Hollow');
   await nextFrame();
   const veg = createVegetation(hm, q, scene, collision, city.cityBlocks);
@@ -147,10 +152,11 @@ async function createGame(progress) {
     renderer.setSize(innerWidth, innerHeight, false);
     camera.aspect = innerWidth / innerHeight;
     camera.updateProjectionMatrix();
-    if (post) { post.composer.setPixelRatio(pr); post.setSize(innerWidth, innerHeight); }
+    if (post) post.setSize(innerWidth, innerHeight);
   };
   applySize();
   post = createPost(renderer, scene, camera, q);
+  if (post) renderer.toneMapping = THREE.NoToneMapping; // the post chain does filmic tone mapping
   applySize();
   addEventListener('resize', applySize);
 
@@ -362,7 +368,7 @@ async function createGame(progress) {
     veg.update(camera.position, dd);
     water.update(camera.position);
     roads.update(sky.night);
-    scene.fog.density = 1.6 / Math.max(dd, 400) * (1 + sky.night * 0.6);
+    scene.fog.density = 1.25 / Math.max(dd, 400) * (1 + sky.night * 0.5);
     grassUniforms.uSunDir.value.copy(sky.sunDir);
     grassUniforms.uSunColor.value.copy(sky.sun.color).multiplyScalar(sky.sun.intensity * 0.35);
     grassUniforms.uAmbient.value.copy(sky.hemi.color).multiplyScalar(0.12 + sky.hemi.intensity * 0.9);
@@ -382,7 +388,12 @@ async function createGame(progress) {
       driving: S.mode === 'car', speed: S.vehicle?.speed || 0, throttle: a.throttle, night: sky.night,
       horn: a.horn && S.mode === 'car', impact: S.vehicle?.impact || 0, nature: reg.name !== 'Port Calvera',
     });
-    if (post) post.grade.uniforms.uWarm.value = 0.015 + (sky.hour > 16 && sky.hour < 20 ? 0.02 : 0);
+    if (post) {
+      post.grade.uniforms.uWarm.value = 0.012 + (sky.hour > 16 && sky.hour < 20 ? 0.018 : 0);
+      post.grade.uniforms.uNight.value = sky.night;
+      const aimingNow = S.mode === 'foot' && player.aiming && armed;
+      post.update(sky.sunDir, sky.sunDir.y > 0.02, aimingNow ? 18 : camera.position.distanceTo(focus) + 1, aimingNow);
+    }
 
     render();
     dynamicResolution(dt);
@@ -452,7 +463,7 @@ async function createGame(progress) {
 
   function render() {
     renderer.info.reset();
-    if (post) post.render(); else renderer.render(scene, camera);
+    if (post) post.render(1 / 60); else renderer.render(scene, camera);
     stats.drawCalls = renderer.info.render.calls;  // all passes this frame
     stats.tris = renderer.info.render.triangles;
   }

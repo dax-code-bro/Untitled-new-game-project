@@ -16,10 +16,13 @@ const PALETTES = {
   5: [0xd8c7a2, 0xc09a74, 0xe2d6c0, 0x9eb3ae],
 };
 
-function makeFacadeMaterial() {
+function makeFacadeMaterial(surf) {
+  const real = surf && surf.bricks.real ? 1 : 0;
   const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8, metalness: 0.0 });
   mat.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, worldUniforms);
+    shader.uniforms.tBrick = { value: surf ? surf.bricks.color : null };
+    shader.uniforms.tConc = { value: surf ? surf.concrete.color : null };
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>', '#include <common>\nattribute vec4 aInfo;\nvarying vec3 vWPos; varying vec3 vWNrm; varying vec4 vInfo; varying vec3 vSize;')
       .replace('#include <begin_vertex>', `#include <begin_vertex>
@@ -31,7 +34,7 @@ vSize = vec3(length(sbIM[0].xyz), length(sbIM[1].xyz), length(sbIM[2].xyz));`);
     shader.fragmentShader = shader.fragmentShader
       .replace('#include <common>', `#include <common>
 varying vec3 vWPos; varying vec3 vWNrm; varying vec4 vInfo; varying vec3 vSize;
-uniform float uNight;
+uniform float uNight; uniform sampler2D tBrick; uniform sampler2D tConc;
 ${GLSL_NOISE}
 float sbRough; float sbMetal; vec3 sbEmit;
 `)
@@ -72,6 +75,10 @@ float sbRough; float sbMetal; vec3 sbEmit;
     // horizontal floor bands on towers/offices
     if (style < 1.5) facade *= 0.85 + 0.15*step(0.12, fract(v/3.6));
     vec3 wall = base * facade;
+    if (${real}.0 > 0.5) {
+      if (style > 1.5 && style < 2.5) wall = mix(wall, texture2D(tBrick, vec2(u, v) / 1.6).rgb * (0.7 + 0.5 * base), 0.8);
+      else { float cl = dot(texture2D(tConc, vec2(u, v) / 3.0).rgb, vec3(0.333)); wall *= 0.6 + 0.65 * cl; }
+    }
     float h = sbHash(cid + seed*13.1);
     vec3 glass = mix(vec3(0.05,0.07,0.09), vec3(0.14,0.18,0.22), h);
     if (style < 0.5) glass = mix(vec3(0.10,0.16,0.22), vec3(0.22,0.30,0.36), h);
@@ -92,7 +99,7 @@ float sbRough; float sbMetal; vec3 sbEmit;
   return mat;
 }
 
-export function createBuildings(hm, quality, scene, collision) {
+export function createBuildings(hm, quality, scene, collision, surf) {
   const rnd = mulberry32(2026);
   const pick = (a) => a[(rnd() * a.length) | 0];
   const B = []; // {x,z,w,d,h,y,style,color}
@@ -239,7 +246,7 @@ export function createBuildings(hm, quality, scene, collision) {
 
   // ---- Build the instanced meshes
   const box = new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0);
-  const facade = makeFacadeMaterial();
+  const facade = makeFacadeMaterial(surf);
   const bbox = box.clone();
   const mesh = new THREE.InstancedMesh(bbox, facade, B.length);
   const info = new Float32Array(B.length * 4);

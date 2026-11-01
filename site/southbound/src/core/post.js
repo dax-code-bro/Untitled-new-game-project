@@ -1,56 +1,105 @@
-// Post-processing chain: AO (Ultra) -> bloom -> tone map -> colour grade/vignette -> SMAA.
+// Cinematic post-processing (pmndrs/postprocessing + N8AO, both open source):
+//   ambient occlusion -> sun shafts -> depth of field -> bloom
+//   -> AgX filmic tone mapping -> colour grade -> vignette + film grain -> SMAA
 import * as THREE from 'three';
-import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
-import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
-import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
-import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
-import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
-import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
+import {
+  EffectComposer, RenderPass, EffectPass, Effect, BlendFunction,
+  BloomEffect, ToneMappingEffect, ToneMappingMode, VignetteEffect, NoiseEffect,
+  SMAAEffect, SMAAPreset, GodRaysEffect, DepthOfFieldEffect,
+} from 'postprocessing';
+import { N8AOPostPass } from 'n8ao';
 
-const GradeShader = {
-  uniforms: { tDiffuse: { value: null }, uVignette: { value: 0.28 }, uSat: { value: 1.08 }, uContrast: { value: 1.05 }, uWarm: { value: 0.02 }, uDamage: { value: 0 } },
-  vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }',
-  fragmentShader: /* glsl */`
-    uniform sampler2D tDiffuse; uniform float uVignette, uSat, uContrast, uWarm, uDamage; varying vec2 vUv;
-    void main(){
-      vec4 c = texture2D(tDiffuse, vUv);
-      float l = dot(c.rgb, vec3(0.299,0.587,0.114));
-      c.rgb = mix(vec3(l), c.rgb, uSat);
-      c.rgb = (c.rgb - 0.5)*uContrast + 0.5;
-      c.rgb += vec3(uWarm, uWarm*0.4, -uWarm*0.6);
-      vec2 d = vUv - 0.5;
-      float v = 1.0 - dot(d,d)*uVignette*2.2;
-      c.rgb *= v;
-      c.rgb = mix(c.rgb, vec3(0.6,0.0,0.0), uDamage*smoothstep(0.2,0.7,length(d)));
-      gl_FragColor = vec4(clamp(c.rgb,0.0,1.0), c.a);
-    }`,
-};
+const GRADE_FRAG = /* glsl */`
+uniform float uWarm; uniform float uDamage; uniform float uSat; uniform float uContrast; uniform float uNight;
+void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor) {
+  vec3 c = inputColor.rgb;
+  float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
+  // split toning: cool teal shadows, warm highlights (the classic cinematic look)
+  vec3 shadows = vec3(0.92, 1.0, 1.06), highs = vec3(1.06, 1.0, 0.9);
+  c *= mix(shadows, highs, smoothstep(0.15, 0.75, l));
+  c = mix(vec3(l), c, uSat);
+  c = (c - 0.5) * uContrast + 0.5;
+  c += vec3(uWarm, uWarm * 0.45, -uWarm * 0.7);
+  // moonlit nights lean blue
+  c = mix(c, c * vec3(0.8, 0.9, 1.2), uNight * 0.6);
+  vec2 d = uv - 0.5;
+  c = mix(c, vec3(0.55, 0.0, 0.0), uDamage * smoothstep(0.2, 0.75, length(d)));
+  outputColor = vec4(clamp(c, 0.0, 1.0), inputColor.a);
+}`;
+
+class GradeEffect extends Effect {
+  constructor() {
+    super('GradeEffect', GRADE_FRAG, {
+      uniforms: new Map([
+        ['uWarm', new THREE.Uniform(0.015)], ['uDamage', new THREE.Uniform(0)],
+        ['uSat', new THREE.Uniform(1.12)], ['uContrast', new THREE.Uniform(1.06)], ['uNight', new THREE.Uniform(0)],
+      ]),
+    });
+  }
+}
 
 export function createPost(renderer, scene, camera, quality) {
   if (!quality.bloom && !quality.ao && quality.aa !== 'smaa') return null;
-  const size = renderer.getDrawingBufferSize(new THREE.Vector2());
-  const composer = new EffectComposer(renderer);
+  const composer = new EffectComposer(renderer, { frameBufferType: THREE.HalfFloatType, multisampling: 0 });
   composer.addPass(new RenderPass(scene, camera));
-  let ao = null, bloom = null, smaa = null;
-  if (quality.ao) {
-    ao = new GTAOPass(scene, camera, size.x, size.y);
-    ao.output = GTAOPass.OUTPUT.Default;
-    ao.blendIntensity = 0.85;
-    ao.updateGtaoMaterial({ radius: 1.2, distanceExponent: 1.5, thickness: 2, scale: 1.0, samples: 12 });
+  const size = renderer.getDrawingBufferSize(new THREE.Vector2());
+  const high = quality.label === 'High' || quality.label === 'Ultra';
+
+  let ao = null;
+  if (quality.ao || high) {
+    ao = new N8AOPostPass(scene, camera, size.x, size.y);
+    Object.assign(ao.configuration, {
+      aoRadius: 2.2, distanceFalloff: 1.2, intensity: 2.2, color: new THREE.Color(0, 0, 0),
+      halfRes: quality.label !== 'Ultra', aoSamples: quality.label === 'Ultra' ? 16 : 8, denoiseSamples: 8,
+    });
     composer.addPass(ao);
   }
-  if (quality.bloom) {
-    bloom = new UnrealBloomPass(new THREE.Vector2(size.x / 2, size.y / 2), 0.2, 0.4, 0.92);
-    composer.addPass(bloom);
+
+  // Sun shafts: a sun disc the god-ray effect can see (occluded by buildings/trees)
+  let godRays = null, sunMesh = null;
+  if (high) {
+    sunMesh = new THREE.Mesh(new THREE.SphereGeometry(110, 16, 8), new THREE.MeshBasicMaterial({ color: 0xffe2b0, transparent: true, fog: false, depthWrite: false }));
+    sunMesh.frustumCulled = false;
+    // not added to the scene: the god-ray effect renders it in its own light pass only
+    godRays = new GodRaysEffect(camera, sunMesh, { density: 0.94, decay: 0.92, weight: 0.35, exposure: 0.45, samples: 48, clampMax: 1, resolutionScale: 0.5, blur: true });
+    composer.addPass(new EffectPass(camera, godRays));
   }
-  composer.addPass(new OutputPass());
-  const grade = new ShaderPass(GradeShader);
-  composer.addPass(grade);
-  if (quality.aa === 'smaa') { smaa = new SMAAPass(size.x, size.y); composer.addPass(smaa); }
+
+  let dof = null;
+  if (quality.label === 'Ultra') {
+    dof = new DepthOfFieldEffect(camera, { worldFocusDistance: 8, worldFocusRange: 40, bokehScale: 0, resolutionScale: 0.5 });
+    composer.addPass(new EffectPass(camera, dof));
+  }
+
+  const bloom = quality.bloom ? new BloomEffect({ mipmapBlur: true, intensity: 0.55, luminanceThreshold: 0.9, luminanceSmoothing: 0.25, radius: 0.7 }) : null;
+  if (bloom) composer.addPass(new EffectPass(camera, bloom));
+
+  const grade = new GradeEffect();
+  const tone = new ToneMappingEffect({ mode: ToneMappingMode.AGX });
+  const vignette = new VignetteEffect({ offset: 0.32, darkness: 0.55 });
+  const grain = new NoiseEffect({ blendFunction: BlendFunction.OVERLAY, premultiply: false });
+  grain.blendMode.opacity.value = 0.06;
+  composer.addPass(new EffectPass(camera, tone, grade, vignette, grain));
+  if (quality.aa === 'smaa') composer.addPass(new EffectPass(camera, new SMAAEffect({ preset: SMAAPreset.HIGH })));
+
+  const gradeU = { uWarm: grade.uniforms.get('uWarm'), uDamage: grade.uniforms.get('uDamage'), uNight: grade.uniforms.get('uNight') };
   return {
-    composer, grade, bloom, ao,
-    setSize(w, h) { composer.setSize(w, h); },
-    render() { composer.render(); },
+    composer,
+    grade: { uniforms: gradeU },
+    setSize(w, h) { composer.setSize(w, h, false); },
+    // per-frame: sun position for shafts, focus distance for depth of field
+    update(sunDir, sunVisible, focusDist, aiming) {
+      if (sunMesh) {
+        sunMesh.position.copy(camera.position).addScaledVector(sunDir, 4000);
+        sunMesh.visible = sunVisible;
+        godRays.blendMode.opacity.value = sunVisible ? 1 : 0;
+      }
+      if (dof) {
+        dof.cocMaterial.worldFocusDistance = focusDist;
+        dof.cocMaterial.worldFocusRange = aiming ? 25 : 120;
+        dof.bokehScale = aiming ? 2.0 : 0.6;
+      }
+    },
+    render(dt) { composer.render(dt); },
   };
 }

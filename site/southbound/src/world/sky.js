@@ -3,6 +3,8 @@ import * as THREE from 'three';
 import { Sky } from 'three/addons/objects/Sky.js';
 import { clamp, lerp, smoothstep } from '../util.js';
 import { worldUniforms } from './terrain.js';
+import { fogParams } from './atmosphere.js';
+import { GLSL_NOISE } from '../util.js';
 
 // Horizon fog colour through the day (hour -> linear RGB)
 const FOG_KEYS = [
@@ -33,9 +35,24 @@ export function createSky(renderer, scene, quality) {
   // Night: pull the sky toward deep blue instead of the model's muddy brown
   const skyNight = { value: 0 };
   sky.material.uniforms.uSkyNight = skyNight;
+  sky.material.uniforms.uTime = worldUniforms.uTime;
+  sky.material.uniforms.uCloudCover = { value: 0.48 };
   sky.material.fragmentShader = sky.material.fragmentShader
-    .replace('void main() {', 'uniform float uSkyNight;\nvoid main() {')
-    .replace('gl_FragColor = vec4( retColor, 1.0 );', `vec3 nightCol = mix(vec3(0.004,0.007,0.02), vec3(0.02,0.035,0.07), pow(1.0 - max(direction.y, 0.0), 3.0));
+    .replace('void main() {', 'uniform float uSkyNight; uniform float uTime; uniform float uCloudCover;\n' + GLSL_NOISE + '\nvoid main() {')
+    .replace('gl_FragColor = vec4( retColor, 1.0 );', `// cumulus layer: a noise field projected on a high cloud deck
+			if (direction.y > 0.0) {
+				vec2 cp = direction.xz / (direction.y + 0.06) * 1.6 + vec2(uTime * 0.006, uTime * 0.0025);
+				float n = sbFbm(cp) * 0.65 + sbFbm(cp * 3.1 + 7.0) * 0.35;
+				float cov = smoothstep(uCloudCover, uCloudCover + 0.22, n) * smoothstep(0.0, 0.12, direction.y);
+				float sunAmt = pow(max(dot(direction, vSunDirection), 0.0), 5.0);
+				float day = clamp(vSunDirection.y * 4.0 + 0.3, 0.0, 1.0);
+				float lum = dot(retColor, vec3(0.3333));
+				vec3 lit = mix(vec3(0.62, 0.64, 0.7), vec3(1.0, 0.97, 0.92), smoothstep(0.35, 0.8, n));
+				vec3 glow = vec3(1.0, 0.72, 0.45) * sunAmt * (1.0 - day * 0.6);
+				vec3 cloudCol = (lit * (0.35 + lum * 1.1) + glow * 1.2) * mix(0.15, 1.0, day);
+				retColor = mix(retColor, cloudCol, cov * 0.92);
+			}
+			vec3 nightCol = mix(vec3(0.004,0.007,0.02), vec3(0.02,0.035,0.07), pow(1.0 - max(direction.y, 0.0), 3.0));
 			retColor = mix(retColor, nightCol, uSkyNight);
 			gl_FragColor = vec4( retColor, 1.0 );`);
 
@@ -103,6 +120,14 @@ export function createSky(renderer, scene, quality) {
       state.night = 1 - smoothstep(-0.12, 0.05, elev);
       worldUniforms.uNight.value = state.night;
       skyNight.value = 1 - smoothstep(-0.2, 0.02, elev);
+      // atmosphere: fog glows toward the sun (or the moon at night)
+      const glowDir = elev > -0.05 ? sunDir : sunDir.clone().negate();
+      fogParams.a.x = glowDir.x; fogParams.a.y = glowDir.y; fogParams.a.z = glowDir.z;
+      const low = 1 - smoothstep(0.05, 0.5, Math.abs(elev));
+      fogParams.b.x = lerp(1.0, 1.35, low) * (elev > -0.05 ? 1 : 0.25);
+      fogParams.b.y = lerp(0.92, 0.72, low) * (elev > -0.05 ? 1 : 0.3);
+      fogParams.b.z = lerp(0.78, 0.42, low) * (elev > -0.05 ? 1 : 0.45);
+      fogParams.b.w = elev > -0.05 ? lerp(0.35, 0.95, low) : 0.25;
 
       // Sun / moon key light
       const moonDir = sunDir.clone().negate();
