@@ -14,7 +14,7 @@ import * as THREE from 'three';
 import { ITEMS } from './data/catalog.js';
 import { buildWeapon, compactWeapon, restParts } from './weapons.js';
 import { ik, limb, rboxGeo, at, mergeParts, camoTexture, PALETTES } from './rig.js';
-import { Hand, sleeveGeometry, cuffGeometry, elbowPadGeometry, watchGeometry } from './hands.js';
+import { Hand, sleeveGeometry, cuffGeometry, elbowPadGeometry, watchGeometry, shoulderGeometry } from './hands.js';
 import { lerp } from './rng.js';
 
 // kept for the POB printer display and other callers
@@ -32,7 +32,7 @@ class S1 { // scalar spring
 }
 
 const S = 0.62; // the whole view is modelled at real size and shrunk towards the eye (less wall clipping)
-const ARM = { upper: 0.3, fore: 0.28 };
+const ARM = { upper: 0.33, fore: 0.3 };
 
 // medical items shown in the left hand while treating
 function medModel(id) {
@@ -98,11 +98,11 @@ export class Viewmodel {
     const M = this.armMat;
     const group = () => { const g = new THREE.Group(); g.matrixAutoUpdate = false; this.root.add(g); return g; };
     const mesh = (g, geo, mat) => { const m = new THREE.Mesh(geo, mat); m.frustumCulled = false; m.castShadow = false; m.receiveShadow = true; g.add(m); return m; };
-    const upperGeo = sleeveGeometry('upper'), foreGeo = sleeveGeometry('fore'), cuffGeo = cuffGeometry(), padGeo = elbowPadGeometry();
-    const mkUpper = () => { const g = group(); mesh(g, upperGeo, M.sleeve); mesh(g, padGeo, M.plate); return g; };
+    const upperGeo = sleeveGeometry('upper', ARM.upper), foreGeo = sleeveGeometry('fore', ARM.fore), cuffGeo = cuffGeometry(ARM.fore), padGeo = elbowPadGeometry(ARM.upper), SH = shoulderGeometry();
+    const mkUpper = () => { const g = group(); mesh(g, upperGeo, M.sleeve); mesh(g, padGeo, M.plate); mesh(g, SH.delt, M.sleeve); mesh(g, SH.gear, M.strap); return g; };
     const mkFore = (watch) => {
       const g = group(); mesh(g, foreGeo, M.sleeve); mesh(g, cuffGeo, M.sleeve);
-      if (watch) { const W = watchGeometry(); mesh(g, W.band, M.strap); mesh(g, W.dial, M.dial); }
+      if (watch) { const W = watchGeometry(ARM.fore); mesh(g, W.band, M.strap); mesh(g, W.dial, M.dial); }
       return g;
     };
     this.handR = new Hand(1, M); this.handL = new Hand(-1, M);
@@ -307,8 +307,8 @@ export class Viewmodel {
       left.fwd = V(0.1, -0.2, -1).normalize(); left.up = V(0, 1, 0);
     }
     const gunFwd = V(0, 0, -1).applyQuaternion(this.model.quaternion), gunUp = V(0, 1, 0).applyQuaternion(this.model.quaternion);
-    this.solveArm('R', V(0.2, -0.42, 0.12), gripR, gunFwd, gunUp, true);
-    if (gripL) { this.arm.upL.visible = this.arm.foL.visible = this.arm.hL.visible = true; this.solveArm('L', V(-0.24, -0.44, 0.05), gripL, left.fwd || gunFwd, left.up || gunUp, true); }
+    this.solveArm('R', V(0.23, -0.41, -0.02), gripR, gunFwd, gunUp, true);
+    if (gripL) { this.arm.upL.visible = this.arm.foL.visible = this.arm.hL.visible = true; this.solveArm('L', V(-0.26, -0.43, -0.04), gripL, left.fwd || gunFwd, left.up || gunUp, true); }
     else this.arm.upL.visible = this.arm.foL.visible = this.arm.hL.visible = false;
     if (this.med) { this.med.matrix.copy(this.arm.hL.matrix).multiply(new THREE.Matrix4().makeTranslation(0.0, -0.03, 0.08)); this.med.matrixWorldNeedsUpdate = true; }
     // ---- fingers
@@ -345,9 +345,9 @@ export class Viewmodel {
     const rT = V(0.14 - k * 0.1, -0.2 + breathe + sw + k * 0.1, -0.38 - k * 0.16);
     const lT = V(-0.15, -0.21 + breathe - sw, -0.36);
     const upR = V(-0.35, 1, 0.5).normalize(), upL = V(0.35, 1, 0.5).normalize();
-    this.solveArm('R', V(0.2, -0.42, 0.12), rT, V(-0.25, -0.15 + k * 0.3, -1).normalize(), upR, false);
+    this.solveArm('R', V(0.23, -0.41, -0.02), rT, V(-0.25, -0.15 + k * 0.3, -1).normalize(), upR, false);
     this.arm.upL.visible = this.arm.foL.visible = this.arm.hL.visible = true;
-    this.solveArm('L', V(-0.24, -0.44, 0.05), lT, V(0.25, -0.15, -1).normalize(), upL, false);
+    this.solveArm('L', V(-0.26, -0.43, -0.04), lT, V(0.25, -0.15, -1).normalize(), upL, false);
     this.handR.setPose(k > 0.5 && this.reachT < 0.5 ? 'mag' : this.reachT > 0 ? 'open' : 'relaxed');
     this.handL.setPose('relaxed');
     this.handR.update(dt); this.handL.update(dt);

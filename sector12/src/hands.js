@@ -160,10 +160,11 @@ export class Hand {
 
 // Detailed sleeve pieces for the first-person arms: fabric with folds, a cuff and an elbow pad.
 // Built along +Y (shoulder -> elbow, elbow -> wrist).
-export function sleeveGeometry(kind) {
+export function sleeveGeometry(kind, L = kind === 'upper' ? 0.33 : 0.3) {
+  // upper: shoulder -> elbow; fore: elbow -> just short of the wrist, where the glove's cuff takes over
   const prof = kind === 'upper'
-    ? [[-0.03, 0.0], [-0.02, 0.062], [0.05, 0.07], [0.14, 0.064], [0.22, 0.06], [0.29, 0.056], [0.31, 0.0]]
-    : [[-0.02, 0.0], [-0.01, 0.058], [0.08, 0.06], [0.16, 0.054], [0.205, 0.05], [0.215, 0.0]];
+    ? [[-0.03, 0.0], [-0.02, 0.066], [0.05, 0.072], [L * 0.45, 0.066], [L * 0.75, 0.06], [L - 0.02, 0.056], [L, 0.0]]
+    : [[-0.02, 0.0], [-0.01, 0.058], [0.08, 0.061], [L * 0.55, 0.055], [L - 0.05, 0.05], [L - 0.028, 0.049], [L - 0.02, 0.0]];
   const g = new THREE.LatheGeometry(prof.map(([y, r]) => new THREE.Vector2(Math.max(0.0005, r), y)), 24, 0, Math.PI * 2);
   g.scale(1, 1, 0.92);
   // fabric folds: rings bunched towards the joints, plus some lumpy noise
@@ -181,27 +182,43 @@ export function sleeveGeometry(kind) {
   return g;
 }
 
-export function cuffGeometry() {
+// the top of the arm: a rounded shoulder (deltoid) under the sleeve, with the plate carrier's
+// shoulder strap and a bit of the vest edge over it
+export function shoulderGeometry() {
+  const delt = new THREE.SphereGeometry(0.082, 20, 14);
+  delt.scale(1.05, 1.25, 0.95);
+  delt.translate(0, 0.02, 0);
+  const strap = rbox(0.07, 0.11, 0.022, 0.008);
+  strap.translate(0, 0.0, 0.0);
+  strap.rotateX(-0.25);
+  strap.translate(0, -0.03, 0.085);
+  const edge = rbox(0.13, 0.05, 0.05, 0.015);
+  edge.translate(0, -0.075, 0.07);
+  return { delt, gear: merge([strap, edge]) };
+}
+
+export function cuffGeometry(L = 0.3) {
   const parts = [];
   const cuff = new THREE.LatheGeometry([[0.0, 0.052], [0.008, 0.054], [0.028, 0.054], [0.034, 0.05]].map(([y, r]) => new THREE.Vector2(r, y)), 24);
   cuff.scale(1, 1, 0.9);
-  parts.push(at(cuff, 0, 0.19, 0));
-  parts.push(at(rbox(0.03, 0.026, 0.012, 0.004), 0.04, 0.205, 0.03)); // velcro tab
+  parts.push(at(cuff, 0, L - 0.075, 0));
+  parts.push(at(rbox(0.03, 0.026, 0.012, 0.004), 0.04, L - 0.06, 0.03)); // velcro tab
   return merge(parts);
 }
 
-export function elbowPadGeometry() {
+export function elbowPadGeometry(L = 0.33) {
   const g = new THREE.SphereGeometry(0.05, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2.3);
   g.scale(1, 0.55, 1);
   g.rotateX(-Math.PI / 2);
-  g.translate(0, 0.285, -0.045);
+  g.translate(0, L - 0.03, -0.047);
   return g;
 }
 
 // a field watch on the left wrist: strap, case, glowing dial
-export function watchGeometry() {
-  const strap = new THREE.TorusGeometry(0.045, 0.006, 6, 24); strap.rotateX(Math.PI / 2); strap.scale(1, 1, 0.88); strap.translate(0, 0.243, 0);
-  const watchCase = new THREE.CylinderGeometry(0.018, 0.019, 0.01, 20); watchCase.rotateX(Math.PI / 2); watchCase.translate(0, 0.243, 0.044);
-  const dial = new THREE.CircleGeometry(0.015, 20); dial.translate(0, 0.243, 0.0496);
+export function watchGeometry(L = 0.3) {
+  const y = L - 0.042;
+  const strap = new THREE.TorusGeometry(0.045, 0.006, 6, 24); strap.rotateX(Math.PI / 2); strap.scale(1, 1, 0.88); strap.translate(0, y, 0);
+  const watchCase = new THREE.CylinderGeometry(0.018, 0.019, 0.01, 20); watchCase.rotateX(Math.PI / 2); watchCase.translate(0, y, 0.044);
+  const dial = new THREE.CircleGeometry(0.015, 20); dial.translate(0, y, 0.0496);
   return { band: merge([strap, watchCase]), dial };
 }
