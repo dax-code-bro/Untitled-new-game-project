@@ -152,7 +152,7 @@ async function createGame(progress) {
 
   $('#loading').classList.remove('show');
   $('#hud').classList.add('show');
-  if (settings.isTouch || settings.platform === 'phone') $('#touch').classList.add('show');
+  if (settings.isTouch || settings.platform === 'phone') { $('#touch').classList.add('show'); document.body.classList.add('touch'); }
 
   // ---- state
   const S = {

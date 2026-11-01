@@ -101,3 +101,8 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 
 - **Session 1:** Phase 1 built. External asset sites are blocked by the cloud
   environment's network policy, so every texture, model and sound is made in code.
+  Playtested in headless Chromium (software rendering): 12 location screenshots,
+  a midway video and a final video. Fixes made during the playtest: overexposed
+  sky lighting, window shimmer at a distance, the menu FPS dropdown clashing
+  with the HUD, bayou ground colour, night sky colour, night lighting, and
+  terrain poking through highways on climbs.

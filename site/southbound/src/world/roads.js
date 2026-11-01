@@ -213,9 +213,28 @@ export function createRoads(graph, hm, quality, scene, collision) {
   poles.castShadow = quality.shadows >= 2;
   group.add(poles, heads, arms);
 
+  // Light pools on the ground under each lamp (additive, night only)
+  const poolTex = (() => {
+    const c = document.createElement('canvas'); c.width = c.height = 128;
+    const g = c.getContext('2d'), gr = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+    gr.addColorStop(0, 'rgba(255,200,130,1)'); gr.addColorStop(0.45, 'rgba(255,180,100,0.45)'); gr.addColorStop(1, 'rgba(255,160,80,0)');
+    g.fillStyle = gr; g.fillRect(0, 0, 128, 128);
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+  })();
+  const poolMat = new THREE.MeshBasicMaterial({ map: poolTex, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0, fog: true, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 });
+  const pools = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), poolMat, lights.length);
+  lights.forEach((l, i) => {
+    const r = l.rot + (l.side > 0 ? Math.PI / 2 : -Math.PI / 2);
+    const x = l.x + Math.sin(r) * 2.6, z = l.z + Math.cos(r) * 2.6;
+    m4.compose(p.set(x, Math.max(l.y, hm.height(x, z)) + 0.2, z), q.identity(), s.set(16, 1, 16));
+    pools.setMatrixAt(i, m4);
+  });
+  pools.renderOrder = 2;
+  group.add(pools);
+
   scene.add(group);
   return {
     group, lights,
-    update(night) { headMat.emissiveIntensity = night * 6; },
+    update(night) { headMat.emissiveIntensity = night * 6; poolMat.opacity = night * 0.55; pools.visible = night > 0.02; },
   };
 }

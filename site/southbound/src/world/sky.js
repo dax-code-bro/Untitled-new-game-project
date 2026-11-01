@@ -119,13 +119,13 @@ export function createSky(renderer, scene, quality) {
       const warm = smoothstep(0.0, 0.35, elev);
       if (useMoon) {
         sun.color.setRGB(0.55, 0.65, 1.0);
-        sun.intensity = 0.25 * smoothstep(-0.05, -0.3, elev);
+        sun.intensity = 0.6 * smoothstep(-0.05, -0.3, elev);
       } else {
         sun.color.setRGB(1.0, lerp(0.55, 0.96, warm), lerp(0.3, 0.9, warm));
         sun.intensity = 3.2 * day;
       }
-      hemi.intensity = lerp(0.12, 0.7, day);
-      hemi.color.setRGB(lerp(0.25, 0.75, day), lerp(0.3, 0.85, day), lerp(0.5, 1.0, day));
+      hemi.intensity = lerp(0.35, 0.7, day);
+      hemi.color.setRGB(lerp(0.22, 0.75, day), lerp(0.28, 0.85, day), lerp(0.55, 1.0, day));
 
       fogColorAt(h, fogCol);
       scene.fog.color.copy(fogCol);
@@ -146,7 +146,7 @@ export function createSky(renderer, scene, quality) {
         if (envRT) envRT.dispose();
         envRT = next;
         scene.environment = envRT.texture;
-        scene.environmentIntensity = lerp(0.015, 0.22, day);
+        scene.environmentIntensity = lerp(0.06, 0.22, day);
       }
     },
   };

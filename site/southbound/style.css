@@ -121,3 +121,12 @@ select { background: #1f1814; color: var(--paper); border: 1px solid var(--line)
 .toggle.on { background: var(--sun); }
 .toggle.on::after { left: 27px; }
 .set-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
+
+/* ---------- touch layout: minimap moves up, joystick takes the bottom-left */
+body.touch .mini-wrap { top: max(12px, env(safe-area-inset-top)); bottom: auto; width: calc(130px * var(--hud)); height: calc(130px * var(--hud)); left: max(12px, env(safe-area-inset-left)); }
+body.touch #fps { left: auto; right: max(16px, env(safe-area-inset-right)); top: calc(max(14px, env(safe-area-inset-top)) + 20px); text-align: right; }
+body.touch #stick { bottom: max(24px, env(safe-area-inset-bottom)); left: max(28px, env(safe-area-inset-left)); }
+body.touch .tbtns { bottom: max(16px, env(safe-area-inset-bottom)); right: max(16px, env(safe-area-inset-right)); }
+body.touch .tbtns.top { top: auto; bottom: max(16px, env(safe-area-inset-bottom)); right: calc(max(16px, env(safe-area-inset-right)) + 76px); }
+body.touch #speedo { right: calc(max(16px, env(safe-area-inset-right)) + 160px); }
+@media (max-height: 500px) { .tbtns button { width: 54px; height: 54px; font-size: 20px; } .tbtns { gap: 8px; } #region b { font-size: 34px; } }
