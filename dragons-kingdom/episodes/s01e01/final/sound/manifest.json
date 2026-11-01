@@ -34,6 +34,17 @@
    ]
   },
   {
+   "id": "fx-procedural",
+   "what": "Spot effects (footsteps on stone/straw/timber/turf, cloth, rig chains, buckles, leather, door, latch, knocks, egg scratch, shell ticks/cracks/creaks/breaks, dragon and hatchling breaths, weight shifts, wingbeats, wind through grass, snorts, pipe taps, stair runners): sound/fx/synth.mjs recipes placed by sound/fx/spots.json",
+   "origin": "synthesised in JavaScript by sound/fx/synth.mjs (seeded PRNG noise, impulse trains, decaying partials, biquad filters) and reverberated by sound/fx/fx.mjs (Freeverb-style algorithm, own code); no recording, sample or download",
+   "licence": "the project's own work (no third-party material)",
+   "credit": "Sound design line in credits.txt",
+   "used_in": [
+    "PROLOGUE-TITLE-1A",
+    "1B"
+   ]
+  },
+  {
    "id": "soundfont-fluidr3-gm",
    "what": "Instrument samples for the music render: Fluid R3 GM SoundFont (FluidR3_GM.sf2; Debian/Ubuntu package fluid-soundfont-gm 3.1)",
    "origin": "Frank Wen and contributors (Suren M. Seron, Scott Hanan, Steve Aupperle, Chris Gillman, Alex Taubr, Chris Prola, Andrew Klenk, Winfried Hubbe, Dylan, Tim, Gort, Uros Katic, Ethan Winer); built partly from public-domain samples",

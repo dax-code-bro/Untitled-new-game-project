@@ -24,6 +24,7 @@ computer-generated with Kokoro-82M by hexgrad
 
 Sound design
 ambience synthesised for the series
+sound effects synthesised for the series
 (no library recordings)
 
 Music

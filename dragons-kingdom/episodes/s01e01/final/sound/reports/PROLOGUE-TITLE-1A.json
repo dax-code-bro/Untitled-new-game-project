@@ -18,21 +18,21 @@
   "mix": "episodes/s01e01/final/audio/cuts/PROLOGUE-TITLE-1A/mix.wav",
   "I": -16.1,
   "TP": -1.6,
-  "LRA": 22.6,
-  "sha256": "4d8c53062d2ea1c6d9d288e754cc87f3646dd3e3e0d24460c7e5196ae5f94161",
-  "master_gain_db": 0.6,
+  "LRA": 22.2,
+  "sha256": "5ecb5236c6b12dab97f299f3390bf3ebf463691cdc5396f13da81c15c4cd5167",
+  "master_gain_db": 0.7,
   "limiter_ceiling_dbfs": -1.6,
   "dialogue_gain_db": 10.9,
-  "min_dialogue_margin_lu": 11.68,
+  "min_dialogue_margin_lu": 11.579,
   "anchored": "integrated",
   "pass": true
  },
  "muxed": {
   "file": "episodes/s01e01/final/audio/cuts/PROLOGUE-TITLE-1A/DragonsKingdom_S01E01_draft-cut_PROLOGUE-TITLE-1A_sound.mp4",
   "duration_s": 357.5,
-  "aac_I": -16.2,
-  "aac_TP": -1.5,
-  "bytes": 61330714
+  "aac_I": -16.1,
+  "aac_TP": -1.6,
+  "bytes": 61491883
  },
  "beds": {
   "sea_shore": {
@@ -114,6 +114,46 @@
  ],
  "music_not_in_cut": [],
  "music_cue_sheet": "episodes/s01e01/final/sound/music/cues.json",
+ "fx": {
+  "spot_sheet": "episodes/s01e01/final/sound/fx/spots.json",
+  "events": 267,
+  "peak_dbfs": -12,
+  "spaces": [
+   "open",
+   "sea",
+   "stone_corridor",
+   "stone_room"
+  ],
+  "sha256": "ba7e56f4d9e36e13e6037728b83b7e9ce7be372728fe5fb86833e46a0d8ea1b2",
+  "spot_rows_not_in_cut": 52,
+  "by_sound": {
+   "rope_creak": 5,
+   "wingbeat": 3,
+   "wind_grass": 2,
+   "egg_scratch": 3,
+   "shell_tick": 4,
+   "shell_crack": 2,
+   "door": 6,
+   "step_stone": 173,
+   "knock": 2,
+   "cloth": 11,
+   "breath": 28,
+   "latch": 2,
+   "shell_creak": 2,
+   "hatchling_strain": 2,
+   "fragment_click": 3,
+   "wet_scrape": 1,
+   "shell_break": 2,
+   "step_straw": 5,
+   "knee_stone": 1,
+   "step_turf": 4,
+   "claws_turf": 1,
+   "hide_rub": 2,
+   "leather": 1,
+   "buckle": 1,
+   "snort": 1
+  }
+ },
  "runs": [
   {
    "bed": "sea_shore",
@@ -217,204 +257,204 @@
   {
    "from_s": 12.2,
    "to_s": 17.005,
-   "dialogue_M": -15.629,
-   "background_M": -30.81,
-   "margin_LU": 15.181
+   "dialogue_M": -15.529,
+   "background_M": -30.7,
+   "margin_LU": 15.171
   },
   {
    "from_s": 39.3,
    "to_s": 43.32,
-   "dialogue_M": -15.859,
-   "background_M": -38.713,
+   "dialogue_M": -15.759,
+   "background_M": -38.613,
    "margin_LU": 22.854
   },
   {
    "from_s": 47.4,
    "to_s": 51.935,
-   "dialogue_M": -15.667,
-   "background_M": -37.733,
+   "dialogue_M": -15.567,
+   "background_M": -37.633,
    "margin_LU": 22.066
   },
   {
    "from_s": 55.05,
    "to_s": 56.125,
-   "dialogue_M": -17.259,
-   "background_M": -28.939,
+   "dialogue_M": -17.159,
+   "background_M": -28.839,
    "margin_LU": 11.68
   },
   {
    "from_s": 57,
    "to_s": 57.775,
-   "dialogue_M": -15.61,
-   "background_M": -33.885,
+   "dialogue_M": -15.51,
+   "background_M": -33.785,
    "margin_LU": 18.275
   },
   {
    "from_s": 59,
    "to_s": 59.75,
-   "dialogue_M": -15.07,
-   "background_M": -32.238,
+   "dialogue_M": -14.97,
+   "background_M": -32.138,
    "margin_LU": 17.168
   },
   {
    "from_s": 61.72,
    "to_s": 64.065,
-   "dialogue_M": -15.36,
-   "background_M": -37.074,
+   "dialogue_M": -15.26,
+   "background_M": -36.974,
    "margin_LU": 21.714
   },
   {
    "from_s": 66.2,
    "to_s": 70.255,
-   "dialogue_M": -15.608,
-   "background_M": -31.005,
+   "dialogue_M": -15.508,
+   "background_M": -30.905,
    "margin_LU": 15.398
   },
   {
    "from_s": 78.5,
    "to_s": 84.4,
-   "dialogue_M": -15.884,
-   "background_M": -29.522,
+   "dialogue_M": -15.784,
+   "background_M": -29.422,
    "margin_LU": 13.639
   },
   {
    "from_s": 90.1,
    "to_s": 92.145,
-   "dialogue_M": -15.238,
-   "background_M": -29.214,
-   "margin_LU": 13.976
+   "dialogue_M": -15.138,
+   "background_M": -26.718,
+   "margin_LU": 11.579
   },
   {
    "from_s": 131.42,
    "to_s": 134.525,
-   "dialogue_M": -17.312,
-   "background_M": -37.747,
+   "dialogue_M": -17.212,
+   "background_M": -37.647,
    "margin_LU": 20.435
   },
   {
    "from_s": 148.1,
    "to_s": 154.535,
-   "dialogue_M": -17.045,
-   "background_M": -39.346,
-   "margin_LU": 22.301
+   "dialogue_M": -16.945,
+   "background_M": -39.224,
+   "margin_LU": 22.279
   },
   {
    "from_s": 191.1,
    "to_s": 192.07,
-   "dialogue_M": -16.522,
-   "background_M": -32.128,
+   "dialogue_M": -16.422,
+   "background_M": -32.028,
    "margin_LU": 15.606
   },
   {
    "from_s": 196.9,
    "to_s": 198.305,
-   "dialogue_M": -22.116,
-   "background_M": -39.247,
+   "dialogue_M": -22.016,
+   "background_M": -39.147,
    "margin_LU": 17.131
   },
   {
    "from_s": 211.25,
    "to_s": 211.955,
-   "dialogue_M": -16.766,
-   "background_M": -39.618,
+   "dialogue_M": -16.666,
+   "background_M": -39.518,
    "margin_LU": 22.852
   },
   {
    "from_s": 213.3,
    "to_s": 214.17,
-   "dialogue_M": -17.002,
-   "background_M": -39.215,
+   "dialogue_M": -16.902,
+   "background_M": -39.115,
    "margin_LU": 22.213
   },
   {
    "from_s": 219.3,
    "to_s": 222.61,
-   "dialogue_M": -16.935,
-   "background_M": -39.435,
+   "dialogue_M": -16.835,
+   "background_M": -39.335,
    "margin_LU": 22.5
   },
   {
    "from_s": 230.4,
    "to_s": 232.17,
-   "dialogue_M": -18.134,
-   "background_M": -39.261,
+   "dialogue_M": -18.034,
+   "background_M": -39.161,
    "margin_LU": 21.127
   },
   {
    "from_s": 233.1,
    "to_s": 237.84,
-   "dialogue_M": -16.903,
-   "background_M": -39.467,
-   "margin_LU": 22.564
+   "dialogue_M": -16.899,
+   "background_M": -39.367,
+   "margin_LU": 22.469
   },
   {
    "from_s": 245.45,
    "to_s": 246.955,
-   "dialogue_M": -20.205,
-   "background_M": -39.405,
+   "dialogue_M": -20.105,
+   "background_M": -39.305,
    "margin_LU": 19.199
   },
   {
    "from_s": 248.5,
    "to_s": 252.105,
-   "dialogue_M": -17.134,
-   "background_M": -39.554,
+   "dialogue_M": -17.034,
+   "background_M": -39.454,
    "margin_LU": 22.42
   },
   {
    "from_s": 255.4,
    "to_s": 256.575,
-   "dialogue_M": -16.865,
-   "background_M": -39.127,
+   "dialogue_M": -16.765,
+   "background_M": -39.027,
    "margin_LU": 22.262
   },
   {
    "from_s": 258.1,
    "to_s": 259.8,
-   "dialogue_M": -17.037,
-   "background_M": -39.13,
+   "dialogue_M": -16.937,
+   "background_M": -39.03,
    "margin_LU": 22.092
   },
   {
    "from_s": 264,
    "to_s": 270.015,
-   "dialogue_M": -17.64,
-   "background_M": -39.459,
-   "margin_LU": 21.819
+   "dialogue_M": -17.54,
+   "background_M": -38.554,
+   "margin_LU": 21.014
   },
   {
    "from_s": 285.5,
    "to_s": 288.14,
-   "dialogue_M": -18.429,
-   "background_M": -39.461,
+   "dialogue_M": -18.329,
+   "background_M": -39.361,
    "margin_LU": 21.032
   },
   {
    "from_s": 290.5,
    "to_s": 291.625,
-   "dialogue_M": -16.863,
-   "background_M": -39.215,
+   "dialogue_M": -16.763,
+   "background_M": -39.115,
    "margin_LU": 22.353
   },
   {
    "from_s": 301.1,
    "to_s": 308.31,
-   "dialogue_M": -17.193,
-   "background_M": -37.181,
-   "margin_LU": 19.988
+   "dialogue_M": -17.093,
+   "background_M": -36.306,
+   "margin_LU": 19.212
   },
   {
    "from_s": 328.4,
    "to_s": 329.035,
-   "dialogue_M": -16.296,
-   "background_M": -33.531,
+   "dialogue_M": -16.196,
+   "background_M": -33.431,
    "margin_LU": 17.235
   },
   {
    "from_s": 341.1,
    "to_s": 346.085,
-   "dialogue_M": -17.602,
-   "background_M": -39.353,
+   "dialogue_M": -17.502,
+   "background_M": -39.253,
    "margin_LU": 21.752
   }
  ]
