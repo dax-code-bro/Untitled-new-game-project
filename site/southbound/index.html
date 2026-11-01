@@ -8,9 +8,28 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;600;800&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="style.css" />
-<script type="importmap">
-{ "imports": { "three": "./vendor/three/build/three.module.js", "three/addons/": "./vendor/three/addons/" } }
+<script>
+  // If the game code fails to start, show why instead of leaving dead buttons.
+  (function () {
+    function fail(msg) {
+      if (window.__sbReady) return;
+      var d = document.getElementById('loaderror') || document.createElement('div');
+      d.id = 'loaderror';
+      d.style.cssText = 'position:fixed;left:16px;right:16px;bottom:16px;z-index:99;background:#3a1210;color:#fff;border:1px solid #e2572b;border-radius:10px;padding:14px;font:14px system-ui;user-select:text;-webkit-user-select:text';
+      d.textContent = 'The game could not start (' + msg + '). Please screenshot this and send it over.';
+      (document.body || document.documentElement).appendChild(d);
+    }
+    window.addEventListener('error', function (e) {
+      var t = e.target;
+      if (t && t.tagName === 'SCRIPT') return fail('could not download ' + (t.src || 'a script'));
+      if (t && t !== window && t.tagName) return; // images, fonts etc. don't matter
+      fail((e.message || 'error') + (e.lineno ? ' @' + e.lineno + ':' + e.colno : ''));
+    }, true);
+    window.addEventListener('unhandledrejection', function (e) { fail(String(e.reason && e.reason.message || e.reason)); });
+    window.addEventListener('load', function () { setTimeout(function () { if (!window.__sbReady) fail('the game code did not run — browser: ' + navigator.userAgent); }, 4000); });
+  })();
 </script>
+
 </head>
 <body>
 <canvas id="game"></canvas>
@@ -134,22 +153,7 @@
   </div>
 </section>
 
-<script type="module" src="src/main.js"></script>
-<script>
-  // If the game code fails to load, say so instead of leaving dead buttons.
-  (function () {
-    function fail(msg) {
-      if (window.__sbReady && !/load|import|module/i.test(msg)) return;
-      var d = document.getElementById('loaderror') || document.createElement('div');
-      d.id = 'loaderror';
-      d.style.cssText = 'position:fixed;left:16px;right:16px;bottom:16px;z-index:99;background:#3a1210;color:#fff;border:1px solid #e2572b;border-radius:10px;padding:14px;font:14px system-ui';
-      d.textContent = 'The game could not start: ' + msg + ' — try refreshing the page.';
-      document.body.appendChild(d);
-    }
-    window.addEventListener('error', function (e) { fail(e.message || 'a file failed to load'); }, true);
-    window.addEventListener('unhandledrejection', function (e) { fail(String(e.reason && e.reason.message || e.reason)); });
-    setTimeout(function () { if (!window.__sbReady) fail('the game code did not load'); }, 12000);
-  })();
-</script>
+<script src="game.js"></script>
+
 </body>
 </html>

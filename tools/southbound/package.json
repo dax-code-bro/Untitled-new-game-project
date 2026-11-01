@@ -1,0 +1,7 @@
+{
+  "private": true,
+  "name": "southbound-tools",
+  "type": "module",
+  "scripts": { "build": "node build.mjs" },
+  "devDependencies": { "esbuild": "0.24.0" }
+}
