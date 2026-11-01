@@ -1,0 +1,7 @@
+{
+ "about": "Every voice take placed in the cut: rec_s = where the WAV's file_in_s plays on the cut timeline (seconds from the cut's first frame); speech_rec_in/out = the words. Per scene below.",
+ "fps": 24,
+ "scenes": {
+  "1C": []
+ }
+}

@@ -3,6 +3,60 @@
 Owner paths: `scenes/lib/director/`, `episodes/s01e01/final/scenes/`, `episodes/s01e01/final/cut/`.
 How it works: `README.md` in this folder. Latest state first.
 
+## Session 13 (2026-11-01, short budgeted session: 1B sunward stills, START of 1C - STILLS / previs only)
+
+- 1B polish (stills in `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/director/st13/`, draft 960x540, `tools/still.mjs X3-04@0.75 X3-10@0.5 X3-15@0.48 1B-12@0.5`):
+  - `SET1B_DOWN_SUN = { ...SET1B_DOWN, look: { ...LOOK1B, haze: 1.4 } }` (verdor-grounds.spec.js) on the two
+    sun-facing views only, X3-04 and X3-10 (the other 1B shots keep haze 2.4: only those two look into the sun).
+  - X3-04 aim point 1 m south (look [38.5, G+3.8, -62.0] -> -61.0). `st13/X3-04_054.png` LOOKED AT: Remi is whole
+    at the right edge now (head to knees, face turned away), Charcoal's back + folded wing fill the left two
+    thirds. The turf beyond is still pale khaki in the sunward distance (better, not gone): haze is not the main
+    cause - it is the sunward grass BRDF + exposure. If it still bothers on video: a per-shot `gain` < 1.04 or
+    `exposure` on X3-04 only, or a lower camera so the sea / horizon line is higher in frame.
+  - `st13/X3-10_030.png` LOOKED AT: the turf behind Remi reads as pale green turf with texture (no white);
+    the keeper's coif in the right foreground is still a bright grey out-of-focus blob (white coif material;
+    candidate: drop the keeper 0.3 m or pan 3 deg left so only his shoulder edge is in).
+  - X3-15 / 1B-12 deeper-toe check: see the st13 folder (`X3-15_*.png`, `1B-12_*.png`) - the still job was
+    still running when this session closed; NOT looked at yet -> first thing next session.
+- 1C STARTED (first part: the six VERDOR_GROUNDS takeoff shots 1C-01..1C-06, 28 s, continuous from 1B-15):
+  - registry: SCENE_CONTINUITY['1C'] + VERDOR_GROUNDS continuity '1C' (same sun as 1B: sunDir(102, 31),
+    exposure 1.4). build-shots CUTS gains `edl-1C` (`final/cut/edl-1C.json/.md`, audio-cues-1C.json): 81 shots,
+    382.0 s, the 75 un-authored shots as slates (SKY_OFF_VERDOR, VERDOR_AERIAL, OUTER_ROCKS, VERDOR_HARBOR,
+    CLING_SQUARE have no set builder yet).
+  - specs in verdor-grounds.spec.js (header comment there has the launch clock): Leaf launches (poses.launch via
+    the 'takeoff' act) at 0.4 s of 1C-01 on heading 100 (1B-15 left him at 90: 10 deg south so he clears
+    Charcoal's head), 1C-02 continues his launch clock (tOffset 3.6), crane up on 'abbyR.head' (face soft, turned
+    forward). Charcoal: 1C-03 holds `mount` 4.4 s then launch (tau 0 -> 2.6: gather, kick, wings opening, tilt up);
+    1C-04 tau 2.6 -> 6.6 from the ground ON his line 18 m ahead (he passes over the lens); 1C-05 is a DECLARED
+    overlapping-action repeat (tau 1.5 -> 7.5) from 100 m west, level, so the whole lift-off + dust crosses the
+    frame (his launch run is ~70 m in 6 s: no locked ground camera near the scar holds it later); 1C-06
+    tau 7.5 -> 11.5 from north of the scar looking south (torn turf foreground, dust toward camera, him small and
+    high). Launch travel measured from poses.launch formulas (Charcoal L 36: tau 4 -> 14 m fwd / 8 up, 6 -> 38/15,
+    8 -> 76/23; Leaf L 9: tau 4 -> 10/3.5, 6 -> 25/5.4).
+  - FX cues (fx library kinds): `dust-downwash` + `debris-turf` at SCAR [43, G, -60] from Charcoal's first
+    downstroke (tau 3.3), bursts every 2.2 s (his beat), carried across shots by negative/shifted `from`;
+    a small Leaf downwash in 1C-01 (1.9 s, radius 9, strength 0.35). NOT rendered yet: dust scale unchecked.
+  - previs (`tools/previs.mjs` - NOTE: previs places creatures at their blocking mark only; it does NOT apply
+    the launch pose's travel (pose.rig.position), so its in/out for 1C-03..06 is meaningless after lift-off):
+    `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/director/pv13/`. Edit check `--cuts`: 5 cuts checked, 0 flagged.
+  - selftest 20 pass. No 1C still rendered (budget).
+- NEXT (exact, in order):
+  1. LOOK at `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/director/st13/X3-15_*.png` and `1B-12_*.png` (deeper toe: shadow detail on Charcoal must not crush).
+  2. 1C stills before any video: `node scenes/lib/director/tools/still.mjs 1C-01@0.7 1C-02@0.5 1C-03@0.95
+     1C-04@0.35 1C-05@0.5 1C-06@0.5 --preset draft --out <scratch>/st14` (one set build per shot, ~3.5 min each).
+     Check: Leaf clears Charcoal's head in 1C-01; Abby framed in 1C-02's crane; wings fill 1C-03 at the end;
+     he really passes over the 1C-04 lens (if not, move the camera along heading 190 to where he is at ~tau 4.5);
+     1C-05 dust scale vs. him at 100 m; 1C-06 him in the top third. Then tune the dust (radius / strength).
+  3. Videos (one resumable queue, `tools/render-shots.mjs --only ... --work <scratch>/work1B`):
+     1B changed THIS session: X3-04, X3-10 (look + aim) - plus the whole session-12 list (all 32 1B shots are
+     stale since the SET1B look; priority X3-02, X3-04, X3-10, 1B-03, X3-15, X3-08, 1B-12).
+     1C ready after step 2: 1C-01, 1C-02, 1C-03, 1C-04, 1C-05, 1C-06.
+  4. Then author 1C-07..1C-19 (SKY_OFF_VERDOR: needs a set builder - the F3 style frame
+     scenes/lookdev/style-f3-* flight line and sets/wing-cloud.js / cloud-deck.js are the starting points;
+     camera 'follow' with mount for air-to-air; screen direction L -> R, Leaf behind + on the inland side,
+     long lenses 135-200 mm for the size disparity; lines L042 (1C-09) and L043-L045 (1C-14) placed from takes).
+  5. Session 12's NEXT items 2-4 and session 11's 4-5 still open.
+
 ## Session 12 (2026-10-31, short budgeted session: Charcoal grey at noon, X3-10 washout, X3-04 framing - STILLS only)
 
 Stills under `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/director/st12/` (draft 960x540, X3-02 at t=123.0 = frame 48). Mean sRGB luma of a 100x70 body crop

@@ -37,7 +37,7 @@ const opt = (n) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : nu
 const CHECK = args.includes('--check');
 // the draft cuts: the first is THE cut (edl.json); the others are written once a shot of theirs is authored
 const CUTS = opt('--scenes') ? [{ name: opt('--scenes') === 'PROLOGUE,TITLE,1A' ? 'edl' : `edl-${opt('--scenes').split(',').join('-')}`, scenes: opt('--scenes').split(','), always: true }]
-  : [{ name: 'edl', scenes: ['PROLOGUE', 'TITLE', '1A'], always: true }, { name: 'edl-1B', scenes: ['1B'] }];
+  : [{ name: 'edl', scenes: ['PROLOGUE', 'TITLE', '1A'], always: true }, { name: 'edl-1B', scenes: ['1B'] }, { name: 'edl-1C', scenes: ['1C'] }];
 const HANDLE = 12;                                                 // handle frames reserved on each side of every shot
 
 const shotlist = readJson(path.join(FINAL, 'shotlist.json'));

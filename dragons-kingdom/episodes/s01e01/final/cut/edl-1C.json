@@ -1,0 +1,2237 @@
+{
+ "title": "Dragon's Kingdom S01E01 - draft cut: 1C",
+ "status": "DRAFT EDIT for the animatic / timing check (960x540 draft renders, computer voices, provisional designs). Not a master (SERIES.md section 2).",
+ "fps": 24,
+ "frames": 9168,
+ "duration_s": 382,
+ "duration_tc": "00:06:22:00",
+ "generated_by": "scenes/lib/director/tools/build-shots.mjs",
+ "shots": [
+  {
+   "job": "1C-01",
+   "seq": 109,
+   "scene": "1C",
+   "set": "VERDOR_GROUNDS",
+   "kind": "3d",
+   "frames": 96,
+   "rec_in": 0,
+   "rec_out": 96,
+   "tc_in": "00:00:00:00",
+   "tc_out": "00:00:04:00",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/verdor-grounds.js",
+    "start_s": 253,
+    "start_frame": 6072
+   },
+   "dialogue": [],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 4.66,
+    "k4_cpu_s_per_frame": 54.39,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 7.46,
+    "k4_cpu_hours": 1.45,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.48,
+     "creatures": 1,
+     "fx": 1.05,
+     "walk": 1,
+     "move": 1,
+     "total": 1.55
+    },
+    "basis": "ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED); x 1.55 for the shot's content"
+   },
+   "staging": "WIDE: low, from the south-west across the stakes: Leaf (Abby up) gathers and takes off first, screen LEFT, climbing out to the right (the L -> R flight line); Charcoal low and still at right behind him. The first beat shakes the grass.",
+   "deviation": null,
+   "action": "Leaf takes off ahead of Charcoal. The first wingbeat shakes loose grass.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "1C-02",
+   "seq": 110,
+   "scene": "1C",
+   "set": "VERDOR_GROUNDS",
+   "kind": "3d",
+   "frames": 72,
+   "rec_in": 96,
+   "rec_out": 168,
+   "tc_in": "00:00:04:00",
+   "tc_out": "00:00:07:00",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/verdor-grounds.js",
+    "start_s": 259,
+    "start_frame": 6216
+   },
+   "dialogue": [],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 4.02,
+    "k4_cpu_s_per_frame": 46.87,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 4.82,
+    "k4_cpu_hours": 0.94,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.34
+    },
+    "basis": "ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED); x 1.34 for the shot's content"
+   },
+   "staging": "MEDIUM: 50 mm craning up with her from Leaf's right (south) side: Abby leans into the climb, easy and practised; her face turned forward, soft (no lip-sync shot).",
+   "deviation": null,
+   "action": "Abby leans into the familiar motion: experienced, comfortable, not a first ride.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "1C-03",
+   "seq": 111,
+   "scene": "1C",
+   "set": "VERDOR_GROUNDS",
+   "kind": "3d",
+   "frames": 168,
+   "rec_in": 168,
+   "rec_out": 336,
+   "tc_in": "00:00:07:00",
+   "tc_out": "00:00:14:00",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/verdor-grounds.js",
+    "start_s": 264,
+    "start_frame": 6336
+   },
+   "dialogue": [],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 4.02,
+    "k4_cpu_s_per_frame": 46.87,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 11.25,
+    "k4_cpu_hours": 2.19,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.34
+    },
+    "basis": "ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED); x 1.34 for the shot's content"
+   },
+   "staging": "WIDE: ground level from the south-west, 35 mm, slow tilt up: Charcoal still, then he gathers, vaults and his wings open until the frame cannot hold them; Remi a small fixed point on his back.",
+   "deviation": null,
+   "action": "Charcoal begins to move. The sound drops into a lower register. His wings open until the frame cannot contain them.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "1C-04",
+   "seq": 112,
+   "scene": "1C",
+   "set": "VERDOR_GROUNDS",
+   "kind": "3d",
+   "frames": 96,
+   "rec_in": 336,
+   "rec_out": 432,
+   "tc_in": "00:00:14:00",
+   "tc_out": "00:00:18:00",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/verdor-grounds.js",
+    "start_s": 273,
+    "start_frame": 6552
+   },
+   "dialogue": [],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 4.09,
+    "k4_cpu_s_per_frame": 47.74,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 6.55,
+    "k4_cpu_hours": 1.27,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1.1,
+     "walk": 1,
+     "move": 1,
+     "total": 1.36
+    },
+    "basis": "ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED); x 1.36 for the shot's content"
+   },
+   "staging": "WIDE: the ground camera on his line 18 m ahead of the launch spot, looking up and back: the wings open and beat overhead and he passes over the lens.",
+   "deviation": null,
+   "action": "The camera stays at ground level long enough for the audience to understand what is above it.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "1C-05",
+   "seq": 113,
+   "scene": "1C",
+   "set": "VERDOR_GROUNDS",
+   "kind": "3d",
+   "frames": 144,
+   "rec_in": 432,
+   "rec_out": 576,
+   "tc_in": "00:00:18:00",
+   "tc_out": "00:00:24:00",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/verdor-grounds.js",
+    "start_s": 279,
+    "start_frame": 6696
+   },
+   "dialogue": [],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 4.09,
+    "k4_cpu_s_per_frame": 47.74,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 9.82,
+    "k4_cpu_hours": 1.91,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1.1,
+     "walk": 1,
+     "move": 1,
+     "total": 1.36
+    },
+    "basis": "ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED); x 1.36 for the shot's content"
+   },
+   "staging": "WIDE: locked ground camera far to the west (100 m), level across the emptied launch space toward the sea, with shake: he kicks, lifts and the first beats tear the field - dirt lifts, turf breaks, a rolling dust cloud crosses the cleared field (no bystanders) as he climbs away right (south).",
+   "deviation": "Overlapping action: 1C-05 repeats the lift-off already seen from below in 1C-03 / 1C-04 (launch tau 1.5 -> 7.5) - the script's \"He launches\" beat whole, from the side.",
+   "action": "He launches. Dirt lifts, turf breaks, loose stones jump, a rolling dust cloud crosses the empty launch area. Field was cleared: no bystanders.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "1C-06",
+   "seq": 114,
+   "scene": "1C",
+   "set": "VERDOR_GROUNDS",
+   "kind": "3d",
+   "frames": 96,
+   "rec_in": 576,
+   "rec_out": 672,
+   "tc_in": "00:00:24:00",
+   "tc_out": "00:00:28:00",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/verdor-grounds.js",
+    "start_s": 287,
+    "start_frame": 6888
+   },
+   "dialogue": [],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 4.09,
+    "k4_cpu_s_per_frame": 47.74,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 6.55,
+    "k4_cpu_hours": 1.27,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1.1,
+     "walk": 1,
+     "move": 1,
+     "total": 1.36
+    },
+    "basis": "ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED); x 1.36 for the shot's content"
+   },
+   "staging": "WIDE: static behind the launch (north of the scar) looking south along his line: the torn turf in the foreground, the dust rolling toward and past camera; Charcoal small, top of frame, leaving.",
+   "deviation": null,
+   "action": "The ground visibly devastated beneath and behind him; dust rolls toward and past camera.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "1C-07",
+   "seq": 115,
+   "scene": "1C",
+   "set": "SKY_OFF_VERDOR",
+   "kind": "missing",
+   "frames": 60,
+   "rec_in": 672,
+   "rec_out": 732,
+   "tc_in": "00:00:28:00",
+   "tc_out": "00:00:30:12",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "Abby looks back through the departing dust.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "1C-08",
+   "seq": 116,
+   "scene": "1C",
+   "set": "SKY_OFF_VERDOR",
+   "kind": "missing",
+   "frames": 120,
+   "rec_in": 732,
+   "rec_out": 852,
+   "tc_in": "00:00:30:12",
+   "tc_out": "00:00:35:12",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "Charcoal rises out of the dust with Remi a small fixed point on his back.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "1C-09",
+   "seq": 117,
+   "scene": "1C",
+   "set": "SKY_OFF_VERDOR",
+   "kind": "missing",
+   "frames": 96,
+   "rec_in": 852,
+   "rec_out": 948,
+   "tc_in": "00:00:35:12",
+   "tc_out": "00:00:39:12",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "The joke is for Abby and the viewer; Remi is too far away to hear it, so there is no reply. His not hearing is shown by the distance and the missing answer, not by hiding the line.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "1C-10",
+   "seq": 118,
+   "scene": "1C",
+   "set": "SKY_OFF_VERDOR",
+   "kind": "missing",
+   "frames": 144,
+   "rec_in": 948,
+   "rec_out": 1092,
+   "tc_in": "00:00:39:12",
+   "tc_out": "00:00:45:12",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "The dragons climb over the coast: the shoreline first.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "1C-11",
+   "seq": 119,
+   "scene": "1C",
+   "set": "SKY_OFF_VERDOR",
+   "kind": "missing",
+   "frames": 120,
+   "rec_in": 1092,
+   "rec_out": 1212,
+   "tc_in": "00:00:45:12",
+   "tc_out": "00:00:50:12",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "Their relation to one another (establishes the flight line used through 1E).",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "1C-12",
+   "seq": 120,
+   "scene": "1C",
+   "set": "SKY_OFF_VERDOR",
+   "kind": "missing",
+   "frames": 96,
+   "rec_in": 1212,
+   "rec_out": 1308,
+   "tc_in": "00:00:50:12",
+   "tc_out": "00:00:54:12",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "The sea below; their shadows on the water.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "1C-13",
+   "seq": 121,
+   "scene": "1C",
+   "set": "SKY_OFF_VERDOR",
+   "kind": "missing",
+   "frames": 144,
+   "rec_in": 1308,
+   "rec_out": 1452,
+   "tc_in": "00:00:54:12",
+   "tc_out": "00:01:00:12",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "Charcoal draws level. His larger shadow crosses the water. Leaf adjusts with quicker wingbeats. Remi waits until they are near enough to speak.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "1C-14",
+   "seq": 122,
+   "scene": "1C",
+   "set": "SKY_OFF_VERDOR",
+   "kind": "missing",
+   "frames": 120,
+   "rec_in": 1452,
+   "rec_out": 1572,
+   "tc_in": "00:01:00:12",
+   "tc_out": "00:01:05:12",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "Speaking range check-in.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "1C-15",
+   "seq": 123,
+   "scene": "1C",
+   "set": "SKY_OFF_VERDOR",
+   "kind": "missing",
+   "frames": 216,
+   "rec_in": 1572,
+   "rec_out": 1788,
+   "tc_in": "00:01:05:12",
+   "tc_out": "00:01:14:12",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "Their path curves along the coast. For a stretch nobody speaks. The camera travels with them rather than spinning around them.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "1C-16",
+   "seq": 124,
+   "scene": "1C",
+   "set": "SKY_OFF_VERDOR",
+   "kind": "missing",
+   "frames": 72,
+   "rec_in": 1788,
+   "rec_out": 1860,
+   "tc_in": "00:01:14:12",
+   "tc_out": "00:01:17:12",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "Detail 1 (will change later): Abby using both hands comfortably on the grips/reins.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "1C-17",
+   "seq": 125,
+   "scene": "1C",
+   "set": "SKY_OFF_VERDOR",
+   "kind": "missing",
+   "frames": 72,
+   "rec_in": 1860,
+   "rec_out": 1932,
+   "tc_in": "00:01:17:12",
+   "tc_out": "00:01:20:12",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "Detail 2: Leaf glances at Charcoal without fear.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "1C-18",
+   "seq": 126,
+   "scene": "1C",
+   "set": "SKY_OFF_VERDOR",
+   "kind": "missing",
+   "frames": 72,
+   "rec_in": 1932,
+   "rec_out": 2004,
+   "tc_in": "00:01:20:12",
+   "tc_out": "00:01:23:12",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "Detail 3: Remi relaxed enough to look at the island instead of scanning the sky.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "1C-19",
+   "seq": 127,
+   "scene": "1C",
+   "set": "SKY_OFF_VERDOR",
+   "kind": "missing",
+   "frames": 192,
+   "rec_in": 2004,
+   "rec_out": 2196,
+   "tc_in": "00:01:23:12",
+   "tc_out": "00:01:31:12",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "The sky is beautiful because it can be watched without being attacked. Private freedom, not a military procession.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X4-01",
+   "seq": 128,
+   "scene": "1C",
+   "set": "VERDOR_AERIAL",
+   "kind": "missing",
+   "frames": 168,
+   "rec_in": 2196,
+   "rec_out": 2364,
+   "tc_in": "00:01:31:12",
+   "tc_out": "00:01:38:12",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "The coast bends and the harbor opens below them: a curved stone wall, a quay of weathered pale stone, boats on a slipway, nets drying on frames. Mist still in the inland hollows; island inland, open sea on the other side. A working harbor, not a postcard.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X4-02",
+   "seq": 129,
+   "scene": "1C",
+   "set": "VERDOR_AERIAL",
+   "kind": "missing",
+   "frames": 96,
+   "rec_in": 2364,
+   "rec_out": 2460,
+   "tc_in": "00:01:38:12",
+   "tc_out": "00:01:42:12",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "Leaf drops lower and flies along the harbor wall.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X4-03",
+   "seq": 130,
+   "scene": "1C",
+   "set": "VERDOR_AERIAL",
+   "kind": "missing",
+   "frames": 96,
+   "rec_in": 2460,
+   "rec_out": 2556,
+   "tc_in": "00:01:42:12",
+   "tc_out": "00:01:46:12",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "Charcoal stays high; his shadow reaches the town before he does.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X4-04",
+   "seq": 131,
+   "scene": "1C",
+   "set": "VERDOR_HARBOR",
+   "kind": "missing",
+   "frames": 96,
+   "rec_in": 2556,
+   "rec_out": 2652,
+   "tc_in": "00:01:46:12",
+   "tc_out": "00:01:50:12",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "On the quay, a working dragon about Leaf's size crouches low and level beside a fishing crew, folded wings' wrists on the stones, watching the catch being sorted and waiting for its share.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X4-05",
+   "seq": 132,
+   "scene": "1C",
+   "set": "VERDOR_HARBOR",
+   "kind": "missing",
+   "frames": 144,
+   "rec_in": 2652,
+   "rec_out": 2796,
+   "tc_in": "00:01:50:12",
+   "tc_out": "00:01:56:12",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "Two boats bring in a heavy net between them; a second small dragon takes the slack line in its jaws and walks it up the slipway, low on its two legs and the wrists of its folded wings, in time with the crew's pull.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X4-06",
+   "seq": 133,
+   "scene": "1C",
+   "set": "VERDOR_AERIAL",
+   "kind": "missing",
+   "frames": 72,
+   "rec_in": 2796,
+   "rec_out": 2868,
+   "tc_in": "00:01:56:12",
+   "tc_out": "00:01:59:12",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "On a terraced hillside, a farmer leans on a tool and watches the royal riders pass, not especially impressed.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X4-07",
+   "seq": 134,
+   "scene": "1C",
+   "set": "VERDOR_HARBOR",
+   "kind": "missing",
+   "frames": 120,
+   "rec_in": 2868,
+   "rec_out": 2988,
+   "tc_in": "00:01:59:12",
+   "tc_out": "00:02:04:12",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "In the market street, Charcoal's shadow crosses the stalls. People glance up, recognize him and go back to their business. One or two lift a hand. Nobody runs.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X4-08",
+   "seq": 135,
+   "scene": "1C",
+   "set": "VERDOR_AERIAL",
+   "kind": "missing",
+   "frames": 84,
+   "rec_in": 2988,
+   "rec_out": 3072,
+   "tc_in": "00:02:04:12",
+   "tc_out": "00:02:08:00",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "Leaf gives a quick, bright call. The quay dragon answers from below. Charcoal does not call.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X4-09",
+   "seq": 136,
+   "scene": "1C",
+   "set": "VERDOR_HARBOR",
+   "kind": "missing",
+   "frames": 120,
+   "rec_in": 3072,
+   "rec_out": 3192,
+   "tc_in": "00:02:08:00",
+   "tc_out": "00:02:13:00",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "Moored at the quay is the largest ship in the harbor: the Santa Maria. Her name may be glimpsed on the hull (on-screen text T12, optional); do not hold on it.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X4-10",
+   "seq": 137,
+   "scene": "1C",
+   "set": "VERDOR_AERIAL",
+   "kind": "missing",
+   "frames": 168,
+   "rec_in": 3192,
+   "rec_out": 3360,
+   "tc_in": "00:02:13:00",
+   "tc_out": "00:02:20:00",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "Leaf passes close beside her mast. A LOOKOUT at the masthead ducks, then laughs and waves. Abby waves back with her LEFT hand (no attention drawn to which hand).",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X4-11",
+   "seq": 138,
+   "scene": "1C",
+   "set": "VERDOR_AERIAL",
+   "kind": "missing",
+   "frames": 84,
+   "rec_in": 3360,
+   "rec_out": 3444,
+   "tc_in": "00:02:20:00",
+   "tc_out": "00:02:23:12",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "Leaf climbs back up to Charcoal's level, on his usual side, near enough for talk over the wind.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X4-12",
+   "seq": 139,
+   "scene": "1C",
+   "set": "VERDOR_AERIAL",
+   "kind": "missing",
+   "frames": 96,
+   "rec_in": 3444,
+   "rec_out": 3540,
+   "tc_in": "00:02:23:12",
+   "tc_out": "00:02:27:12",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "Abby pretends not to hear and pats Leaf's neck.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X4-13",
+   "seq": 140,
+   "scene": "1C",
+   "set": "VERDOR_AERIAL",
+   "kind": "missing",
+   "frames": 192,
+   "rec_in": 3540,
+   "rec_out": 3732,
+   "tc_in": "00:02:27:12",
+   "tc_out": "00:02:35:12",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "On a grassy field above the harbor, young riders learn on small dragons under an INSTRUCTOR: a wobbling takeoff, a rider clinging on with both arms, one young dragon lying down flat in the middle of the lesson and refusing to move. Abby laughs. No rider is named or given an age.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X4-14",
+   "seq": 141,
+   "scene": "1C",
+   "set": "VERDOR_AERIAL",
+   "kind": "missing",
+   "frames": 120,
+   "rec_in": 3732,
+   "rec_out": 3852,
+   "tc_in": "00:02:35:12",
+   "tc_out": "00:02:40:12",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "Beyond the town, on its high ground, the palace: weathered pale stone, practical, the birthing chamber's high opening a dark shape near the top. No emblems.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X4-15",
+   "seq": 142,
+   "scene": "1C",
+   "set": "VERDOR_AERIAL",
+   "kind": "missing",
+   "frames": 108,
+   "rec_in": 3852,
+   "rec_out": 3960,
+   "tc_in": "00:02:40:12",
+   "tc_out": "00:02:45:00",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "Remi looks up at the opening and sees Alexandria standing in it, watching them pass. He lifts a hand. She does not wave back. She watches until they are past.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X4-16",
+   "seq": 143,
+   "scene": "1C",
+   "set": "VERDOR_AERIAL",
+   "kind": "missing",
+   "frames": 144,
+   "rec_in": 3960,
+   "rec_out": 4104,
+   "tc_in": "00:02:45:00",
+   "tc_out": "00:02:51:00",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "Remi looks down over the town for longer than he needs to: the roofs, the harbor, the people working.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X4-17",
+   "seq": 144,
+   "scene": "1C",
+   "set": "VERDOR_AERIAL",
+   "kind": "missing",
+   "frames": 48,
+   "rec_in": 4104,
+   "rec_out": 4152,
+   "tc_in": "00:02:51:00",
+   "tc_out": "00:02:53:00",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "Abby watches him doing it.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X4-18",
+   "seq": 145,
+   "scene": "1C",
+   "set": "VERDOR_AERIAL",
+   "kind": "missing",
+   "frames": 192,
+   "rec_in": 4152,
+   "rec_out": 4344,
+   "tc_in": "00:02:53:00",
+   "tc_out": "00:03:01:00",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "Counting roofs.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X4-19",
+   "seq": 146,
+   "scene": "1C",
+   "set": "VERDOR_AERIAL",
+   "kind": "missing",
+   "frames": 84,
+   "rec_in": 4344,
+   "rec_out": 4428,
+   "tc_in": "00:03:01:00",
+   "tc_out": "00:03:04:12",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "He does not answer. He looks away from the town toward the sea, like someone caught.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X4-20",
+   "seq": 147,
+   "scene": "1C",
+   "set": "VERDOR_AERIAL",
+   "kind": "missing",
+   "frames": 120,
+   "rec_in": 4428,
+   "rec_out": 4548,
+   "tc_in": "00:03:04:12",
+   "tc_out": "00:03:09:12",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "The dragons leave the harbor behind and follow the coast toward its far end, where the outer rocks stand in the sea.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X5-01",
+   "seq": 148,
+   "scene": "1C",
+   "set": "CLING_SQUARE",
+   "kind": "missing",
+   "frames": 72,
+   "rec_in": 4548,
+   "rec_out": 4620,
+   "tc_in": "00:03:09:12",
+   "tc_out": "00:03:12:12",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "ON-SCREEN LOCATION: CLING — SCRAPPER (T11). A cart wheel jolts over uneven paving stones.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X5-02",
+   "seq": 149,
+   "scene": "1C",
+   "set": "CLING_SQUARE",
+   "kind": "missing",
+   "frames": 120,
+   "rec_in": 4620,
+   "rec_out": 4740,
+   "tc_in": "00:03:12:12",
+   "tc_out": "00:03:17:12",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "The square is nearly empty; long morning shadows; the fountain runs quietly around its stone pillar. The festival has not begun.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X5-03",
+   "seq": 150,
+   "scene": "1C",
+   "set": "CLING_SQUARE",
+   "kind": "missing",
+   "frames": 192,
+   "rec_in": 4740,
+   "rec_out": 4932,
+   "tc_in": "00:03:17:12",
+   "tc_out": "00:03:25:12",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "The camera passes each fixed landmark naturally, unlabelled: the steps, the stone arch, the gate onto the broad road, the alley, the music space. This is the map the attack depends on.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X5-04",
+   "seq": 151,
+   "scene": "1C",
+   "set": "CLING_SQUARE",
+   "kind": "missing",
+   "frames": 144,
+   "rec_in": 4932,
+   "rec_out": 5076,
+   "tc_in": "00:03:25:12",
+   "tc_out": "00:03:31:12",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "The VENDOR pushes his cart into place and builds his stall: poles, a crossbar, a cloth roof.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X5-05",
+   "seq": 152,
+   "scene": "1C",
+   "set": "CLING_SQUARE",
+   "kind": "missing",
+   "frames": 120,
+   "rec_in": 5076,
+   "rec_out": 5196,
+   "tc_in": "00:03:31:12",
+   "tc_out": "00:03:36:12",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "One leg rocks on the uneven stones. He wedges a flat stone under it, tests it, and wedges a second.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X5-06",
+   "seq": 153,
+   "scene": "1C",
+   "set": "CLING_SQUARE",
+   "kind": "missing",
+   "frames": 72,
+   "rec_in": 5196,
+   "rec_out": 5268,
+   "tc_in": "00:03:36:12",
+   "tc_out": "00:03:39:12",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "He ties the cloth. One corner hangs lower than the rest, at the height of a passing shoulder.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X5-07",
+   "seq": 154,
+   "scene": "1C",
+   "set": "CLING_SQUARE",
+   "kind": "missing",
+   "frames": 108,
+   "rec_in": 5268,
+   "rec_out": 5376,
+   "tc_in": "00:03:39:12",
+   "tc_out": "00:03:44:00",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "Two VILLAGERS carry a long ladder across the square to hang banners. The end of the ladder catches the low corner and drags the cloth half off its frame. They do not notice.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X5-08",
+   "seq": 155,
+   "scene": "1C",
+   "set": "CLING_SQUARE",
+   "kind": "missing",
+   "frames": 84,
+   "rec_in": 5376,
+   "rec_out": 5460,
+   "tc_in": "00:03:44:00",
+   "tc_out": "00:03:47:12",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "The vendor watches them go, then reties the corner without a word. That is the first time.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X5-09",
+   "seq": 156,
+   "scene": "1C",
+   "set": "CLING_SQUARE",
+   "kind": "missing",
+   "frames": 96,
+   "rec_in": 5460,
+   "rec_out": 5556,
+   "tc_in": "00:03:47:12",
+   "tc_out": "00:03:51:12",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "Early sounds, few and distinct: the fountain, the cart, a door opening, a bird on a roof, a shutter thrown back.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X5-10",
+   "seq": 157,
+   "scene": "1C",
+   "set": "CLING_SQUARE",
+   "kind": "missing",
+   "frames": 120,
+   "rec_in": 5556,
+   "rec_out": 5676,
+   "tc_in": "00:03:51:12",
+   "tc_out": "00:03:56:12",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "Through the open door of a house near the stone arch, the PARENT wraps a parcel in cloth: something baked, still warm enough to fog the cloth.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X5-11",
+   "seq": 158,
+   "scene": "1C",
+   "set": "CLING_SQUARE",
+   "kind": "missing",
+   "frames": 72,
+   "rec_in": 5676,
+   "rec_out": 5748,
+   "tc_in": "00:03:56:12",
+   "tc_out": "00:03:59:12",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "The CHILD reaches for the parcel. The parent moves it gently out of reach: not yet.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X5-12",
+   "seq": 159,
+   "scene": "1C",
+   "set": "CLING_SQUARE",
+   "kind": "missing",
+   "frames": 72,
+   "rec_in": 5748,
+   "rec_out": 5820,
+   "tc_in": "00:03:59:12",
+   "tc_out": "00:04:02:12",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "The child accepts this and goes to the doorway to watch the banners go up.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X5-13",
+   "seq": 160,
+   "scene": "1C",
+   "set": "CLING_SQUARE",
+   "kind": "missing",
+   "frames": 120,
+   "rec_in": 5820,
+   "rec_out": 5940,
+   "tc_in": "00:04:02:12",
+   "tc_out": "00:04:07:12",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "The MUSICIAN sits on the fountain rim to test his instrument. One fastening is loose. He presses it with his thumb.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X5-14",
+   "seq": 161,
+   "scene": "1C",
+   "set": "CLING_SQUARE",
+   "kind": "missing",
+   "frames": 120,
+   "rec_in": 5940,
+   "rec_out": 6060,
+   "tc_in": "00:04:07:12",
+   "tc_out": "00:04:12:12",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "An old conversation between friends.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "R3-01",
+   "seq": 162,
+   "scene": "1C",
+   "set": "CLING_SQUARE",
+   "kind": "missing",
+   "frames": 60,
+   "rec_in": 6060,
+   "rec_out": 6120,
+   "tc_in": "00:04:12:12",
+   "tc_out": "00:04:15:00",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "At the house near the arch, the parent calls the child in from the doorway, and the door swings shut.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "R3-02",
+   "seq": 163,
+   "scene": "1C",
+   "set": "CLING_SQUARE",
+   "kind": "missing",
+   "frames": 108,
+   "rec_in": 6120,
+   "rec_out": 6228,
+   "tc_in": "00:04:15:00",
+   "tc_out": "00:04:19:12",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "The musician takes a small pipe from his coat and lights it. The smoke that drifts across the fountain is thicker and sweeter than tobacco, and the vendor knows exactly what it is. No child is in the shot or in sight of it.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "R3-03",
+   "seq": 164,
+   "scene": "1C",
+   "set": "CLING_SQUARE",
+   "kind": "missing",
+   "frames": 180,
+   "rec_in": 6228,
+   "rec_out": 6408,
+   "tc_in": "00:04:19:12",
+   "tc_out": "00:04:27:00",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "Deadpan.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "R3-04",
+   "seq": 165,
+   "scene": "1C",
+   "set": "CLING_SQUARE",
+   "kind": "missing",
+   "frames": 84,
+   "rec_in": 6408,
+   "rec_out": 6492,
+   "tc_in": "00:04:27:00",
+   "tc_out": "00:04:30:12",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "The vendor shakes his head and goes back to his stall. The musician smokes with his eyes closed and the instrument across his knees.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X5-15",
+   "seq": 166,
+   "scene": "1C",
+   "set": "CLING_SQUARE",
+   "kind": "missing",
+   "frames": 120,
+   "rec_in": 6492,
+   "rec_out": 6612,
+   "tc_in": "00:04:30:12",
+   "tc_out": "00:04:35:12",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "The WATCHMAN climbs to his post: a raised platform on the wall with a clear line of sight over the roofs. He wraps his cloak against the chill.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X5-16",
+   "seq": 167,
+   "scene": "1C",
+   "set": "CLING_SQUARE",
+   "kind": "missing",
+   "frames": 108,
+   "rec_in": 6612,
+   "rec_out": 6720,
+   "tc_in": "00:04:35:12",
+   "tc_out": "00:04:40:00",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "A guard calls up without much interest.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X5-17",
+   "seq": 168,
+   "scene": "1C",
+   "set": "CLING_SQUARE",
+   "kind": "missing",
+   "frames": 144,
+   "rec_in": 6720,
+   "rec_out": 6864,
+   "tc_in": "00:04:40:00",
+   "tc_out": "00:04:46:00",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "The watchman's view: roofs, fields, a road and a wide, quiet sky. Nothing moves in it but birds. No foreshadowing.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X5-18",
+   "seq": 169,
+   "scene": "1C",
+   "set": "CLING_SQUARE",
+   "kind": "missing",
+   "frames": 96,
+   "rec_in": 6864,
+   "rec_out": 6960,
+   "tc_in": "00:04:46:00",
+   "tc_out": "00:04:50:00",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "The first banner unrolls across the square and lifts in the breeze.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X6-01",
+   "seq": 170,
+   "scene": "1C",
+   "set": "OUTER_ROCKS",
+   "kind": "missing",
+   "frames": 144,
+   "rec_in": 6960,
+   "rec_out": 7104,
+   "tc_in": "00:04:50:00",
+   "tc_out": "00:04:56:00",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "Off the end of the coast stand the outer rocks: tall sea stacks, white water at their feet, seabirds on every ledge. Two stacks lean close together, leaving a narrow gap that opens seaward; on the seaward side a low bank of sea mist lies against the rocks. One clear wide; it must match 1F.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X6-02",
+   "seq": 171,
+   "scene": "1C",
+   "set": "OUTER_ROCKS",
+   "kind": "missing",
+   "frames": 72,
+   "rec_in": 7104,
+   "rec_out": 7176,
+   "tc_in": "00:04:56:00",
+   "tc_out": "00:04:59:00",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "The gap.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X6-03",
+   "seq": 172,
+   "scene": "1C",
+   "set": "OUTER_ROCKS",
+   "kind": "missing",
+   "frames": 72,
+   "rec_in": 7176,
+   "rec_out": 7248,
+   "tc_in": "00:04:59:00",
+   "tc_out": "00:05:02:00",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "The mist lying against the seaward side.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X6-04",
+   "seq": 173,
+   "scene": "1C",
+   "set": "SKY_OFF_VERDOR",
+   "kind": "missing",
+   "frames": 48,
+   "rec_in": 7248,
+   "rec_out": 7296,
+   "tc_in": "00:05:02:00",
+   "tc_out": "00:05:04:00",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "Abby looks at the gap, then at Remi. He already knows what she is going to say.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X6-05",
+   "seq": 174,
+   "scene": "1C",
+   "set": "SKY_OFF_VERDOR",
+   "kind": "missing",
+   "frames": 288,
+   "rec_in": 7296,
+   "rec_out": 7584,
+   "tc_in": "00:05:04:00",
+   "tc_out": "00:05:16:00",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "The challenge.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X6-06",
+   "seq": 175,
+   "scene": "1C",
+   "set": "SKY_OFF_VERDOR",
+   "kind": "missing",
+   "frames": 72,
+   "rec_in": 7584,
+   "rec_out": 7656,
+   "tc_in": "00:05:16:00",
+   "tc_out": "00:05:19:00",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "She does not wait. She leans, and Leaf drops away toward the rocks with quick, eager wingbeats.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X6-07",
+   "seq": 176,
+   "scene": "1C",
+   "set": "SKY_OFF_VERDOR",
+   "kind": "missing",
+   "frames": 96,
+   "rec_in": 7656,
+   "rec_out": 7752,
+   "tc_in": "00:05:19:00",
+   "tc_out": "00:05:23:00",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "Remi, resigned, leans forward, and Charcoal goes after them.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X6-08",
+   "seq": 177,
+   "scene": "1C",
+   "set": "OUTER_ROCKS",
+   "kind": "missing",
+   "frames": 96,
+   "rec_in": 7752,
+   "rec_out": 7848,
+   "tc_in": "00:05:23:00",
+   "tc_out": "00:05:27:00",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "Leaf goes low and fast, skimming the water, making small quick corrections.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X6-09",
+   "seq": 178,
+   "scene": "1C",
+   "set": "OUTER_ROCKS",
+   "kind": "missing",
+   "frames": 96,
+   "rec_in": 7848,
+   "rec_out": 7944,
+   "tc_in": "00:05:27:00",
+   "tc_out": "00:05:31:00",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "He tilts almost onto his side and threads the gap, wingtips passing close to the rock.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X6-10",
+   "seq": 179,
+   "scene": "1C",
+   "set": "OUTER_ROCKS",
+   "kind": "missing",
+   "frames": 48,
+   "rec_in": 7944,
+   "rec_out": 7992,
+   "tc_in": "00:05:31:00",
+   "tc_out": "00:05:33:00",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "Abby is tucked down against him, both hands on the straps, laughing into the wind.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X6-11",
+   "seq": 180,
+   "scene": "1C",
+   "set": "OUTER_ROCKS",
+   "kind": "missing",
+   "frames": 120,
+   "rec_in": 7992,
+   "rec_out": 8112,
+   "tc_in": "00:05:33:00",
+   "tc_out": "00:05:38:00",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "Charcoal cannot follow. He climbs and goes over the top of the stacks, slow and enormous.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X6-12",
+   "seq": 181,
+   "scene": "1C",
+   "set": "OUTER_ROCKS",
+   "kind": "missing",
+   "frames": 96,
+   "rec_in": 8112,
+   "rec_out": 8208,
+   "tc_in": "00:05:38:00",
+   "tc_out": "00:05:42:00",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "His downwash flattens the water around the rocks into a pale ring and lifts every seabird off its ledge at once.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X6-13",
+   "seq": 182,
+   "scene": "1C",
+   "set": "OUTER_ROCKS",
+   "kind": "missing",
+   "frames": 72,
+   "rec_in": 8208,
+   "rec_out": 8280,
+   "tc_in": "00:05:42:00",
+   "tc_out": "00:05:45:00",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "Spray climbs the stone. Remi stays low in the saddle.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X6-14",
+   "seq": 183,
+   "scene": "1C",
+   "set": "OUTER_ROCKS",
+   "kind": "missing",
+   "frames": 96,
+   "rec_in": 8280,
+   "rec_out": 8376,
+   "tc_in": "00:05:45:00",
+   "tc_out": "00:05:49:00",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "On the far side Charcoal folds his wings and comes down the slope of the air; for a moment it looks as if he might get there first.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X6-15",
+   "seq": 184,
+   "scene": "1C",
+   "set": "OUTER_ROCKS",
+   "kind": "missing",
+   "frames": 144,
+   "rec_in": 8376,
+   "rec_out": 8520,
+   "tc_in": "00:05:49:00",
+   "tc_out": "00:05:55:00",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "Leaf bursts out of the gap on the seaward side, swings up in a tight turn and lands on the flat top of a lower stack. He settles there low and level, the wrists of his folded wings braced on the rock, Abby on his back, the whole of him fitting with room to spare.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X6-16",
+   "seq": 185,
+   "scene": "1C",
+   "set": "OUTER_ROCKS",
+   "kind": "missing",
+   "frames": 96,
+   "rec_in": 8520,
+   "rec_out": 8616,
+   "tc_in": "00:05:55:00",
+   "tc_out": "00:05:59:00",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "Charcoal arrives a moment later, out of his dive, and checks above the stack with one huge beat that sends the last birds wheeling. His shadow covers the whole stack and the dragon crouched on it.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X6-17",
+   "seq": 186,
+   "scene": "1C",
+   "set": "OUTER_ROCKS",
+   "kind": "missing",
+   "frames": 168,
+   "rec_in": 8616,
+   "rec_out": 8784,
+   "tc_in": "00:05:59:00",
+   "tc_out": "00:06:06:00",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "Say it so he can hear.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X6-18",
+   "seq": 187,
+   "scene": "1C",
+   "set": "OUTER_ROCKS",
+   "kind": "missing",
+   "frames": 72,
+   "rec_in": 8784,
+   "rec_out": 8856,
+   "tc_in": "00:06:06:00",
+   "tc_out": "00:06:09:00",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "Leaf turns one eye toward Charcoal without any fear at all and flies a little higher than he needs to.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X6-19",
+   "seq": 188,
+   "scene": "1C",
+   "set": "SKY_OFF_VERDOR",
+   "kind": "missing",
+   "frames": 120,
+   "rec_in": 8856,
+   "rec_out": 8976,
+   "tc_in": "00:06:09:00",
+   "tc_out": "00:06:14:00",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "They turn back along the coast side by side, Leaf a little behind on the near side, as for 1D. Behind them the mist still lies against the rocks.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X6-20",
+   "seq": 189,
+   "scene": "1C",
+   "set": "SKY_OFF_VERDOR",
+   "kind": "missing",
+   "frames": 192,
+   "rec_in": 8976,
+   "rec_out": 9168,
+   "tc_in": "00:06:14:00",
+   "tc_out": "00:06:22:00",
+   "trans": [
+    "cut"
+   ],
+   "src": null,
+   "dialogue": [],
+   "captions": [],
+   "cost": null,
+   "staging": null,
+   "deviation": null,
+   "action": "Ahead, the whole island in the morning light. For a while nobody speaks. The camera travels with them, not around them.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  }
+ ]
+}

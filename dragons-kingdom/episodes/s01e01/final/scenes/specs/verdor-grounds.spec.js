@@ -30,6 +30,9 @@ const KEEP3_R2 = [25.7, -67.6];
 const LOOK1B = { banks: 0.3, contrast: 1.25, lift: -0.05, gain: 1.04 };
 const SET1B = { rig: 'up', platform: PLAT1B, shadowAt: [31, G, -58], shadowExtent: 42, look: LOOK1B };
 const SET1B_DOWN = { ...SET1B, rig: 'down' };
+// session 13: the sun-facing 1B views (X3-04, X3-10) look through the sunward aerosol - thinner haze (2.4 -> 1.4)
+// so the turf / field behind reads green, not pale khaki
+const SET1B_DOWN_SUN = { ...SET1B_DOWN, look: { ...LOOK1B, haze: 1.4 } };
 const SET1B_BACK = { ...SET1B, rig: 'back', rigSlide: 4 };
 // at rest he is low and level (a half crouch: crouch k 0.5 = verdor-launch.js REST_K); X3-02 lowers him for
 // mounting (creatures poses.mount: hind legs folded under the hips; crouch k 1 read as rearing - session 10)
@@ -38,6 +41,28 @@ const charLow = (o = {}) => ({ at: CH, face: 190, tack: true, acts: [[0, 'mount'
 // Leaf low and level: crouch k 0.6 (k 1 read as lying flat on the turf in the 1B stills - session 9)
 const leafLow = (o = {}) => ({ at: LF, face: 90, tack: true, acts: [[0, 'crouch', { k: 0.6, breathe: 0.5, ...o }]] });
 const keeperDown = { armsDown: 1 };          // keeper1's build stands calling (a raised hand): hang the arms
+
+// ---- scene 1C (session 13): the takeoffs, CONTINUOUS from 1B-15 (same sun, same SET1B_BACK look; the rig drawn back).
+// Launch clock: poses.launch (crouch T1 1.5 s, vault to T2 2.1 s, wing unfold to T3 3.3 s for Charcoal; Leaf
+// scales by sqrt(L/36)). Each shot continues the previous one's launch time (tOffset) so the cuts match on action:
+//   Leaf      1C-01 act at 0.4 s (tau = t - 0.4) -> 1C-02 tau = t + 3.6
+//   Charcoal  1C-03 holds the mount pose 4.4 s ("the sound drops"), act at 4.4 (tau = t - 4.4: gathered, the
+//             kick, the wings starting to open at the cut, tau 2.6) -> 1C-04 tau = t + 2.6 (unfold + first beats
+//             overhead) -> 1C-05 tau = t + 1.5: a DECLARED overlapping-action repeat (the whole lift-off and the
+//             dust from the far west wide; his launch run is 70 m in 6 s, no single locked ground camera holds it
+//             later) -> 1C-06 tau = t + 7.5 (forward again from the end of 1C-05)
+//   (travel from poses.launch, Charcoal L 36: tau 3 -> 8 m forward / 5.5 up, 4 -> 14 / 8, 6 -> 38 / 15, 8 -> 76 / 23,
+//    10 -> 128 / 30; heading 190: forward = (-0.17, +0.985) in x, z)
+// Leaf launches on heading 100 (1B-15 left him facing 90): 10 deg south so his climb-out clears Charcoal's head.
+const LEAF_GO = 100;
+const leafGo = (t0, tOffset) => ({ at: LF, face: LEAF_GO, tack: true, acts: t0 > 0 ? [[0, 'stand', { breathe: 0.6, look: [0.0, 0.15] }], [t0, 'takeoff', { tOffset, blend: 0.6 }]] : [[0, 'takeoff', { tOffset }]] });
+const charGo = (t0, tOffset) => ({ at: CH, face: 190, tack: true, acts: t0 > 0 ? [[0, 'mount', {}], [t0, 'takeoff', { tOffset, blend: 0.8 }]] : [[0, 'takeoff', { tOffset }]] });
+// the launch scar: turf + downwash dust at the launch spot (fx library kinds; bursts on Charcoal's first beats)
+const SCAR = [43.0, G, -60.0];
+const LAUNCH_FX = (from) => [
+  { kind: 'dust-downwash', id: 'launch', from, to: null, at: SCAR, params: { bursts: [0, 2.2, 4.4, 6.6], radius: 30, strength: 1, color: 'loam' } },
+  { kind: 'debris-turf', id: 'launch', from, to: null, at: SCAR, params: { bursts: [0, 2.2], radius: 12, speed: 10 } },
+];
 
 export default {
   set: 'VERDOR_GROUNDS',
@@ -264,8 +289,9 @@ export default {
       // session 12: higher and further north-west, aimed down past the deck onto his back (the old line ran
       // through the deck and its tower: Charcoal mostly hidden behind the rig)
       deviation: 'Remi comes up into frame RIGHT, not left: the landing lies south of the only line from it that clears the deck to Charcoal\'s back.',
-      cam: { rig: 'static', pos: [26.0, G + 7.0, -66.5], look: [38.5, G + 3.8, -62.0], mm: 24, fstop: 5.6, focus: 12 },
-      set: SET1B_DOWN,
+      // session 13: aim point 1 m south (-62.0 -> -61.0) so Remi is whole at the right edge
+      cam: { rig: 'static', pos: [26.0, G + 7.0, -66.5], look: [38.5, G + 3.8, -61.0], mm: 24, fstop: 5.6, focus: 12 },
+      set: SET1B_DOWN_SUN,
       cast: {
         charcoal: charLow(),
         remi: { at: [29.3, -60.4], face: 350, legs: 'planted', armSwing: 0.6, acts: [[0, 'walk', { path: ['climb4', 'climb5', 'climb6', [30.9, -61.85]], speed: 0.95, acc: 0.2, stop: 0.6 }]] },
@@ -338,7 +364,7 @@ export default {
       // session 12: higher, looking down onto him so the turf, not the sunward sky / sea haze, is behind him
       // (the level line looked straight into the sun: washed out almost white)
       cam: { rig: 'static', pos: [38.2, G + 7.6, -59.3], look: [42.6, G + 6.1, -58.0], mm: 40, fstop: 2.8, focus: 'remiR.head' },
-      set: SET1B_DOWN,
+      set: SET1B_DOWN_SUN,
       cast: {
         charcoal: charLow(),
         remiR: { look: [43, G + 5, -40], lookAmount: 0.5, acts: [[1.3, 'look', { at: 'keeper.head', amount: 0.4, blend: 0.4 }]] },
@@ -472,6 +498,48 @@ export default {
         leaf: { at: LF, face: 90, tack: true, acts: [[0, 'crouch', { k: 0.6, breathe: 0.5 }], [1.0, 'stand', { breathe: 0.6, look: [0.0, 0.15], blend: 2.4 }]] },
         abbyR: {},
       },
+    },
+    // ================================================================ 1C (session 13: the first six, VERDOR_GROUNDS)
+    '1C-01': {
+      staging: 'WIDE: low, from the south-west across the stakes: Leaf (Abby up) gathers and takes off first, screen LEFT, climbing out to the right (the L -> R flight line); Charcoal low and still at right behind him. The first beat shakes the grass.',
+      cam: { rig: 'static', pos: [14.0, G + 0.6, -30.0], look: [29.0, G + 3.0, -56.0], mm: 35, fstop: 5.6, focus: 22 },
+      set: SET1B_BACK,
+      cast: { charcoal: charLow(), remiR: {}, leaf: leafGo(0.4, -0.4), abbyR: {} },
+      fx: [{ kind: 'dust-downwash', id: 'leafgo', from: 1.9, to: null, at: [22.5, G, -50.2], params: { bursts: [0, 1.0], radius: 9, strength: 0.35, color: 'loam' } }],
+    },
+    '1C-02': {
+      staging: 'MEDIUM: 50 mm craning up with her from Leaf\'s right (south) side: Abby leans into the climb, easy and practised; her face turned forward, soft (no lip-sync shot).',
+      cam: { rig: 'crane', pos: [[0, [21.5, G + 1.8, -41.5]], [3.0, [26.0, G + 5.0, -41.0], 'sine']], look: 'abbyR.head', mm: 50, fstop: 2.8, focus: 'abbyR.head' },
+      set: SET1B_BACK,
+      cast: { leaf: leafGo(0, 3.6), abbyR: {} },
+    },
+    '1C-03': {
+      staging: 'WIDE: ground level from the south-west, 35 mm, slow tilt up: Charcoal still, then he gathers, vaults and his wings open until the frame cannot hold them; Remi a small fixed point on his back.',
+      cam: { rig: 'tilt', pos: [30.0, G + 0.35, -46.0], look: [[0, [43.0, G + 2.5, -62.0]], [4.0, [43.0, G + 2.5, -62.0]], [7.0, [42.8, G + 8.0, -60.0], 'sine']], mm: 35, fstop: 5.6, focus: 21 },
+      set: SET1B_BACK,
+      cast: { charcoal: charGo(4.4, -4.4), remiR: {} },
+    },
+    '1C-04': {
+      staging: 'WIDE: the ground camera on his line 18 m ahead of the launch spot, looking up and back: the wings open and beat overhead and he passes over the lens.',
+      cam: { rig: 'static', pos: [40.9, G + 0.3, -48.3], look: [42.6, G + 12.0, -57.0], mm: 35, fstop: 5.6, focus: 12 },
+      set: SET1B_BACK,
+      cast: { charcoal: charGo(0, 2.6), remiR: {} },
+      fx: LAUNCH_FX(0.7),
+    },
+    '1C-05': {
+      staging: 'WIDE: locked ground camera far to the west (100 m), level across the emptied launch space toward the sea, with shake: he kicks, lifts and the first beats tear the field - dirt lifts, turf breaks, a rolling dust cloud crosses the cleared field (no bystanders) as he climbs away right (south).',
+      deviation: 'Overlapping action: 1C-05 repeats the lift-off already seen from below in 1C-03 / 1C-04 (launch tau 1.5 -> 7.5) - the script\'s "He launches" beat whole, from the side.',
+      cam: { rig: 'static', pos: [-55.0, G + 1.2, -30.0], look: [40.0, G + 8.0, -26.0], mm: 35, fstop: 8, focus: 95, shake: { kind: 'handheld', amount: 0.35 } },
+      set: SET1B_BACK,
+      cast: { charcoal: charGo(0, 1.5), remiR: {} },
+      fx: LAUNCH_FX(1.8),
+    },
+    '1C-06': {
+      staging: 'WIDE: static behind the launch (north of the scar) looking south along his line: the torn turf in the foreground, the dust rolling toward and past camera; Charcoal small, top of frame, leaving.',
+      cam: { rig: 'static', pos: [45.5, G + 1.4, -82.0], look: [42.0, G + 4.0, -40.0], mm: 35, fstop: 8, focus: 30 },
+      set: SET1B_BACK,
+      cast: { charcoal: charGo(0, 7.5), remiR: {} },
+      fx: LAUNCH_FX(-4.2),
     },
   },
 };
