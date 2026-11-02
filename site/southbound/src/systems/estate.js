@@ -56,8 +56,26 @@ export function installEstate(game) {
   let inside = null, insidePoints = [];
   const IO = (i) => new THREE.Vector3(-1900 + (i % 24) * 70, 1400, -1900 + Math.floor(i / 24) * 70);
   const M = (c, r = 0.7, m = 0) => new THREE.MeshStandardMaterial({ color: c, roughness: r, metalness: m });
+  // photo-scanned surfaces for walls and floors, UVs scaled to real size (no stretching)
+  const S = game.surf;
+  const texMat = (key, tint, rough) => {
+    const t = S && S[key];
+    if (!t || !t.color) return null;
+    return new THREE.MeshStandardMaterial({ map: t.color, normalMap: t.normal || null, roughnessMap: t.rough || null, color: tint, roughness: rough, normalScale: new THREE.Vector2(0.6, 0.6) });
+  };
+  const scaleUV = (geo, w, h, d, size) => {
+    const uv = geo.attributes.uv, n = geo.attributes.normal;
+    for (let i = 0; i < uv.count; i++) {
+      const ax = Math.abs(n.getX(i)), ay = Math.abs(n.getY(i));
+      const su = ax > 0.5 ? d : w, sv = ay > 0.5 ? d : h;
+      uv.setXY(i, uv.getX(i) * su / size, uv.getY(i) * sv / size);
+    }
+    uv.needsUpdate = true;
+  };
   const boxAt = (g, w, h, d, x, y, z, mat, solid, origin) => {
-    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+    const geo = new THREE.BoxGeometry(w, h, d);
+    if (mat.map) scaleUV(geo, w, h, d, mat.userData.texSize || 2.5);
+    const m = new THREE.Mesh(geo, mat);
     m.position.set(x, y + h / 2, z); m.castShadow = m.receiveShadow = true; g.add(m);
     if (solid) collision.addBox(origin.x + x - w / 2, origin.z + z - d / 2, origin.x + x + w / 2, origin.z + z + d / 2, origin.y + y, origin.y + y + h, solid === 'walk' ? { walkable: true } : null);
     return m;
@@ -70,7 +88,8 @@ export function installEstate(game) {
     const g = new THREE.Group(); g.position.copy(o);
     const wallC = [0xd8d0c0, 0xc9d3d8, 0xe6dccb, 0xb9c4b0, 0xd9c2b0, 0xf0ece4][Math.floor(r() * 6)];
     const floorC = kind === 'warehouse' ? 0x6d6d68 : kind === 'office' ? 0x4a4f55 : [0x7a5434, 0x8c6a46, 0x5c3f28, 0xb8b2a4][Math.floor(r() * 4)];
-    const wallM = M(wallC, 0.9), floorM = M(floorC, kind === 'home' || kind === 'apartment' ? 0.45 : 0.8);
+    const wallM = texMat('plaster', wallC, 0.9) || M(wallC, 0.9), floorM = (kind === 'warehouse' || kind === 'store' || kind === 'office' ? texMat('concrete', floorC === 0x4a4f55 ? 0x8a8f95 : 0xb0aca4, 0.8) : null) || M(floorC, kind === 'home' || kind === 'apartment' ? 0.45 : 0.8);
+    wallM.userData.texSize = 3.0; floorM.userData.texSize = 2.5;
     boxAt(g, W + 0.4, 0.2, D + 0.4, 0, -0.2, 0, floorM, 'walk', o);
     boxAt(g, W + 0.4, 0.2, D + 0.4, 0, H, 0, M(0xf2f0ea, 0.9), false, o);
     boxAt(g, W + 0.4, H, 0.2, 0, 0, -D / 2 - 0.1, wallM, true, o);
