@@ -21,8 +21,10 @@ How it works: `README.md` in this folder. Latest state first.
     camera 10 m west so the rig leaves frame.
   - 1C-05 (not asked, noticed): the field reads very pale / washed in the sunward direction and Charcoal is large
     for "100 m" (he flies past ~60-70 m from the lens). Keep for now; check in the 1C cut.
-- X3-10 coif blob: aim 0.25 m north (3 deg pan left) so only the keeper's shoulder edge holds the OTS. Still
-  `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/director/st20/X3-10_*.png` was still rendering at the commit - LOOK at it first next session.
+- X3-10 coif blob: aim 0.25 m north (3 deg pan left). Still `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/director/st20/X3-10_030.png`
+  LOOKED AT: Remi in profile in the saddle, centre, turf behind; the keeper's coif + shoulder is now a smaller
+  grey-blue shape cut by the bottom-right corner (~10 % of the width) - it reads as the OTS foreground, no longer
+  a white blob. Optional: 1-2 deg more pan left if it still draws the eye on video.
 - SKY_OFF_VERDOR (NEW, first pass, NOT rendered): `sets/sky-off-verdor.js` = F3's world in the VERDOR frame
   (the grounds' coastX near the field, cliffs rising south, bay floor, scanned rocks, the grounds' sea, physical
   sky, sun from continuity '1C' sunDir(102, 31), exposure 1.1 - a guess: F3 graded +1.1); registry entry; scene
@@ -39,7 +41,7 @@ How it works: `README.md` in this folder. Latest state first.
   exposure; 1C-19 "Island, L-bg" is NOT honoured (abeam from inland, Verdor's headland is behind the lens) -
   either another island ahead (OUTER_ROCKS?) or accept.
 - NEXT (exact, in order):
-  1. LOOK at `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/director/st20/X3-10_*.png` (coif gone? Remi still framed).
+  1. (done: X3-10 still looked at.) npm test this session: 49 tests, 48 pass, 0 fail, 1 skipped.
   2. SKY_OFF_VERDOR stills - ONE set build, run in the background (~4-6 min build + ~1 min/still here):
      `node scenes/lib/director/tools/still.mjs 1C-07@0.5 1C-08@0.5 1C-09@0.4 1C-10@0.5 1C-11@0.5 1C-12@0.5 1C-13@0.8
      1C-14@0.3 1C-15@0.5 1C-16@0.5 1C-17@0.5 1C-18@0.5 1C-19@0.5 --preset draft --out <scratch>/st21`
