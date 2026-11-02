@@ -102,9 +102,9 @@ export function installEstate(game) {
       put(QH(pick(['Carpet_1', 'Carpet_2', 'Carpet_Round'])), 3.2, -W / 4, -D / 2 + 2.6, 0, 'max', false);
       put(r() < 0.5 ? K('GlamVelvetSofa') : K('SheenWoodLeatherSofa'), 2.3, -W / 4, -D / 2 + 1.0, 0);
       put(QH('Table_RoundSmall'), 0.9, -W / 4, -D / 2 + 2.5, 0);
-      put(QH('Drawer_1'), 1.5, -W / 4, -D / 2 + 4.3, Math.PI);
+      const stand = put(QH('Drawer_1'), 1.5, -W / 4, -D / 2 + 4.3, Math.PI);
       const tv = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.75, 0.06), new THREE.MeshStandardMaterial({ color: 0x050608, roughness: 0.2, emissive: 0x2a4f80, emissiveIntensity: 0.5 }));
-      tv.position.set(-W / 4, 1.45, -D / 2 + 4.3); g.add(tv);
+      tv.position.set(-W / 4, (stand ? stand.userData.size.y : 0.7) + 0.4, -D / 2 + 4.3); g.add(tv);
       put(QH(pick(['Light_Floor1', 'Light_Floor2', 'Light_Stand1'])), 1.7, -W / 2 + 0.6, -D / 2 + 0.6, 0, 'y');
       put(QH('Bookshelf'), 2.0, -W / 2 + 0.35, 0.5, Math.PI / 2, 'y');
       put(plant(), 1.2, -W / 2 + 0.6, D / 2 - 0.8, 0, 'y');

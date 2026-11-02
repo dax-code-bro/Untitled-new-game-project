@@ -398,7 +398,7 @@ async function createGame(progress) {
 
     const onFoot = S.mode === 'foot' ? player.pos : null;
     peds.update(dt, focus, onFoot, [S.vehicle, ...police.cars.map((c) => c.v), ...traffic.cars.map((c) => c.v)], (amt) => { S.money += amt; hud.toast(`+$${amt}`, 1.2); });
-    police.update(dt, { pos: focus, inCar: S.mode === 'car', speed: S.mode === 'car' ? S.vehicle.speed : player.speed, vehicle: S.vehicle });
+    police.update(dt, { pos: S.indoors ? new THREE.Vector3(S.indoors.d.x, focus.y, S.indoors.d.z) : focus, inCar: S.mode === 'car', speed: S.mode === 'car' ? S.vehicle.speed : player.speed, vehicle: S.vehicle });
     if (player.health > 0 && player.health < 100 && S.dead <= 0) player.health = Math.min(100, player.health + dt * (police.wanted ? 0 : 0.6));
     S.dmgFlash = Math.max(0, S.dmgFlash - dt * 0.8);
     if (post) post.grade.uniforms.uDamage.value = Math.max(S.dmgFlash, player.health < 25 ? 0.35 : 0);
@@ -430,7 +430,9 @@ async function createGame(progress) {
       headlight.target.position.set(v.pos.x + fx * 25, v.pos.y - 1, v.pos.z + fz * 25);
     } else headlight.intensity = 0;
 
-    const reg = regionAt(focus.x, focus.z);
+    // indoors: the map and region follow the building's front door, not the room
+    const mapPos = S.indoors ? new THREE.Vector3(S.indoors.d.x, 0, S.indoors.d.z) : focus;
+    const reg = regionAt(mapPos.x, mapPos.z);
     audio.update(dt, {
       driving: S.mode === 'car', speed: S.vehicle?.speed || 0, throttle: a.throttle, night: sky.night,
       horn: a.horn && S.mode === 'car', impact: S.vehicle?.impact || 0, nature: reg.name !== 'Port Calvera' && weather.rain < 0.2,
@@ -446,7 +448,7 @@ async function createGame(progress) {
     render();
     dynamicResolution(dt);
     hud.update(dt, {
-      pos: focus, yaw: rig.yaw, heading: S.mode === 'car' ? S.vehicle.heading : player.heading,
+      pos: mapPos, yaw: rig.yaw, heading: S.mode === 'car' ? S.vehicle.heading : player.heading,
       driving: S.mode === 'car', speed: S.vehicle?.speed || 0, hour: sky.hour, day: sky.day, prompt,
       traffic: traffic.cars.map((c) => c.v.pos), police: police.cars.map((c) => c.v.pos),
       health: player.health, armor: player.armor, money: S.money, wanted: police.wanted, wantedLost: police.lost, blips: interact.blips(focus),
