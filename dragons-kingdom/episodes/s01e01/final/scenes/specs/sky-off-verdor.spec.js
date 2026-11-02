@@ -7,12 +7,13 @@
 // Formation clock T = seconds since 1C-10's first frame (the edit compresses time; T keeps the coast continuous):
 //   (session 15, owner notes on the st21 stills: Leaf flew 20-40 m below Charcoal in the wides -> brought ABREAST,
 //   slightly behind, inland side, near his altitude; lateral gap 40 -> 30 m keeps ~11 m clear of his ~30 m span)
-//   Leaf      [505, 58, zF(T)]          quick corrective beats (flight corr 1)
+//   Leaf      [505, 61, zF(T)]  (62 in TALK)          quick corrective beats (flight corr 1)
 //   Charcoal  [545, 58, zF(T) + 20]     slow heavy beats (hz 0.625 = one beat / 1.6 s, the sound spots); draws level +
-//                                       closes in + climbs 5 m in 1C-13 -> TALK [535, 63, +8] for 1C-14..19
+//                                       closes in + climbs 2 m in 1C-13 -> TALK [535, 60, +16] for 1C-14..19
 //   zF(T) = 300 + 16 T  (16 m/s)
-// Wides (1C-11/13/15/19): 160-200 mm, camera ~4-4.5 deg above the pair (the horizon just out of the top of frame: no
-// white haze band) and 300-800 m out, so the 40 m depth gap shows as ~0.5 deg (previs: Leaf <= ~0.2 NDC lower).
+// Wides (1C-11/13/15/19): 150-180 mm, camera ~6.5-7 deg above the pair and 300-800 m out. The sea's far haze band
+// sits ~2 deg BELOW the geometric horizon (st22: at 4 deg it was still in the top 15 % of frame), so the depression
+// must exceed half the vertical FOV + ~2.5 deg. Leaf's extra height cancels the depth gap (she reads level).
 // Shadows (1C-12): sun sunDir(102, 31) -> a shadow lies 1.63 h west and 0.35 h north of its dragon: Leaf (h 58) on
 // x ~410, Charcoal (h 58) on x ~450 - the sandy shallows (sea floor 1-3 m down), so they read.
 // Air-to-air close / medium shots use the framing solver with track: true (re-solved every frame on the moving
@@ -45,8 +46,10 @@ const OLD_DUST = (from) => [{ kind: 'dust-downwash', id: 'launch', from, to: nul
 // formation times of each shot's first frame (shot lengths from the shot list)
 const T = { '1C-10': 0, '1C-11': 6, '1C-12': 11, '1C-13': 15, '1C-14': 21, '1C-15': 26, '1C-16': 35, '1C-17': 38, '1C-18': 41, '1C-19': 44 };
 // the talking formation (after 1C-13): Charcoal closed in and level, a little above
-const FORM = { leaf: [505, 58, 0], charcoal: [545, 58, 20] };
-const TALK = { leaf: [505, 58, 0], charcoal: [535, 63, 8] };
+// (s15 round 2, from the st22 stills: Leaf 3-4 m ABOVE his centre line reads level on screen - the camera is above
+// them and she is 40 m nearer the lens; she stays 16-20 m behind his centre so she clears his body, in front of his tail)
+const FORM = { leaf: [505, 61, 0], charcoal: [545, 58, 20] };
+const TALK = { leaf: [505, 62, 0], charcoal: [535, 60, 16] };
 
 export default {
   set: 'SKY_OFF_VERDOR',
@@ -73,15 +76,15 @@ export default {
       staging: 'POV (Abby\'s eyeline, 35 mm, flying): back over her right shoulder, Charcoal rises out of the dust above the field, Remi a small fixed point on his back; the dust cloud behind and below him.',
       deviation: 'Charcoal flies a keyed climb (flight pose) instead of continuing poses.launch: the launch formula accelerates without limit (tau 14 = 276 m) and would put him ahead of Leaf.',
       // (session 15: st21 showed only Leaf's own neck scales + right wing - Charcoal was due WEST, i.e. along her right
-      // wing. Now Leaf is further down her line and Charcoal climbs on her back-right quarter (bearing ~300 from her,
-      // 40 deg off the tail line), from a little below her eyeline to above it, the old dust behind/below him;
+      // wing. Now Leaf is further down her line and Charcoal climbs nearly over her tail (bearing ~325 from her: she turns 165 deg
+      // to her right; st22 at bearing 300 still had her upstroking wing over 70 % of frame), from a little below her eyeline to above it, the old dust behind/below him;
       // eye raised 0.6 m (she half-stands to look back) so her wing root sits low in frame.)
       cam: { rig: 'follow', pos: 'abbyR.head', offset: [0, 0.6, 0], look: 'charcoal.chest', mm: 35, fstop: 5.6, focus: 'charcoal.chest', shake: { kind: 'aerial', amount: 0.5 } },
       set: { shadowAt: [[0, [120, 9, 40]], [5, [150, 9, 90], 'linear']], shadowExtent: 160 },
       cast: {
         leaf: { tack: true, ...fly([200, 44, 60], 160, V, 5, 4), acts: LEAF_FLY() },
         abbyR: { visible: false },
-        charcoal: { tack: true, ...fly([90, 38, 0], 150, 15, 5, 20), pitch: [[0, -12], [5, -6]], acts: CHAR_FLY() },
+        charcoal: { tack: true, ...fly([131, 38, -38], 150, 15, 5, 20), pitch: [[0, -12], [5, -6]], acts: CHAR_FLY() },
         remiR: {},
       },
       fx: OLD_DUST(-10.7),
@@ -101,16 +104,16 @@ export default {
       cam: { rig: 'drone', pos: [[0, [-350, 160, 60]], [6, [-330, 162, 100], 'linear']], look: [[0, [232, 31, 251]], [6, [300, 47, 319], 'linear']], mm: 150, fstop: 8, focus: 'charcoal.chest' },
       set: { shadowAt: [[0, [240, 9, 250]], [6, [300, 0, 320], 'linear']], shadowExtent: 160 },
       cast: {
-        // (s15: Leaf 42 m straight behind him (NW = inland + screen left), 1 m higher - was 6 m lower and in front)
-        leaf: { tack: true, ...fly([220, 35, 232], 135, V, 6, 16), acts: LEAF_FLY() },
+        // (s15: Leaf 42 m straight behind him (NW = inland + screen left), 7 m higher (st22: 1 m higher still read ~25 % of frame lower) - was 6 m lower and in front)
+        leaf: { tack: true, ...fly([220, 41, 232], 135, V, 6, 16), acts: LEAF_FLY() },
         charcoal: { tack: true, ...fly([250, 34, 262], 135, V, 6, 16), acts: CHAR_FLY() },
         abbyR: {}, remiR: {},
       },
     },
     '1C-11': {
       staging: 'WIDE: 135 mm air-to-air from the inland side, abreast of Leaf (~300 m): Leaf left and nearer, Charcoal right, ahead and farther out - the flight line used through 1E.',
-      // (s15: 200 mm from 300 m, ~4 deg above them: the horizon is out of frame (st21 had a blown-out white band on top))
-      cam: { rig: 'follow', pos: [[0, [205, 82, zF(6) + 4]], [5, [205, 82, zF(11) + 4], 'linear']], look: [[0, [525, 59, zF(6) + 16]], [5, [525, 59, zF(11) + 16], 'linear']], mm: 200, fstop: 8, focus: 'leaf.chest' },
+      // (s15: 160 mm from 300 m, ~7 deg above them (st22 at 200 mm clipped his head + wing): the horizon is out of frame (st21 had a blown-out white band on top))
+      cam: { rig: 'follow', pos: [[0, [205, 100, zF(6) + 4]], [5, [205, 100, zF(11) + 4], 'linear']], look: [[0, [525, 60, zF(6) + 18]], [5, [525, 60, zF(11) + 18], 'linear']], mm: 160, fstop: 8, focus: 'leaf.chest' },
       set: { shadowAt: [[0, [470, 0, zF(6)]], [5, [470, 0, zF(11)], 'linear']], shadowExtent: 180 },
       cast: {
         leaf: { tack: true, ...inForm(...FORM.leaf, T['1C-11'], 5), acts: LEAF_FLY() },
@@ -131,8 +134,8 @@ export default {
     },
     '1C-13': {
       staging: 'WIDE: 135 mm from the inland side: Charcoal draws level and closes in (out 540 -> 500, ahead 25 -> 5, a little higher); his shadow crosses the water below; Leaf works harder with quick corrective beats.',
-      // (s15: 180 mm, camera ~4.5 deg above them, horizon out of frame; he keeps beating (1.6 s) - the st21 glide read as a stiff sail)
-      cam: { rig: 'follow', pos: [[0, [195, 85, zF(15) + 4]], [6, [195, 85, zF(21) + 4], 'linear']], look: [[0, [525, 59, zF(15) + 14]], [6, [520, 60, zF(21) + 8], 'linear']], mm: 180, fstop: 8, focus: 'leaf.chest' },
+      // (s15: 150 mm, camera ~7 deg above them (st22 at 180 mm cut his back off the top), horizon out of frame; he keeps beating (1.6 s) - the st21 glide read as a stiff sail)
+      cam: { rig: 'follow', pos: [[0, [195, 100, zF(15) + 4]], [6, [195, 100, zF(21) + 4], 'linear']], look: [[0, [525, 61, zF(15) + 14]], [6, [520, 62, zF(21) + 14], 'linear']], mm: 150, fstop: 8, focus: 'leaf.chest' },
       set: { shadowAt: [[0, [460, 0, zF(15)]], [6, [450, 0, zF(21)], 'linear']], shadowExtent: 200 },
       cast: {
         leaf: { tack: true, ...inForm(...FORM.leaf, T['1C-13'], 6), acts: LEAF_FLY({ hz: 1.25 }) },
@@ -142,7 +145,7 @@ export default {
     },
     '1C-14': {
       staging: 'MEDIUM: 50 mm off Charcoal\'s right shoulder, ahead of Remi, looking back over the neck: Remi right, Leaf and Abby lower in the background left. "Everything secure?" - "Yes." - "All right."',
-      cam: { rig: 'follow', frame: { subjects: [['remiR.head', [0.38, 0.12]], ['abbyR.head', [-0.4, -0.35]]], from: 190, dist: 14, rise: 2.5, track: true }, mm: 50, fstop: 4, focus: 'remiR.head' },
+      cam: { rig: 'follow', frame: { subjects: [['remiR.head', [0.38, 0.12]], ['abbyR.head', [-0.42, -0.15]]], from: 190, dist: 14, rise: 0.3, track: true }, mm: 50, fstop: 4, focus: 'remiR.head' },
       set: { shadowExtent: 70 },
       cast: {
         leaf: { tack: true, ...inForm(TALK.leaf[0], TALK.leaf[1], TALK.leaf[2], T['1C-14'], 5), acts: LEAF_FLY() },
@@ -154,10 +157,11 @@ export default {
     },
     '1C-15': {
       staging: 'EXTREME WIDE: 180 mm from the inland side, tracking with them (no orbit): their path curves gently seaward with the coast; the coast in the foreground left; nobody speaks.',
-      cam: { rig: 'follow', pos: [[0, [-120, 104, zF(26) - 40]], [9, [-100, 104, zF(35) - 40], 'linear']], look: [[0, [520, 58, zF(26)]], [9, [550, 58, zF(35)], 'linear']], mm: 180, fstop: 8, focus: 'leaf.chest' },
+      cam: { rig: 'follow', pos: [[0, [-120, 135, zF(26) - 40]], [9, [-100, 135, zF(35) - 40], 'linear']], look: [[0, [520, 61, zF(26) + 6]], [9, [550, 61, zF(35) + 6], 'linear']], mm: 180, fstop: 8, focus: 'leaf.chest' },
       set: { shadowAt: [[0, [440, 0, zF(26)]], [9, [470, 0, zF(35)], 'linear']], shadowExtent: 200 },
       cast: {
-        leaf: { tack: true, ...inForm(TALK.leaf[0], TALK.leaf[1], TALK.leaf[2], T['1C-15'], 9, { dx: 30, heading: [[0, 180], [9, 176]] }), acts: LEAF_FLY() },
+        // (st23: at 640 m Leaf still read ~25 % of frame low -> +4 m for this shot only; nobody can measure 4 m at 640 m)
+        leaf: { tack: true, ...inForm(TALK.leaf[0], TALK.leaf[1] + 4, TALK.leaf[2], T['1C-15'], 9, { dx: 30, heading: [[0, 180], [9, 176]] }), acts: LEAF_FLY() },
         charcoal: { tack: true, ...inForm(TALK.charcoal[0], TALK.charcoal[1], TALK.charcoal[2], T['1C-15'], 9, { dx: 30, heading: [[0, 180], [9, 176]] }), acts: CHAR_FLY({ bank: -0.06 }) },
         abbyR: {}, remiR: {},
       },
@@ -194,7 +198,7 @@ export default {
       staging: 'EXTREME WIDE: 160 mm slow aerial travel from inland, abeam and a little behind: the pair over the bright sea, Leaf left, Charcoal right; Verdor\'s headland receding in the left background. Private freedom, not a procession.',
       // (abeam from inland: from behind, the inland Leaf read RIGHT of Charcoal; Verdor's headland is then behind the lens -
       // the shot list's 'Island, L-bg' is open: PROGRESS session 14)
-      cam: { rig: 'drone', pos: [[0, [-250, 118, zF(44) - 150]], [8, [-235, 119, zF(52) - 150], 'linear']], look: [[0, [520, 59, zF(44) + 10]], [8, [535, 59, zF(52) + 10], 'linear']], mm: 160, fstop: 8, focus: 'charcoal.chest' },
+      cam: { rig: 'drone', pos: [[0, [-250, 155, zF(44) - 150]], [8, [-235, 156, zF(52) - 150], 'linear']], look: [[0, [520, 62, zF(44) + 10]], [8, [535, 62, zF(52) + 10], 'linear']], mm: 160, fstop: 8, focus: 'charcoal.chest' },
       set: { shadowAt: [[0, [460, 0, zF(44)]], [8, [470, 0, zF(52)], 'linear']], shadowExtent: 200 },
       cast: {
         leaf: { tack: true, ...inForm(...TALK.leaf, T['1C-19'], 8), acts: LEAF_FLY() },

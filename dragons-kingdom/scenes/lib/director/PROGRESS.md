@@ -24,7 +24,48 @@ Owner notes (`/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5
 - 1C-08 POV: st21 looked along Leaf's own right wing (Charcoal was due WEST of her = along the wing). Now Leaf is
   further down her line ([200, 44, 60], heading 160) and Charcoal climbs on her back-right quarter ([90, 38, 0] ->
   +20 m, heading 150, ~120 m away, 40 deg off her tail line), eye raised 0.6 m; the old dust behind / below him.
-RESULTS: (see below)
+- Round 1 stills `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/director/st22/` (partA.jpg = 08/10/11/12/13/14, partB.jpg = 15/19), LOOKED AT:
+  1C-12 GOOD (Charcoal's glide planform reads from above, both shadows on the shallows). 1C-08 still bad (Leaf's
+  upstroking wing over ~70 % of frame, Charcoal small lower right). 1C-11: abreast now, a rider readable on his
+  back, but 200 mm clipped his head + wing and a thin haze band sat at the top. 1C-13: his back cut off by the top
+  edge (180 mm too tight). 1C-15 / 1C-19: horizon haze band in the top ~15 % (the sea's far haze sits ~2 deg BELOW
+  the geometric horizon - 4 deg depression was not enough); Leaf still ~25 % of frame lower (15) / hidden behind his
+  wing (19). Beating wings (CHAR_FLY) read as wings in 10 / 11 (no more stiff sail), but a beat caught at the top
+  of the upstroke (13) hides the far wing behind the body.
+- Round 2 (now in the spec): Leaf 3-4 m ABOVE his centre line (FORM 61, TALK 62; she is 40 m nearer the lens of a
+  camera above them, so this reads level), TALK lead 8 -> 16 (she sits 16 m behind his centre: clear of his body, in
+  front of his tail, LEFT of him in every wide); wides 150-180 mm with the camera ~6.5-7 deg above them (haze band out
+  of frame); 1C-10 Leaf +7 m; 1C-08 Charcoal at bearing ~325 from her (she turns 165 deg right, looking over her tail);
+  1C-14 rise 2.5 -> 0.3 and Abby's mark [-0.42, -0.15] (solve 0.05 off; Abby lower-left of Remi, as staged).
+
+- Round 2 stills `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/director/st23/sheet.jpg` and round 3 (11/13/14/15 after TALK Charcoal y 63 -> 60,
+  1C-11 look +6 m ahead, 1C-13 look, 1C-15 Leaf +4 m for that shot only) `st24/r3.jpg`, LOOKED AT. Final sheet of
+  the latest still per shot: `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/director/s15/sheet.jpg`:
+  - 1C-08 FIXED: Charcoal head-on, wings spread, coming up behind her, dust low left, the field's hills behind; only
+    a sliver of her own wingtip at the left edge.
+  - 1C-11 GOOD: Leaf left, a little behind, level with his body; Charcoal right with a rider readable on his back;
+    downstroke wings read as wings; no haze band.
+  - 1C-15 GOOD: Leaf left-behind, only slightly lower, no haze band. 1C-12 unchanged (good).
+  - 1C-10 better (Leaf behind-left), she still reads ~20 % of frame lower - acceptable for the climb-out wide.
+  - 1C-13 OK: Leaf near level now, but this frame (4.8 s) catches his upstroke and the wingtip is clipped by the
+    top edge. If it bothers on video: look y -2 m or 135 mm.
+  - 1C-19 (st23, rendered BEFORE TALK Charcoal 63 -> 60): Leaf partly behind his wing. With Charcoal now 3 m lower
+    she should clear it - unverified; re-still first.
+  - 1C-14 NOT FIXED (and was not readable in st21 either): Remi right, seated, clear; Abby/Leaf hidden behind
+    Charcoal's wing membrane (only Leaf's green wingtips show at left). Solver reports 0.27 off. Try: from 200-205
+    (more behind his shoulder so his wing is not between us and her), or rise 1.5 + dist 18, or move Leaf 8 m
+    further inland in 1C-14 only.
+- Wingbeat cadence vs sound: Charcoal now beats at 1.6 s in the wides (= sound's spots). Leaf flaps at 0.8 Hz
+  (1.25 s; 1.25 Hz = 0.8 s in 1C-13); sound spotted her every 0.36-0.45 s - a 9 m dragon at 2.5 Hz would look
+  frantic. Sound should respace Leaf's spots to her animation (or tell us to raise her hz) - flagged in the report.
+- Shot ids, lengths, line cues unchanged; selftest 20/20.
+- NEXT (exact, in order):
+  1. Re-still 1C-19 and 1C-14 (after a 1C-14 fix above):
+     `node scenes/lib/director/tools/still.mjs 1C-14@0.3 1C-19@0.5 --preset draft --out <scratch>/st25`
+  2. Videos (resumable queue, ~10 min/shot here; DO NOT run in a short session - owner/background only):
+     `node scenes/lib/director/tools/render-shots.mjs --only 1C-07,1C-08,1C-09,1C-10,1C-11,1C-12,1C-13,1C-14,1C-15,1C-16,1C-17,1C-18,1C-19 --force --work /tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/director/work1B`
+     (plus the session-14 queue: `--only 1C-04,1C-06,X3-10`), then re-assemble the 1C cut (edl-1C, session 11).
+  3. Then 1C-20+ (VERDOR_AERIAL / OUTER_ROCKS / VERDOR_HARBOR / CLING_SQUARE have no builder yet).
 
 ## Session 14 (2026-11-02, short budgeted session: 1C-04 / 1C-06 fixes, SKY_OFF_VERDOR set + 1C-07..19 specs - previs only)
 
