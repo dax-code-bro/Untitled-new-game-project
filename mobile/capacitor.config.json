@@ -1,0 +1,7 @@
+{
+  "appId": "com.southbound.game",
+  "appName": "Southbound",
+  "webDir": "../site/southbound",
+  "android": { "backgroundColor": "#120d0a" },
+  "ios": { "backgroundColor": "#120d0a", "contentInset": "never" }
+}

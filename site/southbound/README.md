@@ -31,6 +31,7 @@ frame rate. Dynamic resolution keeps the frame rate at that target.
 | Aim | Right mouse / E | LT | 🎯 (toggle) |
 | Fire / punch | Left mouse / Ctrl | RT | 💥 |
 | Switch weapon | Q / 1 / 2 | X | 🔫 |
+| Arsenal (buy guns and attachments) | B | | 🛒 Arsenal button |
 | Reload | R | | auto |
 | Horn | H | | |
 | Camera distance | V, mouse wheel | | |
@@ -70,17 +71,21 @@ cd tools/southbound && npm install && npm run build
 src/
   main.js            boot, world build, game loop, dynamic resolution, debug API (window.SB)
   settings.js        presets, GPU detection, saved settings
-  world/             layout (map + road graph), heightmap, terrain, water, sky,
-                     roads, buildings, vegetation, collision
-  entities/          player, character, vehicle, traffic
+  world/             layout (map + road graph), heightmap, terrain, water (+ planar
+                     reflections), sky, clouds (ray-marched), weather, roads,
+                     buildings, vegetation, collision
+  assets/            texture/model loading, carbuilder.js (procedural vehicles),
+                     animation retargeting
+  entities/          player, peds, police, vehicle, traffic, combat, arsenal (weapons)
   core/              input, camera, post-processing, audio
-  ui/                start menu, settings panel, HUD
+  ui/                start menu, settings panel, HUD, arsenal store
 vendor/three/        Three.js r170 (MIT), served locally
 ```
 
-All textures, models and sounds are generated in code. The cloud build
-environment couldn't reach the asset sites, and generating them keeps the
-download small for phones.
+Surfaces, trees and people come from CC0/MIT asset packs (see CREDITS.md).
+Cars, weapons, clouds, weather and sounds are generated in code, which keeps
+the download small for phones. `dev-showroom.html` renders the sky and every
+vehicle on its own for quick look-dev.
 
 ## Automated playtest
 

@@ -51,15 +51,43 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 - [x] Terrain: height-blended layers, anti-tiling, triplanar cliffs, normal maps
 - [x] Height fog with sun glow (golden-hour haze), cloud layer
 - [x] Post chain (pmndrs postprocessing + N8AO): AO, sun shafts, DOF (Ultra), bloom, AgX tone mapping, colour grade, grain
-- [ ] Realistic tree models (current trees are simple shapes; need a CC0 photogrammetry tree pack)
-- [ ] Rain / wet roads with reflections, volumetric clouds
-- [ ] Higher-detail cars and characters
+- [x] Realistic trees and bushes (ez-tree, baked): 3D near the camera, impostor sprites far away
+- [x] Grass clumps and scanned rocks as ground cover
+- [x] Hydraulic erosion on the terrain (gullies, ridges, valley floors)
+- [x] Realistic player, pedestrians and police built from CC0 MakeHuman assets
+- [x] Volumetric ray-marched clouds (cached in a sky cube, so 4K costs the same as 720p); clouds show in reflections
+- [x] Weather: clear / cloudy / overcast / rain / storm with lightning and thunder; rain streaks; wet roads with puddles and street-light reflections
+- [x] Planar reflections on the lake and the Gulf (High/Ultra)
+- [x] Procedural realistic vehicles: smooth bodies, clear-coat paint, glass, LED lights, grilles, plates, panel gaps, real rims and tyres, LODs; random real-world paint colours for traffic
+
+## Phase 1.7 — Arsenal + store readiness (done)
+
+- [x] 221 weapons in 7 categories from 22 base platforms by 12 invented gunmakers (stats, prices, procedural 3D models)
+- [x] 195 attachments in 6 slots (optics, muzzle, barrel, underbarrel, magazine, stock) that change weapon stats
+- [x] Arsenal store screen (B key / HUD button): browse, buy, equip, fit attachments
+- [x] Shotgun pellets, explosive rockets/grenades with blast damage, silent bows with arrows in flight
+- [x] Installable web app (manifest + icons); Capacitor setup guide for the App Store / Google Play (`mobile/`)
+
+## Phase 1.8 — The whole list (first playable versions)
+
+- [x] Career save on the device (money, garage, weapons, properties, home, tools, jobs, story) + autosave
+- [x] Interaction markers (light columns), minimap blips, GPS waypoints, phone menu (I / 📱)
+- [x] 93 land vehicles in 15 classes (procedural, built on first use), dealerships, 63 parts per car + 20 paints, nitrous
+- [x] 16 boats + 98 boat upgrades, 3 marinas with piers, buoyant boat physics
+- [x] 11 aircraft (6 planes, 5 helicopters) + 17 upgrades, Redgrass Airfield (runway, hangar), arcade flight
+- [x] Every building enterable: generated homes, apartments, offices, stores, bars, warehouses
+- [x] 198 properties for sale (homes = save/sleep point, businesses pay daily), realtor listings
+- [x] 243 tools in 8 trades (heal, armor, repair, flashlight, metal detector, calls, rods, bait, trade tools for jobs)
+- [x] Hunting: 8 species with behaviour (graze/flee/charge), skinning, 3 trading posts
+- [x] Fishing: cast/bite/reel-tension minigame, 4 water types, 23 species, fish market + log
+- [x] 27 jobs with work vehicles, timers, pay per stop and levels
+- [x] 63 story missions in 3 acts (original story: Eli Navarro vs. the Delacroix family, the Ríos crew and Capt. Voss)
 
 ## Phase 2 — World depth
 
 - [ ] Expand map to more of the continent's southern side (multiple states/regions)
 - [ ] Streaming world chunks (needed before the map gets much bigger)
-- [ ] Every building gets an enterable interior (procedural interior generator + hand-made key interiors)
+- [~] Every building gets an enterable interior (procedural generator done; hand-made key interiors to do)
 - [ ] Pedestrians with daily routines
 - [ ] Traffic lights, lane changes, police response
 - [ ] Weather: rain, storms, fog, hurricanes
@@ -69,35 +97,35 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 
 | Item | Target | Done |
 |---|---|---|
-| Assault rifles | 56 | 0 |
-| Shotguns | 13 | 0 |
-| Rocket launchers | 12 | 0 |
-| Bows | 19 | 0 |
-| Sniper rifles | 13 | 0 |
-| Marksman rifles | 45 | 0 |
-| Pistols | 63 | 1 |
-| Weapon attachments | 193+ | 0 |
-| Land vehicles | 93 | 13 |
-| Water vehicles | 16 | 0 |
-| Air vehicles | 11 | 0 |
-| Car upgrades (per car) | 63 | 0 |
-| Boat upgrades | 98 | 0 |
-| Plane upgrades | 17 | 0 |
-| Buyable houses | 198 | 0 |
-| Tools | 240 | 0 |
-| Jobs | 27 | 0 |
-| Story missions | 63 | 0 |
+| Assault rifles | 56 | 56 (variants of 4 platforms) |
+| Shotguns | 13 | 13 (3 platforms) |
+| Rocket launchers | 12 | 12 (2 platforms) |
+| Bows | 19 | 19 (3 platforms) |
+| Sniper rifles | 13 | 13 (2 platforms) |
+| Marksman rifles | 45 | 45 (3 platforms) |
+| Pistols | 63 | 63 (5 platforms) |
+| Weapon attachments | 193+ | 195 (39 parts × 5 tiers) |
+| Land vehicles | 93 | 93 (15 classes, derived from 15 body types) |
+| Water vehicles | 16 | 16 |
+| Air vehicles | 11 | 11 |
+| Car upgrades (per car) | 63 | 63 (48 performance + 15 looks) |
+| Boat upgrades | 98 | 98 (14 systems × 7 levels) |
+| Plane upgrades | 17 | 17 |
+| Buyable houses | 198 | 198 |
+| Tools | 240 | 243 |
+| Jobs | 27 | 27 |
+| Story missions | 63 | 63 (first pass: objectives + short dialogue) |
 
 ## Phase 4 — Systems
 
-- [~] Combat: shooting and aiming done; cover, more weapons, vehicle damage model to do
-- [ ] Hunting: animals with AI, tracking, skinning, trophies
-- [ ] Fishing: casting, fish species by water type, reel mini-game
-- [ ] Economy: money, shops, property ownership
-- [ ] Jobs system framework (27 jobs)
-- [ ] Mission scripting system + story (63 missions, lore bible)
-- [ ] Garage / tuning UI
-- [ ] Save system
+- [~] Combat: shooting, aiming, 7 weapon classes done; cover and a vehicle damage model to do
+- [~] Hunting: animals with AI and skinning done; tracking and trophies to do
+- [x] Fishing: casting, fish species by water type, reel mini-game
+- [x] Economy: money, shops, property ownership
+- [x] Jobs system framework (27 jobs)
+- [~] Mission scripting system + story (63 missions done; cutscenes, voice and hostile AI to do)
+- [x] Garage / tuning UI
+- [x] Save system
 
 ## Phase 5 — Ship
 
@@ -113,13 +141,18 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 
 - Frame rates have only been measured in a software renderer (the cloud box has
   no GPU). Real phone and PC frame rates still need testing on actual devices.
-- Characters are simple shapes for now (no skinned models).
 - Cars can't be damaged yet. Collisions push and slow you down.
 - Traffic has no traffic lights, so cars cross intersections without stopping
   for each other.
 - Buildings are solid for now. The interior system is Phase 2.
 
 ## Session log
+
+- **Graphics push (clouds, weather, cars, arsenal):** volumetric clouds, weather
+  with wet roads, water reflections, procedural realistic cars replacing the
+  Kenney kit, 221 weapons + 195 attachments with a store, installable web app.
+  Not yet done: WebGPU renderer, interiors, missions, boats/planes, vehicle
+  upgrades, real-device frame-rate measurements.
 
 - **Session 1:** Phase 1 built. External asset sites are blocked by the cloud
   environment's network policy, so every texture, model and sound is made in code.

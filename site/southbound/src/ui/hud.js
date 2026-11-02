@@ -119,6 +119,12 @@ export class HUD {
       mm.fillStyle = (performance.now() / 250) % 2 < 1 ? '#3b7bff' : '#ff3b3b';
       for (const c of st.police) mm.fillRect((c.x + WORLD.half) / s - 2, (c.z + WORLD.half) / s - 2, 4, 4);
     }
+    if (st.blips) {
+      for (const b of st.blips) {
+        mm.fillStyle = b.color; mm.strokeStyle = '#000'; mm.lineWidth = 0.8;
+        mm.beginPath(); mm.arc((b.x + WORLD.half) / s, (b.z + WORLD.half) / s, b.size * 0.8, 0, Math.PI * 2); mm.fill(); mm.stroke();
+      }
+    }
     mm.restore();
     // player arrow
     mm.save();
@@ -178,7 +184,8 @@ export class HUD {
       this.stars.forEach((el, i) => el.classList.toggle('on', i < st.wanted));
       this.wantedEl.classList.toggle('flash', !!st.wantedLost);
       this.wicon.textContent = st.weaponIcon;
-      this.ammoEl.textContent = st.ammo || '';
+      const wl = st.ammo ? `${st.weaponName || ''}  ${st.ammo}` : '';
+      if (wl !== this._wl) { this._wl = wl; this.ammoEl.textContent = wl; }
       this.cross.classList.toggle('show', !!st.aiming);
       if (st.hitMarker) { this.cross.classList.add('hit'); clearTimeout(this._hm); this._hm = setTimeout(() => this.cross.classList.remove('hit'), 120); }
     }

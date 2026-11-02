@@ -1,7 +1,8 @@
 // Generates the terrain height field, water levels and the material splat map.
 import { ImprovedNoise } from 'three/addons/math/ImprovedNoise.js';
-import { WORLD, CITY, TOWN, LAKE, FOREST, PLAINS, BAYOU, CHANNELS, coastZ, lakeRadius } from './layout.js';
+import { WORLD, CITY, TOWN, LAKE, AIRFIELD, FOREST, PLAINS, BAYOU, CHANNELS, coastZ, lakeRadius } from './layout.js';
 import { clamp, lerp, smoothstep, distToSeg, nextFrame } from '../util.js';
+import { erode } from './erosion.js';
 
 const perlin = new ImprovedNoise();
 const N = (x, z, s) => perlin.noise(x, z, s);
@@ -80,7 +81,7 @@ export class Heightmap {
     return Math.max(0, this.wl[gz * this.n + gx]);
   }
 
-  async generate(progress) {
+  async generate(progress, opts = {}) {
     const { n, half, cell, h } = this;
     // 1. Base terrain
     for (let j = 0; j < n; j++) {
@@ -88,11 +89,30 @@ export class Heightmap {
       for (let i = 0; i < n; i++) h[j * n + i] = baseHeight(-half + i * cell, z);
       if ((j & 63) === 0) { progress(0.05 + 0.35 * j / n, 'Raising the land'); await nextFrame(); }
     }
+    // 1b. Hydraulic erosion: gullies, ridges and valley floors
+    progress(0.4, 'Eroding hills and valleys');
+    await nextFrame();
+    const drops = opts.erosionDrops ?? 220000;
+    for (let pass = 0; pass < 4; pass++) {
+      erode(this.h, n, { drops: drops / 4, seed: 7 + pass });
+      progress(0.4 + 0.04 * (pass + 1), 'Eroding hills and valleys');
+      await nextFrame();
+    }
+    // soften grid-scale rills the drops leave (keeps the big gullies and valleys)
+    for (let pass = 0; pass < 2; pass++) {
+      const src = h.slice();
+      for (let j = 1; j < n - 1; j++) for (let i = 1; i < n - 1; i++) {
+        const k = j * n + i;
+        h[k] = src[k] * 0.4 + (src[k - 1] + src[k + 1] + src[k - n] + src[k + n]) * 0.1 + (src[k - n - 1] + src[k - n + 1] + src[k + n - 1] + src[k + n + 1]) * 0.05;
+      }
+    }
     // 2. Flatten the city, the town, and the lake basin
     TOWN.height = Math.round(this.height(TOWN.x0 + 144, TOWN.z0 + 108)) + 1;
     LAKE.level = Math.round(this.height(LAKE.x, LAKE.z)) - 1;
     this.flattenRect(CITY.x0 - 8, CITY.z0 - 8, CITY.x0 + CITY.nx * CITY.pitch + 8, CITY.z0 + CITY.nz * CITY.pitch + 8, CITY.height, 70);
     this.flattenRect(TOWN.x0 - 6, TOWN.z0 - 6, TOWN.x0 + TOWN.nx * TOWN.pitch + 6, TOWN.z0 + TOWN.nz * TOWN.pitch + 6, TOWN.height, 60);
+    AIRFIELD.height = Math.round(this.height((AIRFIELD.x0 + AIRFIELD.x1) / 2, AIRFIELD.z)) + 1;
+    this.flattenRect(AIRFIELD.x0 - 40, AIRFIELD.z - 70, AIRFIELD.x1 + 40, AIRFIELD.z + 40, AIRFIELD.height, 90);
     this.carveLake();
     progress(0.45, 'Filling Lake Arden');
     await nextFrame();
@@ -242,6 +262,8 @@ export class Heightmap {
         const forest = Math.max(forestMask(x, z), bay * 0.9);
         const dry = clamp(plainsMask(x, z) * 0.9 + fbm(x * 0.004, z * 0.004, 2, 51) * 0.6, 0, 1) * (1 - forest);
         let paved = splat[k * 4 + 3] / 255;
+        if (x > AIRFIELD.x0 && x < AIRFIELD.x1 && Math.abs(z - AIRFIELD.z) < AIRFIELD.w / 2) paved = 1;
+        if (x > AIRFIELD.x1 - 120 && x < AIRFIELD.x1 && z > AIRFIELD.z - 60 && z < AIRFIELD.z - 16) paved = 1; // apron
         if (x > cx0 && x < cx1 && z > cz0 && z < cz1) paved = 1;
         if (x > tx0 && x < tx1 && z > tz0 && z < tz1) paved = Math.max(paved, 0.85);
         splat[k * 4] = sand * 255;

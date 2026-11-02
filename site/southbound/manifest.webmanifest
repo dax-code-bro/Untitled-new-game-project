@@ -1,0 +1,15 @@
+{
+  "name": "Southbound",
+  "short_name": "Southbound",
+  "description": "Open-world action game set in the Gulf Coast state of Calvera.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#120d0a",
+  "theme_color": "#120d0a",
+  "icons": [
+    { "src": "assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "assets/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

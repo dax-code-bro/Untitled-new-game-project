@@ -23,6 +23,7 @@ export const worldUniforms = {
   uHeightTex: { value: null },
   uSplatTex: { value: null },
   uWorldHalf: { value: WORLD.half },
+  uWet: { value: 0 }, // 0 dry .. 1 soaked (weather)
 };
 
 export function createTerrain(hm, quality, scene, surf) {
@@ -124,6 +125,7 @@ function makeTerrainMaterial(quality, surf) {
   const size = (k) => (surf ? surf[k].size : 3).toFixed(2);
   mat.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, worldUniforms);
+    shader.fragmentShader = 'uniform float uWet;\n' + shader.fragmentShader;
     for (const k of L) {
       shader.uniforms[`t_${k}C`] = { value: surf ? surf[k].color : null };
       shader.uniforms[`t_${k}N`] = { value: surf ? surf[k].normal : null };
@@ -140,15 +142,26 @@ ${GLSL_NOISE}
 float sbRough; vec3 sbNrm; float sbFar;
 // Faithful sample at true scale. Far away, blend in a rotated 4x-larger
 // sample to hide repetition (never near the camera, where it would blur).
+// Two equally sharp samples (one rotated + offset) mixed by a soft noise mask:
+// breaks the tiling grid without blurring near the camera.
+float sbBomb(vec2 p){ return smoothstep(0.3, 0.7, sbNoise(p * 0.05) * 0.7 + sbNoise(p * 0.13) * 0.3); }
+vec2 sbRot(vec2 uv){ return mat2(0.62, -0.78, 0.78, 0.62) * uv + vec2(0.37, 0.71); }
 vec3 layerC(sampler2D t, vec2 p, float scale){
-  vec3 a = texture2D(t, p / scale).rgb;
+  vec2 uv = p / scale;
+  vec3 a = mix(texture2D(t, uv).rgb, texture2D(t, sbRot(uv)).rgb, sbBomb(p));
   if (sbFar > 0.001) {
     vec3 b = texture2D(t, mat2(0.8, -0.6, 0.6, 0.8) * p / (scale * 4.3)).rgb;
     a = mix(a, b, sbFar * 0.5);
   }
   return a;
 }
-vec3 layerN(sampler2D t, vec2 p, float scale){ return texture2D(t, p / scale).xyz * 2.0 - 1.0; }
+vec3 layerN(sampler2D t, vec2 p, float scale){
+  vec2 uv = p / scale;
+  vec3 a = texture2D(t, uv).xyz * 2.0 - 1.0;
+  vec3 b = texture2D(t, sbRot(uv)).xyz * 2.0 - 1.0;
+  b.xy = mat2(0.62, 0.78, -0.78, 0.62) * b.xy; // undo the sample rotation
+  return mix(a, b, sbBomb(p));
+}
 `)
       .replace('#include <color_fragment>', `#include <color_fragment>
 {
@@ -197,7 +210,7 @@ vec3 layerN(sampler2D t, vec2 p, float scale){ return texture2D(t, p / scale).xy
   }
   sbNrm = nt;
 }`)
-      .replace('#include <roughnessmap_fragment>', 'float roughnessFactor = sbRough;')
+      .replace('#include <roughnessmap_fragment>', 'float roughnessFactor = mix(sbRough, sbRough * 0.55, uWet); diffuseColor.rgb *= 1.0 - uWet * 0.3;')
       .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
 {
   vec3 N = normalize(vWNrm);

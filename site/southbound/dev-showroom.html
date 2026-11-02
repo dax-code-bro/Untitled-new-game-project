@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Southbound showroom (dev)</title>
+<style>html,body{margin:0;background:#000;overflow:hidden}canvas{display:block}</style>
+<script type="importmap">
+{ "imports": { "three": "./vendor/three/build/three.module.js", "three/addons/": "./vendor/three/addons/" } }
+</script>
+</head>
+<body>
+<script type="module">
+// Dev tool: renders the sky and every procedural vehicle without loading the world.
+//   dev-showroom.html?hour=12&view=cars|sky|one&car=sedan&q=high
+import * as THREE from 'three';
+import { installAtmosphere } from './src/world/atmosphere.js';
+import { createSky } from './src/world/sky.js';
+import { PRESETS } from './src/settings.js';
+import { buildCar, CAR_TYPES, randomPaint, FIXED_PAINT, SECOND_PAINT } from './src/assets/carbuilder.js';
+
+const qs = new URLSearchParams(location.search);
+const qkey = qs.get('q') || 'high';
+const q = { ...PRESETS[qkey], key: qkey };
+installAtmosphere();
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.body.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(+(qs.get('fov') || 50), innerWidth / innerHeight, 0.1, 20000);
+console.log('start', performance.now()|0);
+const sky = createSky(renderer, scene, q);
+console.log('sky created', performance.now()|0);
+sky.hour = +(qs.get('hour') || 12);
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), new THREE.MeshStandardMaterial({ color: 0x3a3a38, roughness: 0.85 }));
+ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true;
+scene.add(ground);
+const view = qs.get('view') || 'cars';
+const t0 = performance.now();
+const cars = [];
+if (view !== 'sky') {
+  const list = view === 'one' ? [qs.get('car') || 'sedan'] : CAR_TYPES;
+  let i = 0, rnd = 0.37;
+  for (const t of list) {
+    const car = buildCar(t, q);
+    const u = car.getObjectByName('body').material.userData.u;
+    if (view === 'one') { car.position.set(0, 0, 0); }
+    const p = FIXED_PAINT[t] || randomPaint(() => (rnd = (rnd * 9301 + 49297) % 233280 / 233280 + 0.0001, (rnd * 7.13) % 1));
+    u.uPaint.value.setRGB(p[0], p[1], p[2]); u.uMetal.value = p[3];
+    if (SECOND_PAINT[t]) u.uPaint2.value.setRGB(...SECOND_PAINT[t]);
+    u.uLights.value = sky.hour > 19 || sky.hour < 6 ? 1 : 0;
+    const col = i % 5, row = Math.floor(i / 5);
+    if (view !== 'one') car.position.set((col - 2) * 4.2, 0, -row * 10);
+    car.rotation.y = view === 'one' ? +(qs.get('yaw') || 0.6) : 0.5;
+    scene.add(car); cars.push(car); i++;
+  }
+}
+console.log('built cars in', (performance.now() - t0).toFixed(0), 'ms; tris', cars.reduce((a, c) => a + c.getObjectByName('body').levels[0].object.geometry.index.count / 3, 0));
+const cam = (qs.get('cam') || (view === 'sky' ? '0,1.7,0,0,40,-200' : view === 'one' ? '4.5,1.4,5.5,0,0.7,0' : '0,6,16,0,1,-8')).split(',').map(Number);
+camera.position.set(cam[0], cam[1], cam[2]);
+camera.lookAt(cam[3], cam[4], cam[5]);
+const focus = new THREE.Vector3();
+let frames = 0;
+function loop() {
+  sky.update(1 / 60, 0, focus);
+  if (frames < 3) console.log('updated', frames, performance.now()|0);
+  renderer.render(scene, camera);
+  if (frames < 3) { renderer.getContext().finish(); console.log('rendered', frames, performance.now()|0); }
+  if (++frames === 8) window.__done = true;
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>

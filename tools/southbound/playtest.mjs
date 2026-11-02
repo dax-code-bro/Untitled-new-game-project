@@ -77,6 +77,7 @@ if (scenario === 'smoke') {
     if (s.only && s.only !== preset) continue;
     await sb((s) => {
       window.SB.setHour(s.hour ?? 10);
+      if (s.weather) window.SB.setWeather(s.weather);
       if (s.drive) window.SB.enterNearest();
       window.SB.teleport(s.x, s.z, s.yaw ?? 0);
       window.SB.lookAt(s.yaw ?? 0, s.pitch ?? 0.15);
@@ -118,6 +119,7 @@ if (scenario === 'capture') {
     if (seg.setup) await sb((st) => {
       const S = window.SB;
       if (st.hour !== undefined) S.setHour(st.hour);
+      if (st.weather) S.setWeather(st.weather);
       if (st.teleport) S.teleport(...st.teleport);
       if (st.look) S.lookAt(...st.look);
       if (st.enter) S.enterNearest();

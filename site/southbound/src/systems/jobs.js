@@ -1,0 +1,160 @@
+// 27 jobs. Each job board starts a shift: get the work vehicle (or your
+// tools), follow the stops before the clock runs out, get paid per stop.
+// Pay grows with your level in that job (every 3 shifts).
+import { CITY, TOWN, LAKE, PLAINS, FOREST, AIRFIELD } from '../world/layout.js';
+import { roadPointAround, nearestRoad, spawnParked, money, keyHint } from './world-util.js';
+import { BOATS, AIRCRAFT } from '../entities/craft.js';
+
+const C = (i, j) => [CITY.x0 + i * CITY.pitch, CITY.z0 + j * CITY.pitch];
+const T = (i, j) => [TOWN.x0 + i * TOWN.pitch, TOWN.z0 + j * TOWN.pitch];
+// kind: route (drive/walk to stops), catch (fish N), hunt (skin N), bounty
+export const JOBS = [
+  { id: 'taxi', name: 'Taxi Driver', at: C(1, 3), veh: 'taxi', area: 'city', stops: 4, pay: 90, timer: 300, text: 'Pick up and drop off fares' },
+  { id: 'bus', name: 'Bus Driver', at: C(0, 1), veh: 'bus_01', area: 'city', stops: 6, wait: 3, pay: 60, timer: 420, text: 'Run the downtown loop and stop at every shelter' },
+  { id: 'parcel', name: 'Parcel Courier', at: C(4, 0), veh: 'delivery', area: 'city', stops: 5, wait: 2, pay: 70, timer: 360, text: 'Drop parcels around Port Calvera' },
+  { id: 'pizza', name: 'Pizza Delivery', at: C(3, 2), veh: 'compact_02', area: 'city', stops: 3, pay: 55, timer: 150, text: 'Hot pizza, tight clock' },
+  { id: 'trucker', name: 'Long-haul Trucker', at: T(0, 3), veh: 'truck_02', area: 'far', stops: 2, wait: 4, pay: 420, timer: 600, text: 'Haul freight between the city, the town and the airfield' },
+  { id: 'paramedic', name: 'Paramedic', at: C(8, 2), veh: 'ambulance', area: 'city', stops: 3, wait: 4, back: true, pay: 160, timer: 240, siren: true, text: 'Reach the patient, then get them to Medical Center' },
+  { id: 'fire', name: 'Firefighter', at: C(6, 0), veh: 'firetruck', area: 'city', stops: 2, wait: 8, back: true, pay: 220, timer: 300, siren: true, text: 'Put out fires around the city' },
+  { id: 'police', name: 'Police Patrol', at: C(0, 1), veh: 'police', area: 'city', stops: 5, pay: 110, timer: 400, siren: true, text: 'Patrol the checkpoints' },
+  { id: 'tow', name: 'Tow Truck Operator', at: C(7, 5), veh: 'tow-truck', area: 'city', stops: 2, wait: 5, back: true, pay: 180, timer: 360, text: 'Hook up breakdowns and haul them to the impound' },
+  { id: 'garbage', name: 'Garbage Collector', at: C(2, 6), veh: 'garbage-truck', area: 'city', stops: 6, wait: 2, pay: 50, timer: 420, text: 'Empty the bins on the route' },
+  { id: 'roadcrew', name: 'Road Crew', at: C(5, 6), veh: 'pickup_02', area: 'city', stops: 3, wait: 6, pay: 120, timer: 400, text: 'Fix potholes at the work sites', tool: 'build' },
+  { id: 'mechanic', name: 'Mechanic', at: C(2, 6), veh: null, area: 'near', stops: 3, wait: 6, pay: 140, timer: 300, tool: 'mech', text: 'Fix customer cars around the shop' },
+  { id: 'messenger', name: 'Bike Messenger', at: C(5, 3), veh: null, area: 'downtown', stops: 4, pay: 45, timer: 200, text: 'Run envelopes between offices on foot' },
+  { id: 'security', name: 'Security Guard', at: C(6, 4), veh: null, area: 'near', stops: 5, wait: 3, pay: 50, timer: 360, text: 'Check every door on your round' },
+  { id: 'charter', name: 'Fishing Charter Captain', at: 'marina', boat: 'center-console', area: 'lake', stops: 1, wait: 20, back: true, pay: 600, timer: 600, text: 'Take clients out to the fishing grounds and back' },
+  { id: 'fisherman', name: 'Commercial Fisherman', at: 'marina', kind: 'catch', need: 3, pay: 150, timer: 900, text: 'Land three fish for the market' },
+  { id: 'guide', name: 'Hunting Guide', at: [PLAINS.x - 120, PLAINS.z + 70], kind: 'hunt', need: 2, pay: 300, timer: 900, text: 'Bag and skin two animals for your clients' },
+  { id: 'duster', name: 'Crop Duster Pilot', at: [AIRFIELD.x1 - 20, AIRFIELD.z - 50], air: 'crop-duster', area: 'plains', stops: 5, fly: true, pay: 260, timer: 420, text: 'Spray the fields (fly low through the markers)' },
+  { id: 'tours', name: 'Air Tour Pilot', at: [AIRFIELD.x1 - 30, AIRFIELD.z - 50], air: 'tour-heli', area: 'landmarks', stops: 4, fly: true, back: true, pay: 380, timer: 600, text: 'Show tourists the lake, downtown and the coast' },
+  { id: 'medevac', name: 'Medevac Pilot', at: [AIRFIELD.x1 - 40, AIRFIELD.z - 50], air: 'medevac', area: 'far', stops: 1, fly: true, land: true, back: true, pay: 700, timer: 480, text: 'Fly to the accident, land, and bring the patient back' },
+  { id: 'lumber', name: 'Lumberjack', at: [FOREST.x + 280, FOREST.z + 240], veh: null, area: 'forest', stops: 4, wait: 6, pay: 110, timer: 500, tool: 'yard', text: 'Fell the marked trees (needs a chainsaw)' },
+  { id: 'landscaper', name: 'Landscaper', at: T(1, 1), veh: 'pickup_04', area: 'town', stops: 4, wait: 5, pay: 95, timer: 480, tool: 'yard', text: 'Mow and trim yards around Mill Creek' },
+  { id: 'construction', name: 'Construction Worker', at: C(7, 1), veh: null, area: 'near', stops: 4, wait: 6, pay: 120, timer: 420, tool: 'build', text: 'Frame, drill and fasten at the site' },
+  { id: 'electrician', name: 'Electrician', at: C(3, 5), veh: 'van_02', area: 'city', stops: 3, wait: 6, pay: 160, timer: 480, tool: 'elec', text: 'Service calls: wiring and panels' },
+  { id: 'plumber', name: 'Plumber', at: C(4, 5), veh: 'van_03', area: 'city', stops: 3, wait: 6, pay: 150, timer: 480, tool: 'plumb', text: 'Service calls: leaks and clogs' },
+  { id: 'ranch', name: 'Ranch Hand', at: [PLAINS.x + 200, PLAINS.z - 140], veh: 'offroad_01', area: 'plains', stops: 5, pay: 85, timer: 480, text: 'Check fences and round up strays across the plains' },
+  { id: 'bounty', name: 'Bounty Hunter', at: C(0, 2), kind: 'bounty', pay: 900, timer: 600, text: 'Track down the fugitive and take them out' },
+];
+
+export function installJobs(game) {
+  const { career, interact, hud, player, hm, graph } = game;
+  const P = career.p;
+  let job = null; // { def, stop, stops[], t, veh, marker, waitT, base }
+  const lvl = (id) => (P.jobs[id] || { level: 1 }).level;
+  const marina = () => game.marineAir?.marinas?.[0];
+  const where = (def) => def.at === 'marina' ? (marina() ? [marina().land.x + 3, marina().land.z - 5] : [LAKE.x + LAKE.r, LAKE.z]) : def.at;
+
+  const stopPoints = (def, from) => {
+    const pts = [];
+    const near = (cx, cz, r0, r1) => { const p = roadPointAround(graph, cx, cz, r0, r1); return [p.x, p.z]; };
+    for (let i = 0; i < (def.stops || 0); i++) {
+      if (def.area === 'city') pts.push(near(CITY.x0 + CITY.nx * CITY.pitch / 2, CITY.z0 + CITY.nz * CITY.pitch / 2, 40, 330));
+      else if (def.area === 'downtown') pts.push(near(CITY.downtown[0], CITY.downtown[1], 20, 160));
+      else if (def.area === 'town') pts.push(near(TOWN.x0 + 144, TOWN.z0 + 108, 20, 200));
+      else if (def.area === 'near') { const a = Math.random() * 6.28, r = 15 + Math.random() * 45; pts.push([from[0] + Math.cos(a) * r, from[1] + Math.sin(a) * r]); }
+      else if (def.area === 'forest') { const a = Math.random() * 6.28, r = 40 + Math.random() * 160; pts.push([FOREST.x + 200 + Math.cos(a) * r, FOREST.z + 180 + Math.sin(a) * r]); }
+      else if (def.area === 'plains') { const a = Math.random() * 6.28, r = 80 + Math.random() * 380; pts.push([PLAINS.x + Math.cos(a) * r, PLAINS.z + Math.sin(a) * r]); }
+      else if (def.area === 'lake') { const a = Math.random() * 6.28; pts.push([LAKE.x + Math.cos(a) * LAKE.r * 0.45, LAKE.z + Math.sin(a) * LAKE.r * 0.45]); }
+      else if (def.area === 'landmarks') pts.push([[LAKE.x, LAKE.z], CITY.downtown, [CITY.x0 + 400, 1500], [TOWN.x0 + 144, TOWN.z0 + 108]][i % 4]);
+      else pts.push([[TOWN.x0 + 144, TOWN.z0 + 120], [CITY.x0 + 200, CITY.z0 + 200], [AIRFIELD.x1 - 100, AIRFIELD.z - 40], [PLAINS.x, PLAINS.z]][(i + Math.floor(Math.random() * 4)) % 4]);
+    }
+    if (def.back) pts.push(def.id === 'paramedic' || def.id === 'medevac' ? [CITY.x0 + CITY.nx * CITY.pitch + 24, CITY.z0 + 2 * CITY.pitch] : from);
+    return pts;
+  };
+
+  const setMarker = () => {
+    if (job.marker) interact.remove(job.marker);
+    const [x, z] = job.stops[job.stop];
+    const r = job.def.fly ? 26 : job.def.veh === null || job.def.kind ? 3 : 7;
+    job.marker = interact.add({ x, z, r, any: true, marker: true, height: job.def.fly ? 60 : 6, color: 0xffe040, blip: { color: '#ffe040', size: 7, global: true }, label: () => '', use: () => {} });
+    job.waitT = job.def.wait || 0;
+  };
+  const finish = (ok, msg) => {
+    if (job.marker) interact.remove(job.marker);
+    if (job.target && !job.target.dead) job.target.mode = 'walk';
+    const d = job.def;
+    if (ok) {
+      const j = P.jobs[d.id] || (P.jobs[d.id] = { level: 1, xp: 0, runs: 0 });
+      j.runs++; j.xp++; if (j.xp >= 3) { j.xp = 0; j.level++; hud.toast(`${d.name} level ${j.level}!`, 2.5); }
+      P.stats.jobsDone++;
+      const bonus = Math.round(job.earned * 0.25 * Math.max(0, job.t / d.timer));
+      if (bonus > 0) career.earn(bonus, 'time bonus');
+      hud.bigMessage('SHIFT COMPLETE', `${d.name} · earned ${money(job.earned + bonus)}`, 3);
+    } else hud.bigMessage('SHIFT OVER', msg || d.name, 2.5);
+    if (job.veh && d.siren) job.veh.siren = false;
+    job = null; career.saveSoon();
+  };
+
+  const start = (def) => {
+    if (job) return finish(false, 'You quit the shift');
+    if (def.tool && !game.tools.hasTrade(def.tool)) return hud.toast(`You need ${def.tool === 'mech' ? 'mechanic' : def.tool === 'build' ? 'construction' : def.tool === 'elec' ? 'electrical' : def.tool === 'plumb' ? 'plumbing' : 'yard'} tools (hardware store)`, 3);
+    const from = where(def);
+    job = { def, stop: 0, t: def.timer, earned: 0, base: def.pay * (1 + (lvl(def.id) - 1) * 0.15), count0: def.kind === 'catch' ? P.stats.fishCaught : P.stats.animals };
+    if (def.kind === 'bounty') {
+      const p = roadPointAround(graph, CITY.x0 + 380, CITY.z0 + 280, 60, 380);
+      job.target = game.peds.spawnAt(p.x, p.z, player.pos);
+      if (job.target) { job.target.bounty = true; job.target.hp = (job.target.hp || 100) * 2; }
+      job.stops = [[p.x, p.z]]; setMarker();
+    } else if (def.kind) { job.stops = []; }
+    else {
+      job.stops = stopPoints(def, from);
+      // the work vehicle
+      if (def.veh) { const r = nearestRoad(graph, from[0], from[1]); job.veh = spawnParked(game, def.veh, r.x, r.z, Math.atan2(r.tx, r.tz)); game.enterVehicle(job.veh); }
+      if (def.boat) { job.veh = game.marineAir.spawnCraft(BOATS.find((b) => b.id === def.boat), 'boat', { x: marina().water.x, z: marina().water.z, h: marina().dir }); game.enterVehicle(job.veh); }
+      if (def.air) { const e = AIRCRAFT.find((a) => a.id === def.air); job.veh = game.marineAir.spawnCraft(e, 'air', { x: AIRFIELD.x1 - 90, z: AIRFIELD.z, h: -Math.PI / 2 }); game.enterVehicle(job.veh); }
+      if (job.veh && def.siren) job.veh.siren = true;
+      setMarker();
+    }
+    hud.bigMessage(def.name.toUpperCase(), def.text, 3);
+  };
+
+  for (const def of JOBS) {
+    const at = where(def);
+    interact.add({ x: at[0], z: at[1], color: 0xffe040, blip: { color: '#ffe040', size: 4 }, show: () => !game.S.indoors && (!job || job.def === def),
+      label: () => job && job.def === def ? `${keyHint(game)} quit the ${def.name} shift` : `${keyHint(game)} work as ${def.name} (level ${lvl(def.id)} · ~${money((def.pay * (1 + (lvl(def.id) - 1) * 0.15)) * (def.stops || def.need || 1))})`,
+      use: () => start(def) });
+  }
+
+  return {
+    JOBS, get active() { return job; },
+    update(dt) {
+      if (!job || game.S.frozen) return '';
+      const d = job.def;
+      job.t -= dt;
+      if (job.t <= 0) { finish(false, 'Out of time'); return ''; }
+      const clock = `${Math.floor(job.t / 60)}:${String(Math.floor(job.t % 60)).padStart(2, '0')}`;
+      if (d.kind === 'catch' || d.kind === 'hunt') {
+        const got = (d.kind === 'catch' ? P.stats.fishCaught : P.stats.animals) - job.count0;
+        if (got >= d.need) { career.earn(Math.round(job.base * d.need), d.name); job.earned = job.base * d.need; finish(true); return ''; }
+        return `${d.name.toUpperCase()} · ${got}/${d.need} · ${clock}`;
+      }
+      if (d.kind === 'bounty') {
+        const tg = job.target;
+        if (!tg) { finish(false, 'The trail went cold'); return ''; }
+        if (job.marker) { job.marker.x = tg.pos.x; job.marker.z = tg.pos.z; }
+        if (tg.mode === 'dead' || tg.dead || tg.hp <= 0) { career.earn(Math.round(job.base), 'bounty'); job.earned = job.base; finish(true); return ''; }
+        return `BOUNTY · fugitive on the map · ${clock}`;
+      }
+      const inJobVeh = !job.veh || game.vehicle() === job.veh;
+      if (job.veh && !inJobVeh) return `${d.name.toUpperCase()} · get back in the vehicle · ${clock}`;
+      const [x, z] = job.stops[job.stop];
+      const pos = job.veh ? job.veh.pos : player.pos;
+      const dist = Math.hypot(pos.x - x, pos.z - z);
+      const reach = job.marker.r;
+      if (dist < reach && (!d.fly || (d.land && job.stop === 0 ? job.veh.alt < 2.5 : job.veh.alt < (d.area === 'plains' ? 30 : 120)))) {
+        const still = !job.veh || job.veh.isAir || Math.abs(job.veh.speed) < 1.5;
+        if (still) job.waitT -= dt;
+        if (job.waitT <= 0) {
+          const pay = Math.round(job.base);
+          career.earn(pay, d.name); job.earned += pay;
+          job.stop++;
+          if (job.stop >= job.stops.length) { finish(true); return ''; }
+          setMarker();
+        } else return `${d.name.toUpperCase()} · working… ${Math.ceil(job.waitT)}s`;
+      }
+      return `${d.name.toUpperCase()} · stop ${job.stop + 1}/${job.stops.length} · ${Math.round(dist)} m · ${clock}`;
+    },
+  };
+}

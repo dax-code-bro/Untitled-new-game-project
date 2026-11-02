@@ -4,7 +4,7 @@ import { Human, locomotion } from './human.js';
 import { clamp, wrapAngle } from '../util.js';
 
 export class Player {
-  constructor(scene, lib, modelId = 'm_casual') {
+  constructor(scene, lib, modelId = 'hero') {
     this.h = new Human(lib, modelId, { alwaysVisible: true });
     this.char = { root: this.h.root };
     scene.add(this.h.root);

@@ -2,6 +2,17 @@
   "private": true,
   "name": "southbound-tools",
   "type": "module",
-  "scripts": { "build": "node build.mjs" },
-  "devDependencies": { "esbuild": "0.24.0", "@gltf-transform/core": "4.1.1", "@gltf-transform/functions": "4.1.1", "@gltf-transform/extensions": "4.1.1" }
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "devDependencies": {
+    "@gltf-transform/core": "4.1.1",
+    "@gltf-transform/extensions": "4.1.1",
+    "@gltf-transform/functions": "4.1.1",
+    "esbuild": "0.24.0"
+  },
+  "dependencies": {
+    "meshoptimizer": "^0.21.0",
+    "sharp": "^0.33.5"
+  }
 }

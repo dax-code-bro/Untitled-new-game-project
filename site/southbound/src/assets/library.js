@@ -1,13 +1,17 @@
-// Loads the CC0 model packs (Quaternius people + animations, Kenney cars) and
+// Loads the CC0 model packs (MakeHuman people, Quaternius animations), builds the
+// procedural vehicles, and
 // prepares them: animations are retargeted once per skeleton family.
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { bakeClips, UAL_TO_MODULAR } from './retarget.js';
+import { bakeClips, UAL_TO_MH } from './retarget.js';
+import { buildCar } from './carbuilder.js';
+import { loadOpen, K } from './open.js';
 
-export const PEOPLE_ALL = ['m_casual', 'm_casual2', 'm_suit', 'm_worker', 'm_punk', 'm_beach', 'f_casual', 'f_formal', 'f_suit', 'f_worker', 'f_punk', 'm_swat'];
-export const PEOPLE_LITE = ['m_casual', 'm_suit', 'f_casual', 'f_formal', 'm_swat'];
+// Realistic people built from CC0 MakeHuman assets (tools/southbound/build-human.py)
+export const PEOPLE_ALL = ['mh_m1', 'mh_m2', 'mh_m3', 'mh_m4', 'mh_f1', 'mh_f2', 'mh_cop'];
+export const PEOPLE_LITE = ['mh_m2', 'mh_f1', 'mh_cop'];
 
-// Real-world lengths + handling for each Kenney vehicle
+// Real-world lengths + handling for each vehicle (bodies come from carbuilder.js)
 export const VEHICLES = {
   sedan: { name: 'Meridian Sedan', len: 4.7, accel: 9, top: 50, grip: 7.5, weight: 6 },
   'sedan-sports': { name: 'Vantor GT', len: 4.6, accel: 13, top: 72, grip: 9, weight: 2 },
@@ -24,45 +28,91 @@ export const VEHICLES = {
   'garbage-truck': { name: 'City Sanitation', len: 8.2, accel: 5.5, top: 32, grip: 5, weight: 0.4 },
 };
 
+// The body types built at load time (catalog models are built on first use)
+export const BASE_CAR_IDS = Object.keys(VEHICLES);
+
+// Wrap the concept car: wheels under pivots named like the game expects, nose toward +z
+function prepareConcept(scene) {
+  const root = new THREE.Group();
+  const model = scene;
+  root.add(model);
+  root.updateMatrixWorld(true);
+  const box = new THREE.Box3();
+  const center = (name) => { const n = model.getObjectByName(name); return n ? box.setFromObject(n).getCenter(new THREE.Vector3()) : null; };
+  const head = center('BodyHeadlights'), tail = center('BodyTaillights');
+  if (head && tail && head.z < tail.z) { model.rotation.y = Math.PI; root.updateMatrixWorld(true); }
+  for (const [k, name] of [['FrontL', 'wheel-front-left'], ['FrontR', 'wheel-front-right'], ['RearL', 'wheel-back-left'], ['RearR', 'wheel-back-right']]) {
+    const tire = model.getObjectByName('Wheel' + k);
+    if (!tire) continue;
+    const c = box.setFromObject(tire).getCenter(new THREE.Vector3());
+    const pivot = new THREE.Group(); pivot.name = name; pivot.position.copy(c);
+    root.add(pivot); pivot.updateMatrixWorld(true);
+    for (const part of ['', 'Rim', 'BrakeDisc']) { const n = model.getObjectByName('Wheel' + k + part); if (n) pivot.attach(n); }
+  }
+  root.traverse((o) => {
+    if (!o.isMesh) return;
+    o.castShadow = true; o.receiveShadow = true;
+    // physical transmission re-renders the whole scene every frame; tinted glass looks the same on a car
+    const m = o.material;
+    if (m && m.transmission > 0) { m.transmission = 0; m.transparent = true; m.opacity = 0.32; m.roughness = Math.min(m.roughness, 0.05); m.depthWrite = false; }
+  });
+  root.userData.hasLights = true; root.userData.paintable = true;
+  return root;
+}
+
+function tunePerson(scene) {
+  scene.traverse((o) => {
+    if (!o.isMesh) return;
+    o.castShadow = true; o.receiveShadow = true;
+    const m = o.material;
+    if (m.name === 'skin') m.roughness = 0.5;
+    if (m.name === 'eyes') m.roughness = 0.05;
+    if (m.alphaTest > 0) { m.alphaTest = 0.4; m.side = THREE.DoubleSide; }
+  });
+}
+
 export async function loadLibrary(quality, progress = () => {}) {
   const loader = new GLTFLoader();
   const base = 'assets/';
   const people = quality.label === 'Phone' || quality.label === 'Low' ? PEOPLE_LITE : PEOPLE_ALL;
-  const carIds = Object.keys(VEHICLES);
+  const carIds = BASE_CAR_IDS;
   const total = people.length + carIds.length + 1;
   let done = 0;
   const step = (what) => progress(++done / total, what);
 
-  const lib = { people: {}, cars: {}, clips: {}, peopleIds: people.filter((p) => p !== 'm_swat') };
+  const lib = { people: {}, cars: {}, clips: {}, peopleIds: people.filter((p) => p !== 'mh_cop'), quality };
 
   const anims = await loader.loadAsync(base + 'anims/ual.glb');
   step('Loading animations');
-  await Promise.all(carIds.map(async (id) => {
-    const g = await loader.loadAsync(`${base}cars/${id}.glb`);
-    g.scene.traverse((o) => {
-      if (o.isMesh) {
-        o.castShadow = true; o.receiveShadow = true;
-        // Kenney cars use one colour-map atlas; render it as clear-coated paint
-        const old = o.material;
-        o.material = new THREE.MeshPhysicalMaterial({ map: old.map, color: old.color, roughness: 0.32, metalness: 0.25, clearcoat: 1, clearcoatRoughness: 0.06 });
-        old.dispose();
-      }
-    });
-    lib.cars[id] = g.scene;
-    step('Loading vehicles');
-  }));
+  // the realistic concept car (Khronos glTF sample, CC-BY 4.0 / CC0 base) on PC
+  if (quality.key !== 'phone' && quality.key !== 'low') {
+    const g = await loadOpen(K('CarConcept'));
+    if (g) lib.cars.concept = prepareConcept(g.scene);
+  }
+  for (const id of carIds) {
+    lib.cars[id] = buildCar(id, quality);
+    step('Building vehicles');
+    await new Promise((r) => setTimeout(r, 0)); // let the loading bar repaint
+  }
   await Promise.all(people.map(async (id) => {
     const g = await loader.loadAsync(`${base}people/${id}.glb`);
-    g.scene.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = false; } });
-    lib.people[id] = { scene: g.scene, family: id[0] === 'f' ? 'women' : 'men' };
+    tunePerson(g.scene);
+    if (id === 'mh_cop') {
+      // police uniform: dark navy shirt and trousers
+      g.scene.traverse((o) => { if (o.isMesh && o.material.name === 'suit') { o.material = o.material.clone(); o.material.color.set(0x34405a); } });
+    }
+    lib.people[id] = { scene: g.scene, family: id.startsWith('mh_f') ? 'mh_f' : 'mh_m' };
     step('Loading people');
   }));
-  // Retarget the animation library once per skeleton family
-  for (const fam of ['men', 'women']) {
+  // The player
+  const hero = await loader.loadAsync(base + 'people/hero.glb');
+  tunePerson(hero.scene);
+  lib.people.hero = { scene: hero.scene, family: 'mh_m' };
+  // Retarget the animation library once per body type (men/women differ in height)
+  for (const fam of ['mh_m', 'mh_f']) {
     const sample = Object.values(lib.people).find((p) => p.family === fam);
     if (!sample) continue;
-    const clips = bakeClips(anims.scene, anims.animations, sample.scene, UAL_TO_MODULAR);
-    lib.clips[fam] = Object.fromEntries(clips.map((c) => [c.name, c]));
+    lib.clips[fam] = Object.fromEntries(bakeClips(anims.scene, anims.animations, sample.scene, UAL_TO_MH).map((c) => [c.name, c]));
   }
   return lib;
 }

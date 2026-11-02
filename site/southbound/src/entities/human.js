@@ -22,7 +22,7 @@ export class Human {
         if (!opts.alwaysVisible) { o.geometry.computeBoundingSphere(); o.geometry.boundingSphere.radius = Math.max(o.geometry.boundingSphere.radius, 1.2); }
       }
     });
-    this.handR = this.model.getObjectByName('HandR');
+    this.handR = this.model.getObjectByName('HandR') || this.model.getObjectByName('wristR');
     this.head = this.model.getObjectByName('Head');
     this.mixer.addEventListener('finished', (e) => { if (e.action === this.current) this.locked = 0; });
     this.play('Idle_Loop', 0);

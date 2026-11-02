@@ -54,11 +54,8 @@ let total = 0;
 for (const [id, p] of Object.entries(PEOPLE)) {
   total += await pack(path.join(dl, 'quaternius-showcase/public/glb', p + '.glb'), path.join(out, 'people', id + '.glb'), { quantize: true });
 }
-for (const id of CARS) {
-  total += await pack(path.join(dl, 'carkit/Models/GLB format', id + '.glb'), path.join(out, 'cars', id + '.glb'), { quantize: true });
-}
 total += await pack(path.join(dl, 'ual/glTF/AnimationLibrary_Godot_Standard.gltf'), path.join(out, 'anims/ual.glb'), { animationsOnly: true });
-for (const d of ['people', 'cars', 'anims']) {
+for (const d of ['people', 'anims']) {
   for (const f of fs.readdirSync(path.join(out, d))) console.log(d + '/' + f, Math.round(fs.statSync(path.join(out, d, f)).size / 1024) + ' KB');
 }
 console.log('total', (total / 1048576).toFixed(2), 'MB');
