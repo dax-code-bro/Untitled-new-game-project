@@ -4,6 +4,35 @@ Owner paths: `scenes/lib/creatures/`, `scenes/lookdev/creatures-*.js` (+ creatur
 README.md in this folder is the full description of how the models are built; this file is
 only the state of the work.
 
+## REALISM ROUND 2 - session 6 (2026-11-02, short budgeted session)
+Stills (draft) under `scratchpad/eng1/creatures/r2s6/`: `v1/`, `v2/`, `v3/X3-15_042.png` (v3 = final), crop sheets
+`x315_s5_s6v1.png`, `x315_s5_s6v2.png`, `x315_s5_s6v3.png` (crop x620-940 y80-320 x2: session 5 v3 | now),
+`fly/1C-13_072.png` + `c113_crop.png` (Charcoal flight, legThigh), `fly/1C-07_036.png` (Leaf takeoff - NOT Charcoal).
+Done (code):
+- glsl.js `dkVor3` also returns `e` (a random per cell EDGE, symmetric: the same on both sides of a seam), `up`
+  (+-1, antisymmetric: which cell lies on top where the edge overlaps) and `q` (d1/F2 border coordinate). Other
+  callers unaffected (extra struct fields).
+- materials.js head block (only where headVar > 0, i.e. Charcoal): per-edge seams - ~25% of edges abut with no
+  groove, ~10% deep/dark, ~20% (brow ~45%, `browM` from uEyeC) OVERLAP: the top plate's rim stays up (no drop-off,
+  rubbed lighter lip via vcr, +0.25 gA height) and the plate under it gets a dark shadow line; the plain seam is
+  0.55 x as dark; the rim SLOPE (q 0.7..1, wider than the groove - this was the real "grout" under the raking key)
+  is flattened 60% (abut/top 92%, deep/under 0). Plate-spanning cracks: a thin wandering noise iso-line (scale
+  3.2 x local scale size, masked so only some areas get one) - dark, rough, slight V dent, ignores the seams.
+RESULTS (looked at): X3-15 v3 - the uniform dark grout network is gone; plates now merge in places, step over each
+other with a shadow on one side, and a few cracks cross several plates (`x315_s5_s6v3.png`). New tell: some flat
+plates now read a bit like broken slate / dried mud (angular, flat) - see NEXT 1.
+- 1C-13 (Charcoal flight wide, legThigh 0.04): the plagiopatagium meets the thigh/hip cleanly, no stretch or
+  spike at the knee at this size (`c113_crop.png`). Takeoff with Charcoal NOT checked (1C-07 is Leaf).
+- npm test: 49 tests, 48 pass, 0 fail, 1 skipped, exit 0. Style frames / creatures lookdev NOT re-rendered (budget).
+NEXT (exact):
+1. X3-15: restore a little roundness - in the head block lower the default rim flatten 0.6 -> 0.45 and give each
+   plate a slight dome tilt (vg += (plateJ-0.5, plateJ2-0.5) style per-plate tilt x 0.3 on head) so flat plates
+   do not read as slate; maybe tubercle-ish raised centres on the biggest brow plates. Re-still X3-15, same crop.
+2. Charcoal takeoff / walk check for legTuck/legThigh: find a Charcoal launch shot in verdor-grounds.shots.json
+   (grep "charcoal" + "launch"), still it at u 0.3/0.6; or creatures lookdev `takeoff`/`walkLow` at draft.
+3. Re-render style frames + creatures lookdev at draft (not done since session 3) to check nothing broke.
+4. X3-02 grey (session 3 item 3) still open; session 2 items 4-5 (Leaf/Starlight memFoldOcc, contacts, gait).
+
 ## REALISM ROUND 2 - session 5 (2026-11-02, short budgeted session)
 Stills (draft) under `scratchpad/eng1/creatures/r2s5/`: `v1/1B-03_042.png` (leg tuck only), `v2/1B-03_042.png` (+ Charcoal
 lowCurl), `1b03_crop_s4_v1_v2.png` (crop x120-480 y150-450: session 4 | v1 | v2), `v2/X3-15_042.png` (first headVar),
