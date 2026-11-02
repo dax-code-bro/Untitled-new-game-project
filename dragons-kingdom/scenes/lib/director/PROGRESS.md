@@ -3,6 +3,29 @@
 Owner paths: `scenes/lib/director/`, `episodes/s01e01/final/scenes/`, `episodes/s01e01/final/cut/`.
 How it works: `README.md` in this folder. Latest state first.
 
+## Session 15 (2026-11-02, short budgeted session: SKY_OFF_VERDOR fixes from the owner's st21 notes - STILLS only)
+
+Owner notes (`/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/director-next.md`, from st21/sheet.jpg). All fixes in
+`episodes/s01e01/final/scenes/specs/sky-off-verdor.spec.js`; shot ids, lengths and line cue times UNCHANGED (sound is synced).
+- Leaf far below Charcoal in the wides: the cause was geometry, not just altitude - camera ~6-8 deg above the pair and
+  Leaf 70 m nearer the lens, so at 135 mm the depth gap alone put her ~1/3 of the frame lower (+ 6-12 m lower in the
+  world). NEW formation constants: `FORM` Leaf [505, 58, 0], Charcoal [545, 58, +20] (1C-11..13), `TALK` Leaf
+  [505, 58, 0], Charcoal [535, 63, +8] (1C-13 end .. 1C-19; he climbs 5 m while closing - "a little higher", and it keeps
+  Abby lower in the 1C-14 background). Lateral gap 40 / 30 m (his span ~30 m: ~11 m clear in TALK). 1C-10: Leaf 42 m
+  straight behind him (NW = inland + screen LEFT), 1 m higher.
+- Wides re-cut (1C-11 200 mm, 1C-13 180 mm, 1C-15 180 mm, 1C-19 160 mm; all inside the shot list's 135-200 mm): cameras
+  ~4-4.5 deg above the pair, 300-800 m out, horizon just out of the top of frame -> no blown-out white band (1C-11's
+  problem was the hazy horizon at 135 mm with the camera only 2 deg above them). Previs (pv15): Leaf left of Charcoal
+  and only 0.1-0.3 NDC lower in every wide (was ~0.5-0.8).
+- Stiff sail wings: in the wides Charcoal now BEATS (`CHAR_FLY`: flight hz 0.625 = one beat / 1.6 s = the sound
+  spots, amp 0.68) instead of the glide planform, which seen near edge-on from the side reads as a swept triangle.
+  Glide kept only where he is close / top-down (1C-12, 14, 17, 18). Riders in wides: at 300-350 m and 180-200 mm a
+  rider is ~20-25 px at draft (~90 px at 4K) - a silhouette, not a face; that is the honest limit of a wide.
+- 1C-08 POV: st21 looked along Leaf's own right wing (Charcoal was due WEST of her = along the wing). Now Leaf is
+  further down her line ([200, 44, 60], heading 160) and Charcoal climbs on her back-right quarter ([90, 38, 0] ->
+  +20 m, heading 150, ~120 m away, 40 deg off her tail line), eye raised 0.6 m; the old dust behind / below him.
+RESULTS: (see below)
+
 ## Session 14 (2026-11-02, short budgeted session: 1C-04 / 1C-06 fixes, SKY_OFF_VERDOR set + 1C-07..19 specs - previs only)
 
 - Reviewed the 1C videos rendered 2026-11-01 (`/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/director/work1B/shots/1C-0*.mp4`; sheets `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/director/st20/1C-04_sheet.jpg`,
