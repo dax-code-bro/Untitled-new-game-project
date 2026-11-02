@@ -48,6 +48,7 @@ export class Interactions {
   // Returns the prompt for the closest point in reach (and triggers it on F)
   update(dt, pos, inCar, enterPressed, speed = 0) {
     this.t += dt;
+    this.consumed = false;
     if ((this.scan -= dt) <= 0) {
       this.scan = 0.25;
       this.near = this.points.filter((p) => this.visible(p) && Math.abs(p.x - pos.x) < 140 && Math.abs(p.z - pos.z) < 140 && Math.abs(p.y - pos.y) < 60)
@@ -80,7 +81,7 @@ export class Interactions {
       if (this.hold > 0.6 && !this.fired) { this.fired = true; best.use(); return ''; }
       return this.fired ? '' : `${label} — stop in the marker`;
     }
-    if (enterPressed) { best.use(); return ''; }
+    if (enterPressed) { this.consumed = true; best.use(); return ''; }
     return label;
   }
 

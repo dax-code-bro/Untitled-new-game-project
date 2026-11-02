@@ -7,7 +7,7 @@ import { surfaceNets, smax, smin, roundBox, hyp2 } from '../assets/carbuilder.js
 import { clamp, lerp } from '../util.js';
 
 // ---------------------------------------------------------------- shared
-function partMesh(parts, bounds, h, colorOf, physical = true) {
+export function partMesh(parts, bounds, h, colorOf, physical = true) {
   // parts: [{ d: sdf, kind }]; combined with smooth union, coloured by nearest part
   const sdf = (x, y, z) => {
     let d = 1e9;

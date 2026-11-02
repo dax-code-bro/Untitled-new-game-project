@@ -96,6 +96,15 @@ export class Combat {
       const t = tca - Math.sqrt(r * r - d2);
       if (t > 0 && t < best.t) best = { t, kind: 'vehicle', vehicle: v };
     }
+    for (const an of targets.animals || []) {
+      if (an.dead) continue;
+      const oc = an.center().sub(origin), tca = oc.dot(dir);
+      if (tca < 0) continue;
+      const d2 = oc.lengthSq() - tca * tca, r = an.radius;
+      if (d2 > r * r) continue;
+      const t = tca - Math.sqrt(r * r - d2);
+      if (t > 0 && t < best.t) best = { t, kind: 'animal', animal: an };
+    }
     const end = origin.clone().addScaledVector(dir, best.t);
     const f = this.collision.raycast(origin.x, origin.y, origin.z, end.x, end.y, end.z);
     if (f < 1) best = { t: best.t * f, kind: 'building' };
@@ -164,6 +173,11 @@ export class Combat {
 
   impact(hit, w, targets, from) {
     if (w.explosive) return this.explode(hit.point, w, targets, from);
+    if (hit.kind === 'animal') {
+      hit.killed = hit.animal.hurt(w.damage, w);
+      this.burst(hit.point, this.settings.gore ? this.bloodMat : this.dustMat, this.settings.gore ? 8 : 3);
+      return;
+    }
     if (hit.kind === 'ped') {
       hit.killed = targets.peds.damage(hit.ped, w.damage * (hit.head ? 3 : 1), from);
       this.burst(hit.point, this.settings.gore ? this.bloodMat : this.dustMat, this.settings.gore ? 10 : 4);
@@ -182,6 +196,7 @@ export class Combat {
       const d = p.pos.distanceTo(at);
       if (d < R) targets.peds.damage(p, w.damage * (1 - d / R), from);
     }
+    for (const an of targets.animals || []) if (!an.dead && an.pos.distanceTo(at) < R) an.hurt(w.damage, w);
     for (const v of targets.vehicles) { if (v && v.pos.distanceTo(at) < R) { v.health -= w.damage * (1 - v.pos.distanceTo(at) / R); v.impact = Math.max(v.impact, 6); } }
     this.burst(at, this.sparkMat, 26);
     this.burst(at, this.dustMat, 30);

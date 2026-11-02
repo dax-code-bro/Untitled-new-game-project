@@ -2,6 +2,12 @@
 import { installGarage } from './garage.js';
 import { installMarineAir } from './marine-air.js';
 import { installEstate } from './estate.js';
+import { installTools } from './tools.js';
+import { installHunting } from './hunting.js';
+import { installFishing } from './fishing.js';
+import { installJobs } from './jobs.js';
+import { installMissions } from './missions.js';
+import { installPhone } from './phone.js';
 
 export function installSystems(game) {
   const list = [];
@@ -17,8 +23,19 @@ export function installSystems(game) {
   };
   add('waypoint', { update() { if (wp && Math.hypot(game.player.pos.x - wp.x, game.player.pos.z - wp.z) < 8 && game.S.mode === 'foot') { game.interact.remove(wp); wp = null; } } });
   add('estate', installEstate(game));
+  add('toolsSys', installTools(game));
+  add('hunting', installHunting(game));
+  add('fishing', installFishing(game));
+  add('jobs', installJobs(game));
+  add('missions', installMissions(game));
+  add('phoneSys', installPhone(game));
   return {
     list,
-    update(dt, a) { for (const s of list) if (s.update) s.update(dt, a); },
+    // systems may return a prompt; `free` says whether F is still unclaimed this frame
+    update(dt, a, free) {
+      let prompt = '';
+      for (const s of list) { if (!s.update) continue; const p = s.update(dt, a, free && !prompt); if (p && !prompt) prompt = p; }
+      return prompt;
+    },
   };
 }

@@ -68,11 +68,26 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 - [x] Shotgun pellets, explosive rockets/grenades with blast damage, silent bows with arrows in flight
 - [x] Installable web app (manifest + icons); Capacitor setup guide for the App Store / Google Play (`mobile/`)
 
+## Phase 1.8 — The whole list (first playable versions)
+
+- [x] Career save on the device (money, garage, weapons, properties, home, tools, jobs, story) + autosave
+- [x] Interaction markers (light columns), minimap blips, GPS waypoints, phone menu (I / 📱)
+- [x] 93 land vehicles in 15 classes (procedural, built on first use), dealerships, 63 parts per car + 20 paints, nitrous
+- [x] 16 boats + 98 boat upgrades, 3 marinas with piers, buoyant boat physics
+- [x] 11 aircraft (6 planes, 5 helicopters) + 17 upgrades, Redgrass Airfield (runway, hangar), arcade flight
+- [x] Every building enterable: generated homes, apartments, offices, stores, bars, warehouses
+- [x] 198 properties for sale (homes = save/sleep point, businesses pay daily), realtor listings
+- [x] 243 tools in 8 trades (heal, armor, repair, flashlight, metal detector, calls, rods, bait, trade tools for jobs)
+- [x] Hunting: 8 species with behaviour (graze/flee/charge), skinning, 3 trading posts
+- [x] Fishing: cast/bite/reel-tension minigame, 4 water types, 23 species, fish market + log
+- [x] 27 jobs with work vehicles, timers, pay per stop and levels
+- [x] 63 story missions in 3 acts (original story: Eli Navarro vs. the Delacroix family, the Ríos crew and Capt. Voss)
+
 ## Phase 2 — World depth
 
 - [ ] Expand map to more of the continent's southern side (multiple states/regions)
 - [ ] Streaming world chunks (needed before the map gets much bigger)
-- [ ] Every building gets an enterable interior (procedural interior generator + hand-made key interiors)
+- [~] Every building gets an enterable interior (procedural generator done; hand-made key interiors to do)
 - [ ] Pedestrians with daily routines
 - [ ] Traffic lights, lane changes, police response
 - [ ] Weather: rain, storms, fog, hurricanes
@@ -90,27 +105,27 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 | Marksman rifles | 45 | 45 (3 platforms) |
 | Pistols | 63 | 63 (5 platforms) |
 | Weapon attachments | 193+ | 195 (39 parts × 5 tiers) |
-| Land vehicles | 93 | 13 body types (procedural; more are new spec entries) |
-| Water vehicles | 16 | 0 |
-| Air vehicles | 11 | 0 |
-| Car upgrades (per car) | 63 | 0 |
-| Boat upgrades | 98 | 0 |
-| Plane upgrades | 17 | 0 |
-| Buyable houses | 198 | 0 |
-| Tools | 240 | 0 |
-| Jobs | 27 | 0 |
-| Story missions | 63 | 0 |
+| Land vehicles | 93 | 93 (15 classes, derived from 15 body types) |
+| Water vehicles | 16 | 16 |
+| Air vehicles | 11 | 11 |
+| Car upgrades (per car) | 63 | 63 (48 performance + 15 looks) |
+| Boat upgrades | 98 | 98 (14 systems × 7 levels) |
+| Plane upgrades | 17 | 17 |
+| Buyable houses | 198 | 198 |
+| Tools | 240 | 243 |
+| Jobs | 27 | 27 |
+| Story missions | 63 | 63 (first pass: objectives + short dialogue) |
 
 ## Phase 4 — Systems
 
 - [~] Combat: shooting, aiming, 7 weapon classes done; cover and a vehicle damage model to do
-- [ ] Hunting: animals with AI, tracking, skinning, trophies
-- [ ] Fishing: casting, fish species by water type, reel mini-game
-- [ ] Economy: money, shops, property ownership
-- [ ] Jobs system framework (27 jobs)
-- [ ] Mission scripting system + story (63 missions, lore bible)
-- [ ] Garage / tuning UI
-- [ ] Save system
+- [~] Hunting: animals with AI and skinning done; tracking and trophies to do
+- [x] Fishing: casting, fish species by water type, reel mini-game
+- [x] Economy: money, shops, property ownership
+- [x] Jobs system framework (27 jobs)
+- [~] Mission scripting system + story (63 missions done; cutscenes, voice and hostile AI to do)
+- [x] Garage / tuning UI
+- [x] Save system
 
 ## Phase 5 — Ship
 
