@@ -18,6 +18,22 @@
     "note": "Low fifth under the 1B-12 lines, Leaf alert at 1B-13, his figure and a swell to an A major chord as he rises (1B-15), held to the last frame of 1B." },
   { "id": "M6 takeoff", "score": "takeoff", "sync": { "beat": 0, "shot": "1C-01", "offset_s": 0 },
     "target_lufs": -19, "duck_db": 9, "end_by": { "shot": "1C-07", "offset_s": 0 }, "fade_out_s": 3.0,
-    "note": "1C-01..1C-06: Leaf's figure fast as he goes first, Charcoal gathers (horns D-Bb-C), tremolo + timpani roll as the air builds and the birds stop (1C-04), full D major tutti with the dawn theme on the massive downbeat (1C-05), a higher second swell (1C-06), gone by the 1C-07 slate." }
- ]
+    "note": "1C-01..1C-06: Leaf's figure fast as he goes first, Charcoal gathers (horns D-Bb-C), tremolo + timpani roll as the air builds and the birds stop (1C-04), full D major tutti with the dawn theme on the massive downbeat (1C-05), a higher second swell (1C-06), gone by the 1C-07 slate." },
+  {
+   "id": "M7 sky glimpse",
+   "score": "sky_glimpse",
+   "sync": { "beat": 0, "shot": "1C-10", "offset_s": 0 },
+   "target_lufs": -21.5, "duck_db": 9,
+   "end_by": { "shot": "1C-11", "offset_s": 2.5 }, "fade_out_s": 2.5,
+   "note": "1C-10 'Wind bed; light theme': high pad + harp, the light theme once on flute, left hanging on F#; gone early in 1C-11 (two wingbeat rhythms only: 'music stops; only wingbeats')."
+  },
+  {
+   "id": "M8 light theme",
+   "score": "light_theme",
+   "sync": { "beat": 0, "shot": "1C-15", "offset_s": 0 },
+   "target_lufs": -19.5, "duck_db": 10,
+   "end_by": { "shot": "X4-01", "offset_s": 3.0 }, "fade_out_s": 3.5,
+   "note": "1C-15 'lighter version of the main theme begins' (pad, harp, theme low on clarinet), 1C-17 Leaf's figure, 1C-18 'theme' (dawn head on soft horn), 1C-19 'lighter theme carries the shot' (whole, on flute + violins, resolves to D); faded early in X4-01 (the harbour, still a slate: re-spot when X4 is specced)."
+  }
+]
 }

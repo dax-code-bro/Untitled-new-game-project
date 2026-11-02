@@ -45,6 +45,10 @@ const SR = 48000;
 // dialogue anchor: the words never go above MAX_DIALOGUE_I (integrated over the dialogue stem). In a cut with sparse
 // dialogue and no music yet, hitting -16 integrated would push the words to -11 and into the limiter, so the mix
 // stays quieter there (report: anchored = 'dialogue') until music and effects fill it.
+// program region: loudness is normalised over the shots that have a picture spec (EDL kind != 'missing'); in a cut
+// that is still mostly slates for unspecced shots (1C: 91.5 s of 1C-01..1C-19 in 382 s), the slates only carry
+// beds, so measuring the whole cut would push the real scenes ~6 dB too hot. The slates keep the same gain (the
+// beds sit where they would in a finished scene); report: I_program (the target) and I (whole cut, info only).
 const TARGET_I = -16, MAX_TP = -1.0, DIALOGUE_I = -17, MAX_DIALOGUE_I = -15;
 const FF = ffmpegPath();
 const rel = (p) => path.relative(REPO, p).split(path.sep).join('/');
@@ -86,6 +90,17 @@ const FPS = edl.fps || 24;
 const DUR = edl.frames / FPS;
 const cues = Object.values(cuesDoc.scenes).flat();
 say(`cut ${CUT}: ${edl.shots.length} shots, ${DUR.toFixed(3)} s, ${cues.length} voice cues`);
+// program windows (merged consecutive non-missing shots), as an aselect expression for ebur128
+const progWins = [];
+for (const s of edl.shots) {
+  if (s.kind === 'missing') continue;
+  const a = s.rec_in / FPS, b = s.rec_out / FPS, l = progWins[progWins.length - 1];
+  if (l && Math.abs(l[1] - a) < 1e-6) l[1] = b; else progWins.push([a, b]);
+}
+const PROG_ALL = !progWins.length || (progWins.length === 1 && progWins[0][0] <= 1e-6 && progWins[0][1] >= DUR - 1e-6);
+const progSel = PROG_ALL ? '' : `asetnsamples=n=480,aselect='${progWins.map(([a, b]) => `between(t,${f4(a)},${f4(b)})`).join('+')}',asetpts=N/SR/TB`;
+const progS = progWins.reduce((s, [a, b]) => s + b - a, 0);
+if (!PROG_ALL) say(`program region: ${progWins.map(([a, b]) => `${a.toFixed(1)}-${b.toFixed(1)}`).join(', ')} s (${progS.toFixed(1)} of ${DUR.toFixed(1)} s; the rest are unspecced slates)`);
 
 // ---------- ambience runs: consecutive shots with the same bed ----------
 const bedOf = (s) => BEDS.shots[s.job] || BEDS.sets[s.set] || BEDS.default_bed;
@@ -269,7 +284,7 @@ say(`fx stem written (${fxr.events.length} events, peak ${fxr.peak_dbfs} dBFS${f
 const sumG = (gain, ceil) => `[0:a]volume=${dlgGain.toFixed(3)}dB,pan=stereo|c0=c0|c1=c0[d];[d][1:a][2:a][3:a]amix=inputs=4:normalize=0:duration=longest,` +
   `volume=${gain.toFixed(3)}dB,aresample=${SR * 4},alimiter=limit=${dbToLin(ceil).toFixed(5)}:attack=2:release=80:level=0:latency=1,` +
   `aresample=${SR},afade=t=out:st=${f4(DUR - 0.3)}:d=0.3[m]`;
-const pre = measure(['-i', dlgWav, '-i', ambWav, '-i', musWav, '-i', fxWav], '', 'premaster', { text: sumG(0, 0).replace(/alimiter=[^,]*,/, ''), out: 'm' });
+const pre = measure(['-i', dlgWav, '-i', ambWav, '-i', musWav, '-i', fxWav], progSel, 'premaster', { text: sumG(0, 0).replace(/alimiter=[^,]*,/, ''), out: 'm' });
 // no dialogue: keep the same cap (beds/music/fx sit where they sit in the dialogue cuts) rather than pushing a
 // slate-heavy cut's wind bed to -16 integrated (report: anchored = 'reference')
 const gainCap = MAX_DIALOGUE_I - DIALOGUE_I;
@@ -278,7 +293,9 @@ const mixWav = path.join(OUT, 'mix.wav');
 for (let it = 0; it < 4; it++) {
   ff(['-i', dlgWav, '-i', ambWav, '-i', musWav, '-i', fxWav, '-filter_complex', sumG(gain, ceil), '-map', '[m]', '-c:a', 'pcm_s24le', '-fflags', '+bitexact', '-flags:a', '+bitexact', mixWav], 'master');
   mm = measure(['-i', mixWav], '', 'master check');
-  say(`  master pass ${it + 1}: gain ${gain.toFixed(2)} dB, ceiling ${ceil} dBFS -> I ${mm.I} LUFS, TP ${mm.TP} dBTP, LRA ${mm.LRA}`);
+  mm.I_full = mm.I;
+  if (!PROG_ALL) { const pm = measure(['-i', mixWav], progSel, 'master check (program)'); mm.I = pm.I; mm.LRA = pm.LRA; }
+  say(`  master pass ${it + 1}: gain ${gain.toFixed(2)} dB, ceiling ${ceil} dBFS -> I ${mm.I} LUFS${PROG_ALL ? '' : ` (program; whole cut ${mm.I_full})`}, TP ${mm.TP} dBTP, LRA ${mm.LRA}`);
   const okTP = mm.TP <= MAX_TP - 0.1, okI = Math.abs(mm.I - TARGET_I) <= 0.3 || (gain >= gainCap - 1e-9 && mm.I < TARGET_I);
   if (okTP && okI) break;
   if (!okTP) ceil -= 0.5;
@@ -306,15 +323,17 @@ if (!flag('--no-mux') && fs.existsSync(VIDEO)) {
   if (fs.existsSync(srt)) fs.copyFileSync(srt, path.join(OUT, `${base}_sound.en.srt`));
   const probe = spawnSync(FF.replace(/ffmpeg(\.exe)?$/, 'ffprobe$1'), ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', mp4], { encoding: 'utf8' });
   const aac = measure(['-i', mp4], '', 'aac check');
-  muxed = { file: rel(mp4), duration_s: probe.status === 0 ? +probe.stdout.trim() : null, aac_I: aac.I, aac_TP: aac.TP, bytes: fs.statSync(mp4).size };
-  say(`muxed: ${rel(mp4)} (${muxed.duration_s} s), AAC I ${aac.I} LUFS, TP ${aac.TP} dBTP`);
+  const aacP = PROG_ALL ? aac : measure(['-i', mp4, '-vn'], progSel, 'aac check (program)');
+  muxed = { file: rel(mp4), duration_s: probe.status === 0 ? +probe.stdout.trim() : null, aac_I: aacP.I, aac_I_full: aac.I, aac_TP: aac.TP, bytes: fs.statSync(mp4).size };
+  say(`muxed: ${rel(mp4)} (${muxed.duration_s} s), AAC I ${aacP.I} LUFS, TP ${aac.TP} dBTP`);
 } else say(`no mux (${fs.existsSync(VIDEO) ? '--no-mux' : 'no video ' + rel(VIDEO)})`);
 
 // ---------- 7. report ----------
 const report = {
   cut: CUT, made_with: ffver, inputs: { edl: rel(EDL), cues: rel(CUES), video: rel(VIDEO), beds: 'episodes/s01e01/final/sound/beds.json' },
   duration_s: DUR, targets: { integrated_lufs: TARGET_I, true_peak_dbtp_max: MAX_TP, dialogue_lufs_pre_master: DIALOGUE_I, min_dialogue_margin_lu: 10 },
-  result: { mix: rel(mixWav), I: mm.I, TP: mm.TP, LRA: mm.LRA, sha256: sha256(mixWav), master_gain_db: r3(gain), limiter_ceiling_dbfs: ceil, dialogue_gain_db: r3(dlgGain), min_dialogue_margin_lu: minMargin,
+  program: PROG_ALL ? 'whole cut' : { windows_s: progWins.map(([a, b]) => [r3(a), r3(b)]), seconds: r3(progS), note: 'I/LRA measured over these windows (shots with a picture spec); I_full = whole cut incl. slates' },
+  result: { mix: rel(mixWav), I: mm.I, I_full: mm.I_full, TP: mm.TP, LRA: mm.LRA, sha256: sha256(mixWav), master_gain_db: r3(gain), limiter_ceiling_dbfs: ceil, dialogue_gain_db: r3(dlgGain), min_dialogue_margin_lu: minMargin,
     anchored: gain >= gainCap - 1e-9 && mm.I < TARGET_I - 0.5 ? (NO_DIALOGUE ? 'reference' : 'dialogue') : 'integrated',
     pass: mm.TP <= MAX_TP && (Math.abs(mm.I - TARGET_I) <= 0.5 || gain >= gainCap - 1e-9) && (minMargin === null || minMargin >= 10) },
   muxed,

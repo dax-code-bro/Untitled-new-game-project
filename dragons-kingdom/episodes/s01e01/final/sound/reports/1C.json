@@ -14,31 +14,48 @@
   "dialogue_lufs_pre_master": -17,
   "min_dialogue_margin_lu": 10
  },
+ "program": {
+  "windows_s": [
+   [
+    0,
+    91.5
+   ]
+  ],
+  "seconds": 91.5,
+  "note": "I/LRA measured over these windows (shots with a picture spec); I_full = whole cut incl. slates"
+ },
  "result": {
   "mix": "episodes/s01e01/final/audio/cuts/1C/mix.wav",
-  "I": -22.3,
+  "I": -16.6,
+  "I_full": -20.1,
   "TP": -1.6,
-  "LRA": 12.9,
-  "sha256": "855b20fd7c36dc7e88cd06dc08915e81d0b7fbbf5fc9bbf91d5de8e0d8877bc6",
+  "LRA": 9.8,
+  "sha256": "22172a8b1abc3d7f66045f307f99282036f4737fe162f32649aa83f25a94f868",
   "master_gain_db": 2,
   "limiter_ceiling_dbfs": -1.6,
   "dialogue_gain_db": 11.4,
-  "min_dialogue_margin_lu": 14.679,
+  "min_dialogue_margin_lu": 12.613,
   "anchored": "dialogue",
   "pass": true
  },
  "muxed": {
   "file": "episodes/s01e01/final/audio/cuts/1C/DragonsKingdom_S01E01_draft-cut_1C_sound.mp4",
   "duration_s": 382,
-  "aac_I": -22.3,
-  "aac_TP": -1.5,
-  "bytes": 22688677
+  "aac_I": -16.7,
+  "aac_I_full": -20.2,
+  "aac_TP": -1.4,
+  "bytes": 22691881
  },
  "beds": {
   "grounds_wind": {
    "target_lufs": -28,
    "raw_lufs_60s": -31.3,
    "duck_db": 6
+  },
+  "flight_wind": {
+   "target_lufs": -22,
+   "raw_lufs_60s": -25.8,
+   "duck_db": 7
   },
   "vista_wind_sea": {
    "target_lufs": -27,
@@ -64,6 +81,32 @@
    "duck_db": 9,
    "fade_out_s": 3,
    "render_sha256": "e8671ca02037b534864e4907520e6981c3fffd9cc5e0072a9009d0aa963894a7"
+  },
+  {
+   "id": "M7 sky glimpse",
+   "score": "sky_glimpse",
+   "start_s": 39.5,
+   "end_s": 48,
+   "sync": "beat 0 = 1C-10 +0 s",
+   "raw_lufs": -28.9,
+   "target_lufs": -21.5,
+   "gain_db": 7.4,
+   "duck_db": 9,
+   "fade_out_s": 2.5,
+   "render_sha256": "97c4af130ff3726d51b24c0363371bb3a6b246570d5e90df13e3c690f2b2503c"
+  },
+  {
+   "id": "M8 light theme",
+   "score": "light_theme",
+   "start_s": 65.5,
+   "end_s": 94.5,
+   "sync": "beat 0 = 1C-15 +0 s",
+   "raw_lufs": -28.4,
+   "target_lufs": -19.5,
+   "gain_db": 8.9,
+   "duck_db": 10,
+   "fade_out_s": 3.5,
+   "render_sha256": "e267dd42a1bd16b18a774c33adead9bfced908acc3764bc0b4bc899e20388097"
   }
  ],
  "music_not_in_cut": [
@@ -76,22 +119,26 @@
  "music_cue_sheet": "episodes/s01e01/final/sound/music/cues.json",
  "fx": {
   "spot_sheet": "episodes/s01e01/final/sound/fx/spots.json",
-  "events": 33,
+  "events": 123,
   "peak_dbfs": -4.1,
   "spaces": [
+   "air",
    "open"
   ],
-  "sha256": "ee36649572f2a03c920483394a7e21652b5d819b74de10480f1e35a27c4bfc56",
+  "sha256": "61913844057ee7806a8e805e0d07355a9294de04f22bfa3a891c8d29a6dea7d2",
   "spot_rows_not_in_cut": 134,
   "by_sound": {
    "claws_turf": 1,
-   "wingbeat": 15,
+   "wingbeat": 30,
    "wind_grass": 3,
-   "leather": 1,
+   "leather": 4,
    "breath": 1,
    "hide_rub": 1,
    "weight_shift": 2,
-   "step_stone": 9
+   "step_stone": 9,
+   "wingbeat_light": 65,
+   "air_rush": 6,
+   "snort": 1
   }
  },
  "runs": [
@@ -104,12 +151,20 @@
    "shots": "1C-01..1C-06 (6)"
   },
   {
-   "bed": "vista_wind_sea",
+   "bed": "flight_wind",
    "from_s": 28,
+   "to_s": 91.5,
+   "xf_in_s": 0.5,
+   "xf_out_s": 0.5,
+   "shots": "1C-07..1C-19 (13)"
+  },
+  {
+   "bed": "vista_wind_sea",
+   "from_s": 91.5,
    "to_s": 106.5,
    "xf_in_s": 0.5,
    "xf_out_s": 0.5,
-   "shots": "1C-07..X4-03 (16)"
+   "shots": "X4-01..X4-03 (3)"
   },
   {
    "bed": "sea_shore",
@@ -176,7 +231,7 @@
    "shots": "X6-01..X6-03 (3)"
   },
   {
-   "bed": "vista_wind_sea",
+   "bed": "flight_wind",
    "from_s": 302,
    "to_s": 323,
    "xf_in_s": 0.5,
@@ -192,7 +247,7 @@
    "shots": "X6-08..X6-18 (11)"
   },
   {
-   "bed": "vista_wind_sea",
+   "bed": "flight_wind",
    "from_s": 369,
    "to_s": 382,
    "xf_in_s": 0.5,
@@ -206,15 +261,15 @@
    "from_s": 36.1,
    "to_s": 37.37,
    "dialogue_M": -14.115,
-   "background_M": -28.794,
-   "margin_LU": 14.679
+   "background_M": -26.728,
+   "margin_LU": 12.613
   },
   {
    "from_s": 61,
    "to_s": 64.285,
    "dialogue_M": -15.773,
-   "background_M": -35.862,
-   "margin_LU": 20.088
+   "background_M": -28.522,
+   "margin_LU": 12.748
   }
  ]
 }

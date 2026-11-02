@@ -1,0 +1,72 @@
+{
+ "cut": "1C",
+ "engine": "pocketsphinx (BSD-2), default en-us model",
+ "lines": 4,
+ "mean_recall": {
+  "dialogue": 0.875,
+  "mix": 0.875
+ },
+ "lost_in_mix": [],
+ "rows": [
+  {
+   "id": "L042",
+   "role": "ABBY",
+   "from_s": 35.8,
+   "to_s": 37.67,
+   "text": "You could have warned the grass.",
+   "dialogue": {
+    "hyp": "you could have warned the grass",
+    "recall": 1.0
+   },
+   "mix": {
+    "hyp": "you could have warned the grass",
+    "recall": 1.0
+   }
+  },
+  {
+   "id": "L043",
+   "role": "REMI",
+   "from_s": 60.7,
+   "to_s": 62.53,
+   "text": "Everything secure?",
+   "dialogue": {
+    "hyp": "everything suck your",
+    "recall": 0.5
+   },
+   "mix": {
+    "hyp": "everything sick you or",
+    "recall": 0.5
+   }
+  },
+  {
+   "id": "L044",
+   "role": "ABBY",
+   "from_s": 62.29,
+   "to_s": 63.38,
+   "text": "Yes.",
+   "dialogue": {
+    "hyp": "yes",
+    "recall": 1.0
+   },
+   "mix": {
+    "hyp": "yes",
+    "recall": 1.0
+   }
+  },
+  {
+   "id": "L045",
+   "role": "REMI",
+   "from_s": 63.19,
+   "to_s": 64.58,
+   "text": "All right.",
+   "dialogue": {
+    "hyp": "all right",
+    "recall": 1.0
+   },
+   "mix": {
+    "hyp": "all right",
+    "recall": 1.0
+   }
+  }
+ ]
+}

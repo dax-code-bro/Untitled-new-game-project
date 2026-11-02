@@ -9,7 +9,8 @@
    "credit": "Voices: computer-generated with Kokoro-82M by hexgrad (Apache License 2.0) - already in credits.txt",
    "used_in": [
     "PROLOGUE-TITLE-1A",
-    "1B"
+    "1B",
+    "1C"
    ]
   },
   {
@@ -20,7 +21,8 @@
    "credit": "Sound design line in credits.txt",
    "used_in": [
     "PROLOGUE-TITLE-1A",
-    "1B"
+    "1B",
+    "1C"
    ]
   },
   {
@@ -30,7 +32,9 @@
    "licence": "the project's own work",
    "credit": "Music line in credits.txt",
    "used_in": [
-    "PROLOGUE-TITLE-1A"
+    "PROLOGUE-TITLE-1A",
+    "1B",
+    "1C"
    ]
   },
   {
@@ -41,7 +45,8 @@
    "credit": "Sound design line in credits.txt",
    "used_in": [
     "PROLOGUE-TITLE-1A",
-    "1B"
+    "1B",
+    "1C"
    ]
   },
   {
@@ -51,7 +56,9 @@
    "licence": "MIT License (Copyright 2000-2002, 2008 Frank Wen; 2008 Toby Smithe). Licence text: /usr/share/doc/fluid-soundfont-gm/copyright",
    "credit": "Music rendered with the Fluid R3 GM SoundFont by Frank Wen (MIT License)",
    "used_in": [
-    "PROLOGUE-TITLE-1A"
+    "PROLOGUE-TITLE-1A",
+    "1B",
+    "1C"
    ]
   },
   {
@@ -71,8 +78,18 @@
    "licence": "LGPL 2.1+ (tool licence; no credit required for output)",
    "credit": null,
    "used_in": [
-    "PROLOGUE-TITLE-1A"
+    "PROLOGUE-TITLE-1A",
+    "1B",
+    "1C"
    ]
+  },
+  {
+   "id": "pocketsphinx",
+   "what": "Tool only: speech recogniser for the intelligibility check (sound/asr_check.py); nothing of it is in the sound",
+   "origin": "pocketsphinx 5 (PyPI, cmusphinx.github.io) with its bundled CMU en-us model",
+   "licence": "BSD-2-Clause (tool licence; no credit required)",
+   "credit": null,
+   "used_in": ["QA only"]
   }
  ]
 }

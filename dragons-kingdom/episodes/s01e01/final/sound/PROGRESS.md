@@ -1,5 +1,46 @@
 # Sound track: progress (for the next session)
 
+## State (2026-11-02, session 5: 1C flight sound + program-region loudness)
+
+- **Loudness logic** (`mix.mjs`): I/LRA are measured over the **program region** = shots with a picture spec (EDL
+  `kind` != `missing`); slates of unspecced shots keep the same gain (beds only). Report: `result.I` (program),
+  `result.I_full` (whole cut), `program.windows_s`, `muxed.aac_I` (program) / `aac_I_full`. Cuts with no missing shots
+  (1A, 1B) are unaffected (not re-mixed). The +2 dB dialogue cap (words <= -15 LUFS) still applies.
+- **1C flight** (1C-07..1C-19, still slates in the director's cut but specced, with L042-L045):
+  - bed `flight_wind` (SKY_OFF_VERDOR; target -22, duck 7): steady air rush, slow gusts, faint high edge.
+  - fx recipes `wingbeat_light` (Leaf: quick, smaller, membrane snap) and `air_rush` (gust past camera; `dark`,
+    `whistle`); space `air` (almost dry). 21 spot rows 1C-07..1C-19 in `fx/spots.json` (Leaf ~2.3 beats/s, Charcoal
+    ~0.6/s; 1C-11 two rhythms L/R; 1C-13 heavy beats approach while Leaf's quicken; beats ducked 8 dB in 1C-09/1C-14;
+    leather creak 1C-16; snort 1C-17).
+  - music: the **light theme** (`LIGHT` in `scores.mjs`: A | D . E F# - A | B A F# | D, the dawn head + Leaf's turn).
+    **M7 sky glimpse** (`sky_glimpse`, beat 0 = 1C-10, -21.5 LUFS): pad + harp + the theme once on flute, left hanging
+    on F#, gone by 1C-11 +2.5 s ("music stops; only wingbeats"). **M8 light theme** (`light_theme`, beat 0 = 1C-15,
+    beat = cut time - 65.5, -19.5 LUFS): pad + harp + theme low on clarinet (1C-15), Leaf's figure (1C-17), dawn head
+    on soft horn (1C-18), the theme whole on flute + violins resolving to D on 1C-19, D add9 faded by X4-01 +3 s.
+- **1C mix** `final/audio/cuts/1C/DragonsKingdom_S01E01_draft-cut_1C_sound.mp4`: program (0-91.5 s) **-16.6 LUFS**
+  (whole cut -20.1), TP -1.6 dBTP (AAC -16.7 / -1.4), anchored "dialogue" (+2 dB cap), min dialogue margin 12.6 LU,
+  PASS. ASR (`asr_check.py`, pocketsphinx): recall dialogue-alone 0.875 = mix 0.875, nothing lost in the mix
+  ("Everything secure?" -> "everything suck your" in both: the model, not the mix). Seen: spectrogram + stem
+  waveforms of 26-96 s (scratchpad `eng1/sound/1C-flight-spec.png`, `1C-flight-stems.png`): M6 out by 28 s, M7
+  39.5-48, M8 65.5-94.5, beats/rushes per shot. A bright ~1.3 kHz stripe in the spectrogram PNG is a display effect:
+  band RMS of ambience/fx/mix at 30-36 s falls smoothly 200 Hz -> 4 kHz (no peak).
+- Not re-run for byte-identity this session (new recipes are seeded like the others). NOT listened to by a person.
+
+## Next steps (in order)
+
+1. **Listen** to the 1C `_sound.mp4` 28-95 s: is `flight_wind` (-22) too loud/hissy for 4 minutes of flight in 1D/1E?
+   Leaf's `wingbeat_light` rate (0.36-0.45 s) vs his flight animation once 1C-07..19 are rendered - re-time the
+   `every_s` to the wing cycle in the director's flight pose (scenes/lib/creatures poses) when shots exist.
+2. When the director renders 1C-07..1C-19, re-mix and check beat sync on picture (1C-11 rhythms, 1C-13 approach).
+3. X4 (harbour / aerial town), X5 (Cling): spot when specced (`kind` becomes non-missing -> they join the program
+   region automatically). Beds needed: harbour (gulls, rigging, water lap, crew voices as walla), market street,
+   Cling festival square (replace the `grounds_wind` placeholder); diegetic festival music (separate cue, not ducked
+   like score). M8 currently fades in X4-01: extend/re-spot when X4-01..X4-03 exist (shotlist: X4-20 "light theme").
+4. If 1C program stays below -16 when all shots exist, the dialogue cap is binding: raise music/beds rather than the
+   cap (margin is 12.6 LU, 2.6 LU of room).
+5. Earlier items below still stand (listen 1A/1B, M6 basses re-render check, VSCO 2 CE via sfizz for the final, per-line
+   voice treatment, episode-timeline mix).
+
 ## State (2026-11-01, session 4: 1B score + 1C takeoff)
 
 - Done: three new ORIGINAL cues as note data in `music/scores.mjs` (shared helpers `leafFig` = Leaf's light figure
