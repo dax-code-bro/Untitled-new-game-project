@@ -1,7 +1,8 @@
-// Vehicles: Kenney Car Kit models (CC0) + arcade driving physics.
+// Vehicles: procedural car bodies (assets/carbuilder.js) + arcade driving physics.
 import * as THREE from 'three';
 import { clamp, lerp } from '../util.js';
 import { VEHICLES } from '../assets/library.js';
+import { makeBodyMaterial, randomPaint, FIXED_PAINT, SECOND_PAINT } from '../assets/carbuilder.js';
 
 export function randomCarType(rnd) {
   const list = Object.entries(VEHICLES).filter(([, v]) => v.weight > 0);
@@ -28,8 +29,21 @@ export class Vehicle {
     this.group = new THREE.Group();
     this.body = new THREE.Group();
     this.group.add(this.body);
-    const model = lib.cars[type].clone(true);
-    // scale the toy-sized Kenney model to real-world length
+    const proto = lib.cars[type];
+    const model = proto.clone(true);
+    this.procedural = !!proto.userData.procedural;
+    if (this.procedural) {
+      // each car gets its own paint (and its own brake/indicator state)
+      const spec = proto.userData.spec;
+      const pm = proto.getObjectByName('body').levels[0].object.material;
+      this.bodyMat = makeBodyMaterial(spec, pm.isMeshPhysicalMaterial);
+      const u = this.bodyMat.userData.u;
+      const paint = FIXED_PAINT[type] || randomPaint();
+      u.uPaint.value.setRGB(paint[0], paint[1], paint[2]); u.uMetal.value = paint[3];
+      if (SECOND_PAINT[type]) u.uPaint2.value.setRGB(...SECOND_PAINT[type]);
+      model.getObjectByName('body').traverse((o) => { if (o.isMesh) o.material = this.bodyMat; });
+    }
+    // scale the model to its real-world length
     _box.setFromObject(model);
     const size = _box.getSize(new THREE.Vector3());
     const k = v.len / size.z;
@@ -57,12 +71,15 @@ export class Vehicle {
       m.position.set(x, y, z); this.body.add(m); return m;
     };
     this.tail = L.red.clone();
-    for (const s of [-1, 1]) {
+    if (!this.procedural) for (const s of [-1, 1]) {
       lamp(L.head, s * (w / 2 - 0.3), h * 0.42, v.len / 2 + 0.01);
       lamp(this.tail, s * (w / 2 - 0.25), h * 0.45, -v.len / 2 - 0.01);
     }
     this.siren = null;
     if (type === 'police' || type === 'ambulance' || type === 'firetruck') {
+      if (this.procedural) this.siren = false;
+    }
+    if (!this.procedural && (type === 'police' || type === 'ambulance' || type === 'firetruck')) {
       this.sirenRed = L.red.clone(); this.sirenBlue = L.blue.clone();
       const red = new THREE.Mesh(new THREE.BoxGeometry(w * 0.32, 0.12, 0.25), this.sirenRed);
       const blue = new THREE.Mesh(new THREE.BoxGeometry(w * 0.32, 0.12, 0.25), this.sirenBlue);
@@ -186,7 +203,14 @@ export class Vehicle {
       if (w.front) w.node.quaternion.premultiply(_q.setFromAxisAngle(Y, this.steer));
     }
     this.tail.emissiveIntensity = this.braking ? 3.5 : 0.5 + this.night * 1.5;
-    if (this.siren !== null) {
+    if (this.bodyMat) {
+      const u = this.bodyMat.userData.u;
+      u.uBrake.value = this.braking ? 1 : 0;
+      u.uLights.value = this.night;
+      const on = this.siren ? 1 : 0, t = performance.now() * 0.008;
+      u.uSirenR.value = on * (Math.sin(t) > 0 ? 1 : 0.05);
+      u.uSirenB.value = on * (Math.sin(t) > 0 ? 0.05 : 1);
+    } else if (this.siren !== null) {
       const t = performance.now() * 0.008;
       const on = this.siren ? 1 : 0;
       this.sirenRed.emissiveIntensity = on * (Math.sin(t) > 0 ? 6 : 0.2);
@@ -194,5 +218,5 @@ export class Vehicle {
     }
   }
 
-  dispose() { this.tail.dispose(); if (this.sirenRed) { this.sirenRed.dispose(); this.sirenBlue.dispose(); } }
+  dispose() { this.tail.dispose(); if (this.bodyMat) this.bodyMat.dispose(); if (this.sirenRed) { this.sirenRed.dispose(); this.sirenBlue.dispose(); } }
 }

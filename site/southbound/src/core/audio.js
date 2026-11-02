@@ -72,6 +72,16 @@ export class GameAudio {
     this.windGain.gain.setTargetAtTime(wind, t, 0.3);
     this.windFilter.frequency.setTargetAtTime(300 + sp * 18, t, 0.3);
     if (st.impact > 2) this.thud(Math.min(st.impact / 15, 1));
+    // rain hiss and thunder
+    if ((st.rain || 0) > 0.01 && !this.rainGain) {
+      const ctx = this.ctx, src = ctx.createBufferSource(); src.buffer = this.noiseBuf; src.loop = true;
+      const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 900;
+      const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 7000;
+      this.rainGain = ctx.createGain(); this.rainGain.gain.value = 0;
+      src.connect(hp); hp.connect(lp); lp.connect(this.rainGain); this.rainGain.connect(this.amb); src.start();
+    }
+    if (this.rainGain) this.rainGain.gain.setTargetAtTime((st.rain || 0) * 0.22, t, 0.8);
+    if (st.thunder) this.thunder();
 
     // birds by day, crickets by night (only outside the city)
     this.nextChirp -= dt;
@@ -125,6 +135,15 @@ export class GameAudio {
     }
     this.sirenGain.gain.setTargetAtTime(level * level * 0.09, this.ctx.currentTime, 0.2);
   }
+  thunder() {
+    const ctx = this.ctx, t = ctx.currentTime + 0.4 + Math.random() * 2.5;
+    const src = ctx.createBufferSource(); src.buffer = this.noiseBuf; src.loop = true;
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 160;
+    const g = ctx.createGain(); g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.9, t + 0.15); g.gain.exponentialRampToValueAtTime(0.001, t + 4.5);
+    src.connect(lp); lp.connect(g); g.connect(this.amb); src.start(t); src.stop(t + 4.6);
+  }
+
   thud(k) {
     const ctx = this.ctx, t = ctx.currentTime;
     const src = ctx.createBufferSource(); src.buffer = this.noiseBuf;

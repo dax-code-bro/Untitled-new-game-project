@@ -178,7 +178,8 @@ export class HUD {
       this.stars.forEach((el, i) => el.classList.toggle('on', i < st.wanted));
       this.wantedEl.classList.toggle('flash', !!st.wantedLost);
       this.wicon.textContent = st.weaponIcon;
-      this.ammoEl.textContent = st.ammo || '';
+      const wl = st.ammo ? `${st.weaponName || ''}  ${st.ammo}` : '';
+      if (wl !== this._wl) { this._wl = wl; this.ammoEl.textContent = wl; }
       this.cross.classList.toggle('show', !!st.aiming);
       if (st.hitMarker) { this.cross.classList.add('hit'); clearTimeout(this._hm); this._hm = setTimeout(() => this.cross.classList.remove('hit'), 120); }
     }

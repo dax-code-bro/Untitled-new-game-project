@@ -22,6 +22,7 @@ function makeFacadeMaterial(surf) {
   const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8, metalness: 0.0 });
   mat.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, worldUniforms);
+    shader.fragmentShader = 'uniform float uWet;\n' + shader.fragmentShader;
     const T = (k, m) => ({ value: surf ? surf[k][m] : null });
     Object.assign(shader.uniforms, {
       tGlassC: T('glass', 'color'), tGlassN: T('glass', 'normal'), tGlassR: T('glass', 'rough'), tGlassM: T('glass', 'metal'), tGlassE: T('glass', 'emit'),
@@ -129,7 +130,7 @@ float sbRough; float sbMetal; vec3 sbEmit; vec3 sbNt; vec3 sbT;
     }
   }
 }`)
-      .replace('#include <roughnessmap_fragment>', 'float roughnessFactor = sbRough;')
+      .replace('#include <roughnessmap_fragment>', 'float roughnessFactor = mix(sbRough, sbRough * 0.6, uWet); diffuseColor.rgb *= 1.0 - uWet * 0.22;')
       .replace('#include <metalnessmap_fragment>', 'float metalnessFactor = sbMetal;')
       .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
 {

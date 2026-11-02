@@ -1,14 +1,16 @@
-// Loads the CC0 model packs (MakeHuman people, Quaternius animations, Kenney cars) and
+// Loads the CC0 model packs (MakeHuman people, Quaternius animations), builds the
+// procedural vehicles, and
 // prepares them: animations are retargeted once per skeleton family.
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { bakeClips, UAL_TO_MH } from './retarget.js';
+import { buildCar } from './carbuilder.js';
 
 // Realistic people built from CC0 MakeHuman assets (tools/southbound/build-human.py)
 export const PEOPLE_ALL = ['mh_m1', 'mh_m2', 'mh_m3', 'mh_m4', 'mh_f1', 'mh_f2', 'mh_cop'];
 export const PEOPLE_LITE = ['mh_m2', 'mh_f1', 'mh_cop'];
 
-// Real-world lengths + handling for each Kenney vehicle
+// Real-world lengths + handling for each vehicle (bodies come from carbuilder.js)
 export const VEHICLES = {
   sedan: { name: 'Meridian Sedan', len: 4.7, accel: 9, top: 50, grip: 7.5, weight: 6 },
   'sedan-sports': { name: 'Vantor GT', len: 4.6, accel: 13, top: 72, grip: 9, weight: 2 },
@@ -49,20 +51,11 @@ export async function loadLibrary(quality, progress = () => {}) {
 
   const anims = await loader.loadAsync(base + 'anims/ual.glb');
   step('Loading animations');
-  await Promise.all(carIds.map(async (id) => {
-    const g = await loader.loadAsync(`${base}cars/${id}.glb`);
-    g.scene.traverse((o) => {
-      if (o.isMesh) {
-        o.castShadow = true; o.receiveShadow = true;
-        // Kenney cars use one colour-map atlas; render it as clear-coated paint
-        const old = o.material;
-        o.material = new THREE.MeshPhysicalMaterial({ map: old.map, color: old.color, roughness: 0.32, metalness: 0.25, clearcoat: 1, clearcoatRoughness: 0.06 });
-        old.dispose();
-      }
-    });
-    lib.cars[id] = g.scene;
-    step('Loading vehicles');
-  }));
+  for (const id of carIds) {
+    lib.cars[id] = buildCar(id, quality);
+    step('Building vehicles');
+    await new Promise((r) => setTimeout(r, 0)); // let the loading bar repaint
+  }
   await Promise.all(people.map(async (id) => {
     const g = await loader.loadAsync(`${base}people/${id}.glb`);
     tunePerson(g.scene);

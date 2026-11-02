@@ -6,6 +6,7 @@ import { buildRoadGraph, CITY, TOWN, regionAt } from './world/layout.js';
 import { Heightmap } from './world/heightmap.js';
 import { createTerrain, makeWorldTextures, worldUniforms } from './world/terrain.js';
 import { createSky } from './world/sky.js';
+import { createWeather } from './world/weather.js';
 import { createWater } from './world/water.js';
 import { createRoads } from './world/roads.js';
 import { createBuildings } from './world/buildings.js';
@@ -16,6 +17,7 @@ import { Vehicle } from './entities/vehicle.js';
 import { Traffic } from './entities/traffic.js';
 import { Peds } from './entities/peds.js';
 import { Combat, WEAPONS } from './entities/combat.js';
+import { ArsenalUI } from './ui/arsenal-ui.js';
 import { Police } from './entities/police.js';
 import { loadLibrary } from './assets/library.js';
 import { loadSurfaces } from './assets/textures.js';
@@ -94,7 +96,7 @@ async function createGame(progress) {
   progress(0.66, 'Shaping the terrain');
   await nextFrame();
   const terrain = createTerrain(hm, q, scene, surf);
-  const water = createWater(scene);
+  const water = createWater(scene, renderer, q);
   const roads = createRoads(graph, hm, q, scene, collision, surf);
   progress(0.74, 'Building Port Calvera and Mill Creek');
   await nextFrame();
@@ -106,6 +108,8 @@ async function createGame(progress) {
   progress(0.92, 'Lighting the sky');
   await nextFrame();
   const sky = createSky(renderer, scene, q);
+  const weather = createWeather(scene, q);
+  sky.weather = weather;
   progress(0.93, 'Loading people and vehicles');
   const lib = await loadLibrary(q, (p, t) => progress(0.93 + p * 0.04, t));
 
@@ -177,6 +181,11 @@ async function createGame(progress) {
     fps: 60, frameMs: 16, frames: 0, fpsTimer: 0, lowTimer: 0, highTimer: 0, resTimer: 0,
   };
   const stats = { drawCalls: 0, tris: 0 };
+  const arsenalUI = new ArsenalUI({
+    combat, getMoney: () => S.money, pause: (b) => { S.frozen = b; },
+    spend: (n) => { if (S.money < n) { hud.toast('Not enough money', 1.2); return false; } S.money -= n; return true; },
+  });
+  arsenalUI.enable();
 
   const pauseEl = $('#pause');
   const setPaused = (p) => {
@@ -295,7 +304,7 @@ async function createGame(progress) {
     }
     if (a.weapon && S.mode === 'foot') combat.cycle();
     if (a.reload && combat.reload()) player.h.play('Pistol_Reload', 0.1, 1, true);
-    const armed = combat.weapon === 'pistol';
+    const armed = !combat.def.melee;
     if (armed && (a.fire || a.firePressed)) S.aimHold = 0.7;
     S.aimHold = Math.max(0, S.aimHold - dt);
     if (S.aimHold > 0 && armed) a.aim = true;
@@ -360,6 +369,7 @@ async function createGame(progress) {
     traffic.max = Math.round(basePreset.traffic * settings.trafficDensity);
     traffic.update(dt, focus, S.vehicle, S.mode === 'foot' ? player.pos : null, sky.night,
       [...peds.list.filter((p) => p.mode !== 'dead' && p.pos.distanceTo(focus) < 120), ...police.cars.map((c) => c.v)]);
+    weather.update(dt, (dt * settings.timeScale) / 120, camera, !S.weatherLocked);
     sky.update(dt, settings.timeScale, focus);
     rig.update(dt, a, focus, { vehicle: S.vehicle, heading: S.vehicle?.heading, speed: S.vehicle?.speed || 0, lastLook: input.lastLookTime, aiming: S.mode === 'foot' && player.aiming && armed }, collision);
 
@@ -368,7 +378,7 @@ async function createGame(progress) {
     veg.update(camera.position, dd);
     water.update(camera.position);
     roads.update(sky.night);
-    scene.fog.density = 1.25 / Math.max(dd, 400) * (1 + sky.night * 0.5);
+    scene.fog.density = 1.25 / Math.max(dd, 400) * (1 + sky.night * 0.5) * weather.fog;
     grassUniforms.uSunDir.value.copy(sky.sunDir);
     grassUniforms.uSunColor.value.copy(sky.sun.color).multiplyScalar(sky.sun.intensity * 0.35);
     grassUniforms.uAmbient.value.copy(sky.hemi.color).multiplyScalar(0.12 + sky.hemi.intensity * 0.9);
@@ -386,7 +396,8 @@ async function createGame(progress) {
     const reg = regionAt(focus.x, focus.z);
     audio.update(dt, {
       driving: S.mode === 'car', speed: S.vehicle?.speed || 0, throttle: a.throttle, night: sky.night,
-      horn: a.horn && S.mode === 'car', impact: S.vehicle?.impact || 0, nature: reg.name !== 'Port Calvera',
+      horn: a.horn && S.mode === 'car', impact: S.vehicle?.impact || 0, nature: reg.name !== 'Port Calvera' && weather.rain < 0.2,
+      rain: weather.rain, thunder: weather.thunder,
     });
     if (post) {
       post.grade.uniforms.uWarm.value = 0.012 + (sky.hour > 16 && sky.hour < 20 ? 0.018 : 0);
@@ -403,7 +414,8 @@ async function createGame(progress) {
       traffic: traffic.cars.map((c) => c.v.pos), police: police.cars.map((c) => c.v.pos),
       health: player.health, armor: player.armor, money: S.money, wanted: police.wanted, wantedLost: police.lost,
       weaponIcon: WEAPONS[combat.weapon].icon,
-      ammo: combat.weapon === 'pistol' ? (combat.reloading > 0 ? 'RELOADING' : `${combat.ammo.pistol.clip} / ${combat.ammo.pistol.reserve}`) : '',
+      ammo: !combat.def.melee ? (combat.reloading > 0 ? 'RELOADING' : `${combat.ammo[combat.weapon].clip} / ${combat.ammo[combat.weapon].reserve}`) : '',
+      weaponName: combat.def.name,
       aiming: S.mode === 'foot' && player.aiming && armed, hitMarker: S.hitMarker,
       fpsText: `${Math.round(S.fps)} FPS · ${q.label} · ${renderer.domElement.width}×${renderer.domElement.height}\n${stats.drawCalls} draws · ${(stats.tris / 1e6).toFixed(2)}M tris`,
     });
@@ -463,6 +475,7 @@ async function createGame(progress) {
 
   function render() {
     renderer.info.reset();
+    water.renderReflection(scene, camera);
     if (post) post.render(1 / 60); else renderer.render(scene, camera);
     stats.drawCalls = renderer.info.render.calls;  // all passes this frame
     stats.tris = renderer.info.render.triangles;
@@ -489,6 +502,7 @@ async function createGame(progress) {
         speed: +(S.vehicle?.speed || 0).toFixed(1), traffic: traffic.cars.length, trees: veg.placed, buildings: city.count, draws: stats.drawCalls, tris: stats.tris, scale: dynScale, preset: q.label };
     },
     setHour(h) { sky.hour = h; },
+    setWeather(kind) { weather.set(kind); weather.snap(); S.weatherLocked = true; },
     setOverride(o) { S.override = o; },
     teleport(x, z, heading = 0) {
       const y = collision.surface(x, z, 500);
@@ -518,7 +532,9 @@ async function createGame(progress) {
     get wanted() { return police.wanted; },
     get cops() { return { cars: police.cars.length, officers: peds.list.filter((p) => p.role === 'cop' && p.mode !== 'dead').length }; },
     giveMoney(n) { S.money += n; },
-    weapon(w) { combat.weapon = w; },
+    openArsenal: (tab) => { if (tab) arsenalUI.tab = tab; arsenalUI.toggle(true); },
+    weapon(w) { if (w !== 'fists') combat.give(w); combat.weapon = w; },
+    arsenal: () => ({ owned: combat.owned.slice(), total: Object.keys(WEAPONS).length - 2 }),
     get peds() { return peds.list.length; },
     hurt(n) { hurtPlayer(n); },
     // Put the current vehicle on the nearest road, facing `heading`, and let the autopilot drive.
@@ -545,8 +561,8 @@ async function createGame(progress) {
       for (const v of parked) { const d = v.pos.distanceTo(player.pos); if (d < bd) { bd = d; best = v; } }
       if (best) enterVehicle(best, null);
     },
-    spawnCar(type = 'sports', color = 0xc2410f) {
-      const v = new Vehicle(type, color, q);
+    spawnCar(type = 'sedan-sports') {
+      const v = new Vehicle(lib, type);
       v.pos.copy(player.pos); v.heading = player.heading; scene.add(v.group); parked.push(v); return true;
     },
     pause: setPaused,

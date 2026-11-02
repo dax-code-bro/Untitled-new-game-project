@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { CITY, TOWN } from './layout.js';
 import { mulberry32 } from '../util.js';
+import { worldUniforms } from './terrain.js';
 
 function canvasTex(w, h, draw, anisotropy) {
   const c = document.createElement('canvas');
@@ -88,21 +89,30 @@ export function createRoads(graph, hm, quality, scene, collision, surf) {
     m.onBeforeCompile = (sh) => {
       sh.uniforms.tAsph = { value: A.color }; sh.uniforms.tAsphN = { value: A.normal };
       sh.uniforms.tAsphR = { value: A.rough }; sh.uniforms.tAsphAO = { value: A.ao };
+      sh.uniforms.uWet = worldUniforms.uWet;
       sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vRW;')
         .replace('#include <begin_vertex>', '#include <begin_vertex>\nvRW = (modelMatrix * vec4(transformed, 1.0)).xyz;');
       sh.fragmentShader = sh.fragmentShader.replace('#include <common>', `#include <common>
-varying vec3 vRW; uniform sampler2D tAsph; uniform sampler2D tAsphN; uniform sampler2D tAsphR; uniform sampler2D tAsphAO; float sbPaint;`)
+varying vec3 vRW; uniform sampler2D tAsph; uniform sampler2D tAsphN; uniform sampler2D tAsphR; uniform sampler2D tAsphAO; float sbPaint;
+uniform float uWet; float sbPud;
+float sbVN(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+  float a = fract(sin(dot(i, vec2(127.1, 311.7))) * 43758.5), b = fract(sin(dot(i + vec2(1, 0), vec2(127.1, 311.7))) * 43758.5);
+  float c = fract(sin(dot(i + vec2(0, 1), vec2(127.1, 311.7))) * 43758.5), d = fract(sin(dot(i + vec2(1, 1), vec2(127.1, 311.7))) * 43758.5);
+  return mix(mix(a, b, f.x), mix(c, d, f.x), f.y); }`)
         .replace('#include <map_fragment>', `
           vec2 auv = vRW.xz / ${sz};
           vec3 asph = texture2D(tAsph, auv).rgb * texture2D(tAsphAO, auv).r;
           vec4 mk = texture2D(map, vMapUv);
           sbPaint = mk.a;
-          diffuseColor.rgb *= mix(asph, mk.rgb * (0.75 + 0.25 * asph.g * 2.0), mk.a);`)
-        .replace('#include <roughnessmap_fragment>', 'float roughnessFactor = mix(texture2D(tAsphR, auv).g, 0.6, sbPaint);')
+          diffuseColor.rgb *= mix(asph, mk.rgb * (0.75 + 0.25 * asph.g * 2.0), mk.a);
+          // rain: darker asphalt, standing water in the low spots
+          sbPud = uWet * smoothstep(0.58, 0.68, sbVN(vRW.xz * 0.22) * 0.7 + sbVN(vRW.xz * 0.9) * 0.3 + (1.0 - asph.g) * 0.25);
+          diffuseColor.rgb *= 1.0 - uWet * 0.45 - sbPud * 0.25;`)
+        .replace('#include <roughnessmap_fragment>', 'float roughnessFactor = mix(mix(texture2D(tAsphR, auv).g, 0.6, sbPaint), 0.16, uWet * 0.85); roughnessFactor = mix(roughnessFactor, 0.02, sbPud);')
         .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
           {
             vec3 nt = texture2D(tAsphN, auv).xyz * 2.0 - 1.0;
-            nt.xy *= 1.0 - sbPaint * 0.6;
+            nt.xy *= (1.0 - sbPaint * 0.6) * (1.0 - sbPud);
             vec3 nw = normalize(vec3(nt.x, max(nt.z, 0.2), nt.y));
             normal = normalize((viewMatrix * vec4(nw, 0.0)).xyz);
           }`);
@@ -296,9 +306,47 @@ varying vec3 vRW; uniform sampler2D tAsph; uniform sampler2D tAsphN; uniform sam
   pools.renderOrder = 2;
   group.add(pools);
 
+  // Wet roads: each lamp's reflection stretched toward the camera
+  const streakGeo = new THREE.InstancedBufferGeometry();
+  streakGeo.setAttribute('position', new THREE.Float32BufferAttribute([-1, 0, 0, 1, 0, 0, 1, 1, 0, -1, 1, 0], 3));
+  streakGeo.setIndex([0, 1, 2, 0, 2, 3]);
+  const lampAttr = [];
+  lights.forEach((l) => {
+    const r = l.rot + (l.side > 0 ? Math.PI / 2 : -Math.PI / 2);
+    const x = l.x + Math.sin(r) * 1.9, z = l.z + Math.cos(r) * 1.9;
+    lampAttr.push(x, Math.max(l.y, hm.height(x, z)) + 0.06, z, l.y + 7.8 - Math.max(l.y, hm.height(x, z)));
+  });
+  streakGeo.setAttribute('aLamp', new THREE.InstancedBufferAttribute(new Float32Array(lampAttr), 4));
+  streakGeo.instanceCount = lights.length;
+  const streakMat = new THREE.ShaderMaterial({
+    uniforms: { uOpacity: { value: 0 } },
+    vertexShader: `attribute vec4 aLamp; varying vec2 vQ; varying float vF;
+      void main(){
+        vec2 d = cameraPosition.xz - aLamp.xz; float dist = length(d); d /= max(dist, 1e-3);
+        float camH = max(cameraPosition.y - aLamp.y, 0.3);
+        float rp = dist * aLamp.w / (aLamp.w + camH);          // mirror point of the lamp on the road
+        float len = clamp(dist * 0.45, 3.0, 22.0);
+        vec2 side = vec2(-d.y, d.x);
+        vec2 c = aLamp.xz + d * (rp - len * 0.35 + position.y * len);
+        vec2 xz = c + side * position.x * 0.7;
+        vQ = vec2(position.x, position.y); vF = smoothstep(260.0, 120.0, dist) * smoothstep(1.0, 6.0, dist);
+        gl_Position = projectionMatrix * viewMatrix * vec4(xz.x, aLamp.y, xz.y, 1.0);
+      }`,
+    fragmentShader: `uniform float uOpacity; varying vec2 vQ; varying float vF;
+      void main(){
+        float a = exp(-vQ.x * vQ.x * 5.0) * smoothstep(0.0, 0.35, vQ.y) * smoothstep(1.0, 0.45, vQ.y) * vF * uOpacity;
+        gl_FragColor = vec4(vec3(1.0, 0.68, 0.34) * a * 1.6, 1.0);
+      }`,
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+  });
+  const streaks = new THREE.Mesh(streakGeo, streakMat);
+  streaks.frustumCulled = false; streaks.renderOrder = 3; streaks.userData.noReflect = true;
+  group.add(streaks);
+
   scene.add(group);
   return {
     group, lights,
-    update(night) { headMat.emissiveIntensity = night * 6; poolMat.opacity = night * 0.55; pools.visible = night > 0.02; },
+    update(night) { headMat.emissiveIntensity = night * 6; poolMat.opacity = night * 0.55 * (1 - worldUniforms.uWet.value * 0.3); pools.visible = night > 0.02;
+      streakMat.uniforms.uOpacity.value = night * worldUniforms.uWet.value; streaks.visible = streakMat.uniforms.uOpacity.value > 0.01; },
   };
 }

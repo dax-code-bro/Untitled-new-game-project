@@ -23,6 +23,7 @@ export const worldUniforms = {
   uHeightTex: { value: null },
   uSplatTex: { value: null },
   uWorldHalf: { value: WORLD.half },
+  uWet: { value: 0 }, // 0 dry .. 1 soaked (weather)
 };
 
 export function createTerrain(hm, quality, scene, surf) {
@@ -124,6 +125,7 @@ function makeTerrainMaterial(quality, surf) {
   const size = (k) => (surf ? surf[k].size : 3).toFixed(2);
   mat.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, worldUniforms);
+    shader.fragmentShader = 'uniform float uWet;\n' + shader.fragmentShader;
     for (const k of L) {
       shader.uniforms[`t_${k}C`] = { value: surf ? surf[k].color : null };
       shader.uniforms[`t_${k}N`] = { value: surf ? surf[k].normal : null };
@@ -208,7 +210,7 @@ vec3 layerN(sampler2D t, vec2 p, float scale){
   }
   sbNrm = nt;
 }`)
-      .replace('#include <roughnessmap_fragment>', 'float roughnessFactor = sbRough;')
+      .replace('#include <roughnessmap_fragment>', 'float roughnessFactor = mix(sbRough, sbRough * 0.55, uWet); diffuseColor.rgb *= 1.0 - uWet * 0.3;')
       .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
 {
   vec3 N = normalize(vWNrm);

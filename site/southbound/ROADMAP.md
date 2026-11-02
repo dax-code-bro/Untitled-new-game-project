@@ -55,8 +55,18 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 - [x] Grass clumps and scanned rocks as ground cover
 - [x] Hydraulic erosion on the terrain (gullies, ridges, valley floors)
 - [x] Realistic player, pedestrians and police built from CC0 MakeHuman assets
-- [ ] Rain / wet roads with reflections, volumetric clouds
-- [ ] Higher-detail cars (Kenney cars are still stylised)
+- [x] Volumetric ray-marched clouds (cached in a sky cube, so 4K costs the same as 720p); clouds show in reflections
+- [x] Weather: clear / cloudy / overcast / rain / storm with lightning and thunder; rain streaks; wet roads with puddles and street-light reflections
+- [x] Planar reflections on the lake and the Gulf (High/Ultra)
+- [x] Procedural realistic vehicles: smooth bodies, clear-coat paint, glass, LED lights, grilles, plates, panel gaps, real rims and tyres, LODs; random real-world paint colours for traffic
+
+## Phase 1.7 — Arsenal + store readiness (done)
+
+- [x] 221 weapons in 7 categories from 22 base platforms by 12 invented gunmakers (stats, prices, procedural 3D models)
+- [x] 195 attachments in 6 slots (optics, muzzle, barrel, underbarrel, magazine, stock) that change weapon stats
+- [x] Arsenal store screen (B key / HUD button): browse, buy, equip, fit attachments
+- [x] Shotgun pellets, explosive rockets/grenades with blast damage, silent bows with arrows in flight
+- [x] Installable web app (manifest + icons); Capacitor setup guide for the App Store / Google Play (`mobile/`)
 
 ## Phase 2 — World depth
 
@@ -72,15 +82,15 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 
 | Item | Target | Done |
 |---|---|---|
-| Assault rifles | 56 | 0 |
-| Shotguns | 13 | 0 |
-| Rocket launchers | 12 | 0 |
-| Bows | 19 | 0 |
-| Sniper rifles | 13 | 0 |
-| Marksman rifles | 45 | 0 |
-| Pistols | 63 | 1 |
-| Weapon attachments | 193+ | 0 |
-| Land vehicles | 93 | 13 |
+| Assault rifles | 56 | 56 (variants of 4 platforms) |
+| Shotguns | 13 | 13 (3 platforms) |
+| Rocket launchers | 12 | 12 (2 platforms) |
+| Bows | 19 | 19 (3 platforms) |
+| Sniper rifles | 13 | 13 (2 platforms) |
+| Marksman rifles | 45 | 45 (3 platforms) |
+| Pistols | 63 | 63 (5 platforms) |
+| Weapon attachments | 193+ | 195 (39 parts × 5 tiers) |
+| Land vehicles | 93 | 13 body types (procedural; more are new spec entries) |
 | Water vehicles | 16 | 0 |
 | Air vehicles | 11 | 0 |
 | Car upgrades (per car) | 63 | 0 |
@@ -93,7 +103,7 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 
 ## Phase 4 — Systems
 
-- [~] Combat: shooting and aiming done; cover, more weapons, vehicle damage model to do
+- [~] Combat: shooting, aiming, 7 weapon classes done; cover and a vehicle damage model to do
 - [ ] Hunting: animals with AI, tracking, skinning, trophies
 - [ ] Fishing: casting, fish species by water type, reel mini-game
 - [ ] Economy: money, shops, property ownership
@@ -116,13 +126,18 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 
 - Frame rates have only been measured in a software renderer (the cloud box has
   no GPU). Real phone and PC frame rates still need testing on actual devices.
-- Characters are simple shapes for now (no skinned models).
 - Cars can't be damaged yet. Collisions push and slow you down.
 - Traffic has no traffic lights, so cars cross intersections without stopping
   for each other.
 - Buildings are solid for now. The interior system is Phase 2.
 
 ## Session log
+
+- **Graphics push (clouds, weather, cars, arsenal):** volumetric clouds, weather
+  with wet roads, water reflections, procedural realistic cars replacing the
+  Kenney kit, 221 weapons + 195 attachments with a store, installable web app.
+  Not yet done: WebGPU renderer, interiors, missions, boats/planes, vehicle
+  upgrades, real-device frame-rate measurements.
 
 - **Session 1:** Phase 1 built. External asset sites are blocked by the cloud
   environment's network policy, so every texture, model and sound is made in code.

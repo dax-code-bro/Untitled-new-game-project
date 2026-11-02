@@ -1,10 +1,9 @@
 // Physical sky, sun/moon lights, image-based lighting, fog, stars, day/night.
 import * as THREE from 'three';
-import { Sky } from 'three/addons/objects/Sky.js';
+import { createCloudSky, createSkyDome } from './clouds.js';
 import { clamp, lerp, smoothstep } from '../util.js';
 import { worldUniforms } from './terrain.js';
 import { fogParams } from './atmosphere.js';
-import { GLSL_NOISE } from '../util.js';
 
 // Horizon fog colour through the day (hour -> linear RGB)
 const FOG_KEYS = [
@@ -24,46 +23,13 @@ function fogColorAt(hour, out) {
 }
 
 export function createSky(renderer, scene, quality) {
-  const sky = new Sky();
-  sky.scale.setScalar(20000);
-  const u = sky.material.uniforms;
-  u.turbidity.value = 6;
-  u.rayleigh.value = 1.6;
-  u.mieCoefficient.value = 0.005;
-  u.mieDirectionalG.value = 0.82;
+  // Ray-marched clouds live in a small cube map; the dome draws it at full res.
+  const clouds = createCloudSky(renderer, quality);
+  const u = clouds.uniforms;
+  const sky = createSkyDome(clouds.texture);
   scene.add(sky);
-  // Night: pull the sky toward deep blue instead of the model's muddy brown
+  const du = sky.material.uniforms;
   const skyNight = { value: 0 };
-  sky.material.uniforms.uSkyNight = skyNight;
-  sky.material.uniforms.uTime = worldUniforms.uTime;
-  sky.material.uniforms.uCloudCover = { value: 0.48 };
-  sky.material.fragmentShader = sky.material.fragmentShader
-    .replace('void main() {', 'uniform float uSkyNight; uniform float uTime; uniform float uCloudCover;\n' + GLSL_NOISE + '\nvoid main() {')
-    .replace('gl_FragColor = vec4( retColor, 1.0 );', `// cumulus layer: a noise field projected on a high cloud deck
-			if (direction.y > 0.0) {
-				vec2 cp = direction.xz / (direction.y + 0.06) * 1.6 + vec2(uTime * 0.006, uTime * 0.0025);
-				float n = sbFbm(cp) * 0.65 + sbFbm(cp * 3.1 + 7.0) * 0.35;
-				float cov = smoothstep(uCloudCover, uCloudCover + 0.22, n) * smoothstep(0.0, 0.12, direction.y);
-				float sunAmt = pow(max(dot(direction, vSunDirection), 0.0), 5.0);
-				float day = clamp(vSunDirection.y * 4.0 + 0.3, 0.0, 1.0);
-				float lum = dot(retColor, vec3(0.3333));
-				vec3 lit = mix(vec3(0.62, 0.64, 0.7), vec3(1.0, 0.97, 0.92), smoothstep(0.35, 0.8, n));
-				vec3 glow = vec3(1.0, 0.72, 0.45) * sunAmt * (1.0 - day * 0.6);
-				vec3 cloudCol = (lit * (0.35 + lum * 1.1) + glow * 1.2) * mix(0.15, 1.0, day);
-				retColor = mix(retColor, cloudCol, cov * 0.92);
-			}
-			vec3 nightCol = mix(vec3(0.004,0.007,0.02), vec3(0.02,0.035,0.07), pow(1.0 - max(direction.y, 0.0), 3.0));
-			retColor = mix(retColor, nightCol, uSkyNight);
-			gl_FragColor = vec4( retColor, 1.0 );`);
-
-  // Separate scene for building the environment (reflection) map
-  const envScene = new THREE.Scene();
-  const envSky = new Sky();
-  envSky.scale.setScalar(1000);
-  envSky.material.uniforms = THREE.UniformsUtils.clone(sky.material.uniforms);
-  envScene.add(envSky);
-  const envGround = new THREE.Mesh(new THREE.SphereGeometry(400, 16, 8, 0, Math.PI * 2, Math.PI / 2 + 0.05, Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x1b1e14, side: THREE.BackSide }));
-  envScene.add(envGround);
   const pmrem = new THREE.PMREMGenerator(renderer);
   let envRT = null;
 
@@ -81,28 +47,10 @@ export function createSky(renderer, scene, quality) {
 
   scene.fog = new THREE.FogExp2(0x9fb6cc, 0.00022);
 
-  // Stars
-  const starGeo = new THREE.BufferGeometry();
-  const sp = [];
-  for (let i = 0; i < 2500; i++) {
-    const v = new THREE.Vector3().randomDirection();
-    if (v.y < 0.02) v.y = Math.abs(v.y) + 0.02;
-    v.normalize().multiplyScalar(9000);
-    sp.push(v.x, v.y, v.z);
-  }
-  starGeo.setAttribute('position', new THREE.Float32BufferAttribute(sp, 3));
-  const starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 2.2, sizeAttenuation: false, transparent: true, opacity: 0, fog: false, depthWrite: false });
-  const stars = new THREE.Points(starGeo, starMat);
-  stars.frustumCulled = false;
-  scene.add(stars);
-
-  // Moon
-  const moon = new THREE.Mesh(new THREE.SphereGeometry(90, 24, 12), new THREE.MeshBasicMaterial({ color: 0xdfe6ff, fog: false, transparent: true }));
-  scene.add(moon);
-
   const sunDir = new THREE.Vector3();
   const fogCol = new THREE.Color();
-  let lastEnvHour = -99, envTimer = 0;
+  let lastEnvHour = -99, envTimer = 0, envAge = 0, lastCover = 0;
+  const _grey = new THREE.Color();
 
   const state = {
     hour: 9.5, day: 1,
@@ -115,7 +63,6 @@ export function createSky(renderer, scene, quality) {
       const ang = ((h - 6) / 24) * Math.PI * 2;
       sunDir.set(Math.cos(ang) * 0.85, Math.sin(ang), Math.cos(ang) * 0.25 + 0.45).normalize();
       const elev = sunDir.y;
-      u.sunPosition.value.copy(sunDir);
       const day = smoothstep(-0.08, 0.12, elev);
       state.night = 1 - smoothstep(-0.12, 0.05, elev);
       worldUniforms.uNight.value = state.night;
@@ -151,23 +98,47 @@ export function createSky(renderer, scene, quality) {
       }
       hemi.intensity = lerp(0.5, 0.7, day);
       hemi.color.setRGB(lerp(0.22, 0.75, day), lerp(0.28, 0.85, day), lerp(0.55, 1.0, day));
+      // weather: clouds swallow the sun, light goes flat and grey
+      const W = state.weather || { cover: 0.52, dark: 0, flash: 0, rain: 0 };
+      sun.intensity *= 1 - W.dark * 0.85;
+      hemi.intensity *= 1 - W.dark * 0.25;
+      hemi.color.lerp(_grey.setRGB(0.55, 0.58, 0.62).multiplyScalar(0.3 + 0.7 * day), W.dark * 0.6);
+      if (W.flash > 0) { hemi.intensity += W.flash * 2.5; hemi.color.lerp(_grey.setRGB(0.75, 0.8, 1.0), W.flash); }
 
       fogColorAt(h, fogCol);
+      fogCol.lerp(_grey.setRGB(0.42, 0.45, 0.48).multiplyScalar(0.08 + 0.92 * day), W.dark * 0.7);
       scene.fog.color.copy(fogCol);
-      starMat.opacity = state.night;
-      moon.position.copy(focus).addScaledVector(moonDir, 8500);
-      moon.material.opacity = clamp(moonDir.y * 4, 0, 1);
-      stars.position.copy(focus);
       sky.position.copy(focus);
+      // dome: crisp sun disc, moon and stars drawn over the cloud cube
+      du.uSunDir.value.copy(sunDir);
+      du.uSunDisc.value.copy(sun.color).multiplyScalar(useMoon ? 0 : 60 * day);
+      du.uMoonDir.value.copy(moonDir);
+      du.uMoon.value = clamp(moonDir.y * 4, 0, 1);
+      du.uStars.value = state.night * (1 - W.dark);
+      du.uFlash.value = W.flash;
+      // clouds: lit by the sun, then the moon after dark; sunset light reaches them last
+      u.uCloudTime.value += dt * Math.max(timeScale, 0.05) + (timeScale === 0 ? dt * 0.3 : 0);
+      u.uSkyNight.value = skyNight.value;
+      const cloudDay = smoothstep(-0.1, 0.1, elev);
+      u.uLightDir.value.copy(useMoon ? moonDir : sunDir);
+      if (useMoon) u.uCloudSun.value.setRGB(0.05, 0.06, 0.085).multiplyScalar(smoothstep(-0.05, -0.3, elev));
+      else u.uCloudSun.value.setRGB(1.0, lerp(0.42, 0.95, warm), lerp(0.22, 0.88, warm)).multiplyScalar(3.4 * cloudDay);
+      u.uCloudAmb.value.setRGB(lerp(0.012, 0.36, cloudDay), lerp(0.016, 0.42, cloudDay), lerp(0.03, 0.52, cloudDay));
+      if (elev > -0.05 && elev < 0.25) u.uCloudAmb.value.lerp(new THREE.Color(0.42, 0.28, 0.26), (1 - smoothstep(0.0, 0.25, elev)) * 0.6);
+      u.uCloudSun.value.multiplyScalar(1 - W.dark * 0.55);
+      u.uCloudAmb.value.multiplyScalar(1 - W.dark * 0.45);
+      u.uCover.value = W.cover;
+      u.uGround.value.setRGB(0.07 * day + 0.006, 0.07 * day + 0.007, 0.05 * day + 0.008);
+      u.sunPosition.value.copy(sunDir);
+      clouds.update();
 
-      // Environment map: refresh when the sun has moved enough
-      envTimer -= dt;
-      if (Math.abs(h - lastEnvHour) > 0.25 && envTimer <= 0) {
-        envTimer = quality.envEvery * 0.1;
+      // Environment map: rebuilt from the cloud cube when the sun moves or clouds drift
+      envTimer -= dt; envAge += dt;
+      if ((Math.abs(h - lastEnvHour) > 0.2 || envAge > 12 || Math.abs(W.cover - lastCover) > 0.05) && envTimer <= 0) {
+        lastCover = W.cover;
+        envTimer = quality.envEvery * 0.1; envAge = 0;
         lastEnvHour = h;
-        envSky.material.uniforms.sunPosition.value.copy(sunDir);
-        envGround.material.color.setRGB(0.1 * day + 0.01, 0.1 * day + 0.012, 0.07 * day + 0.01);
-        const next = pmrem.fromScene(envScene, 0.02);
+        const next = pmrem.fromCubemap(clouds.texture);
         if (envRT) envRT.dispose();
         envRT = next;
         scene.environment = envRT.texture;

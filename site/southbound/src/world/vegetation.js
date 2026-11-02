@@ -79,6 +79,7 @@ function addWind(mat, strength) {
   transformed.y += sin(uTime * 2.7 + ph + reach) * sway * 0.25;
 }`);
   };
+  mat.customProgramCacheKey = () => 'sbwind-' + strength;
 }
 
 export async function createVegetation(hm, quality, scene, collision, cityBlocks, progress = () => {}) {
@@ -295,7 +296,7 @@ export async function createVegetation(hm, quality, scene, collision, cityBlocks
         });
         im.castShadow = quality.shadows >= 2; im.receiveShadow = true;
         im.computeBoundingSphere();
-        scene.add(im); rockMeshes.push(im);
+        im.userData.noReflect = true; scene.add(im); rockMeshes.push(im);
       }
     });
   } catch (e) { console.warn('rocks unavailable', e); }
@@ -414,6 +415,7 @@ async function createGrassField(gltf, Q, scene) {
   });
   const mesh = new THREE.Mesh(geo, mat);
   mesh.frustumCulled = false;
+  mesh.userData.noReflect = true;
   scene.add(mesh);
   return { update(cam) { mat.uniforms.uCam.value.copy(cam); } };
 }
