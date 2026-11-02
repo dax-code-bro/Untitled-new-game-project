@@ -124,10 +124,14 @@ float sbVN(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f)
           if (uReflectOn > 0.5 && uWet > 0.02 && abs(vRW.y - uReflY) < 0.8) {
             vec4 rp = uReflMatrix * vec4(vRW, 1.0);
             vec2 ruv = rp.xy / rp.w + sbRN.xz * (0.05 - sbPud * 0.04);
-            vec3 refl = texture2D(tReflect, clamp(ruv, 0.001, 0.999)).rgb;
+            // wet asphalt smears reflections into vertical streaks; puddles stay sharp
+            float sm = 0.012 * (1.0 - sbPud);
+            vec3 refl = texture2D(tReflect, clamp(ruv, 0.001, 0.999)).rgb * 0.36
+              + (texture2D(tReflect, clamp(ruv + vec2(0.0, sm), 0.001, 0.999)).rgb + texture2D(tReflect, clamp(ruv - vec2(0.0, sm), 0.001, 0.999)).rgb) * 0.22
+              + (texture2D(tReflect, clamp(ruv + vec2(sm * 0.25, sm * 2.2), 0.001, 0.999)).rgb + texture2D(tReflect, clamp(ruv - vec2(sm * 0.25, sm * 2.2), 0.001, 0.999)).rgb) * 0.1;
             vec3 V = normalize(cameraPosition - vRW);
             float F = 0.04 + 0.96 * pow(1.0 - clamp(V.y, 0.0, 1.0), 5.0);
-            outgoingLight = mix(outgoingLight, refl, clamp(F * (uWet * 0.55 + sbPud * 0.6) + sbPud * 0.25, 0.0, 0.92));
+            outgoingLight = mix(outgoingLight, refl, clamp(F * (uWet * 0.42 + sbPud * 0.6) + sbPud * 0.22, 0.0, 0.85));
           }
           #include <opaque_fragment>`);
     };
