@@ -56,7 +56,7 @@ export function installGarage(game) {
       const g = shopCar && ownedOf(shopCar);
       const up = g ? g.up : {};
       if (t === 'paint') return { name: it[0], sub: it[2] > 0.5 ? 'metallic' : 'solid', stats: [], btn: money(500), cls: '' };
-      if (t === 'repair') return { name: 'Full repair', sub: `Body ${Math.round(shopCar.health)}/${shopCar.maxHealth}`, stats: [], btn: money(250) };
+      if (t === 'repair') return shopCar ? { name: 'Full repair', sub: `Body ${Math.round(shopCar.health)}/${shopCar.maxHealth}`, stats: [], btn: money(250) } : { name: 'Full repair', sub: 'drive a car into the shop first', stats: [], btn: '—', cls: 'dis' };
       const fitted = it.kind === 'perf' ? (up[it.group] || 0) >= it.tier : matchesLook(up, it);
       const stats = it.kind === 'perf' ? Object.entries(it.fx).map(([k, v]) => [k, null, `${k === 'armor' ? '+' + v * it.tier : k === 'ride' ? `${Math.round(v * it.tier * 100)} cm` : '+' + Math.round(v * it.tier * 100) + '%'}`]) : [];
       return { name: it.name, sub: it.group, stats, btn: fitted ? 'Fitted' : money(it.price), cls: fitted ? 'own' : '' };
