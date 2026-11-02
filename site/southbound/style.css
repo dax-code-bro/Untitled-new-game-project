@@ -187,3 +187,4 @@ body.touch #topright { top: calc(max(14px, env(safe-area-inset-top)) + 40px); }
 body.touch #vehpanel { right: calc(max(16px, env(safe-area-inset-right)) + 160px); }
 #arsenalBtn, .sbPhoneBtn { display: none; }
 body.touch #arsenalBtn, body.touch .sbPhoneBtn { display: block; }
+#toast { top: calc(max(18px, env(safe-area-inset-top)) + 128px) !important; }
