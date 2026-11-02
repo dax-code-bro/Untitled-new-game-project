@@ -138,6 +138,33 @@ export function drapeMembrane(c, mesh, opts = {}) {
     x[v * 3] += seed.x * a; x[v * 3 + 1] += seed.y * a; x[v * 3 + 2] += seed.z * a;
     xp[v * 3] = x[v * 3]; xp[v * 3 + 1] = x[v * 3 + 1]; xp[v * 3 + 2] = x[v * 3 + 2];
   }
+  // legTuck (0..1): in a ground fold the plagiopatagium's leg edge does not follow the shank down
+  // to the ankle (a resting bat / pterosaur tucks that band flat against the folded leg): every
+  // vertex that rides on the shank or foot is folded up about the knee onto the thigh line
+  // (distance below the knee x legFold, default 0.3) - pinned ones too - so no membrane hangs
+  // below the knee as thin points (1B-03). Weighted by the vertex's shank+foot skin weight.
+  const legTuck = opts.legTuck ?? 0;
+  const sideN = opts.sideName ?? (side > 0 ? 'L' : 'R');
+  const shinB = [1, 2, 3].map((k) => c.boneIndex[`hl_${sideN}_${k}`]).filter((b) => b !== undefined);
+  if (legTuck > 0 && shinB.length && c.boneIndex[`hl_${sideN}_0`] !== undefined) {
+    const rootInv = new THREE.Matrix4().copy(c.root.matrixWorld).invert();
+    const jp = (k) => new THREE.Vector3().setFromMatrixPosition(c.bones[c.boneIndex[`hl_${sideN}_${k}`]].matrixWorld).applyMatrix4(rootInv);
+    const hip = jp(0), knee = jp(1), ank = jp(2);
+    const u = ank.clone().sub(knee).normalize(), hu = hip.clone().sub(knee).normalize();
+    const fold = opts.legFold ?? 0.3;
+    for (let v = 0; v < n; v++) {
+      let ws = 0;
+      for (let k = 0; k < 4; k++) if (shinB.includes(si[v * 4 + k])) ws += sw[v * 4 + k];
+      if (ws <= 0) continue;
+      const i3 = v * 3;
+      const t = (x[i3] - knee.x) * u.x + (x[i3 + 1] - knee.y) * u.y + (x[i3 + 2] - knee.z) * u.z;
+      if (t <= 0) continue;
+      const f = legTuck * Math.min(1, ws * 1.6);
+      const sx = (-u.x + hu.x * fold) * t * f, sy = (-u.y + hu.y * fold) * t * f, sz = (-u.z + hu.z * fold) * t * f;
+      x[i3] += sx; x[i3 + 1] += sy; x[i3 + 2] += sz;
+      xp[i3] = x[i3]; xp[i3 + 1] = x[i3 + 1]; xp[i3 + 2] = x[i3 + 2];
+    }
+  }
   // colliders around the membrane
   const box = [Infinity, Infinity, Infinity, -Infinity, -Infinity, -Infinity];
   for (let v = 0; v < n; v++) for (let k = 0; k < 3; k++) { box[k] = Math.min(box[k], X0[v * 3 + k]); box[3 + k] = Math.max(box[3 + k], X0[v * 3 + k]); }

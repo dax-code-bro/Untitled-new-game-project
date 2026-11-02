@@ -105,7 +105,7 @@ export const DESIGNS = {
     trunkP: [[0, 2.7, 4.2], [0.25, 2.9, 4.5], [0.6, 2.4, 3.4], [0.85, 2.2, 2.8], [1, 2.35, 2.6]],
     tailP: [[0, 1.95, 2.15], [0.15, 1.5, 1.7], [0.35, 0.95, 1.1], [0.6, 0.48, 0.56], [0.85, 0.19, 0.23], [1, 0.04, 0.04]],
     stand: { hip: 7.0, shoulder: 7.5, forearmLean: 12, humerusRise: 12, neckRise: 25, neckTop: 0, headPitch: -14, tailDroop: 22 },
-    fold: { curl: [8, 60, 108] }, bulk: { leg: 1.38, arm: 1.12, neck: 1.12 },
+    fold: { curl: [8, 60, 108], lowCurl: [-6, 0, -8] }, bulk: { leg: 1.38, arm: 1.12, neck: 1.12 },
     // semi-digitigrade with a fibro-fatty heel pad (elephant); claws thick, blunt, chipped
     leg: { femur: 3.1, tibia: 3.4, mt: 1.5, toe: 1.3, claw: 0.42, d: [1.7, 1.05, 1.0, 0.62, 0.52], mtAng: 40, heelPad: 1.0, hallux: 0.48, toeR: 0.19, blunt: 1 },
     wing: { humerus: 4.5, forearm: 8.1, d: [1.55, 1.0, 0.62, 0.42],
