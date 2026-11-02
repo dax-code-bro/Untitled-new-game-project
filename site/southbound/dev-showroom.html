@@ -39,6 +39,11 @@ const ground = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), new THREE.MeshS
 ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true;
 scene.add(ground);
 const view = qs.get('view') || 'cars';
+if (view === 'glass') {
+  // material test panels: shop glass (rough 0.06, metal 0.4) vs variants
+  const mk = (x, rough, metal) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 2.4), new THREE.MeshStandardMaterial({ color: 0x141414, roughness: rough, metalness: metal })); m.position.set(x, 1.6, 0); m.castShadow = m.receiveShadow = true; scene.add(m); };
+  mk(-2, 0.06, 0.4); mk(0, 0.06, 0.0); mk(2, 0.3, 0.4);
+}
 const t0 = performance.now();
 const cars = [];
 if (view !== 'sky') {

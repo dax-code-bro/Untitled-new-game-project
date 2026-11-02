@@ -31,7 +31,7 @@ function makeFacadeMaterial(surf) {
       tConC: T('concrete', 'color'), tPlasC: T('plaster', 'color'),
     });
     shader.vertexShader = shader.vertexShader
-      .replace('#include <common>', '#include <common>\nattribute vec4 aInfo;\nvarying vec3 vWPos; varying vec3 vWNrm; varying vec4 vInfo; varying vec3 vSize;')
+      .replace('#include <common>', '#include <common>\nattribute vec4 aInfo;\nvarying vec3 vWPos; varying vec3 vWNrm; flat varying vec4 vInfo; varying vec3 vSize;')
       .replace('#include <begin_vertex>', `#include <begin_vertex>
 vInfo = aInfo;
 mat4 sbIM = modelMatrix * instanceMatrix;
@@ -40,7 +40,7 @@ vWNrm = normalize(mat3(sbIM) * objectNormal);
 vSize = vec3(length(sbIM[0].xyz), length(sbIM[1].xyz), length(sbIM[2].xyz));`);
     shader.fragmentShader = shader.fragmentShader
       .replace('#include <common>', `#include <common>
-varying vec3 vWPos; varying vec3 vWNrm; varying vec4 vInfo; varying vec3 vSize;
+varying vec3 vWPos; varying vec3 vWNrm; flat varying vec4 vInfo; varying vec3 vSize;
 uniform float uNight;
 uniform sampler2D tGlassC, tGlassN, tGlassR, tGlassM, tGlassE, tOffC, tOffN, tOffE, tBrickC, tBrickN, tConC, tPlasC;
 ${GLSL_NOISE}

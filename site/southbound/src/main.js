@@ -661,6 +661,7 @@ async function createGame(progress) {
   };
   api.game = game;
   api.V3 = THREE.Vector3;
+  api.THREE = THREE;
   api.catalogs = { LAND, BOATS, AIRCRAFT, WEAPONS, ATTACHMENTS };
   api.arsenalAct = (id) => arsenalUI.act(id, 'att');
   game.Vehicle = Vehicle;
