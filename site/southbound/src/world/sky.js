@@ -32,6 +32,13 @@ export function createSky(renderer, scene, quality) {
   const skyNight = { value: 0 };
   const pmrem = new THREE.PMREMGenerator(renderer);
   let envRT = null;
+  // reflections are built from a slightly blurred copy of the sky, so the
+  // clouds' fine ray-march grain never shows up in glass, paint or water
+  const envScene = new THREE.Scene();
+  const envDome = createSkyDome(clouds.texture);
+  envDome.scale.setScalar(100);
+  envDome.material.uniforms.uSunDisc.value.setRGB(0, 0, 0);
+  envScene.add(envDome);
 
   const sun = new THREE.DirectionalLight(0xffffff, 3);
   sun.castShadow = quality.shadows > 0;
@@ -139,7 +146,8 @@ export function createSky(renderer, scene, quality) {
         lastCover = W.cover;
         envTimer = quality.envEvery * 0.1; envAge = 0;
         lastEnvHour = h;
-        const next = pmrem.fromCubemap(clouds.texture);
+        envDome.material.uniforms.uStars.value = 0;
+        const next = pmrem.fromScene(envScene, 0.035, 0.1, 400);
         if (envRT) envRT.dispose();
         envRT = next;
         scene.environment = envRT.texture;
