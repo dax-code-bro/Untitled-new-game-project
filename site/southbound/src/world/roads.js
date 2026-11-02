@@ -90,13 +90,28 @@ export function createRoads(graph, hm, quality, scene, collision, surf) {
     m.onBeforeCompile = (sh) => {
       sh.uniforms.tAsph = { value: A.color }; sh.uniforms.tAsphN = { value: A.normal };
       sh.uniforms.tAsphR = { value: A.rough }; sh.uniforms.tAsphAO = { value: A.ao };
-      sh.uniforms.uWet = worldUniforms.uWet;
+      sh.uniforms.uWet = worldUniforms.uWet; sh.uniforms.uRain = worldUniforms.uRain; sh.uniforms.uTime = worldUniforms.uTime;
       Object.assign(sh.uniforms, reflUniforms);
       sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vRW;')
         .replace('#include <begin_vertex>', '#include <begin_vertex>\nvRW = (modelMatrix * vec4(transformed, 1.0)).xyz;');
       sh.fragmentShader = sh.fragmentShader.replace('#include <common>', `#include <common>
 varying vec3 vRW; uniform sampler2D tAsph; uniform sampler2D tAsphN; uniform sampler2D tAsphR; uniform sampler2D tAsphAO; float sbPaint;
-uniform float uWet; float sbPud; vec3 sbRN = vec3(0.0, 1.0, 0.0);
+uniform float uWet; uniform float uRain; uniform float uTime; float sbPud; vec3 sbRN = vec3(0.0, 1.0, 0.0);
+// raindrop ripples: expanding rings in a jittered grid, each with its own phase
+vec2 sbRipple(vec2 p){
+  vec2 g = vec2(0.0);
+  for (int k = 0; k < 2; k++){
+    vec2 q = p * (k == 0 ? 2.2 : 3.1) + float(k) * 7.3;
+    vec2 i = floor(q), f = fract(q);
+    float h = fract(sin(dot(i, vec2(12.9898, 78.233))) * 43758.5453);
+    vec2 c = vec2(fract(h * 7.1), fract(h * 13.7)) * 0.6 + 0.2;
+    float t = fract(uTime * 1.3 + h);
+    vec2 d = f - c; float r = length(d);
+    float ring = sin((r - t * 0.45) * 60.0) * smoothstep(0.0, 0.05, t * 0.45 - r + 0.05) * (1.0 - t) * smoothstep(0.45, 0.0, r);
+    g += d / max(r, 1e-3) * ring;
+  }
+  return g;
+}
 uniform sampler2D tReflect; uniform float uReflectOn; uniform mat4 uReflMatrix; uniform float uReflY;
 float sbVN(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
   float a = fract(sin(dot(i, vec2(127.1, 311.7))) * 43758.5), b = fract(sin(dot(i + vec2(1, 0), vec2(127.1, 311.7))) * 43758.5);
@@ -116,6 +131,7 @@ float sbVN(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f)
           {
             vec3 nt = texture2D(tAsphN, auv).xyz * 2.0 - 1.0;
             nt.xy *= (1.0 - sbPaint * 0.6) * (1.0 - sbPud);
+            if (uRain > 0.02) nt.xy += sbRipple(vRW.xz) * uRain * (0.15 + sbPud * 0.6);
             vec3 nw = normalize(vec3(nt.x, max(nt.z, 0.2), nt.y));
             normal = normalize((viewMatrix * vec4(nw, 0.0)).xyz);
             sbRN = nw;
