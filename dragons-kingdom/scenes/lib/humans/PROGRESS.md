@@ -761,3 +761,40 @@ NEXT (in order):
    visible now; or move the build's placement to the 15-18 mm canthus if a rebuild ever opens the corner.
 5. Older list (2d items 5-7, 2c): tear-line band on remi / alexandria, crowd gaze-axis offsets, cheek pore
    stipple, stubble, hair root-to-tip + flyaways, cloth weave / hem dirt, hands at 4K, Abby's child face.
+
+## LOOK round 2f (2026-11-02, short session) - sclera, caruncle glint, lower-lash stipple
+
+Recipe as 2e (final preset 3840x2160, humans-dev.json abby/remi, `"light": "lamp"`, `"focusEye": true`; abby
+crop `crop=800:260:1300:1260`, remi `crop=820:260:1260:1220`; sample pixels with ffmpeg crop + scale=1:1:flags=area).
+DIAGNOSED:
+- Eye baked AO (debug paint of vAO in eyeMaterial, colour bands): the visible white is 0.85-1.0 almost
+  everywhere; only the corners / lid-adjacent rim fall to 0.5-0.85. So AO was NOT what made the white grey.
+  The white's effective albedo was too low: in lamp light sclera 147/109/69 vs cheek 188/113/71 (G and B
+  below the skin's) - read as olive-grey.
+- Lower lashes: the stipple was uLower (0.15) opacity going through alphaHash at sub-pixel width. Drawing the
+  lower row opaque showed the MakeHuman card prints a dense, long mascara row (UV debug: u runs along the lid).
+FIXED (materials.js only, runtime, no rebuild, API unchanged):
+1. eyeMaterial: default uScleraTint (0.93, 0.87, 0.8) -> (1.0, 0.93, 0.87), and the sclera term is x1.3
+   (clamped to 1) - `min(diffuse * mix(uScleraTint * 1.3, uIrisTint, irisW), 1)`. directDiffuse AO share
+   0.6 -> 0.35. Lamp sclera now 167/129/88 (cream, a touch below the cheek in R, above in G/B); daylight
+   (default HDRI) clean warm white, not paper.
+2. skinMaterial: caruncle glint share 0.7 -> 0.35 (no more white blob at Abby's near inner corner).
+3. cardMaterial (lower lashes, lw = 1): binary alpha (step(0.7, a) - only strand cores, tips drop off),
+   a 35% strand keep by a hash of 0.25 mm bins along the bind-pose x (new varying vLashX; 0.6 mm bins kept
+   clumps), colour mixed 60% toward (0.24, 0.17, 0.12). No hash dithering on that row any more: sparse fine
+   lashes at 4K instead of dots. uLower is now unused for the lower row (kept for API).
+Checked: native 4K crops abby lamp, remi lamp, abby daylight; humans-anim-dialogue draft still (face rig /
+mouth fine); selftest-perf all passed; npm test 48 pass / 0 fail / 1 skipped.
+Crops (scratch): /tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/look7/
+abby_lamp_eyes_before_after.png (top before, bottom after), abby_neareye_before_after.png (2x),
+remi_lamp_abby_day_after.png, a_aodbg_eyes.png (vAO bands: red <0.5, yellow <0.7, green <0.85, blue <0.95, white).
+
+NEXT (in order):
+1. Lamp sclera still a little olive next to the skin: try a slightly pinker tint (1.0, 0.92, 0.88) or lift
+   the warm indirect bounce on the white; check alexandria (pale) and a dark-skinned crowd id too, so the
+   x1.3 does not clip to paper white in daylight on any texture.
+2. Upper lashes: tips still show a little alphaHash dither at 4K (2x crop) - same binary-core idea with a
+   lower cut (0.4) or thicker cards; Abby's lower row still has 2-3 small clumps under the near eye.
+3. Delete or move the buried caruncle mesh (build.py caruncles) on the next rebuild (2e item 4).
+4. Older list (2e item 5): tear-line band on remi / alexandria, crowd gaze offsets, cheek pore stipple,
+   stubble, hair root-to-tip + flyaways, cloth weave / hem dirt, hands at 4K, Abby's child face.
