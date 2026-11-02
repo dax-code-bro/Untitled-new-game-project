@@ -1,6 +1,7 @@
 // AI traffic: cars follow lanes on the road graph, keep their distance,
 // slow for turns, and stop for the player.
 import * as THREE from 'three';
+import { vehiclesOverlap } from '../world/collision.js';
 import { Vehicle, randomCarType } from './vehicle.js';
 import { mulberry32, polylineLengths, lerp, wrapAngle, clamp } from '../util.js';
 
@@ -138,10 +139,10 @@ export class Traffic {
     if (playerVehicle) {
       for (const c of this.cars) {
         const v = c.v;
-        const dx = v.pos.x - playerVehicle.pos.x, dz = v.pos.z - playerVehicle.pos.z;
-        const d = Math.hypot(dx, dz), R = 3.4;
-        if (d < R && d > 1e-3) {
-          const nx = dx / d, nz = dz / d, push = R - d;
+        if (Math.abs(v.pos.x - playerVehicle.pos.x) > 12 || Math.abs(v.pos.z - playerVehicle.pos.z) > 12) continue;
+        const m = vehiclesOverlap(playerVehicle, v); // exact footprints
+        if (m) {
+          const nx = -m.nx, nz = -m.nz, push = m.d;
           playerVehicle.pos.x -= nx * push * 0.6; playerVehicle.pos.z -= nz * push * 0.6;
           const vn = playerVehicle.vel.x * nx + playerVehicle.vel.y * nz;
           if (vn > 0) { playerVehicle.vel.x -= nx * vn * 1.1; playerVehicle.vel.y -= nz * vn * 1.1; playerVehicle.impact = Math.max(playerVehicle.impact, vn); }

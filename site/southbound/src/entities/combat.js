@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { clamp } from '../util.js';
 
 import { WEAPONS, buildWeaponModel } from './arsenal.js';
+import { raycastObjects, raycastStatic } from '../core/hits.js';
 export { WEAPONS };
 
 // Starter loadout: one of each kind (the rest of the catalog is bought in the arsenal)
@@ -80,38 +81,47 @@ export class Combat {
   muzzleWorld(out) { return this.gun ? out.copy(this.gun.userData.muzzle).applyMatrix4(this.gun.matrixWorld) : out; }
 
   // Hitscan along a ray. targets: {peds, vehicles[]}. Returns the first hit.
+  // Exact hit test: real triangles of people (animated pose), animals, vehicles,
+  // trunks, rocks, poles and furniture; buildings are boxes; terrain is refined
+  // to the surface.
   trace(origin, dir, maxT, targets) {
     let best = { t: maxT, kind: 'none' };
-    const ph = targets.peds.raycast(origin, dir, maxT);
-    if (ph && ph.t < best.t) best = { t: ph.t, kind: 'ped', ped: ph.p, head: ph.head };
-    for (const v of targets.vehicles) {
-      if (!v) continue;
-      const c = v.pos.clone(); c.y += v.spec.height * 0.5;
-      const oc = c.sub(origin);
-      const tca = oc.dot(dir);
-      if (tca < 0) continue;
-      const r = Math.min(v.spec.len, 6) * 0.42;
-      const d2 = oc.lengthSq() - tca * tca;
-      if (d2 > r * r) continue;
-      const t = tca - Math.sqrt(r * r - d2);
-      if (t > 0 && t < best.t) best = { t, kind: 'vehicle', vehicle: v };
+    const objs = [];
+    const up = (v, h) => new THREE.Vector3(v.x, v.y + h, v.z);
+    for (const p of targets.peds.list) {
+      if (p.mode === 'dead' || !p.h || !p.h.root.visible) continue;
+      if (Math.abs(p.pos.x - origin.x) > maxT || Math.abs(p.pos.z - origin.z) > maxT) continue;
+      objs.push({ root: p.h.root, center: up(p.pos, 0.9), radius: 1.25, kind: 'ped', ped: p });
     }
     for (const an of targets.animals || []) {
       if (an.dead) continue;
-      const oc = an.center().sub(origin), tca = oc.dot(dir);
-      if (tca < 0) continue;
-      const d2 = oc.lengthSq() - tca * tca, r = an.radius;
-      if (d2 > r * r) continue;
-      const t = tca - Math.sqrt(r * r - d2);
-      if (t > 0 && t < best.t) best = { t, kind: 'animal', animal: an };
+      objs.push({ root: an.group, center: an.center(), radius: Math.max(an.size.x, an.size.y, an.size.z) * 0.75 + 0.2, kind: 'animal', animal: an });
     }
+    for (const v of targets.vehicles) {
+      if (!v || !v.group) continue;
+      const h = v.spec.height || 1.6;
+      objs.push({ root: v.group, center: up(v.pos, h / 2), radius: Math.hypot(v.spec.len || 4.5, v.spec.width || 2, h) / 2 + 0.6, kind: 'vehicle', vehicle: v });
+    }
+    const hit = raycastObjects(origin, dir, maxT, objs);
+    if (hit) {
+      const o = hit.target;
+      best = { t: hit.distance, kind: o.kind, ped: o.ped, animal: o.animal, vehicle: o.vehicle };
+      if (o.kind === 'ped') best.head = hit.point.y - o.ped.pos.y > 1.47;
+    }
+    const sh = targets.statics && targets.statics.length ? raycastStatic(origin, dir, best.t, targets.statics) : null;
+    if (sh && sh.distance < best.t) best = { t: sh.distance, kind: 'building' };
     const end = origin.clone().addScaledVector(dir, best.t);
     const f = this.collision.raycast(origin.x, origin.y, origin.z, end.x, end.y, end.z);
     if (f < 1) best = { t: best.t * f, kind: 'building' };
-    // terrain
-    for (let s = 1; s < best.t; s += 1.5) {
-      const x = origin.x + dir.x * s, y = origin.y + dir.y * s, z = origin.z + dir.z * s;
-      if (y < this.hm.height(x, z)) { best = { t: s, kind: 'ground' }; break; }
+    // terrain: march, then bisect to the surface
+    for (let s = 0.5; s < best.t; s += 1.0) {
+      const y = origin.y + dir.y * s;
+      if (y < this.hm.height(origin.x + dir.x * s, origin.z + dir.z * s)) {
+        let lo = Math.max(0, s - 1.0), hi = s;
+        for (let k = 0; k < 10; k++) { const m = (lo + hi) / 2; if (origin.y + dir.y * m < this.hm.height(origin.x + dir.x * m, origin.z + dir.z * m)) hi = m; else lo = m; }
+        best = { t: hi, kind: 'ground' };
+        break;
+      }
     }
     best.point = origin.clone().addScaledVector(dir, best.t);
     return best;

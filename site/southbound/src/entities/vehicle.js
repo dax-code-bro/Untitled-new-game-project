@@ -71,7 +71,7 @@ export class Vehicle {
       if (m[1] === 'front') wf = o.position.z * k; else wr = o.position.z * k;
     });
     const w = size.x * k, h = size.y * k;
-    this.spec = { ...v, width: w, height: h, wf: wf || v.len * 0.3, wr: wr || -v.len * 0.3, wheelR };
+    this.spec = { ...v, width: this.procSpec ? this.procSpec.W * k : w, height: h, wf: wf || v.len * 0.3, wr: wr || -v.len * 0.3, wheelR };
     // lights
     const L = mats();
     const lamp = (mat, x, y, z, sx = 0.28, sy = 0.12) => {
@@ -178,14 +178,12 @@ export class Vehicle {
     this.pos.x += this.vel.x * dt;
     this.pos.z += this.vel.y * dt;
 
-    // collisions with buildings, trees, poles (front + rear circles)
+    // collisions with buildings, trees, poles: the car's exact footprint (oriented box)
     this.impact = 0;
-    const r = this.radius;
     let cx = 0, cz = 0, hits = 0, nx = 0, nz = 0;
-    for (const off of [t.len / 2 - r, -(t.len / 2 - r)]) {
-      const px = this.pos.x + nfx * off, pz = this.pos.z + nfz * off;
-      const res = collision.resolve(px, pz, r, this.pos.y, 1.6);
-      if (res.hit) { cx += res.x - px; cz += res.z - pz; nx += res.nx; nz += res.nz; hits++; }
+    {
+      const res = collision.resolveOBB(this.pos.x, this.pos.z, t.width / 2, t.len / 2, this.heading, this.pos.y, Math.min(t.height || 1.6, 2.5));
+      if (res.hit) { cx = res.x - this.pos.x; cz = res.z - this.pos.z; nx = res.nx; nz = res.nz; hits = 1; }
     }
     if (hits) {
       this.pos.x += cx; this.pos.z += cz;

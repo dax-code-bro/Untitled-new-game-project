@@ -303,6 +303,7 @@ float sbVN(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f)
     collision.addCircle(l.x, l.z, 0.25);
   });
   poles.castShadow = quality.shadows >= 2;
+  for (const m of [poles, heads, arms]) m.userData.hitStatic = true;
   group.add(poles, heads, arms);
 
   // Light pools on the ground under each lamp (additive, night only)
@@ -358,7 +359,7 @@ float sbVN(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f)
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
   });
   const streaks = new THREE.Mesh(streakGeo, streakMat);
-  streaks.frustumCulled = false; streaks.renderOrder = 3; streaks.userData.noReflect = true;
+  streaks.frustumCulled = false; streaks.renderOrder = 3; streaks.userData.noReflect = true; streaks.userData.noHit = true;
   group.add(streaks);
 
   scene.add(group);

@@ -203,6 +203,8 @@ export function installMissions(game) {
   return {
     MISSIONS, places, get active() { return run; },
     start: (i) => begin(MISSIONS[i]),
+    cancel: () => { if (!run) return; if (run.marker) interact.remove(run.marker); run = null; placeGiver(); },
+    advanceStep: () => { if (run) advance(); },
     update(dt) {
       if (subT > 0 && (subT -= dt) <= 0) sub.style.opacity = 0;
       if (!run || game.S.frozen) return '';

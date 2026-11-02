@@ -98,6 +98,39 @@ export class CollisionWorld {
     return out;
   }
 
+  // Oriented box (a vehicle's exact footprint) vs boxes and circles.
+  // c: centre, hx/hz: half width/length, ang: heading. Returns push-out like resolve().
+  resolveOBB(x, z, hx, hz, ang, y, height, out = {}) {
+    out.hit = false; out.nx = 0; out.nz = 0;
+    const fx = Math.sin(ang), fz = Math.cos(ang), rx = Math.cos(ang), rz = -Math.sin(ang);
+    const R = Math.hypot(hx, hz);
+    for (let iter = 0; iter < 3; iter++) {
+      this.query(x, z, R + 1, (it) => {
+        if (it.t === 0) {
+          if (y + height < it.y0 || y > it.y1 - 0.4) return;
+          const bx = (it.minX + it.maxX) / 2, bz = (it.minZ + it.maxZ) / 2, bhx = (it.maxX - it.minX) / 2, bhz = (it.maxZ - it.minZ) / 2;
+          const m = obbOverlap(x, z, hx, hz, fx, fz, rx, rz, bx, bz, bhx, bhz, 0, 1, 1, 0);
+          if (!m) return;
+          x += m.nx * m.d; z += m.nz * m.d;
+          out.hit = true; out.nx = m.nx; out.nz = m.nz;
+        } else if (it.t === 1) {
+          // circle (tree trunk, pole): closest point of the box to its centre
+          const dx = it.x - x, dz = it.z - z;
+          const lu = Math.max(-hz, Math.min(hz, dx * fx + dz * fz)), lv = Math.max(-hx, Math.min(hx, dx * rx + dz * rz));
+          const px = x + fx * lu + rx * lv, pz = z + fz * lu + rz * lv;
+          let ex = px - it.x, ez = pz - it.z, d = Math.hypot(ex, ez);
+          if (d >= it.r) return;
+          if (d < 1e-6) { ex = -dx; ez = -dz; d = Math.hypot(ex, ez) || 1; }
+          const push = it.r - d;
+          x += (ex / d) * push; z += (ez / d) * push;
+          out.hit = true; out.nx = ex / d; out.nz = ez / d;
+        }
+      });
+    }
+    out.x = x; out.z = z;
+    return out;
+  }
+
   // Segment vs boxes (for the camera). Returns fraction 0..1 of first hit.
   raycast(ax, ay, az, bx, by, bz) {
     let best = 1;
@@ -123,4 +156,32 @@ export class CollisionWorld {
     }
     return best;
   }
+}
+
+// Separating-axis test between two oriented rectangles A and B (2D, x/z).
+// Each: centre, half sizes along its forward (f) and right (r) axes.
+// Returns the minimum push for A out of B { nx, nz, d } or null.
+export function obbOverlap(ax, az, ahx, ahz, afx, afz, arx, arz, bx, bz, bhx, bhz, bfx, bfz, brx, brz) {
+  const axes = [[afx, afz], [arx, arz], [bfx, bfz], [brx, brz]];
+  const dx = ax - bx, dz = az - bz;
+  let best = null;
+  for (const [ux, uz] of axes) {
+    const ra = ahz * Math.abs(afx * ux + afz * uz) + ahx * Math.abs(arx * ux + arz * uz);
+    const rb = bhz * Math.abs(bfx * ux + bfz * uz) + bhx * Math.abs(brx * ux + brz * uz);
+    const dist = dx * ux + dz * uz;
+    const o = ra + rb - Math.abs(dist);
+    if (o <= 0) return null;
+    if (!best || o < best.d) best = { d: o, nx: dist < 0 ? -ux : ux, nz: dist < 0 ? -uz : uz };
+  }
+  return best;
+}
+
+// A vehicle's exact footprint as an oriented rectangle
+export function vehicleOBB(v) {
+  const a = v.heading, w = v.spec.width || 2, l = v.spec.len || 4.5;
+  return { x: v.pos.x, z: v.pos.z, hx: w / 2, hz: l / 2, fx: Math.sin(a), fz: Math.cos(a), rx: Math.cos(a), rz: -Math.sin(a) };
+}
+export function vehiclesOverlap(a, b) {
+  const A = vehicleOBB(a), B = vehicleOBB(b);
+  return obbOverlap(A.x, A.z, A.hx, A.hz, A.fx, A.fz, A.rx, A.rz, B.x, B.z, B.hx, B.hz, B.fx, B.fz, B.rx, B.rz);
 }

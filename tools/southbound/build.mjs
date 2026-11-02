@@ -17,6 +17,7 @@ const threeResolver = {
     b.onResolve({ filter: /^three\/examples\/jsm\// }, (a) => ({ path: path.join(three, 'addons', a.path.slice('three/examples/jsm/'.length)) }));
     b.onResolve({ filter: /^postprocessing$/ }, () => ({ path: path.join(game, 'vendor/postprocessing/index.js') }));
     b.onResolve({ filter: /^n8ao$/ }, () => ({ path: path.join(game, 'vendor/n8ao/N8AO.js') }));
+    b.onResolve({ filter: /^three-mesh-bvh$/ }, () => ({ path: path.join(game, 'vendor/three-mesh-bvh/index.module.js') }));
   },
 };
 

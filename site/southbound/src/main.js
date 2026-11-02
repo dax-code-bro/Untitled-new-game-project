@@ -17,6 +17,10 @@ import { Vehicle } from './entities/vehicle.js';
 import { Traffic } from './entities/traffic.js';
 import { Peds } from './entities/peds.js';
 import { Combat, WEAPONS } from './entities/combat.js';
+import { vehiclesOverlap } from './world/collision.js';
+import { LAND } from './assets/catalog.js';
+import { BOATS, AIRCRAFT } from './entities/craft.js';
+import { ATTACHMENTS } from './entities/arsenal.js';
 import { ArsenalUI } from './ui/arsenal-ui.js';
 import { Career, loadProfile, newProfile } from './systems/career.js';
 import { Interactions } from './systems/interact.js';
@@ -218,6 +222,10 @@ async function createGame(progress) {
     vehicle: () => S.vehicle,
   };
   const systems = installSystems(game);
+  // scenery bullets can hit (tree trunks, rocks, street poles, piers, hangar)
+  const hitStatics = [];
+  const indoorMeshes = () => { const a = []; if (S.indoors) S.indoors.it.g.traverse((o) => { if (o.isMesh && !o.userData.noHit) a.push(o); }); return a; };
+  scene.traverse((o) => { if (o.userData.hitStatic) hitStatics.push(o); });
 
   const pauseEl = $('#pause');
   const setPaused = (p) => {
@@ -359,7 +367,7 @@ async function createGame(progress) {
       player.update(dt, a, rig.yaw, hm, collision, armed);
       camera.getWorldDirection(aimDir);
       combat.holdGun(player.h, player.aiming ? aimDir : new THREE.Vector3(Math.sin(player.heading), -0.6, Math.cos(player.heading)), armed && S.dead <= 0);
-      const targets = { peds, vehicles: [...traffic.cars.map((c) => c.v), ...police.cars.map((c) => c.v), ...parked], animals: game.hunting ? game.hunting.list : [] };
+      const targets = { peds, vehicles: [...traffic.cars.map((c) => c.v), ...police.cars.map((c) => c.v), ...parked], animals: game.hunting ? game.hunting.list : [], statics: S.indoors ? indoorMeshes() : hitStatics };
       if (armed && a.fire && player.aiming && combat.cooldown <= 0 && S.dead <= 0) {
         combat.muzzleWorld(muzzle);
         const hit = combat.attack(camera.position.clone(), aimDir.clone(), muzzle.clone(), targets, player.pos);
@@ -374,6 +382,20 @@ async function createGame(progress) {
         const fwd = new THREE.Vector3(Math.sin(player.heading), 0, Math.cos(player.heading));
         const hit = combat.attack(player.pos, fwd, null, targets, player.pos);
         if (hit) { player.h.play(Math.random() < 0.5 ? 'Punch_Jab' : 'Punch_Cross', 0.06, 1.3, true); reportHit(hit); if (hit.ped) peds.panic(hit.ped.pos, 15); }
+      }
+      // vehicles are solid: push the player out of their exact footprints
+      for (const v of [...parked, ...traffic.cars.map((c) => c.v), ...police.cars.map((c) => c.v)]) {
+        if (v.isAir && v.alt > 1) continue;
+        const dx = player.pos.x - v.pos.x, dz = player.pos.z - v.pos.z;
+        if (Math.abs(dx) > 10 || Math.abs(dz) > 10 || player.pos.y > v.pos.y + (v.spec.height || 1.5)) continue;
+        const fx = Math.sin(v.heading), fz = Math.cos(v.heading), lu = dx * fx + dz * fz, lv = dx * fz - dz * fx;
+        const hz = v.spec.len / 2, hx = v.spec.width / 2, r = 0.32;
+        const cu = Math.max(-hz, Math.min(hz, lu)), cv = Math.max(-hx, Math.min(hx, lv));
+        let eu = lu - cu, ev = lv - cv, d = Math.hypot(eu, ev);
+        if (d >= r) continue;
+        if (d < 1e-6) { const ou = hz - Math.abs(lu), ov = hx - Math.abs(lv); if (ou < ov) { eu = Math.sign(lu) || 1; ev = 0; d = 0; cu === lu; } else { ev = Math.sign(lv) || 1; eu = 0; } const pu = eu ? Math.sign(lu) * (hz + r) : lu, pv = ev ? Math.sign(lv) * (hx + r) : lv; player.pos.x = v.pos.x + fx * pu + fz * pv; player.pos.z = v.pos.z + fz * pu - fx * pv; continue; }
+        const k = (r - d) / d;
+        player.pos.x += (fx * eu + fz * ev) * k; player.pos.z += (fz * eu - fx * ev) * k;
       }
       // nearby car?
       let best = null, bd = 4.2, fromTraffic = null;
@@ -391,8 +413,9 @@ async function createGame(progress) {
       v.physics(dt, ctl, hm, collision);
       if (v.isAir) prompt = `ALT ${Math.round(v.alt)} m · ${v.heli ? 'Space/Shift up-down, W/S tilt, A/D turn' : `PWR ${Math.round(v.power * 100)}% · W/S power, Space/Shift pitch, A/D bank`}`;
       for (const p of v.isAir || v.isBoat ? [] : parked) {
-        const dx = p.pos.x - v.pos.x, dz = p.pos.z - v.pos.z, d = Math.hypot(dx, dz);
-        if (d < 3.2 && d > 1e-3) { v.pos.x -= (dx / d) * (3.2 - d); v.pos.z -= (dz / d) * (3.2 - d); v.vel.multiplyScalar(0.7); v.impact = Math.max(v.impact, 3); }
+        if (p.isBoat || p.isAir || Math.abs(p.pos.x - v.pos.x) > 14 || Math.abs(p.pos.z - v.pos.z) > 14) continue;
+        const m = vehiclesOverlap(v, p); // exact footprints
+        if (m) { v.pos.x += m.nx * m.d; v.pos.z += m.nz * m.d; const vn = v.vel.x * m.nx + v.vel.y * m.nz; if (vn < 0) { v.vel.x -= m.nx * vn * 1.2; v.vel.y -= m.nz * vn * 1.2; } v.vel.multiplyScalar(0.8); v.impact = Math.max(v.impact, Math.max(3, -vn)); }
       }
       v.night = sky.night;
       v.sync(dt);
@@ -637,6 +660,11 @@ async function createGame(progress) {
     renderer, scene, camera, debug: { hm, graph, collision },
   };
   api.game = game;
+  api.V3 = THREE.Vector3;
+  api.catalogs = { LAND, BOATS, AIRCRAFT, WEAPONS, ATTACHMENTS };
+  api.arsenalAct = (id) => arsenalUI.act(id, 'att');
+  game.Vehicle = Vehicle;
+  api.trace = (ox, oy, oz, dx, dy, dz, far = 200) => { const t = combat.trace(new THREE.Vector3(ox, oy, oz), new THREE.Vector3(dx, dy, dz).normalize(), far, { peds, vehicles: [...traffic.cars.map((c) => c.v), ...police.cars.map((c) => c.v), ...parked], animals: game.hunting ? game.hunting.list : [], statics: hitStatics }); return { kind: t.kind, t: +t.t.toFixed(3), head: !!t.head }; };
   window.SB = api;
 
   return {
