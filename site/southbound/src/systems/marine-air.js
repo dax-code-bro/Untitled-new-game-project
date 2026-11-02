@@ -119,10 +119,10 @@ export function installMarineAir(game) {
   const airShop = makeShop('air', 'Redgrass Airfield · Aircraft', AIRCRAFT, AIR_UPGRADES);
 
   for (const m of marinas) {
-    interact.add({ x: m.land.x, z: m.land.z, label: () => `${keyHint(game)} visit ${m.name} (boats)`, color: 0x40e0d0, blip: { color: '#40e0d0', size: 5, global: true },
+    interact.add({ x: m.land.x, z: m.land.z, label: () => `${keyHint(game)} visit ${m.name} (boats)`, color: 0x40e0d0, blip: { color: '#40e0d0', size: 5, global: true, icon: '⚓' },
       use: () => { activeMarina = m; boatShop.show('buy', m.name); } });
   }
-  interact.add({ x: AIRFIELD.x1 - 60, z: AIRFIELD.z - 62, label: () => `${keyHint(game)} visit the airfield office (aircraft)`, color: 0xa0a0ff, blip: { color: '#a0a0ff', size: 6, global: true }, use: () => airShop.show('buy') });
+  interact.add({ x: AIRFIELD.x1 - 60, z: AIRFIELD.z - 62, label: () => `${keyHint(game)} visit the airfield office (aircraft)`, color: 0xa0a0ff, blip: { color: '#a0a0ff', size: 6, global: true, icon: '✈️' }, use: () => airShop.show('buy') });
 
   // a couple of free boats and a plane to try at the start
   if (marinas[0]) spawnCraft(BOATS.find((b) => b.id === 'speedboat'), 'boat', boatSpot(marinas[0]));

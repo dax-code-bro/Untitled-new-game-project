@@ -166,3 +166,24 @@ body.touch .tbtns.combat { bottom: max(16px, env(safe-area-inset-bottom)); right
 body:not(.touch) .tbtns.combat { display: none; }
 body.touch .tbtns.top { right: calc(max(16px, env(safe-area-inset-right)) + 228px); }
 body.touch #topright { top: calc(max(14px, env(safe-area-inset-top)) + 40px); }
+
+/* ---- HUD redesign: clean screen, info only when it matters ---- */
+#clock { display: none; }
+#region { top: max(18px, env(safe-area-inset-top)); bottom: auto; transform: translate(-50%, -10px); background: linear-gradient(180deg, rgba(10,8,6,0.55), rgba(10,8,6,0)); padding: 10px 34px 16px; border-radius: 8px; }
+#region.show { transform: translate(-50%, 0); }
+#region .when { display: block; margin-top: 4px; letter-spacing: 0.2em; font-size: 13px; color: #fff3d6; text-shadow: 0 1px 4px #000; text-transform: uppercase; }
+#region .stars { margin-top: 4px; font-size: calc(22px * var(--hud)); color: #f6f1e6; letter-spacing: 3px; text-shadow: 0 1px 3px #000; }
+#wanted { opacity: 0; transition: opacity 0.4s; }
+#wanted.active { opacity: 1; }
+#money { opacity: 0; transition: opacity 0.6s; }
+#money.flash, body.menuopen #money { opacity: 1; }
+#weapon { opacity: 0; transition: opacity 0.4s; }
+#weapon.armed { opacity: 1; }
+#vehpanel { position: absolute; right: max(18px, env(safe-area-inset-right)); bottom: max(18px, env(safe-area-inset-bottom)); display: flex; flex-direction: column; align-items: center; gap: 2px; opacity: 0; transition: opacity 0.35s; pointer-events: none; }
+#vehpanel.show { opacity: 1; }
+#vehsil { width: calc(70px * var(--hud)); height: calc(100px * var(--hud)); filter: drop-shadow(0 2px 6px rgba(0,0,0,0.6)); }
+#vehpanel #speedo { position: static; opacity: 1; text-align: center; }
+#vehpanel #speedo b { font-size: calc(46px * var(--hud)); }
+body.touch #vehpanel { right: calc(max(16px, env(safe-area-inset-right)) + 160px); }
+#arsenalBtn, .sbPhoneBtn { display: none; }
+body.touch #arsenalBtn, body.touch .sbPhoneBtn { display: block; }

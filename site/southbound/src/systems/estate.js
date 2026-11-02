@@ -234,7 +234,7 @@ export function installEstate(game) {
     if (p) interact.points[interact.points.length - 1].blip = null;
   }
   // owned properties: map blips + daily income from businesses
-  const ownedBlips = props.map((p) => interact.add({ x: p.door.x, z: p.door.z, r: 0.1, marker: false, show: () => owned(p) && !inside, label: '', use: () => {}, blip: { color: '#60ff90', size: 5, global: true } }));
+  const ownedBlips = props.map((p) => interact.add({ x: p.door.x, z: p.door.z, r: 0.1, marker: false, show: () => owned(p) && !inside, label: '', use: () => {}, blip: { color: '#60ff90', size: 5, global: true, icon: '🏠', bg: 'rgba(30,110,50,0.9)' } }));
   void ownedBlips;
   let lastDay = game.sky.day;
 
@@ -248,7 +248,7 @@ export function installEstate(game) {
     act: (p) => { game.setWaypoint?.(p.door.x, p.door.z, p.name); realtor.close(); },
   });
   const officeDoor = doors.find((d) => d.b.style === 5 && Math.hypot(d.x - (CITY.x0 + 60), d.z - (CITY.z0 + 3 * CITY.pitch)) < 200) || doors[0];
-  interact.add({ x: officeDoor.x + officeDoor.nx * 2.5 + 2, z: officeDoor.z + officeDoor.nz * 2.5, label: () => `${keyHint(game)} browse Gulf Coast Realty listings`, color: 0x60ff90, blip: { color: '#9fffb8', size: 5, global: true }, show: () => !inside, use: () => realtor.show() });
+  interact.add({ x: officeDoor.x + officeDoor.nx * 2.5 + 2, z: officeDoor.z + officeDoor.nz * 2.5, label: () => `${keyHint(game)} browse Gulf Coast Realty listings`, color: 0x60ff90, blip: { color: '#9fffb8', size: 5, global: true, icon: '🏡' }, show: () => !inside, use: () => realtor.show() });
 
   // spawn at home
   if (P.home) { const p = props.find((x) => x.id === P.home); if (p) game.teleport(p.door.x + p.door.nx * 1.5, p.door.z + p.door.nz * 1.5, Math.atan2(p.door.nx, p.door.nz)); }

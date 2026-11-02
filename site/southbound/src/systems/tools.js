@@ -73,7 +73,7 @@ export function installTools(game) {
     if (f.repair) {
       const v = game.vehicle() || game.parked.reduce((a, b) => (b.pos.distanceTo(player.pos) < (a ? a.pos.distanceTo(player.pos) : 8) ? b : a), null);
       if (!v) return hud.toast('Stand next to a vehicle', 1.5);
-      career.useTool(t.id); v.health = Math.min(v.maxHealth || 100, v.health + f.repair); v.wrecked = false; return hud.toast(`${v.spec.name} repaired`, 1.5);
+      career.useTool(t.id); v.health = Math.min(v.maxHealth || 100, v.health + f.repair); v.wrecked = false; if (v.health >= (v.maxHealth || 100)) v.dmg = null; else if (v.dmg) for (const k in v.dmg) v.dmg[k] = Math.max(0, v.dmg[k] - f.repair / 100); return hud.toast(`${v.spec.name} repaired`, 1.5);
     }
     if (f.light) { lightOn = !lightOn; return hud.toast(`Flashlight ${lightOn ? 'on' : 'off'} (L)`, 1.2); }
     if (f.call) { game.hunting?.call(f.call); return; }
@@ -97,8 +97,8 @@ export function installTools(game) {
     [TOWN.x0 + TOWN.pitch * 2 + 10, TOWN.z0 + TOWN.nz * TOWN.pitch + 18, 'Mill Creek Feed & Hardware', 'Farm'],
     [TOWN.x0 - 26, TOWN.z0 + 2 * TOWN.pitch, 'Bayou Outfitters (hunting)', 'Hunting'],
   ];
-  for (const [x, z, name, tab] of shops) interact.add({ x, z, label: () => `${keyHint(game)} shop at ${name}`, color: 0xffa040, blip: { color: '#ffa040', size: 5, global: true }, show: () => !game.S.indoors, use: () => store.show(tab, name) });
-  for (const m of game.marineAir?.marinas || []) interact.add({ x: m.land.x + 6, z: m.land.z + 4, label: () => `${keyHint(game)} shop for bait & tackle`, color: 0xffa040, blip: { color: '#ffa040', size: 4 }, use: () => store.show('Fishing', 'Bait & Tackle') });
+  for (const [x, z, name, tab] of shops) interact.add({ x, z, label: () => `${keyHint(game)} shop at ${name}`, color: 0xffa040, blip: { color: '#ffa040', size: 5, global: true, icon: tab === 'Hunting' ? '🏹' : '🔨' }, show: () => !game.S.indoors, use: () => store.show(tab, name) });
+  for (const m of game.marineAir?.marinas || []) interact.add({ x: m.land.x + 6, z: m.land.z + 4, label: () => `${keyHint(game)} shop for bait & tackle`, color: 0xffa040, blip: { color: '#ffa040', size: 4, icon: '🎣' }, use: () => store.show('Fishing', 'Bait & Tackle') });
 
   // flashlight that follows the player at night
   let lightOn = false;

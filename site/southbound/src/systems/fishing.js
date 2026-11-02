@@ -52,7 +52,7 @@ export function installFishing(game) {
     row: (it, t) => t === 'sell' ? { name: `${it.k} × ${it.n}`, sub: `${it.lb.toFixed(1)} lb total`, stats: [], btn: `Sell ${money(it.lb * it.price)}` } : { name: it.k, sub: `caught ${it.n}`, stats: [['Record', null, `${it.best.toFixed(1)} lb`]], btn: 'Logged', cls: 'own' },
     act: (it, t) => { if (t === 'sell') { career.earn(Math.round(it.lb * it.price), it.k); P.fish[it.k] = null; career.saveSoon(); } },
   });
-  for (const m of game.marineAir?.marinas || []) interact.add({ x: m.land.x - 6, z: m.land.z + 4, label: () => `${keyHint(game)} sell your catch`, color: 0x60c0ff, blip: { color: '#60c0ff', size: 4 }, use: () => market.show('sell') });
+  for (const m of game.marineAir?.marinas || []) interact.add({ x: m.land.x - 6, z: m.land.z + 4, label: () => `${keyHint(game)} sell your catch`, color: 0x60c0ff, blip: { color: '#60c0ff', size: 4, icon: '🐟' }, use: () => market.show('sell') });
 
   FISH_MODELS.forEach(loadOpen); loadOpen(SHARK);
   let trophy = null, trophyT = 0;

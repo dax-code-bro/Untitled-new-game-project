@@ -30,7 +30,6 @@ export class ArsenalUI {
     this.el.innerHTML = `<header><h2>ARSENAL · Calvera Arms Exchange</h2><span class="money"></span><button data-close>Close (B)</button></header><div class="tabs"></div><div class="list"></div>`;
     document.body.appendChild(this.el);
     this.btn = document.createElement('button'); this.btn.id = 'arsenalBtn'; this.btn.textContent = '🛒 Arsenal';
-    this.btn.style.display = 'none';
     document.body.appendChild(this.btn);
     this.btn.addEventListener('click', () => this.toggle());
     this.el.querySelector('[data-close]').addEventListener('click', () => this.toggle(false));
@@ -49,7 +48,7 @@ export class ArsenalUI {
     this.open = false; this.enabled = false;
   }
 
-  enable() { this.enabled = true; this.btn.style.display = 'block'; }
+  enable() { this.enabled = true; this.btn.style.display = ''; }
 
   toggle(force) {
     this.open = force ?? !this.open;

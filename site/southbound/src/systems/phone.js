@@ -52,7 +52,7 @@ export function installPhone(game) {
     },
   });
   const btn = document.createElement('button');
-  btn.textContent = '📱 Phone';
+  btn.textContent = '📱 Phone'; btn.className = 'sbPhoneBtn';
   btn.style.cssText = 'position:fixed;right:16px;top:186px;z-index:20;background:rgba(20,14,10,.7);color:#fff;border:1px solid #4a382b;border-radius:10px;padding:6px 10px;font:600 13px Inter,sans-serif;cursor:pointer';
   btn.onclick = () => phone.show('inv');
   document.body.appendChild(btn);

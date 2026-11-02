@@ -18,7 +18,7 @@ export function installSystems(game) {
   let wp = null;
   game.setWaypoint = (x, z, label = 'Waypoint') => {
     if (wp) game.interact.remove(wp);
-    wp = game.interact.add({ x, z, r: 6, any: true, height: 40, color: 0xff4060, marker: true, label: () => label, blip: { color: '#ff4060', size: 7, global: true }, use: () => {} });
+    wp = game.interact.add({ x, z, r: 6, any: true, height: 40, color: 0xff4060, marker: true, label: () => label, blip: { color: '#ff4060', size: 7, global: true, icon: '📍', bg: 'rgba(190,20,60,0.95)' }, use: () => {} });
     game.hud.toast(`GPS: ${label}`, 2);
   };
   add('waypoint', { update() { if (wp && Math.hypot(game.player.pos.x - wp.x, game.player.pos.z - wp.z) < 8 && game.S.mode === 'foot') { game.interact.remove(wp); wp = null; } } });

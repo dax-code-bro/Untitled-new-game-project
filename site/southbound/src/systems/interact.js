@@ -90,7 +90,7 @@ export class Interactions {
     for (const p of this.points) {
       if (!p.blip || !this.visible(p)) continue;
       if (!p.blip.global && Math.hypot(p.x - pos.x, p.z - pos.z) > 900) continue;
-      out.push({ x: p.x, z: p.z, color: p.blip.color || '#ffc040', size: p.blip.size || 4, icon: p.blip.icon });
+      out.push({ x: p.x, z: p.z, color: p.blip.color || '#ffc040', size: p.blip.size || 4, icon: p.blip.icon, bg: p.blip.bg });
     }
     return out;
   }

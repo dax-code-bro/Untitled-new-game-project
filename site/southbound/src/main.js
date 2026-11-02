@@ -178,17 +178,22 @@ async function createGame(progress) {
   if (settings.isTouch || settings.platform === 'phone') { $('#touch').classList.add('show'); document.body.classList.add('touch'); }
 
   // ---- state
+  let game_damageVehicle = null;
   const S = {
     mode: 'foot', vehicle: null, paused: false, override: null,
     money: 500, dead: 0, dmgFlash: 0, aimHold: 0, hitMarker: false,
     fps: 60, frameMs: 16, frames: 0, fpsTimer: 0, lowTimer: 0, highTimer: 0, resTimer: 0,
   };
   const stats = { drawCalls: 0, tris: 0 };
+  S.lastVehicle = myCar; // your starter car shows on the minimap
   const arsenalUI = new ArsenalUI({
     combat, getMoney: () => S.money, pause: (b) => { S.frozen = b; },
     spend: (n) => { if (S.money < n) { hud.toast('Not enough money', 1.2); return false; } S.money -= n; return true; },
   });
   arsenalUI.enable();
+  const toggleFreeCam = () => { rig.free = !rig.free; hud.toast(rig.free ? 'Free camera: look around freely (C to turn off)' : 'Camera follows the vehicle', 1.8); };
+  addEventListener('keydown', (e) => { if (e.code === 'KeyC' && !e.repeat) toggleFreeCam(); });
+  { const b = document.createElement('button'); b.textContent = '🎥'; b.className = 'sbPhoneBtn'; b.style.cssText = 'position:fixed;right:16px;top:222px;z-index:20;background:rgba(20,14,10,.7);color:#fff;border:1px solid #4a382b;border-radius:10px;padding:6px 10px;font:600 13px Inter,sans-serif'; b.onclick = toggleFreeCam; document.body.appendChild(b); }
 
   // ---- career (save game), interaction points and the gameplay systems ----
   const profile = loadProfile() || newProfile();
@@ -232,13 +237,24 @@ async function createGame(progress) {
   // ---- combat, wanted level, death & arrest
   const HOSPITAL = { x: CITY.x0 + CITY.nx * CITY.pitch + 24, z: CITY.z0 + 2 * CITY.pitch, name: 'Port Calvera Medical Center' };
   const PRECINCT = { x: CITY.x0 - 24, z: CITY.z0 + 1 * CITY.pitch, name: 'Calvera PD · Central Precinct' };
-  const hurtPlayer = (amount) => {
+  // damage a vehicle on the side facing (fx, fz); the HUD silhouette shows each side
+  const damageVehicle = (v, amount, fx, fz) => {
+    if (!v) return;
+    v.health -= amount;
+    const dx = fx - v.pos.x, dz = fz - v.pos.z, c = Math.cos(v.heading), s2 = Math.sin(v.heading);
+    const lz = dx * s2 + dz * c, lx = dx * c - dz * s2; // local: +z forward, +x right
+    const zone = Math.abs(lz) > Math.abs(lx) * 1.2 ? (lz > 0 ? 'front' : 'rear') : (lx > 0 ? 'right' : 'left');
+    v.dmg = v.dmg || { front: 0, rear: 0, left: 0, right: 0 };
+    v.dmg[zone] = Math.min(1, v.dmg[zone] + (amount / (v.maxHealth || 100)) * 2.2);
+  };
+  game_damageVehicle = damageVehicle;
+  const hurtPlayer = (amount, from) => {
     if (S.dead) return;
-    if (S.mode === 'car') { S.vehicle.health -= amount * 0.6; player.damage(amount * 0.35); }
+    if (S.mode === 'car') { damageVehicle(S.vehicle, amount * 0.6, from ? from.x : S.vehicle.pos.x, from ? from.z : S.vehicle.pos.z + 1); player.damage(amount * 0.35); }
     else player.damage(amount);
     S.dmgFlash = Math.min(1, S.dmgFlash + 0.35);
   };
-  police.onPlayerHit = (amount) => hurtPlayer(amount);
+  police.onPlayerHit = (amount, from) => hurtPlayer(amount, from);
   const respawn = (at, title, sub, fee) => {
     S.dead = 4.5;
     hud.bigMessage(title, sub, 4);
@@ -297,6 +313,7 @@ async function createGame(progress) {
     player.char.root.visible = true;
     v.vel.set(0, 0); v.speed = 0;
     parked.push(v);
+    S.lastVehicle = v;
     S.mode = 'foot'; S.vehicle = null;
   }
 
@@ -380,6 +397,8 @@ async function createGame(progress) {
       v.night = sky.night;
       v.sync(dt);
       if (v.impact > 4) rig.shake = Math.min(1, v.impact / 15);
+      if (v.impact > 4 && !v._hitLatch) { v._hitLatch = true; const f = v.forward ? v.forward() : { x: 0, z: 1 }, dir = (v.speed || 0) >= 0 ? 1 : -1; damageVehicle(v, (v.impact - 3) * 2.2, v.pos.x + f.x * 3 * dir, v.pos.z + f.z * 3 * dir); }
+      if (v.impact < 1) v._hitLatch = false;
       if (a.enter && (Math.abs(v.speed) < 6 || v.isAir)) exitVehicle();
       else if (a.enter) prompt = 'Slow down to get out';
       if (v.drowned) prompt = 'The engine is flooded — press F to get out';
@@ -450,7 +469,12 @@ async function createGame(progress) {
     hud.update(dt, {
       pos: mapPos, yaw: rig.yaw, heading: S.mode === 'car' ? S.vehicle.heading : player.heading,
       driving: S.mode === 'car', speed: S.vehicle?.speed || 0, hour: sky.hour, day: sky.day, prompt,
-      traffic: traffic.cars.map((c) => c.v.pos), police: police.cars.map((c) => c.v.pos),
+      police: [...police.cars.map((c) => c.v.pos), ...peds.list.filter((p) => p.role === 'cop' && p.mode !== 'dead').map((p) => p.pos)],
+      hostiles: [...peds.list.filter((p) => p.role === 'foe' && p.mode !== 'dead').map((p) => p.pos), ...(game.hunting ? game.hunting.list.filter((x) => !x.dead && x.mode === 'charge').map((x) => x.pos) : [])],
+      animals: game.hunting ? game.hunting.list.filter((x) => !x.dead && x.pos.distanceTo(focus) < 180).map((x) => ({ x: x.pos.x, z: x.pos.z, icon: { deer: '🦌', stag: '🦌', coyote: '🐺', fox: '🦊', horse: '🐎', cow: '🐄', bull: '🐂' }[x.sp] || '🐾' })) : [],
+      myVehicles: S.mode === 'foot' ? parked.filter((v) => v === S.lastVehicle || v.uid).filter((v) => v.pos.distanceTo(focus) < 600).map((v) => ({ x: v.pos.x, z: v.pos.z, heading: v.heading })) : [],
+      vehKind: S.vehicle ? (S.vehicle.isBoat ? 'boat' : S.vehicle.isAir ? (S.vehicle.heli ? 'heli' : 'plane') : 'car') : null, vehDmg: S.vehicle?.dmg,
+      armed: !combat.def.melee,
       health: player.health, armor: player.armor, money: S.money, wanted: police.wanted, wantedLost: police.lost, blips: interact.blips(focus),
       weaponIcon: WEAPONS[combat.weapon].icon,
       ammo: !combat.def.melee ? (combat.reloading > 0 ? 'RELOADING' : `${combat.ammo[combat.weapon].clip} / ${combat.ammo[combat.weapon].reserve}`) : '',
