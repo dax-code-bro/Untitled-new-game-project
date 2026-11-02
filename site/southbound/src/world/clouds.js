@@ -126,23 +126,24 @@ vec4 clMarch(vec3 rd, vec3 bg){
   float t1 = min(clFar(ro, rd, EARTH_R + CL_TOP), t0 + 14000.0);
   if (t0 > 90000.0) return vec4(0.0, 0.0, 0.0, 1.0);
   // coarse steps through empty air, fine steps (1/3) inside clouds
-  float big = (t1 - t0) / float(CL_STEPS), small = big / 3.0;
-  float jit = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));
+  float big = (t1 - t0) / float(CL_STEPS), small = big / 4.0;
+  vec3 jq = fract(rd * vec3(443.897, 441.423, 437.195) * 37.0); jq += dot(jq, jq.yzx + 19.19);
+  float jit = fract((jq.x + jq.y) * jq.z);
   float t = t0 + big * jit;
   float c = dot(rd, uLightDir);
   float phase = min(mix(clHG(c, 0.72), clHG(c, -0.2), 0.4), 8.0);
   float T = 1.0; vec3 S = vec3(0.0);
   int fine = 0;
-  for (int i = 0; i < CL_STEPS * 2; i++){
+  for (int i = 0; i < CL_STEPS * 3; i++){
     if (T < 0.01 || t > t1) break;
     vec3 p = ro + rd * t;
     if (fine == 0){
-      if (clDensity(p, true) > 0.0){ fine = 8; t = max(t0, t - big * 0.66); continue; }
+      if (clDensity(p, true) > 0.0){ fine = 10; t = max(t0, t - big * 0.75); continue; }
       t += big; continue;
     }
     float dens = clDensity(p, false);
     if (dens > 0.002){
-      fine = 8;
+      fine = 10;
       float od = 0.0, ls = 60.0; vec3 lp = p;
       for (int j = 0; j < CL_LSTEPS; j++){ lp += uLightDir * ls; od += clDensity(lp, j > 1) * ls; ls *= 1.9; }
       // multiple-scattering approximation: a softer second octave keeps cores from going black
@@ -165,7 +166,7 @@ vec4 clMarch(vec3 rd, vec3 bg){
 `;
 
 export function createCloudSky(renderer, quality) {
-  const size = { phone: 192, low: 192, medium: 256, high: 384, ultra: 512 }[quality.key] || 256;
+  const size = { phone: 192, low: 224, medium: 320, high: 448, ultra: 640 }[quality.key] || 256;
   const steps = { phone: 16, low: 20, medium: 28, high: 40, ultra: 52 }[quality.key] || 32;
   const lsteps = quality.key === 'phone' || quality.key === 'low' ? 3 : 5;
 
