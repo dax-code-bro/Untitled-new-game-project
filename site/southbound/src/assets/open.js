@@ -27,12 +27,15 @@ export const preload = (list) => Promise.all(list.map(loadOpen));
 const _b = new THREE.Box3(), _s = new THREE.Vector3();
 export function instance(g, size, axis = 'max') {
   const o = SkeletonUtils.clone(g.scene);
-  _b.setFromObject(o);
+  o.updateMatrixWorld(true);
+  // precise bounds: for rigged models this applies the skeleton, so armature scales are counted
+  _b.setFromObject(o, true);
   _b.getSize(_s);
   const cur = axis === 'max' ? Math.max(_s.x, _s.y, _s.z) : _s[axis];
   const k = cur > 0 ? size / cur : 1;
   o.scale.multiplyScalar(k);
-  _b.setFromObject(o);
+  o.updateMatrixWorld(true);
+  _b.setFromObject(o, true);
   const c = _b.getCenter(new THREE.Vector3());
   const wrap = new THREE.Group();
   o.position.x -= c.x; o.position.z -= c.z; o.position.y -= _b.min.y;
