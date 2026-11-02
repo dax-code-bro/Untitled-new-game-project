@@ -128,9 +128,11 @@ export function installEstate(game) {
       put(K('BoomBox'), 0.5, -W / 4 + 0.7, -D / 2 + 4.3, Math.PI, 'max', false, 0.8);
     } else if (kind === 'office') {
       for (let x = -W / 2 + 2.2; x < W / 2 - 1.5; x += 3.2) for (let z = -D / 2 + 2.2; z < D / 2 - 2.5; z += 2.8) {
-        put(QH('Kitchen_2Drawers'), 1.5, x, z, 0, 'max');
-        const mon = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.34, 0.04), new THREE.MeshStandardMaterial({ color: 0x080808, emissive: 0x4070b0, emissiveIntensity: 0.5 })); mon.position.set(x, 1.15, z - 0.15); g.add(mon);
-        put(K('SheenChair'), 0.95, x, z + 0.8, Math.PI, 'y');
+        const desk = put(QH('Kitchen_2Drawers'), 0.78, x, z, 0, 'y');
+        const top = desk ? desk.userData.size.y : 0.78;
+        const mon = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.34, 0.04), new THREE.MeshStandardMaterial({ color: 0x080808, emissive: 0x4070b0, emissiveIntensity: 0.5 })); mon.position.set(x, top + 0.2, z - 0.1); g.add(mon);
+        put(QH('Light_Desk'), 0.45, x + 0.45, z - 0.1, 0, 'y', false, top);
+        put(QH(r() < 0.5 ? 'Chair_3' : 'Chair_4'), 0.95, x, z + 0.75, Math.PI, 'y');
       }
       put(QH('Couch_Medium1'), 2.0, -W / 2 + 1.4, D / 2 - 1.0, Math.PI);
       put(QH('Shelf_Large'), 2.0, W / 2 - 0.35, 0, -Math.PI / 2, 'y');
@@ -176,7 +178,7 @@ export function installEstate(game) {
   const INTERIOR_MODELS = [
     ...['Carpet_1', 'Carpet_2', 'Carpet_Round', 'Table_RoundSmall', 'Table_RoundSmall2', 'Table_RoundLarge', 'Drawer_1', 'Drawer_2', 'Drawer_3', 'Light_Floor1', 'Light_Floor2', 'Light_Stand1', 'Bookshelf', 'Houseplant_1', 'Houseplant_3', 'Houseplant_5', 'Houseplant_7',
       'Bed_King', 'Bed_Single', 'NightStand_1', 'Light_Desk', 'Kitchen_Fridge', 'Kitchen_Oven', 'Kitchen_Sink', 'Kitchen_2Drawers', 'Kitchen_3Drawers', 'Fireplace', 'Bathroom_Toilet', 'Bathroom_Sink', 'Curtains_Double', 'Trashcan_Small1', 'Trashcan_Large',
-      'Couch_Medium1', 'Couch_L', 'Shelf_Large', 'Stool', 'Chair_2', 'Light_Chandelier', 'Light_Ceiling1', 'Light_Ceiling2', 'Light_Ceiling4'].map((n) => Q('house_interior_pack', n)),
+      'Couch_Medium1', 'Couch_L', 'Shelf_Large', 'Stool', 'Chair_2', 'Chair_3', 'Chair_4', 'Light_Chandelier', 'Light_Ceiling1', 'Light_Ceiling2', 'Light_Ceiling4'].map((n) => Q('house_interior_pack', n)),
     K('GlamVelvetSofa'), K('SheenChair'), K('ChairDamaskPurplegold'), K('Lantern'), K('BoomBox'), K('WaterBottle'), K('DiffuseTransmissionPlant'),
   ];
   const HEAVY = [K('SheenWoodLeatherSofa'), K('CommercialRefrigerator')];
