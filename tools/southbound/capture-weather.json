@@ -1,0 +1,5 @@
+[
+  {"setup": {"hour": 17.9, "weather": "cloudy", "teleport": [234, 1051, 1.5708], "enter": true}, "input": {}, "seconds": 0.2},
+  {"setup": {"auto": [740, 700, 3.1416, 22], "region": true}, "input": {}, "seconds": 4},
+  {"setup": {"exit": true, "hour": 21.5, "weather": "rain", "teleport": [644, 1110, 3.1416], "look": [3.1416, -0.05], "region": true}, "input": {"moveY": 1}, "seconds": 4}
+]

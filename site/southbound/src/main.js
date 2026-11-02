@@ -403,7 +403,7 @@ async function createGame(progress) {
       post.grade.uniforms.uWarm.value = 0.012 + (sky.hour > 16 && sky.hour < 20 ? 0.018 : 0);
       post.grade.uniforms.uNight.value = sky.night;
       const aimingNow = S.mode === 'foot' && player.aiming && armed;
-      post.update(sky.sunDir, sky.sunDir.y > 0.02, aimingNow ? 18 : camera.position.distanceTo(focus) + 1, aimingNow);
+      post.update(sky.sunDir, sky.sunDir.y > 0.02 && weather.cover < 0.75, aimingNow ? 18 : camera.position.distanceTo(focus) + 1, aimingNow);
     }
 
     render();
