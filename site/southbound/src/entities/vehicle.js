@@ -55,8 +55,10 @@ export class Vehicle {
     _box.setFromObject(model);
     const size = _box.getSize(new THREE.Vector3());
     const k = v.len / size.z;
+    const ctr = _box.getCenter(new THREE.Vector3());
     model.scale.setScalar(k);
-    model.position.y = -_box.min.y * k;
+    // centre the model on the vehicle's origin so its footprint and hitbox line up exactly
+    model.position.set(-ctr.x * k, -_box.min.y * k, -ctr.z * k);
     this.body.add(model);
     this.wheels = [];
     let wf = 0, wr = 0, wheelR = 0.35;
@@ -68,7 +70,7 @@ export class Vehicle {
       // which way does this wheel's local X point? (mirrored wheels spin the other way)
       const sign = _v.copy(X).applyQuaternion(o.quaternion).x >= 0 ? 1 : -1;
       this.wheels.push({ node: o, base: o.quaternion.clone(), front: m[1] === 'front', sign });
-      if (m[1] === 'front') wf = o.position.z * k; else wr = o.position.z * k;
+      if (m[1] === 'front') wf = (o.position.z - ctr.z) * k; else wr = (o.position.z - ctr.z) * k;
     });
     const w = size.x * k, h = size.y * k;
     this.spec = { ...v, width: this.procSpec ? this.procSpec.W * k : w, height: h, wf: wf || v.len * 0.3, wr: wr || -v.len * 0.3, wheelR };

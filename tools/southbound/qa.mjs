@@ -28,7 +28,7 @@ await page.goto(`http://127.0.0.1:${server.address().port}/index.html`);
 await page.waitForTimeout(500);
 await page.click('#play');
 await page.waitForFunction(() => window.SB && window.SB.state, null, { timeout: 600000 });
-await page.waitForTimeout(8000); // background model loads
+await page.waitForTimeout(30000); // background model loads
 const suite = fs.readFileSync(path.join(here, 'qa-suite.js'), 'utf8');
 const report = await page.evaluate(`(${suite})(${JSON.stringify({ allDoors: process.argv.includes('--all-doors') })})`);
 console.log(`QA: ${report.pass} passed, ${report.fail} failed, ${report.seconds}s`);
