@@ -720,3 +720,44 @@ NOT YET VERIFIED / NEXT (in order):
    check on guard3 / musician / crowd02 at a close-up; fix by centring eyeI on the texture iris if visible.
 7. Older list from 2c: cheek pore colour / roughness stipple at 4K, tear line on remi / alexandria,
    stubble, hair root-to-tip, cloth weave, hands at 4K, Abby's child face (rebuild).
+
+## LOOK round 2e (2026-11-02, short session) - 4K eye check, caruncle, iris, sclera
+
+4K CHECK (final preset 3840x2160, humans-dev.json `{ "id": "<abby|remi>", "accumulate": false, "still": true,
+"light": "lamp", "focusEye": true }`, abby ~50-85 s, remi ~32 s; eye crops `crop=800:260:1300:1260` (abby),
+`crop=820:260:1260:1220` (remi)): round iris + pupil + catch-light hold at native 4K on both; no 2x2 blockiness
+visible at the limbus from the derivative-based parallax.
+DIAGNOSED:
+- Caruncle: the cache mesh (build.py caruncles(), kind 'teeth') is BURIED. X-ray debug (MeshBasicMaterial
+  green, depthTest false) showed it under the upper lid at eye-centre height; moved down 3 mm / medial 3 mm /
+  forward 2-3.6 mm it was still hidden, because the SKIN mesh itself closes the inner canthus (the dark
+  'wedge' is lid skin). Geometry shift reverted (loader.js unchanged in the end).
+- The visible inner-corner wedge is 15-18 mm from the eye-centre uniform (debug rings), not 11-14 mm.
+- Sclera grey-olive in lamp light: the eyeLidO cap change did NOT move the sampled sclera pixels at all
+  (abby 150/112/71 before and after; cheek 192/126/81) - the lid term is ~0 on the middle / lower white.
+  So the remaining darkness is albedo x AO, not lid occlusion.
+FIXED (materials.js only, runtime, no rebuild, API unchanged):
+1. skinMaterial: `caruncleM(p)` - the canthus skin wedge is painted as caruncle: distance band 13.5-18 mm
+   from the nearer eye centre x medial (mx > ~10 mm) x eye height window (-5.5 .. +2 mm) x in front of the
+   globe centre; albedo -> (0.62, 0.30, 0.29) and a wet glint (0.7 x mask added to the tear-line specular).
+   Verified at 4K: pink wet inner corners on abby and remi.
+2. eyeMaterial: iris desaturation mix 0.7 -> 0.8 (slightly richer iris; verified, small change).
+3. eyeMaterial: eyeLidO upper 0.8 -> 0.6, lower / corner 0.35 -> 0.25, cap 0.88 -> 0.6 (no visible effect in
+   the lamp test - kept as harmless; it only lightens the band under the upper lid).
+selftest-perf all passed; npm test 48 pass / 0 fail / 1 skipped.
+Renders (scratch, not committed): /tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/look6/
+abby_eyes_before_after.png, remi_eyes_before_after.png (top before, bottom after, native 4K crops),
+dbg_car2.png / m2_pair.png (caruncle x-ray), m4d_c.png (distance rings), m5_pair.png (mask debug | result).
+
+NEXT (in order):
+1. Abby's NEAR eye caruncle glint is a little too bright / pale at 4K (reads as a white blob at the corner):
+   lower the specular share 0.7 -> 0.35 and check again at 4K (same recipe). Check remi's near corner too.
+2. Sclera albedo / AO: sample the eye mesh's baked `ao` on the visible white (eye macro debug paint of vAO);
+   if it is ~0.5-0.7, lift `directDiffuse *= mix(1, aoV, 0.6)` to 0.3 and the indirect floor; else raise
+   uScleraTint (0.93, 0.87, 0.8) toward (0.97, 0.93, 0.88). Target: white ~ cheek luminance in the lamp.
+3. Lower lashes still read as a dotted stipple under the near eye at 4K (abby + remi): alphaHash at sub-pixel
+   width - try thicker, lighter lower lash cards or a cut [0.1, 0.5] for lw = 1, or drop opacity to 0.08.
+4. Delete or rebuild-out the buried caruncle mesh (build.py caruncles) on the next rebuild - it costs nothing
+   visible now; or move the build's placement to the 15-18 mm canthus if a rebuild ever opens the corner.
+5. Older list (2d items 5-7, 2c): tear-line band on remi / alexandria, crowd gaze-axis offsets, cheek pore
+   stipple, stubble, hair root-to-tip + flyaways, cloth weave / hem dirt, hands at 4K, Abby's child face.

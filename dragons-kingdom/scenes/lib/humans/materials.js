@@ -167,6 +167,16 @@ float tearLine(vec3 p, float lidM) { vec3 e = distance(p, uEyeL) < distance(p, u
   float rim = smoothstep(0.0127, 0.0131, d) * (1.0 - smoothstep(0.0133, 0.0139, d));
   float m = max(lidM, rim) * step(0.006, p.z - e.z);
   return m * smoothstep(-0.0012, -0.0028, dy) * (1.0 - smoothstep(-0.0075, -0.0095, dy)); }
+// LOOK r2e: the caruncle (inner-corner pink mucosa). The cache's caruncle mesh is buried: x-ray renders
+// showed it under the upper lid, and moved to the canthus it was still behind the lid skin, because the
+// skin mesh itself closes the inner corner (the 'dark wedge'). So the wedge skin is painted as caruncle:
+// within 13.5-18 mm of the nearer eye centre (debug-painted rings: the visible corner wedge is 15-18 mm out), on the medial side, near eye height,
+// in front of the globe's centre. Returns 0..1.
+float caruncleM(vec3 p) { vec3 e = distance(p, uEyeL) < distance(p, uEyeR) ? uEyeL : uEyeR;
+  float mx = -sign(e.x) * (p.x - e.x), dy = p.y - e.y, d = distance(p, e);
+  float band = smoothstep(0.0128, 0.0140, d) * (1.0 - smoothstep(0.0172, 0.0186, d));
+  return band * smoothstep(0.0085, 0.0115, mx) * smoothstep(-0.0055, -0.0035, dy) * (1.0 - smoothstep(0.0005, 0.0022, dy))
+    * step(0.002, p.z - e.z); }
 uniform vec3 uTone, uScalp, uBeard; uniform float uBeardFull; uniform float uSat, uRed, uPores, uAge, uSSS, uSeed, uDirt, uFlush, uLid, uMouthOpen; uniform vec3 uHeadFwd, uLipM, uLipUp;
 varying vec3 vObjP; varying float vAO; varying float vThick; varying vec4 vAux; varying vec4 vAux2; varying vec4 vAux3; varying vec3 vAlbG; varying float vMouth;
 vec3 skinSmoothN; float skinThin; vec3 skinTransCol;`)
@@ -194,6 +204,8 @@ vec3 skinSmoothN; float skinThin; vec3 skinTransCol;`)
     c *= 1.0 - vec3(0.05, 0.075, 0.11) * mel * 1.5 * uChrom; }
   // where blood shows (cheeks, nose tip, chin, ears) / thin cool skin under the eyes
   c = mix(c, c * vec3(1.13, 0.8, 0.79), vAux2.r * uFlush * (0.75 + 0.6 * m1));
+  // LOOK r2e: caruncle - wet pink-red mucosa in the inner corner (see caruncleM)
+  { float cm = caruncleM(vObjP); c = mix(c, vec3(0.62, 0.3, 0.29) * (0.9 + 0.2 * m2), cm); }
   // freckles (sun-exposed cheeks and nose, clustered; 1-3 mm, faded below pixel size)
   if (uFreckle > 0.0) {
     float fwf = length(fwidth(vObjP));
@@ -420,7 +432,7 @@ void RE_Direct_Skin( const in IncidentLight directLight0, const in vec3 geometry
   // LOOK r2: the tear meniscus along the lower lid margin is a thin concave water line: some point of it
   // always faces the half vector, so it draws a fine bright line toward any light in front of the face
   // (without it the lower lid met the eyeball dry, a doll's eye)
-  { float tl = tearLine(vObjP, smoothstep(0.25, 0.7, vAux2.g));
+  { float tl = max(tearLine(vObjP, smoothstep(0.25, 0.7, vAux2.g)), 0.7 * caruncleM(vObjP));
     float front = smoothstep(-0.1, 0.35, dot(directLight.direction, uHeadFwd));
     // (r2c: a broad lobe, not a Fresnel mirror term - the meniscus is concave, so some part of it
     // faces any light in front; strongest when the light is near the camera axis)
@@ -509,7 +521,7 @@ eyeI = vIris / uLimbus;
   // irises in daylight read darker and less saturated than the texture (the cornea and the
   // iris' own depth): desaturate a little, then tint
   { float li = dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722));
-    diffuseColor.rgb = mix(diffuseColor.rgb, mix(vec3(li), diffuseColor.rgb, 0.7), irisW); }
+    diffuseColor.rgb = mix(diffuseColor.rgb, mix(vec3(li), diffuseColor.rgb, 0.8), irisW); }  // LOOK r2e: 0.7 -> 0.8 (hazy at 4K)
   diffuseColor.rgb *= mix(uScleraTint, uIrisTint, irisW);
   // sclera: warmer and a little pinker toward the corners (vessels), never paper white
   diffuseColor.rgb *= mix(vec3(1.0), vec3(1.0, 0.86, 0.82), smoothstep(1.6, 2.6, vIris) * (1.0 - irisW));
@@ -533,7 +545,10 @@ eyeI = vIris / uLimbus;
   // the eye was evenly lit to the lid edge: a glass ball pressed into the face.
   { vec3 gz = normalize(vGazeO), up = normalize(vec3(0.0, 1.0, 0.0) - gz * gz.y);
     float e = dot(normalize(vEyeN), up);
-    eyeLidO = clamp(smoothstep(0.1, 0.4, e) * 0.8 + smoothstep(-0.22, -0.42, e) * 0.35 + smoothstep(1.5, 2.4, vIris) * 0.35, 0.0, 0.88); }
+    // LOOK r2e: was 0.8 / 0.35 / 0.35 capped 0.88 - at 4K under the lamp the whole white read grey-olive,
+    // darker than the skin around it (sclera 147/109/69 vs cheek 192/126/81 sRGB): with the cornea no longer
+    // mirroring the sky, the occlusion no longer had to hide a sheen. Shadow band kept, cap 0.6.
+    eyeLidO = clamp(smoothstep(0.1, 0.4, e) * 0.6 + smoothstep(-0.22, -0.42, e) * 0.25 + smoothstep(1.5, 2.4, vIris) * 0.25, 0.0, 0.6); }
 }`)
       .replace('#include <lights_physical_fragment>', `#include <lights_physical_fragment>
 {
