@@ -49,7 +49,12 @@ for (const s of steps) {
   if (s.wait) await page.waitForTimeout(s.wait);
   if (s.shot) {
     await page.evaluate(() => window.SB.freeze(true));
-    await page.screenshot({ path: path.join(out, s.shot + '.png'), timeout: 600000 });
+    try { await page.screenshot({ path: path.join(out, s.shot + '.png'), timeout: 240000 }); }
+    catch (e) {
+      // the compositor is too slow: grab the WebGL canvas instead (no HTML UI on top)
+      const data = await page.evaluate(() => { window.SB.renderer.render(window.SB.scene, window.SB.camera); return window.SB.renderer.domElement.toDataURL('image/png'); });
+      fs.writeFileSync(path.join(out, s.shot + '.png'), Buffer.from(data.split(',')[1], 'base64'));
+    }
     if (!s.keepFrozen) await page.evaluate(() => window.SB.freeze(false));
     console.log('shot', s.shot);
   }

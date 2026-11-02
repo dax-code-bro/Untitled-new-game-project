@@ -49,7 +49,13 @@ function prepareConcept(scene) {
     root.add(pivot); pivot.updateMatrixWorld(true);
     for (const part of ['', 'Rim', 'BrakeDisc']) { const n = model.getObjectByName('Wheel' + k + part); if (n) pivot.attach(n); }
   }
-  root.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  root.traverse((o) => {
+    if (!o.isMesh) return;
+    o.castShadow = true; o.receiveShadow = true;
+    // physical transmission re-renders the whole scene every frame; tinted glass looks the same on a car
+    const m = o.material;
+    if (m && m.transmission > 0) { m.transmission = 0; m.transparent = true; m.opacity = 0.32; m.roughness = Math.min(m.roughness, 0.05); m.depthWrite = false; }
+  });
   root.userData.hasLights = true; root.userData.paintable = true;
   return root;
 }
