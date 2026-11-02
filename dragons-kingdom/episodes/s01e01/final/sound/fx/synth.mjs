@@ -261,12 +261,14 @@ export const SOUNDS = {
     return x;
   },
   wingbeat_light(r, p) { // Leaf in flight: a quick, lighter stroke (smaller wing): soft whoosh 150-1400 Hz + a dry membrane snap
-    const d = p.dur ?? 0.45, x = buf(d + 0.1), up = p.up ?? 0.35;
-    const w = chain(white(d, r), ['hp', 120], ['lp', 1400], ['bp', 420, 0.6]);
+    // (s6) the buffer holds the whole decay (peak + 4 tau) and ends on a fade: at dur 0.62 the old d + 0.1 buffer cut
+    // the whoosh off at -19 dB (a hard edge, seen on the 1C fx waveform)
+    const d = p.dur ?? 0.45, up = p.up ?? 0.35, len = d * up + 4 * d * 0.3, x = buf(len + 0.05);
+    const w = chain(white(len, r), ['hp', 120], ['lp', 1400], ['bp', 420, 0.6]);
     mix(x, envelope(w, (t) => Math.min(1, (t / (d * up)) ** 2) * Math.exp(-Math.max(0, t - d * up) / (d * 0.3))), 0, 4);
     mix(x, thump(0.3, 110, 60, 0.07, r), d * up * 0.9, 0.35);
     mix(x, bq(SOUNDS.cloth(r, { dur: 0.22 }), 'hp', 500), d * up * 0.8, 0.5);
-    return x;
+    return fadeEdges(x, 0.002, 0.08);
   },
   air_rush(r, p) { // flight air: a gust past the riders / camera (dur; `dark` 0..1 lowers it; `whistle` adds a thin tone)
     const d = p.dur ?? 3, dk = p.dark ?? 0.3, x = chain(white(d, r), ['hp', 60], ['lp', lerp(5000, 1200, dk)], ['bp', lerp(1100, 380, dk), 0.35]);

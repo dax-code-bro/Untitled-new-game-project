@@ -26,15 +26,15 @@
  },
  "result": {
   "mix": "episodes/s01e01/final/audio/cuts/1C/mix.wav",
-  "I": -16.6,
+  "I": -16.7,
   "I_full": -20.1,
   "TP": -1.6,
-  "LRA": 9.8,
-  "sha256": "22172a8b1abc3d7f66045f307f99282036f4737fe162f32649aa83f25a94f868",
+  "LRA": 9.9,
+  "sha256": "2c8b2dc893d6f7a22d9a2ac186c5c38b6b542c5552ebbaaed3ce11d0e73d5626",
   "master_gain_db": 2,
   "limiter_ceiling_dbfs": -1.6,
   "dialogue_gain_db": 11.4,
-  "min_dialogue_margin_lu": 12.613,
+  "min_dialogue_margin_lu": 12.646,
   "anchored": "dialogue",
   "pass": true
  },
@@ -44,7 +44,7 @@
   "aac_I": -16.7,
   "aac_I_full": -20.2,
   "aac_TP": -1.4,
-  "bytes": 47464801
+  "bytes": 47457683
  },
  "beds": {
   "grounds_wind": {
@@ -61,6 +61,11 @@
    "target_lufs": -27,
    "raw_lufs_60s": -28.2,
    "duck_db": 6
+  },
+  "harbour_quay": {
+   "target_lufs": -24,
+   "raw_lufs_60s": -23.5,
+   "duck_db": 8
   },
   "sea_shore": {
    "target_lufs": -23,
@@ -119,24 +124,24 @@
  "music_cue_sheet": "episodes/s01e01/final/sound/music/cues.json",
  "fx": {
   "spot_sheet": "episodes/s01e01/final/sound/fx/spots.json",
-  "events": 123,
+  "events": 102,
   "peak_dbfs": -4.1,
   "spaces": [
    "air",
    "open"
   ],
-  "sha256": "61913844057ee7806a8e805e0d07355a9294de04f22bfa3a891c8d29a6dea7d2",
+  "sha256": "3c01b6bbbdcea645b47e60a10f8ff2327cad0cfe6e7b37f9ab32bb1740241805",
   "spot_rows_not_in_cut": 134,
   "by_sound": {
    "claws_turf": 1,
-   "wingbeat": 30,
+   "wingbeat": 31,
    "wind_grass": 3,
    "leather": 4,
    "breath": 1,
    "hide_rub": 1,
    "weight_shift": 2,
    "step_stone": 9,
-   "wingbeat_light": 65,
+   "wingbeat_light": 43,
    "air_rush": 6,
    "snort": 1
   }
@@ -167,7 +172,7 @@
    "shots": "X4-01..X4-03 (3)"
   },
   {
-   "bed": "sea_shore",
+   "bed": "harbour_quay",
    "from_s": 106.5,
    "to_s": 116.5,
    "xf_in_s": 0.5,
@@ -183,7 +188,7 @@
    "shots": "X4-06..X4-06 (1)"
   },
   {
-   "bed": "sea_shore",
+   "bed": "harbour_quay",
    "from_s": 119.5,
    "to_s": 124.5,
    "xf_in_s": 0.5,
@@ -199,7 +204,7 @@
    "shots": "X4-08..X4-08 (1)"
   },
   {
-   "bed": "sea_shore",
+   "bed": "harbour_quay",
    "from_s": 128,
    "to_s": 133,
    "xf_in_s": 0.5,
@@ -261,15 +266,15 @@
    "from_s": 36.1,
    "to_s": 37.37,
    "dialogue_M": -14.115,
-   "background_M": -26.728,
-   "margin_LU": 12.613
+   "background_M": -26.761,
+   "margin_LU": 12.646
   },
   {
    "from_s": 61,
    "to_s": 64.285,
    "dialogue_M": -15.773,
-   "background_M": -28.522,
-   "margin_LU": 12.748
+   "background_M": -28.564,
+   "margin_LU": 12.79
   }
  ]
 }

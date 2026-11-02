@@ -1,5 +1,51 @@
 # Sound track: progress (for the next session)
 
+## State (2026-11-02, session 6: wingbeat sync on the rendered 1C flight + harbour bed)
+
+- **Wingbeat sync** (director s15 request): 1C-07..19 are now rendered drafts (director work dir
+  `scratchpad/eng1/director/work1B/shots/1C-*.mp4`). Phase model, read from `scenes/lib/creatures/poses.js` `flight()` +
+  `wingFlap()` and CONFIRMED on frames (contact strips of 1C-17 every 5 frames and 1C-13 every 3 frames): pose clock =
+  absolute shot time, cycle 0 = wings up, downstroke = first 57 % of the cycle, so the wing passes level on the
+  downstroke at ~0.285 x period. Leaf (`flapHz` 0.8): 1.25 s period, level-on-downstroke at 0.36 / 1.61 / 2.86 s
+  (seen at 0.42 / 1.67 / 2.92 in 1C-17); 1C-13 `hz: 1.25` -> 0.8 s, mid-downstroke 0.23 s; Charcoal (`hz` 0.625):
+  1.6 s, mid-downstroke 0.46 s (seen ~0.5 s in 1C-13).
+- `fx/spots.json` 1C-07..1C-18 flight-beat rows rewritten: Leaf `wingbeat_light` dur = period/2, up 0.5, `at` =
+  0.285 x period - dur/2 (0.05 s; 0.03 in 1C-13), `every_s` = period, no jitter; Charcoal `wingbeat` at 0.16 every
+  1.6 s (recipe peak ~0.3 s). Beat rows removed where Charcoal GLIDES in the spec (1C-14, 1C-18; also 1C-12/1C-17):
+  1C-14 now has faint Leaf beats under the lines (duck 8), 1C-18 faint off-screen Leaf. New: 1C-15 both pairs far
+  under the theme (-30 / -33). 1C-10 / 1C-12 / 1C-19 (extreme wides) stay air-only.
+- `fx/synth.mjs` `wingbeat_light`: buffer now holds the whole decay (peak + 4 tau) and fades out over 80 ms (the
+  longer dur showed a hard cut-off at -19 dB on the fx waveform). Only 1C rows use this recipe.
+- **harbour_quay** bed (`beds.json`, VERDOR_HARBOR -> harbour_quay, target -24, duck 8): quay-wall slaps (brown,
+  irregular 2.3 / 1.37 s), wet splashes 1.9 kHz, wood knocks (2 crackle layers, bp 380 / 620), breeze, and a
+  PLACEHOLDER crowd murmur (bp 480 + 1500 noise with a 3-6 Hz flutter). Seen: spectrogram + waveform of the ambience
+  stem 104-120 s (`scratchpad/eng1/sound/harbour-bed.png`): slaps every ~3-4 s, broadband to 60 Hz, a steady
+  500-1100 Hz murmur band; 15 s at X4-04/05 measure -24.7 LUFS. X4 shots are still slates (not in the program
+  region), so it only plays under slates for now. NOT listened to.
+- **1C re-mix** `final/audio/cuts/1C/DragonsKingdom_S01E01_draft-cut_1C_sound.mp4`: program -16.7 LUFS (whole cut
+  -20.1), TP -1.6 dBTP (AAC -16.7 / -1.4), min dialogue margin 12.6 LU, PASS, mix sha256 2c8b2dc893d6f7a2. Seen:
+  `scratchpad/eng1/sound/1C-beatsync.png` (fx-stem waveform of 1C-11 / 1C-13 / 1C-17 with the predicted
+  mid-downstroke marks: Leaf's whooshes peak on the green marks) and `1C-beat-frames.png` (cut frames AT the audio
+  peaks: Leaf's wings level mid-stroke in all 8). ASR not re-run (dialogue unchanged; margins unchanged). 1C-16 is
+  still the director's broken green frame. Not re-run for byte identity (no jitter left in these rows; seeds fixed).
+
+## Next steps (in order)
+
+1. **Listen** to 1C 28-95 s on the PC: beat levels (Leaf -21..-34, Charcoal -17..-30), whether the 1.25 s Leaf
+   whoosh (now 0.62 s long) reads as a wingbeat or as wind; `wingbeat_light` dur/up per row are the knobs.
+2. If the director changes any flight act (`hz`, `phase`, `tOffset`, `local: true`, or a flight act that starts
+   later than 0 with `local`), recompute `at` with the formula above. A quick check: `ffmpeg -i <shot>.mp4 -vf
+   "select='not(mod(n\,5))',scale=480:-1,tile=4x4"` and find the frames where the wing passes level going down.
+3. X4 spots when X4 shots are specced/rendered: gulls (new synth recipe: two-formant FM yelp), boat bell (partials,
+   already have `clink`/`partials` helpers), fish slaps (`wet_scrape`-like thump), rope strain (`rope_creak`), crew
+   rhythm call (wordless: a VO/performance REQUEST, not synth), market walla (real walla wanted: REQUEST VO track for
+   a few CC0/own recorded crowd lines; until then harbour_quay's murmur layer). Leaf's beats echo off stone in X4-02
+   (space `stone_open` reverb), one heavy beat X4-07, Leaf's call + quay dragon answer X4-08 (new creature-call recipe).
+4. `harbour_quay` by ear: the murmur band may read as wind/hiss -> lower layer 3 (-12) or narrow it; slaps may be
+   too regular.
+5. Earlier items below still stand (flight_wind level for 1D/1E, M6 basses re-render check, Cling square bed +
+   diegetic festival music, VSCO 2 CE via sfizz, per-line voice treatment, episode-timeline mix).
+
 ## State (2026-11-02, session 5: 1C flight sound + program-region loudness)
 
 - **Loudness logic** (`mix.mjs`): I/LRA are measured over the **program region** = shots with a picture spec (EDL

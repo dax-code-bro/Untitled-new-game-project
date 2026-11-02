@@ -38,7 +38,10 @@ About 2 minutes for the 6-minute cut on the 4-vCPU cloud machine (all CPU, FFmpe
    noise, impulse trains and decaying partials (no recordings): `step_stone|straw|wood|turf`, `knee_stone`, `cloth`,
    `hide_rub`, `chain_rattle`, `buckle`, `leather`, `rope_creak`, `breath` (size 0 hatchling .. 1 Charcoal; inhale/exhale),
    `hatchling_strain`, `weight_shift`, `claws_turf`, `snort`, `egg_scratch`, `shell_tick|crack|creak|break`,
-   `fragment_click`, `wet_scrape`, `wind_grass`, `wingbeat` (Charcoal), `wingbeat_light` (Leaf: quicker, smaller),
+   `fragment_click`, `wet_scrape`, `wind_grass`, `wingbeat` (Charcoal), `wingbeat_light` (Leaf: quicker, smaller;
+   **flight beats are phased to the animation**: `poses.flight` starts every cycle at shot time 0 with the wings up and the
+   downstroke over the first 57 %, so mid-downstroke = 0.285 x period + k x period; Leaf 1.25 s (0.8 s at hz 1.25),
+   Charcoal 1.6 s (hz 0.625) - set `at` = mid-downstroke - the recipe's peak time, no jitter),
    `air_rush` (flight air past camera; `dark`, `whistle`), `knock`, `latch`, `door`, `pipe_tap`, `runners`. `fx/fx.mjs`
    places them, sends each to the reverb of its space (`space_of_set`: stone corridor, stone room, open, sea, air = almost dry for the sky) and writes the
    fx stem; byte-identical on re-run (checked). `defaults.stem_gain_db` sets the whole fx level by ear. Render the stem
