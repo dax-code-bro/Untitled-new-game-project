@@ -374,7 +374,7 @@ void dkSkin(inout vec3 albedo) {
   fsub = mix(fsub, 0.42, uHeadLk2.z * isHead * (1.0 - peri));
   float gA = L * exp2(l0), gC = gA * 2.0;
   float fwr = length(fwidth(vRest));
-  float vh = 0.0, vcav = 0.0, vcr = 0.0, vid = 0.0; vec3 vg = vec3(0.0);
+  float vh = 0.0, vcav = 0.0, vcr = 0.0, vid = 0.0, ve = 0.5, vup = 0.0, vq = 0.0; vec3 vg = vec3(0.0);
   float gDet = 1.0;
   float tiltJ = uSkin3.z + uHeadLk.w * isHead;
   if (chainM < 0.5) {
@@ -385,10 +385,10 @@ void dkSkin(inout vec3 albedo) {
     if (C.id2 >= fsub) {
       DKV3 F = dkVor3(vRest / gA + l0 * 7.31, Tr, an, tilt, dome, groove, uScl2.x);
       float dF = 1.0 - smoothstep(0.35, 0.9, fwr / gA);
-      vh = F.h * gA * dF; vg = (F.g + tiltJ * (vec3(F.id, F.id2, fract(F.id * 7.13 + F.id2)) - 0.5) * 2.2) * dF; vcav = F.cav * dF; vcr = F.crown * dF; vid = F.id;
+      vh = F.h * gA * dF; vg = (F.g + tiltJ * (vec3(F.id, F.id2, fract(F.id * 7.13 + F.id2)) - 0.5) * 2.2) * dF; vcav = F.cav * dF; vcr = F.crown * dF; vid = F.id; ve = F.e; vup = F.up; vq = F.q * dF;
       gDet = dF;
     } else {
-      vh = C.h * gC * dC; vg = (C.g + tiltJ * (vec3(C.id, C.id2, fract(C.id * 7.13 + C.id2)) - 0.5) * 2.2) * dC; vcav = C.cav * dC; vcr = C.crown * dC; vid = C.id;
+      vh = C.h * gC * dC; vg = (C.g + tiltJ * (vec3(C.id, C.id2, fract(C.id * 7.13 + C.id2)) - 0.5) * 2.2) * dC; vcav = C.cav * dC; vcr = C.crown * dC; vid = C.id; ve = C.e; vup = C.up; vq = C.q * dC;
       gDet = dC;
     }
     // scattered enlarged tubercles on the upper flanks, the neck and the outer limbs
@@ -435,6 +435,42 @@ void dkSkin(inout vec3 albedo) {
     float pfade = 1.0 - smoothstep(0.3, 0.8, fwr / pc);
     pitM = smoothstep(0.66, 0.78, pn.x) * (1.0 - vcav) * pfade * hVar;
     vg -= pn.yzw * pitM * 0.06 / max(relief3, 1e-3);
+    // (r2 s6) seams are not a uniform grout network: per EDGE (ve, the same value on both sides) some
+    // plates abut with no groove, some seams are deep and dark, and some edges overlap - the top
+    // plate's rim stays up (no drop-off, a lighter rubbed lip) and casts a dark shadow line onto the
+    // plate under it (imbricate cranial scutes, saltwater crocodile / Komodo head). More overlaps on the brow.
+    float hv1 = clamp(hVar * 2.2, 0.0, 1.0);
+    float browM = 0.0;
+    if (uEyeC.w > 0.0) {
+      vec3 er = vec3(abs(vRest.x), vRest.yz) - uEyeC.xyz;
+      browM = (1.0 - smoothstep(1.4, 3.2, length(er) / uEyeC.w)) * smoothstep(-0.3, 0.7, er.y / uEyeC.w);
+    }
+    float cav0 = vcav;
+    float abut = 1.0 - smoothstep(0.26, 0.4, ve);
+    float deep = smoothstep(0.86, 0.97, ve);
+    float ovl = step(0.4, ve) * (1.0 - step(mix(0.62, 0.84, browM), ve));
+    float top = ovl * step(0.0, vup), under = ovl * (1.0 - step(0.0, vup));
+    float sm = mix(mix(0.55, 0.06, abut), 1.6, deep);   // the plain seam is narrow and faint too
+    sm = mix(sm, 0.12, top);
+    sm = mix(sm, 1.9, under);
+    vcav = mix(vcav, clamp(cav0 * sm, 0.0, 1.0), hv1);
+    // the rim's slope (the outer ~quarter of the plate profile, wider than the groove) is what reads as
+    // grout under a raking key: flatten it except on deep seams and the under side of an overlap
+    float rimM = smoothstep(0.7, 1.0, vq);
+    vg *= 1.0 - hv1 * rimM * clamp(0.6 + 0.35 * abut + 0.35 * top - 0.6 * deep - 0.6 * under, 0.0, 0.92);
+    vcav = max(vcav, hv1 * under * rimM * 0.75);
+    vh += hv1 * top * cav0 * gA * 0.25;
+    vcr = max(vcr, hv1 * top * cav0 * 0.9);
+    // a few plate-spanning cracks / old scars: thin, wandering, dark lines that ignore the seams
+    float crS = max(vMask2.z, L * 0.001) * 3.2;
+    vec4 cn = dkNoised(vRest / crS + 91.3);
+    vec4 cmk = dkNoised(vRest / (crS * 2.6) + 13.1);
+    float cdist = abs(cn.x - 0.5) / max(length(cn.yzw), 0.25) * crS;
+    float cw = crS * (0.012 + 0.01 * cmk.x);
+    float crackM = (1.0 - smoothstep(cw * 0.4, cw + fwr * 0.7, cdist)) * smoothstep(0.6, 0.7, cmk.x) * hv1 * (1.0 - smoothstep(0.5, 1.5, fwr / cw));
+    vcav = max(vcav, crackM * 0.7);
+    vg -= sign(cn.x - 0.5) * cn.yzw * crackM * 0.05 / max(relief3, 1e-3);
+    pitM = max(pitM, crackM);
   }
   // ---- joint wrinkles (lines across the chain, on top of either layer)
   float wr = vMask.w * (0.6 + 0.4 * n2) * (1.0 - isHead);

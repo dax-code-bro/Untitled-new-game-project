@@ -38,8 +38,12 @@ About 2 minutes for the 6-minute cut on the 4-vCPU cloud machine (all CPU, FFmpe
    noise, impulse trains and decaying partials (no recordings): `step_stone|straw|wood|turf`, `knee_stone`, `cloth`,
    `hide_rub`, `chain_rattle`, `buckle`, `leather`, `rope_creak`, `breath` (size 0 hatchling .. 1 Charcoal; inhale/exhale),
    `hatchling_strain`, `weight_shift`, `claws_turf`, `snort`, `egg_scratch`, `shell_tick|crack|creak|break`,
-   `fragment_click`, `wet_scrape`, `wind_grass`, `wingbeat`, `knock`, `latch`, `door`, `pipe_tap`, `runners`. `fx/fx.mjs`
-   places them, sends each to the reverb of its space (`space_of_set`: stone corridor, stone room, open, sea) and writes the
+   `fragment_click`, `wet_scrape`, `wind_grass`, `wingbeat` (Charcoal), `wingbeat_light` (Leaf: quicker, smaller;
+   **flight beats are phased to the animation**: `poses.flight` starts every cycle at shot time 0 with the wings up and the
+   downstroke over the first 57 %, so mid-downstroke = 0.285 x period + k x period; Leaf 1.25 s (0.8 s at hz 1.25),
+   Charcoal 1.6 s (hz 0.625) - set `at` = mid-downstroke - the recipe's peak time, no jitter),
+   `air_rush` (flight air past camera; `dark`, `whistle`), `knock`, `latch`, `door`, `pipe_tap`, `runners`. `fx/fx.mjs`
+   places them, sends each to the reverb of its space (`space_of_set`: stone corridor, stone room, open, sea, air = almost dry for the sky) and writes the
    fx stem; byte-identical on re-run (checked). `defaults.stem_gain_db` sets the whole fx level by ear. Render the stem
    alone: `node episodes/s01e01/final/sound/fx/fx.mjs --cut 1B --out /tmp/fx.wav`.
 4. **Master**: dialogue + ambience + music + fx, one gain to -16 LUFS integrated, a 4x-oversampled look-ahead limiter at -1.6 dBFS,
@@ -48,8 +52,15 @@ About 2 minutes for the 6-minute cut on the 4-vCPU cloud machine (all CPU, FFmpe
    A cut with no voice takes (1C so far: 6 takeoff shots + slates) keeps the same +2 dB cap, so beds/music/fx sit at
    the level they have in the dialogue cuts instead of a slate-heavy cut's wind bed being pushed to -16 (report:
    `anchored: "reference"`; 1C's rendered takeoff, 0-28 s, measures -16.4 LUFS on its own).
+   **Program region**: loudness (I, LRA) is measured only over the shots that have a picture spec (EDL `kind` !=
+   `missing`), so a cut that is still mostly slates for unspecced shots (1C: 1C-01..1C-19 = 0-91.5 s of 382 s; X4/X5
+   are slates) is normalised on its real scenes; the slates keep the same gain (beds only). The report gives `I`
+   (program) and `I_full` (whole cut, info) and `program.windows_s`; a cut with no missing shots is unchanged.
 5. **Checks**: dialogue vs ambience + music + fx momentary loudness over every speech window (want >= 10 LU), stem lengths equal
    the cut, true peak of the AAC copy.
+   Machine listen-check: `python3 -I episodes/s01e01/final/sound/asr_check.py --cut 1C` (after `mix.mjs --keep-work`;
+   needs `pip install pocketsphinx`) decodes every line from the dialogue stem alone and from the mix and compares word
+   recall with the script -> `reports/<cut>-asr.json` (`lost_in_mix` must be empty).
 6. **Outputs** (git-ignored) in `final/audio/cuts/<cut>/`: `mix.wav` (48 kHz 24-bit stereo), a COPY of the draft cut
    with this sound (`..._sound.mp4`, video stream copied unchanged, AAC 256k), the cut's subtitles copied, and
    `mix-report.json`. The committed copy of the report is `sound/reports/<cut>.json`. `final/cut/` is only read.
@@ -65,6 +76,7 @@ About 2 minutes for the 6-minute cut on the 4-vCPU cloud machine (all CPU, FFmpe
 | `fx/spots.json`, `fx/synth.mjs`, `fx/fx.mjs` | the spot sheet (shot-id events); the effect recipes; placement, ducking, reverb, fx stem |
 | `manifest.json` | every sound source and its licence (credits must agree) |
 | `reports/<cut>.json` | last mix of each cut: loudness, true peak, sha256, bed runs, speech margins |
+| `asr_check.py`, `reports/<cut>-asr.json` | pocketsphinx intelligibility check: dialogue alone vs mix |
 
 ## How the mix reaches the render PC
 

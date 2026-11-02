@@ -8,7 +8,7 @@
 // GM programs (0-based): 8 celesta, 42 cello, 43 contrabass, 44 tremolo strings, 45 pizzicato, 46 harp, 47 timpani,
 // 48 strings, 49 slow strings, 60 French horn, 71 clarinet, 73 flute.
 
-const N = { D1: 26, A1: 33, Bb1: 34, C2: 36, D2: 38, E2: 40, F2: 41, G2: 43, A2: 45, Bb2: 46, C3: 48, D3: 50, E3: 52,
+const N = { D1: 26, A1: 33, Bb1: 34, C2: 36, D2: 38, E2: 40, F2: 41, Fs2: 42, G2: 43, A2: 45, Bb2: 46, C3: 48, D3: 50, E3: 52,
   F3: 53, Fs3: 54, G3: 55, A3: 57, Bb3: 58, B3: 59, C4: 60, Cs4: 61, D4: 62, E4: 64, F4: 65, Fs4: 66, G4: 67, A4: 69,
   Bb4: 70, B4: 71, C5: 72, Cs5: 73, D5: 74, E5: 76, F5: 77, Fs5: 78, G5: 79, A5: 81, B5: 83, D6: 86 };
 const chord = (beat, dur, pitches, vel) => pitches.map((p) => [beat, dur, N[p], vel]);
@@ -212,5 +212,59 @@ const takeoff = {
   ],
 };
 
-export const SCORES = { dawn_theme: dawn, title_sting: sting, hatching, riding_grounds: grounds, ready, takeoff };
+// ---------------------------------------------------------------- the light theme (1C flight, 1C-10 / 1C-15..1C-19)
+// The dawn theme's head (D E F# A) made light and airborne by Leaf's turn (B A F#) and his rising tail: 8 beats,
+// A | D . E F#-- A | B A F# | D---. Flute + violins, harp, high pad; never brass-heavy (private freedom, not a
+// procession). M7 states it once and leaves it hanging on F# (1C-10, then "only wingbeats" from 1C-11); M8 grows it
+// from 1C-15 and lets it complete on D only in 1C-19.
+const LIGHT = [[0, 0.5, 'A4'], [0.5, 1, 'D5'], [1.5, 0.5, 'E5'], [2, 1.5, 'Fs5'], [3.5, 0.5, 'A5'], [4, 1, 'B5'], [5, 0.5, 'A5'],
+  [5.5, 0.5, 'Fs5'], [6, 2, 'D5']];
+const lightFig = (b, vel, { shift = 0, upto = LIGHT.length, hold = 0 } = {}) => LIGHT.slice(0, upto).map(([o, d, p], i, a) =>
+  [b + o, (i === a.length - 1 ? d + hold : d) * 0.95, N[p] + shift, vel + (p === 'Fs5' || p === 'B5' ? 4 : 0) - (i % 2) * 3]);
+// slow harp ostinato: pitches cycled every `step` beats over [from, to)
+const ost = (from, to, step, pitches, vel) => pulse(from, to, step, pitches, vel, step * 3);
+
+// M7 sky glimpse: beat 0 = 1C-10 (the extreme wide over the coast), 60 bpm; faded out early in 1C-11.
+const skyGlimpse = {
+  tempo_bpm: 60, length_beats: 12,
+  parts: [
+    { name: 'high pad', program: 49, channel: 0, volume: 92, reverb: 95, expression: 0,
+      notes: [[0, 9, N.D4, 50], [0, 9, N.A4, 46], [0, 9, N.D5, 42], [0, 9, N.Fs5, 30]], ramps: [[0, 2.5, 11, 0, 84], [6, 10, 11, 84, 20]] },
+    { name: 'harp', program: 46, channel: 1, volume: 80, pan: 78, reverb: 92,
+      notes: ost(0, 7, 0.5, ['D4', 'A4', 'D5', 'A4', 'Fs4', 'A4'], 40) },
+    { name: 'flute (light theme)', program: 73, channel: 2, volume: 94, pan: 40, reverb: 82,
+      notes: lightFig(0.5, 66, { upto: 8, hold: 2 }) },
+  ],
+};
+
+// M8 light theme: beat 0 = 1C-15 (65.5 s in the 1C draft cut), 60 bpm, so beat = cut time - 65.5. Shots: 1C-15
+// beats 0-9 (nobody speaks: pad + harp, the theme low on clarinet from beat 3), 1C-16 9-12 (hands on the grips),
+// 1C-17 12-15 (Leaf's glance: his figure on flute), 1C-18 15-18 (Remi relaxed: the dawn head on a soft horn),
+// 1C-19 18-26 (the theme whole on flute + violins, harmonised D - D/F# - G - A - D) then a D add9 held into X4-01.
+const lightTheme = {
+  tempo_bpm: 60, length_beats: 34,
+  parts: [
+    { name: 'high pad', program: 49, channel: 0, volume: 96, reverb: 92, expression: 0,
+      notes: [[0, 9, N.D4, 48], [0, 9, N.Fs4, 44], [0, 9, N.A4, 42], [9, 9, N.D4, 48], [9, 9, N.G4, 44], [9, 9, N.B4, 42],
+        [18, 2, N.D4, 56], [18, 2, N.A4, 52], [20, 2, N.Fs4, 56], [20, 2, N.A4, 52], [22, 1.5, N.G4, 58], [22, 1.5, N.B4, 54],
+        [23.5, 1, N.E4, 58], [23.5, 1, N.A4, 54], [24.5, 9, N.D4, 56], [24.5, 9, N.Fs4, 52], [24.5, 9, N.A4, 50], [24.5, 9, N.E5, 40]],
+      ramps: [[0, 4, 11, 0, 80], [16, 19, 11, 80, 104], [27, 33, 11, 104, 0]] },
+    { name: 'basses', program: 43, channel: 1, volume: 90, reverb: 70, expression: 70,
+      notes: [[18, 2, N.D2, 60], [20, 2, N.Fs2, 58], [22, 1.5, N.G2, 62], [23.5, 1, N.A2, 62], [24.5, 6, N.D2, 64]],
+      ramps: [[25, 31, 11, 70, 0]] },
+    { name: 'harp', program: 46, channel: 2, volume: 82, pan: 80, reverb: 90,
+      notes: [...ost(0.5, 18, 0.5, ['D4', 'A4', 'D5', 'A4', 'Fs4', 'A4'], 38), ...arp(18, 0.25, ['D3', 'A3', 'D4', 'Fs4', 'A4', 'D5'], 52, 2.5),
+        ...arp(22, 0.25, ['G3', 'D4', 'G4', 'B4'], 50, 2), ...arp(24.5, 0.2, ['D3', 'A3', 'D4', 'E4', 'Fs4', 'A4', 'D5', 'E5'], 56, 4)] },
+    { name: 'clarinet (low theme)', program: 71, channel: 3, volume: 86, pan: 50, reverb: 80,
+      notes: lightFig(3, 56, { shift: -12, upto: 5, hold: 1.5 }) },
+    { name: 'flute (Leaf / light theme)', program: 73, channel: 4, volume: 96, pan: 40, reverb: 80,
+      notes: [...leafFig(12.2, 60, 0.7), ...lightFig(18, 74, { hold: 2 })] },
+    { name: 'violins (light theme)', program: 48, channel: 5, volume: 92, pan: 56, reverb: 85, expression: 60,
+      notes: lightFig(18, 64, { shift: -12, hold: 2 }), ramps: [[18, 21, 11, 60, 96], [26, 30, 11, 96, 0]] },
+    { name: 'horn (dawn head)', program: 60, channel: 6, volume: 84, pan: 60, reverb: 88, expression: 70,
+      notes: [[15, 0.9, N.D4, 54], [16, 0.5, N.E4, 52], [16.5, 0.5, N.Fs4, 55], [17, 1.2, N.A4, 58]] },
+  ],
+};
+
+export const SCORES = { dawn_theme: dawn, title_sting: sting, hatching, riding_grounds: grounds, ready, takeoff, sky_glimpse: skyGlimpse, light_theme: lightTheme };
 

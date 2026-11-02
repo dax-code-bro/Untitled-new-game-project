@@ -1,5 +1,92 @@
 # Sound track: progress (for the next session)
 
+## State (2026-11-02, session 6: wingbeat sync on the rendered 1C flight + harbour bed)
+
+- **Wingbeat sync** (director s15 request): 1C-07..19 are now rendered drafts (director work dir
+  `scratchpad/eng1/director/work1B/shots/1C-*.mp4`). Phase model, read from `scenes/lib/creatures/poses.js` `flight()` +
+  `wingFlap()` and CONFIRMED on frames (contact strips of 1C-17 every 5 frames and 1C-13 every 3 frames): pose clock =
+  absolute shot time, cycle 0 = wings up, downstroke = first 57 % of the cycle, so the wing passes level on the
+  downstroke at ~0.285 x period. Leaf (`flapHz` 0.8): 1.25 s period, level-on-downstroke at 0.36 / 1.61 / 2.86 s
+  (seen at 0.42 / 1.67 / 2.92 in 1C-17); 1C-13 `hz: 1.25` -> 0.8 s, mid-downstroke 0.23 s; Charcoal (`hz` 0.625):
+  1.6 s, mid-downstroke 0.46 s (seen ~0.5 s in 1C-13).
+- `fx/spots.json` 1C-07..1C-18 flight-beat rows rewritten: Leaf `wingbeat_light` dur = period/2, up 0.5, `at` =
+  0.285 x period - dur/2 (0.05 s; 0.03 in 1C-13), `every_s` = period, no jitter; Charcoal `wingbeat` at 0.16 every
+  1.6 s (recipe peak ~0.3 s). Beat rows removed where Charcoal GLIDES in the spec (1C-14, 1C-18; also 1C-12/1C-17):
+  1C-14 now has faint Leaf beats under the lines (duck 8), 1C-18 faint off-screen Leaf. New: 1C-15 both pairs far
+  under the theme (-30 / -33). 1C-10 / 1C-12 / 1C-19 (extreme wides) stay air-only.
+- `fx/synth.mjs` `wingbeat_light`: buffer now holds the whole decay (peak + 4 tau) and fades out over 80 ms (the
+  longer dur showed a hard cut-off at -19 dB on the fx waveform). Only 1C rows use this recipe.
+- **harbour_quay** bed (`beds.json`, VERDOR_HARBOR -> harbour_quay, target -24, duck 8): quay-wall slaps (brown,
+  irregular 2.3 / 1.37 s), wet splashes 1.9 kHz, wood knocks (2 crackle layers, bp 380 / 620), breeze, and a
+  PLACEHOLDER crowd murmur (bp 480 + 1500 noise with a 3-6 Hz flutter). Seen: spectrogram + waveform of the ambience
+  stem 104-120 s (`scratchpad/eng1/sound/harbour-bed.png`): slaps every ~3-4 s, broadband to 60 Hz, a steady
+  500-1100 Hz murmur band; 15 s at X4-04/05 measure -24.7 LUFS. X4 shots are still slates (not in the program
+  region), so it only plays under slates for now. NOT listened to.
+- **1C re-mix** `final/audio/cuts/1C/DragonsKingdom_S01E01_draft-cut_1C_sound.mp4`: program -16.7 LUFS (whole cut
+  -20.1), TP -1.6 dBTP (AAC -16.7 / -1.4), min dialogue margin 12.6 LU, PASS, mix sha256 2c8b2dc893d6f7a2. Seen:
+  `scratchpad/eng1/sound/1C-beatsync.png` (fx-stem waveform of 1C-11 / 1C-13 / 1C-17 with the predicted
+  mid-downstroke marks: Leaf's whooshes peak on the green marks) and `1C-beat-frames.png` (cut frames AT the audio
+  peaks: Leaf's wings level mid-stroke in all 8). ASR not re-run (dialogue unchanged; margins unchanged). 1C-16 is
+  still the director's broken green frame. Not re-run for byte identity (no jitter left in these rows; seeds fixed).
+
+## Next steps (in order)
+
+1. **Listen** to 1C 28-95 s on the PC: beat levels (Leaf -21..-34, Charcoal -17..-30), whether the 1.25 s Leaf
+   whoosh (now 0.62 s long) reads as a wingbeat or as wind; `wingbeat_light` dur/up per row are the knobs.
+2. If the director changes any flight act (`hz`, `phase`, `tOffset`, `local: true`, or a flight act that starts
+   later than 0 with `local`), recompute `at` with the formula above. A quick check: `ffmpeg -i <shot>.mp4 -vf
+   "select='not(mod(n\,5))',scale=480:-1,tile=4x4"` and find the frames where the wing passes level going down.
+3. X4 spots when X4 shots are specced/rendered: gulls (new synth recipe: two-formant FM yelp), boat bell (partials,
+   already have `clink`/`partials` helpers), fish slaps (`wet_scrape`-like thump), rope strain (`rope_creak`), crew
+   rhythm call (wordless: a VO/performance REQUEST, not synth), market walla (real walla wanted: REQUEST VO track for
+   a few CC0/own recorded crowd lines; until then harbour_quay's murmur layer). Leaf's beats echo off stone in X4-02
+   (space `stone_open` reverb), one heavy beat X4-07, Leaf's call + quay dragon answer X4-08 (new creature-call recipe).
+4. `harbour_quay` by ear: the murmur band may read as wind/hiss -> lower layer 3 (-12) or narrow it; slaps may be
+   too regular.
+5. Earlier items below still stand (flight_wind level for 1D/1E, M6 basses re-render check, Cling square bed +
+   diegetic festival music, VSCO 2 CE via sfizz, per-line voice treatment, episode-timeline mix).
+
+## State (2026-11-02, session 5: 1C flight sound + program-region loudness)
+
+- **Loudness logic** (`mix.mjs`): I/LRA are measured over the **program region** = shots with a picture spec (EDL
+  `kind` != `missing`); slates of unspecced shots keep the same gain (beds only). Report: `result.I` (program),
+  `result.I_full` (whole cut), `program.windows_s`, `muxed.aac_I` (program) / `aac_I_full`. Cuts with no missing shots
+  (1A, 1B) are unaffected (not re-mixed). The +2 dB dialogue cap (words <= -15 LUFS) still applies.
+- **1C flight** (1C-07..1C-19, still slates in the director's cut but specced, with L042-L045):
+  - bed `flight_wind` (SKY_OFF_VERDOR; target -22, duck 7): steady air rush, slow gusts, faint high edge.
+  - fx recipes `wingbeat_light` (Leaf: quick, smaller, membrane snap) and `air_rush` (gust past camera; `dark`,
+    `whistle`); space `air` (almost dry). 21 spot rows 1C-07..1C-19 in `fx/spots.json` (Leaf ~2.3 beats/s, Charcoal
+    ~0.6/s; 1C-11 two rhythms L/R; 1C-13 heavy beats approach while Leaf's quicken; beats ducked 8 dB in 1C-09/1C-14;
+    leather creak 1C-16; snort 1C-17).
+  - music: the **light theme** (`LIGHT` in `scores.mjs`: A | D . E F# - A | B A F# | D, the dawn head + Leaf's turn).
+    **M7 sky glimpse** (`sky_glimpse`, beat 0 = 1C-10, -21.5 LUFS): pad + harp + the theme once on flute, left hanging
+    on F#, gone by 1C-11 +2.5 s ("music stops; only wingbeats"). **M8 light theme** (`light_theme`, beat 0 = 1C-15,
+    beat = cut time - 65.5, -19.5 LUFS): pad + harp + theme low on clarinet (1C-15), Leaf's figure (1C-17), dawn head
+    on soft horn (1C-18), the theme whole on flute + violins resolving to D on 1C-19, D add9 faded by X4-01 +3 s.
+- **1C mix** `final/audio/cuts/1C/DragonsKingdom_S01E01_draft-cut_1C_sound.mp4`: program (0-91.5 s) **-16.6 LUFS**
+  (whole cut -20.1), TP -1.6 dBTP (AAC -16.7 / -1.4), anchored "dialogue" (+2 dB cap), min dialogue margin 12.6 LU,
+  PASS. ASR (`asr_check.py`, pocketsphinx): recall dialogue-alone 0.875 = mix 0.875, nothing lost in the mix
+  ("Everything secure?" -> "everything suck your" in both: the model, not the mix). Seen: spectrogram + stem
+  waveforms of 26-96 s (scratchpad `eng1/sound/1C-flight-spec.png`, `1C-flight-stems.png`): M6 out by 28 s, M7
+  39.5-48, M8 65.5-94.5, beats/rushes per shot. A bright ~1.3 kHz stripe in the spectrogram PNG is a display effect:
+  band RMS of ambience/fx/mix at 30-36 s falls smoothly 200 Hz -> 4 kHz (no peak).
+- Not re-run for byte-identity this session (new recipes are seeded like the others). NOT listened to by a person.
+
+## Next steps (in order)
+
+1. **Listen** to the 1C `_sound.mp4` 28-95 s: is `flight_wind` (-22) too loud/hissy for 4 minutes of flight in 1D/1E?
+   Leaf's `wingbeat_light` rate (0.36-0.45 s) vs his flight animation once 1C-07..19 are rendered - re-time the
+   `every_s` to the wing cycle in the director's flight pose (scenes/lib/creatures poses) when shots exist.
+2. When the director renders 1C-07..1C-19, re-mix and check beat sync on picture (1C-11 rhythms, 1C-13 approach).
+3. X4 (harbour / aerial town), X5 (Cling): spot when specced (`kind` becomes non-missing -> they join the program
+   region automatically). Beds needed: harbour (gulls, rigging, water lap, crew voices as walla), market street,
+   Cling festival square (replace the `grounds_wind` placeholder); diegetic festival music (separate cue, not ducked
+   like score). M8 currently fades in X4-01: extend/re-spot when X4-01..X4-03 exist (shotlist: X4-20 "light theme").
+4. If 1C program stays below -16 when all shots exist, the dialogue cap is binding: raise music/beds rather than the
+   cap (margin is 12.6 LU, 2.6 LU of room).
+5. Earlier items below still stand (listen 1A/1B, M6 basses re-render check, VSCO 2 CE via sfizz for the final, per-line
+   voice treatment, episode-timeline mix).
+
 ## State (2026-11-01, session 4: 1B score + 1C takeoff)
 
 - Done: three new ORIGINAL cues as note data in `music/scores.mjs` (shared helpers `leafFig` = Leaf's light figure

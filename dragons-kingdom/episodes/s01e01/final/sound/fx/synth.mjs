@@ -260,6 +260,27 @@ export const SOUNDS = {
     mix(x, SOUNDS.cloth(r, { dur: 0.5, heavy: 1 }), 0.12, 0.4);
     return x;
   },
+  wingbeat_light(r, p) { // Leaf in flight: a quick, lighter stroke (smaller wing): soft whoosh 150-1400 Hz + a dry membrane snap
+    // (s6) the buffer holds the whole decay (peak + 4 tau) and ends on a fade: at dur 0.62 the old d + 0.1 buffer cut
+    // the whoosh off at -19 dB (a hard edge, seen on the 1C fx waveform)
+    const d = p.dur ?? 0.45, up = p.up ?? 0.35, len = d * up + 4 * d * 0.3, x = buf(len + 0.05);
+    const w = chain(white(len, r), ['hp', 120], ['lp', 1400], ['bp', 420, 0.6]);
+    mix(x, envelope(w, (t) => Math.min(1, (t / (d * up)) ** 2) * Math.exp(-Math.max(0, t - d * up) / (d * 0.3))), 0, 4);
+    mix(x, thump(0.3, 110, 60, 0.07, r), d * up * 0.9, 0.35);
+    mix(x, bq(SOUNDS.cloth(r, { dur: 0.22 }), 'hp', 500), d * up * 0.8, 0.5);
+    return fadeEdges(x, 0.002, 0.08);
+  },
+  air_rush(r, p) { // flight air: a gust past the riders / camera (dur; `dark` 0..1 lowers it; `whistle` adds a thin tone)
+    const d = p.dur ?? 3, dk = p.dark ?? 0.3, x = chain(white(d, r), ['hp', 60], ['lp', lerp(5000, 1200, dk)], ['bp', lerp(1100, 380, dk), 0.35]);
+    const b = bumps(r, d, Math.max(3, Math.round(d * 1.5)), d / 5);
+    envelope(x, (t) => Math.pow(Math.sin(Math.PI * t / d), 1.5) * (0.45 + 0.55 * b(t)));
+    if (p.whistle) {
+      const f0 = rr(r, 900, 1300), wv = buf(d); let ph = 0;
+      for (let i = 0; i < wv.length; i++) { const t = i / SR; ph += f0 * (1 + 0.04 * Math.sin(6.283 * 0.6 * t)) / SR; wv[i] = Math.sin(6.283185307 * ph) * Math.pow(Math.sin(Math.PI * t / d), 3) * (0.5 + 0.5 * b(t)); }
+      mix(x, wv, 0, 0.02 * p.whistle);
+    }
+    return x;
+  },
   // doors and wood
   knock(r, p) { // a knuckle on a heavy wooden door; short: the second knock cut off
     const x = buf(0.5), hit = envelope(white(0.1, r), decay(0.003));

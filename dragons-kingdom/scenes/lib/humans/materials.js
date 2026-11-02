@@ -167,6 +167,16 @@ float tearLine(vec3 p, float lidM) { vec3 e = distance(p, uEyeL) < distance(p, u
   float rim = smoothstep(0.0127, 0.0131, d) * (1.0 - smoothstep(0.0133, 0.0139, d));
   float m = max(lidM, rim) * step(0.006, p.z - e.z);
   return m * smoothstep(-0.0012, -0.0028, dy) * (1.0 - smoothstep(-0.0075, -0.0095, dy)); }
+// LOOK r2e: the caruncle (inner-corner pink mucosa). The cache's caruncle mesh is buried: x-ray renders
+// showed it under the upper lid, and moved to the canthus it was still behind the lid skin, because the
+// skin mesh itself closes the inner corner (the 'dark wedge'). So the wedge skin is painted as caruncle:
+// within 13.5-18 mm of the nearer eye centre (debug-painted rings: the visible corner wedge is 15-18 mm out), on the medial side, near eye height,
+// in front of the globe's centre. Returns 0..1.
+float caruncleM(vec3 p) { vec3 e = distance(p, uEyeL) < distance(p, uEyeR) ? uEyeL : uEyeR;
+  float mx = -sign(e.x) * (p.x - e.x), dy = p.y - e.y, d = distance(p, e);
+  float band = smoothstep(0.0128, 0.0140, d) * (1.0 - smoothstep(0.0172, 0.0186, d));
+  return band * smoothstep(0.0085, 0.0115, mx) * smoothstep(-0.0055, -0.0035, dy) * (1.0 - smoothstep(0.0005, 0.0022, dy))
+    * step(0.002, p.z - e.z); }
 uniform vec3 uTone, uScalp, uBeard; uniform float uBeardFull; uniform float uSat, uRed, uPores, uAge, uSSS, uSeed, uDirt, uFlush, uLid, uMouthOpen; uniform vec3 uHeadFwd, uLipM, uLipUp;
 varying vec3 vObjP; varying float vAO; varying float vThick; varying vec4 vAux; varying vec4 vAux2; varying vec4 vAux3; varying vec3 vAlbG; varying float vMouth;
 vec3 skinSmoothN; float skinThin; vec3 skinTransCol;`)
@@ -194,6 +204,8 @@ vec3 skinSmoothN; float skinThin; vec3 skinTransCol;`)
     c *= 1.0 - vec3(0.05, 0.075, 0.11) * mel * 1.5 * uChrom; }
   // where blood shows (cheeks, nose tip, chin, ears) / thin cool skin under the eyes
   c = mix(c, c * vec3(1.13, 0.8, 0.79), vAux2.r * uFlush * (0.75 + 0.6 * m1));
+  // LOOK r2e: caruncle - wet pink-red mucosa in the inner corner (see caruncleM)
+  { float cm = caruncleM(vObjP); c = mix(c, vec3(0.62, 0.3, 0.29) * (0.9 + 0.2 * m2), cm); }
   // freckles (sun-exposed cheeks and nose, clustered; 1-3 mm, faded below pixel size)
   if (uFreckle > 0.0) {
     float fwf = length(fwidth(vObjP));
@@ -420,7 +432,7 @@ void RE_Direct_Skin( const in IncidentLight directLight0, const in vec3 geometry
   // LOOK r2: the tear meniscus along the lower lid margin is a thin concave water line: some point of it
   // always faces the half vector, so it draws a fine bright line toward any light in front of the face
   // (without it the lower lid met the eyeball dry, a doll's eye)
-  { float tl = tearLine(vObjP, smoothstep(0.25, 0.7, vAux2.g));
+  { float tl = max(tearLine(vObjP, smoothstep(0.25, 0.7, vAux2.g)), 0.35 * caruncleM(vObjP))  /* LOOK r2f: 0.7 -> 0.35 (white blob at 4K) */;
     float front = smoothstep(-0.1, 0.35, dot(directLight.direction, uHeadFwd));
     // (r2c: a broad lobe, not a Fresnel mirror term - the meniscus is concave, so some part of it
     // faces any light in front; strongest when the light is near the camera axis)
@@ -445,7 +457,7 @@ export function eyeMaterial(o = {}) {
     clearcoat: 1.0, clearcoatRoughness: 0.02,
   });
   if (o.map) mat.map = libTexture(o.map);
-  const U = { uIrisTint: { value: new THREE.Vector3(...(o.irisTint || [1, 1, 1])) }, uScleraTint: { value: new THREE.Vector3(...(o.scleraTint || [0.93, 0.87, 0.8])) }, uHeadFwd: headUniform(o),
+  const U = { uIrisTint: { value: new THREE.Vector3(...(o.irisTint || [1, 1, 1])) }, uScleraTint: { value: new THREE.Vector3(...(o.scleraTint || [1.0, 0.93, 0.87])) }, uHeadFwd: headUniform(o),
     // LOOK r2d: the MakeHuman eye texture's iris ends at UV radius ~0.12 (all mh_eyes maps share the layout),
     // i.e. at vIris ~0.87 on the cache meshes (0.1387 UV per unit vIris, measured on abby / remi); the shader's
     // limbus sat at vIris 1.0, so a pale texture-sclera ring was tinted as iris between two dark rings: at 4K
@@ -509,8 +521,9 @@ eyeI = vIris / uLimbus;
   // irises in daylight read darker and less saturated than the texture (the cornea and the
   // iris' own depth): desaturate a little, then tint
   { float li = dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722));
-    diffuseColor.rgb = mix(diffuseColor.rgb, mix(vec3(li), diffuseColor.rgb, 0.7), irisW); }
-  diffuseColor.rgb *= mix(uScleraTint, uIrisTint, irisW);
+    diffuseColor.rgb = mix(diffuseColor.rgb, mix(vec3(li), diffuseColor.rgb, 0.8), irisW); }  // LOOK r2e: 0.7 -> 0.8 (hazy at 4K)
+  // LOOK r2f: the white read grey-olive in lamp light (G/B below the cheek's): brighter, less olive white
+  diffuseColor.rgb = min(diffuseColor.rgb * mix(uScleraTint * 1.3, uIrisTint, irisW), vec3(1.0));
   // sclera: warmer and a little pinker toward the corners (vessels), never paper white
   diffuseColor.rgb *= mix(vec3(1.0), vec3(1.0, 0.86, 0.82), smoothstep(1.6, 2.6, vIris) * (1.0 - irisW));
   diffuseColor.rgb *= mix(1.0, 0.68, smoothstep(0.85, 1.0, eyeI) * smoothstep(1.18, 1.0, eyeI)); // limbal ring
@@ -533,7 +546,10 @@ eyeI = vIris / uLimbus;
   // the eye was evenly lit to the lid edge: a glass ball pressed into the face.
   { vec3 gz = normalize(vGazeO), up = normalize(vec3(0.0, 1.0, 0.0) - gz * gz.y);
     float e = dot(normalize(vEyeN), up);
-    eyeLidO = clamp(smoothstep(0.1, 0.4, e) * 0.8 + smoothstep(-0.22, -0.42, e) * 0.35 + smoothstep(1.5, 2.4, vIris) * 0.35, 0.0, 0.88); }
+    // LOOK r2e: was 0.8 / 0.35 / 0.35 capped 0.88 - at 4K under the lamp the whole white read grey-olive,
+    // darker than the skin around it (sclera 147/109/69 vs cheek 192/126/81 sRGB): with the cornea no longer
+    // mirroring the sky, the occlusion no longer had to hide a sheen. Shadow band kept, cap 0.6.
+    eyeLidO = clamp(smoothstep(0.1, 0.4, e) * 0.6 + smoothstep(-0.22, -0.42, e) * 0.25 + smoothstep(1.5, 2.4, vIris) * 0.25, 0.0, 0.6); }
 }`)
       .replace('#include <lights_physical_fragment>', `#include <lights_physical_fragment>
 {
@@ -563,7 +579,7 @@ eyeI = vIris / uLimbus;
   // the eye sits in a skin-coloured socket: its fill light is warm bounce, not just blue sky
   reflectedLight.indirectDiffuse *= aoV * vec3(1.22, 1.0, 0.86);
   reflectedLight.indirectSpecular *= mix(1.0, aoV * aoV, 0.85);
-  reflectedLight.directDiffuse *= mix(1.0, aoV, 0.6);
+  reflectedLight.directDiffuse *= mix(1.0, aoV, 0.35);   // LOOK r2f: 0.6 -> 0.35 (baked AO is ~0.85-1 on the visible white; only the corners darken)
   reflectedLight.directDiffuse *= 1.0 - eyeLidO; reflectedLight.indirectDiffuse *= 1.0 - 0.75 * eyeLidO;
   reflectedLight.directSpecular *= 1.0 - eyeLidO;
 #ifdef USE_CLEARCOAT
@@ -603,18 +619,27 @@ export function cardMaterial(o = {}) {
     Object.assign(sh.uniforms, U);
     sh.vertexShader = sh.vertexShader
       .replace('#include <common>', `#include <common>
-attribute float ao; attribute float lw; varying float vAO; varying float vLw;`)
+attribute float ao; attribute float lw; varying float vAO; varying float vLw; varying float vLashX;`)
       .replace('#include <begin_vertex>', `#include <begin_vertex>
-vAO = ao; vLw = lw;`);
+vAO = ao; vLw = lw; vLashX = position.x;`);
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', `#include <common>
-uniform float uAlphaChannel, uAlphaGain, uShift, uLower; uniform vec2 uCut; varying float vAO; varying float vLw;`)
+uniform float uAlphaChannel, uAlphaGain, uShift, uLower; uniform vec2 uCut; varying float vAO; varying float vLw; varying float vLashX;
+#define LOWER_CORE 0.7`)
       .replace('#include <lights_physical_pars_fragment>', '#include <lights_physical_pars_fragment>' + (front ? FRONT_GLSL : ''))
       .replace('#include <alphamap_fragment>', `
 #ifdef USE_ALPHAMAP
   vec4 am = texture2D( alphaMap, vAlphaMapUv );
   float a = uAlphaChannel > 2.5 ? am.a : am.g;
   diffuseColor.a *= clamp(a * smoothstep(uCut.x, uCut.y, a) * uAlphaGain * mix(1.0, uLower, vLw), 0.0, 1.0);
+  // LOOK r2f: the lower lashes at low opacity (uLower) went through the alpha hash as a random dotted
+  // stipple at 4K (sub-pixel hairs x 15% coverage). They are drawn binary instead - only the strand cores,
+  // fully opaque, so the hash never dithers them - and lighter / browner, so the row stays a fine fringe.
+  // The card prints a dense mascara row: only ~35% of the strands are kept (hash of 0.25 mm bins along the
+  // bind-pose x, i.e. along the lid, about one strand per bin - wider bins kept clumps), real lower lashes
+  // are sparse; the higher core cut also drops the tapering tips (shorter lashes).
+  if (vLw > 0.5) { float keep = step(fract(sin(floor(vLashX / 0.00025) * 91.7) * 43758.5), 0.35);
+    diffuseColor.a = step(LOWER_CORE, a * uAlphaGain) * keep; diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.24, 0.17, 0.12), 0.6); }
 #endif`)
       .replace('#include <aomap_fragment>', `#include <aomap_fragment>
 reflectedLight.indirectDiffuse *= vAO; reflectedLight.indirectSpecular *= vAO;

@@ -14,25 +14,37 @@
   "dialogue_lufs_pre_master": -17,
   "min_dialogue_margin_lu": 10
  },
+ "program": {
+  "windows_s": [
+   [
+    0,
+    91.5
+   ]
+  ],
+  "seconds": 91.5,
+  "note": "I/LRA measured over these windows (shots with a picture spec); I_full = whole cut incl. slates"
+ },
  "result": {
   "mix": "episodes/s01e01/final/audio/cuts/1C/mix.wav",
-  "I": -23,
+  "I": -16.7,
+  "I_full": -20.1,
   "TP": -1.6,
-  "LRA": 11.4,
-  "sha256": "be829dac7ae9f240c041a0a329fb2ada76fcb54b53c857156e5c382fe9ed22c6",
+  "LRA": 9.9,
+  "sha256": "2c8b2dc893d6f7a22d9a2ac186c5c38b6b542c5552ebbaaed3ce11d0e73d5626",
   "master_gain_db": 2,
   "limiter_ceiling_dbfs": -1.6,
-  "dialogue_gain_db": 0,
-  "min_dialogue_margin_lu": null,
-  "anchored": "reference",
+  "dialogue_gain_db": 11.4,
+  "min_dialogue_margin_lu": 12.646,
+  "anchored": "dialogue",
   "pass": true
  },
  "muxed": {
   "file": "episodes/s01e01/final/audio/cuts/1C/DragonsKingdom_S01E01_draft-cut_1C_sound.mp4",
   "duration_s": 382,
-  "aac_I": -23,
-  "aac_TP": -1.6,
-  "bytes": 22132160
+  "aac_I": -16.7,
+  "aac_I_full": -20.2,
+  "aac_TP": -1.4,
+  "bytes": 47457683
  },
  "beds": {
   "grounds_wind": {
@@ -40,10 +52,20 @@
    "raw_lufs_60s": -31.3,
    "duck_db": 6
   },
+  "flight_wind": {
+   "target_lufs": -22,
+   "raw_lufs_60s": -25.8,
+   "duck_db": 7
+  },
   "vista_wind_sea": {
    "target_lufs": -27,
    "raw_lufs_60s": -28.2,
    "duck_db": 6
+  },
+  "harbour_quay": {
+   "target_lufs": -24,
+   "raw_lufs_60s": -23.5,
+   "duck_db": 8
   },
   "sea_shore": {
    "target_lufs": -23,
@@ -64,6 +86,32 @@
    "duck_db": 9,
    "fade_out_s": 3,
    "render_sha256": "e8671ca02037b534864e4907520e6981c3fffd9cc5e0072a9009d0aa963894a7"
+  },
+  {
+   "id": "M7 sky glimpse",
+   "score": "sky_glimpse",
+   "start_s": 39.5,
+   "end_s": 48,
+   "sync": "beat 0 = 1C-10 +0 s",
+   "raw_lufs": -28.9,
+   "target_lufs": -21.5,
+   "gain_db": 7.4,
+   "duck_db": 9,
+   "fade_out_s": 2.5,
+   "render_sha256": "97c4af130ff3726d51b24c0363371bb3a6b246570d5e90df13e3c690f2b2503c"
+  },
+  {
+   "id": "M8 light theme",
+   "score": "light_theme",
+   "start_s": 65.5,
+   "end_s": 94.5,
+   "sync": "beat 0 = 1C-15 +0 s",
+   "raw_lufs": -28.4,
+   "target_lufs": -19.5,
+   "gain_db": 8.9,
+   "duck_db": 10,
+   "fade_out_s": 3.5,
+   "render_sha256": "e267dd42a1bd16b18a774c33adead9bfced908acc3764bc0b4bc899e20388097"
   }
  ],
  "music_not_in_cut": [
@@ -76,22 +124,26 @@
  "music_cue_sheet": "episodes/s01e01/final/sound/music/cues.json",
  "fx": {
   "spot_sheet": "episodes/s01e01/final/sound/fx/spots.json",
-  "events": 33,
+  "events": 102,
   "peak_dbfs": -4.1,
   "spaces": [
+   "air",
    "open"
   ],
-  "sha256": "ee36649572f2a03c920483394a7e21652b5d819b74de10480f1e35a27c4bfc56",
+  "sha256": "3c01b6bbbdcea645b47e60a10f8ff2327cad0cfe6e7b37f9ab32bb1740241805",
   "spot_rows_not_in_cut": 134,
   "by_sound": {
    "claws_turf": 1,
-   "wingbeat": 15,
+   "wingbeat": 31,
    "wind_grass": 3,
-   "leather": 1,
+   "leather": 4,
    "breath": 1,
    "hide_rub": 1,
    "weight_shift": 2,
-   "step_stone": 9
+   "step_stone": 9,
+   "wingbeat_light": 43,
+   "air_rush": 6,
+   "snort": 1
   }
  },
  "runs": [
@@ -104,15 +156,23 @@
    "shots": "1C-01..1C-06 (6)"
   },
   {
-   "bed": "vista_wind_sea",
+   "bed": "flight_wind",
    "from_s": 28,
+   "to_s": 91.5,
+   "xf_in_s": 0.5,
+   "xf_out_s": 0.5,
+   "shots": "1C-07..1C-19 (13)"
+  },
+  {
+   "bed": "vista_wind_sea",
+   "from_s": 91.5,
    "to_s": 106.5,
    "xf_in_s": 0.5,
    "xf_out_s": 0.5,
-   "shots": "1C-07..X4-03 (16)"
+   "shots": "X4-01..X4-03 (3)"
   },
   {
-   "bed": "sea_shore",
+   "bed": "harbour_quay",
    "from_s": 106.5,
    "to_s": 116.5,
    "xf_in_s": 0.5,
@@ -128,7 +188,7 @@
    "shots": "X4-06..X4-06 (1)"
   },
   {
-   "bed": "sea_shore",
+   "bed": "harbour_quay",
    "from_s": 119.5,
    "to_s": 124.5,
    "xf_in_s": 0.5,
@@ -144,7 +204,7 @@
    "shots": "X4-08..X4-08 (1)"
   },
   {
-   "bed": "sea_shore",
+   "bed": "harbour_quay",
    "from_s": 128,
    "to_s": 133,
    "xf_in_s": 0.5,
@@ -176,7 +236,7 @@
    "shots": "X6-01..X6-03 (3)"
   },
   {
-   "bed": "vista_wind_sea",
+   "bed": "flight_wind",
    "from_s": 302,
    "to_s": 323,
    "xf_in_s": 0.5,
@@ -192,7 +252,7 @@
    "shots": "X6-08..X6-18 (11)"
   },
   {
-   "bed": "vista_wind_sea",
+   "bed": "flight_wind",
    "from_s": 369,
    "to_s": 382,
    "xf_in_s": 0.5,
@@ -200,6 +260,21 @@
    "shots": "X6-19..X6-20 (2)"
   }
  ],
- "voice_cues": 0,
- "speech_windows": []
+ "voice_cues": 4,
+ "speech_windows": [
+  {
+   "from_s": 36.1,
+   "to_s": 37.37,
+   "dialogue_M": -14.115,
+   "background_M": -26.761,
+   "margin_LU": 12.646
+  },
+  {
+   "from_s": 61,
+   "to_s": 64.285,
+   "dialogue_M": -15.773,
+   "background_M": -28.564,
+   "margin_LU": 12.79
+  }
+ ]
 }

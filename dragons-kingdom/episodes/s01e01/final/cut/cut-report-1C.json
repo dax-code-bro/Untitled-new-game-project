@@ -1,6 +1,6 @@
 {
  "title": "Dragon's Kingdom S01E01 - draft cut: 1C",
- "made_at": "2026-11-01T18:20",
+ "made_at": "2026-11-02T18:05",
  "shots_dir": "$DK_DIRECTOR_WORK/shots",
  "size": "960x540",
  "fps": 24,
@@ -66,7 +66,7 @@
    "job": "1C-04",
    "scene": "1C",
    "kind": "3d",
-   "source": "rendered 2026-11-01T17:51",
+   "source": "rendered 2026-11-02T04:56",
    "frames": 96,
    "rec_in": 336,
    "trans": [
@@ -104,7 +104,7 @@
    "job": "1C-06",
    "scene": "1C",
    "kind": "3d",
-   "source": "rendered 2026-11-01T18:19",
+   "source": "rendered 2026-11-02T05:03",
    "frames": 96,
    "rec_in": 576,
    "trans": [
@@ -122,8 +122,8 @@
   {
    "job": "1C-07",
    "scene": "1C",
-   "kind": "missing",
-   "source": "slate",
+   "kind": "3d",
+   "source": "rendered 2026-11-02T16:33",
    "frames": 60,
    "rec_in": 672,
    "trans": [
@@ -141,8 +141,8 @@
   {
    "job": "1C-08",
    "scene": "1C",
-   "kind": "missing",
-   "source": "slate",
+   "kind": "3d",
+   "source": "rendered 2026-11-02T16:37",
    "frames": 120,
    "rec_in": 732,
    "trans": [
@@ -160,8 +160,8 @@
   {
    "job": "1C-09",
    "scene": "1C",
-   "kind": "missing",
-   "source": "slate",
+   "kind": "3d",
+   "source": "rendered 2026-11-02T16:45",
    "frames": 96,
    "rec_in": 852,
    "trans": [
@@ -174,13 +174,16 @@
    "held_frames": [
     0,
     0
+   ],
+   "notes": [
+    "speaking face reads: ABBY 57 deg from the lens, 41.8% of frame height, blur 0.07% (lip-sync carries it now: check the mouth, or soften / turn / shrink / backlight it)"
    ]
   },
   {
    "job": "1C-10",
    "scene": "1C",
-   "kind": "missing",
-   "source": "slate",
+   "kind": "3d",
+   "source": "rendered 2026-11-02T16:56",
    "frames": 144,
    "rec_in": 948,
    "trans": [
@@ -198,8 +201,8 @@
   {
    "job": "1C-11",
    "scene": "1C",
-   "kind": "missing",
-   "source": "slate",
+   "kind": "3d",
+   "source": "rendered 2026-11-02T17:03",
    "frames": 120,
    "rec_in": 1092,
    "trans": [
@@ -217,8 +220,8 @@
   {
    "job": "1C-12",
    "scene": "1C",
-   "kind": "missing",
-   "source": "slate",
+   "kind": "3d",
+   "source": "rendered 2026-11-02T17:08",
    "frames": 96,
    "rec_in": 1212,
    "trans": [
@@ -236,8 +239,8 @@
   {
    "job": "1C-13",
    "scene": "1C",
-   "kind": "missing",
-   "source": "slate",
+   "kind": "3d",
+   "source": "rendered 2026-11-02T17:24",
    "frames": 144,
    "rec_in": 1308,
    "trans": [
@@ -255,8 +258,8 @@
   {
    "job": "1C-14",
    "scene": "1C",
-   "kind": "missing",
-   "source": "slate",
+   "kind": "3d",
+   "source": "rendered 2026-11-02T17:27",
    "frames": 120,
    "rec_in": 1452,
    "trans": [
@@ -269,13 +272,16 @@
    "held_frames": [
     0,
     0
+   ],
+   "notes": [
+    "framing: a subject lands 0.21 screen units from its place (lens too long for the room, or the subjects too far apart)"
    ]
   },
   {
    "job": "1C-15",
    "scene": "1C",
-   "kind": "missing",
-   "source": "slate",
+   "kind": "3d",
+   "source": "rendered 2026-11-02T17:51",
    "frames": 216,
    "rec_in": 1572,
    "trans": [
@@ -293,8 +299,8 @@
   {
    "job": "1C-16",
    "scene": "1C",
-   "kind": "missing",
-   "source": "slate",
+   "kind": "3d",
+   "source": "rendered 2026-11-02T17:36",
    "frames": 72,
    "rec_in": 1788,
    "trans": [
@@ -312,8 +318,8 @@
   {
    "job": "1C-17",
    "scene": "1C",
-   "kind": "missing",
-   "source": "slate",
+   "kind": "3d",
+   "source": "rendered 2026-11-02T17:47",
    "frames": 72,
    "rec_in": 1860,
    "trans": [
@@ -331,8 +337,8 @@
   {
    "job": "1C-18",
    "scene": "1C",
-   "kind": "missing",
-   "source": "slate",
+   "kind": "3d",
+   "source": "rendered 2026-11-02T17:54",
    "frames": 72,
    "rec_in": 1932,
    "trans": [
@@ -350,8 +356,8 @@
   {
    "job": "1C-19",
    "scene": "1C",
-   "kind": "missing",
-   "source": "slate",
+   "kind": "3d",
+   "source": "rendered 2026-11-02T18:05",
    "frames": 192,
    "rec_in": 2004,
    "trans": [
@@ -1545,20 +1551,61 @@
    ]
   }
  ],
- "audio": [],
+ "audio": [
+  {
+   "ref": "L042",
+   "role": "ABBY",
+   "shot": "1C-09",
+   "file": "vo/L042.wav",
+   "file_in_s": 0,
+   "file_out_s": 1.33,
+   "rec_s": 36.07,
+   "gain_db": 0
+  },
+  {
+   "ref": "L043",
+   "role": "REMI",
+   "shot": "1C-14",
+   "file": "vo/L043.wav",
+   "file_in_s": 0,
+   "file_out_s": 1.295,
+   "rec_s": 60.97,
+   "gain_db": 0
+  },
+  {
+   "ref": "L044",
+   "role": "ABBY",
+   "shot": "1C-14",
+   "file": "vo/L044.wav",
+   "file_in_s": 0,
+   "file_out_s": 0.56,
+   "rec_s": 62.555,
+   "gain_db": 0
+  },
+  {
+   "ref": "L045",
+   "role": "REMI",
+   "shot": "1C-14",
+   "file": "vo/L045.wav",
+   "file_in_s": 0,
+   "file_out_s": 0.86,
+   "rec_s": 63.455,
+   "gain_db": 0
+  }
+ ],
  "output": {
   "file": "episodes/s01e01/final/cut/DragonsKingdom_S01E01_draft-cut_1C.mp4",
   "frames": 9168,
   "duration_s": 382,
-  "size_mb": 9.3,
-  "assembled_s": 23
+  "size_mb": 33.8,
+  "assembled_s": 32
  },
  "summary": {
-  "rendered": 6,
+  "rendered": 19,
   "black": 0,
-  "slates": 75,
-  "voice_cues": 0,
-  "review_flags": 0,
+  "slates": 62,
+  "voice_cues": 4,
+  "review_flags": 2,
   "review_flags_accepted": 0
  }
 }
