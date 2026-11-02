@@ -63,6 +63,12 @@ export const SETS = {
     from: 'style frame F2 (scenes/lookdev/style-f2-riding-grounds.js), same sun side',
     continuity: { PROLOGUE: { sun: sunDir(105, 32), tod: 'clear morning', exposure: 1.4 }, '1A': { sun: sunDir(100, 30), tod: 'morning, mist thinning', exposure: 1.4 }, '1B': { sun: sunDir(102, 31), tod: 'morning (minutes after X2-13)', exposure: 1.4 }, '1C': { sun: sunDir(102, 31), tod: 'morning (continuous from 1B)', exposure: 1.4 } },
   },
+  SKY_OFF_VERDOR: {
+    file: 'sky-off-verdor.js', builder: 'sky-off-verdor', frame: 'VERDOR',
+    libs: ['dk/ocean.js (the grounds\' sea)', 'scenes/lib/sets/terrain.js (the Verdor coast in the VERDOR frame + the bay floor)', 'scenes/lib/sets/kitbash.js (scanned rocks in the shallows)', 'scenes/lib/creatures (Leaf, Charcoal: flight / glide / launch)', 'scenes/lib/humans (remi_ride, abby_ride)', 'runtime/cinematic (physical sky, sea mist banks, cloud shadows)'],
+    from: 'style frame F3 (scenes/lookdev/style-f3-flight.js) moved into the VERDOR frame; sun = the grounds\' (1B/1C continuity)',
+    continuity: { '1C': { sun: sunDir(102, 31), tod: 'morning (continuous from 1B)', exposure: 1.1 } },
+  },
   BIRTHING_CHAMBER: {
     file: 'birthing-chamber.js', builder: 'birthing-chamber', frame: 'VERDOR',
     libs: ['scenes/lib/architecture/interiors.js (birthingChamber, nest, lamps)', 'scenes/lib/props/verdor.js (the egg: closed / cracked / opened)', 'scenes/lib/creatures (hatchling)', 'scenes/lib/humans (alexandria, attendant, abby, remi, young attendant = messenger)', 'runtime/cinematic (dust in the window shaft)'],

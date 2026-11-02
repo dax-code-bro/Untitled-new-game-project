@@ -823,11 +823,11 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 12.45,
-    "k4_cpu_s_per_frame": 145.21,
+    "draft_s_per_frame": 14.04,
+    "k4_cpu_s_per_frame": 163.82,
     "k4_gpu_s_per_frame": null,
-    "draft_minutes": 14.94,
-    "k4_cpu_hours": 2.9,
+    "draft_minutes": 16.85,
+    "k4_cpu_hours": 3.28,
     "k4_gpu_hours": null,
     "factors": {
      "people": 1.24,
@@ -837,7 +837,7 @@
      "move": 1,
      "total": 1.28
     },
-    "basis": "MEASURED draft 12.45 s/f on this machine; 4K = draft x 11.67 (the set's 4K/draft ratio: ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED))"
+    "basis": "MEASURED draft 14.04 s/f on this machine; 4K = draft x 11.67 (the set's 4K/draft ratio: ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED))"
    },
    "staging": "WIDE: from the second landing: Remi comes up into the left of frame and turns for the last flight; Charcoal's back and folded wing fill the frame beyond.",
    "deviation": "Remi comes up into frame RIGHT, not left: the landing lies south of the only line from it that clears the deck to Charcoal's back.",
@@ -1271,11 +1271,11 @@
    ],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 9.22,
-    "k4_cpu_s_per_frame": 107.57,
+    "draft_s_per_frame": 10.77,
+    "k4_cpu_s_per_frame": 125.7,
     "k4_gpu_s_per_frame": null,
-    "draft_minutes": 9.22,
-    "k4_cpu_hours": 1.79,
+    "draft_minutes": 10.77,
+    "k4_cpu_hours": 2.09,
     "k4_gpu_hours": null,
     "factors": {
      "people": 1.36,
@@ -1285,7 +1285,7 @@
      "move": 1,
      "total": 1.36
     },
-    "basis": "MEASURED draft 9.22 s/f on this machine; 4K = draft x 11.67 (the set's 4K/draft ratio: ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED))"
+    "basis": "MEASURED draft 10.77 s/f on this machine; 4K = draft x 11.67 (the set's 4K/draft ratio: ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED))"
    },
    "staging": "OTS: over the keeper's shoulder on the gangway end (his back right) to Remi in the seat in profile: \"Straps?\" - \"Checked twice.\"",
    "deviation": null,

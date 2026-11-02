@@ -1,0 +1,551 @@
+{
+ "set": "SKY_OFF_VERDOR",
+ "scene_file": "episodes/s01e01/final/scenes/sky-off-verdor.js",
+ "spec": "episodes/s01e01/final/scenes/specs/sky-off-verdor.spec.js",
+ "fps": 24,
+ "handles": 12,
+ "generated_by": "scenes/lib/director/tools/build-shots.mjs",
+ "note": "start_s / frames are the render-jobs.json contract (episode.mjs); pre/post are handle frames the editor may render around each shot.",
+ "shots": [
+  {
+   "job": "1C-07",
+   "seq": 115,
+   "scene": "1C",
+   "set": "SKY_OFF_VERDOR",
+   "start_s": 1,
+   "start_frame": 24,
+   "frames": 60,
+   "pre": 12,
+   "post": 12,
+   "seconds": 2.5,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [
+    {
+     "kind": "dust-downwash",
+     "from": -8.2,
+     "to": null
+    }
+   ],
+   "continuity": {
+    "tod": "morning (continuous from 1B)",
+    "weather": "clear; the last mist over the water and against the seaward side of the outer rocks; light breeze off the sea",
+    "notes": "CONTINUOUS from 1B-15: Leaf launches first (Abby), then Charcoal (Remi) tears the cleared launch space (the launch scar mended in X19). Same sun as 1B (east, ~31 deg up). The flight line (1C-10/11) runs along the coast with Leaf behind and on the near (inland) side; screen direction L -> R held through 1E.",
+    "sun": [
+     0.8384361386092437,
+     0.5150380749100542,
+     0.17821510280267075
+    ],
+    "exposure": 1.1
+   },
+   "staging": "MEDIUM: 50 mm air-to-air off Leaf's right (inland) side, a little ahead: Leaf climbing out south-east over the field edge; Abby turns in the saddle and looks back through the departing dust toward the launch (face turned away, three-quarter back).",
+   "deviation": null
+  },
+  {
+   "job": "1C-08",
+   "seq": 116,
+   "scene": "1C",
+   "set": "SKY_OFF_VERDOR",
+   "start_s": 6,
+   "start_frame": 144,
+   "frames": 120,
+   "pre": 12,
+   "post": 12,
+   "seconds": 5,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [
+    {
+     "kind": "dust-downwash",
+     "from": -10.7,
+     "to": null
+    }
+   ],
+   "continuity": {
+    "tod": "morning (continuous from 1B)",
+    "weather": "clear; the last mist over the water and against the seaward side of the outer rocks; light breeze off the sea",
+    "notes": "CONTINUOUS from 1B-15: Leaf launches first (Abby), then Charcoal (Remi) tears the cleared launch space (the launch scar mended in X19). Same sun as 1B (east, ~31 deg up). The flight line (1C-10/11) runs along the coast with Leaf behind and on the near (inland) side; screen direction L -> R held through 1E.",
+    "sun": [
+     0.8384361386092437,
+     0.5150380749100542,
+     0.17821510280267075
+    ],
+    "exposure": 1.1
+   },
+   "staging": "POV (Abby's eyeline, 35 mm, flying): back over her right shoulder, Charcoal rises out of the dust above the field, Remi a small fixed point on his back; the dust cloud behind and below him.",
+   "deviation": "Charcoal flies a keyed climb (flight pose) instead of continuing poses.launch: the launch formula accelerates without limit (tau 14 = 276 m) and would put him ahead of Leaf."
+  },
+  {
+   "job": "1C-09",
+   "seq": 117,
+   "scene": "1C",
+   "set": "SKY_OFF_VERDOR",
+   "start_s": 13,
+   "start_frame": 312,
+   "frames": 96,
+   "pre": 12,
+   "post": 12,
+   "seconds": 4,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [
+    {
+     "id": "L042",
+     "part": 0,
+     "ref": "L042",
+     "role": "ABBY",
+     "file": "vo/L042.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.33,
+     "at_s": 0.57,
+     "speech_in_s": 0.6,
+     "speech_out_s": 1.87,
+     "words": [
+      {
+       "w": "you",
+       "start_s": 0.57,
+       "end_s": 0.7
+      },
+      {
+       "w": "could",
+       "start_s": 0.7,
+       "end_s": 0.85
+      },
+      {
+       "w": "have",
+       "start_s": 0.85,
+       "end_s": 0.99
+      },
+      {
+       "w": "warned",
+       "start_s": 0.99,
+       "end_s": 1.26
+      },
+      {
+       "w": "the",
+       "start_s": 1.26,
+       "end_s": 1.32
+      },
+      {
+       "w": "grass",
+       "start_s": 1.32,
+       "end_s": 1.89
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    }
+   ],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "morning (continuous from 1B)",
+    "weather": "clear; the last mist over the water and against the seaward side of the outer rocks; light breeze off the sea",
+    "notes": "CONTINUOUS from 1B-15: Leaf launches first (Abby), then Charcoal (Remi) tears the cleared launch space (the launch scar mended in X19). Same sun as 1B (east, ~31 deg up). The flight line (1C-10/11) runs along the coast with Leaf behind and on the near (inland) side; screen direction L -> R held through 1E.",
+    "sun": [
+     0.8384361386092437,
+     0.5150380749100542,
+     0.17821510280267075
+    ],
+    "exposure": 1.1
+   },
+   "staging": "CLOSE: 85 mm air-to-air on Abby from her right front three-quarter: \"You could have warned the grass.\" - to herself and us; Remi is far off (no reply).",
+   "deviation": null
+  },
+  {
+   "job": "1C-10",
+   "seq": 118,
+   "scene": "1C",
+   "set": "SKY_OFF_VERDOR",
+   "start_s": 19,
+   "start_frame": 456,
+   "frames": 144,
+   "pre": 12,
+   "post": 12,
+   "seconds": 6,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "morning (continuous from 1B)",
+    "weather": "clear; the last mist over the water and against the seaward side of the outer rocks; light breeze off the sea",
+    "notes": "CONTINUOUS from 1B-15: Leaf launches first (Abby), then Charcoal (Remi) tears the cleared launch space (the launch scar mended in X19). Same sun as 1B (east, ~31 deg up). The flight line (1C-10/11) runs along the coast with Leaf behind and on the near (inland) side; screen direction L -> R held through 1E.",
+    "sun": [
+     0.8384361386092437,
+     0.5150380749100542,
+     0.17821510280267075
+    ],
+    "exposure": 1.1
+   },
+   "staging": "EXTREME WIDE: 150 mm from a camera ship far inland and high, slow travel: they climb out over the coast south-east, the shoreline first (bottom left), Leaf behind and inland (left), Charcoal ahead (right) crossing the cliff edge.",
+   "deviation": null
+  },
+  {
+   "job": "1C-11",
+   "seq": 119,
+   "scene": "1C",
+   "set": "SKY_OFF_VERDOR",
+   "start_s": 27,
+   "start_frame": 648,
+   "frames": 120,
+   "pre": 12,
+   "post": 12,
+   "seconds": 5,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "morning (continuous from 1B)",
+    "weather": "clear; the last mist over the water and against the seaward side of the outer rocks; light breeze off the sea",
+    "notes": "CONTINUOUS from 1B-15: Leaf launches first (Abby), then Charcoal (Remi) tears the cleared launch space (the launch scar mended in X19). Same sun as 1B (east, ~31 deg up). The flight line (1C-10/11) runs along the coast with Leaf behind and on the near (inland) side; screen direction L -> R held through 1E.",
+    "sun": [
+     0.8384361386092437,
+     0.5150380749100542,
+     0.17821510280267075
+    ],
+    "exposure": 1.1
+   },
+   "staging": "WIDE: 135 mm air-to-air from the inland side, abreast of Leaf (~300 m): Leaf left and nearer, Charcoal right, ahead and farther out - the flight line used through 1E.",
+   "deviation": null
+  },
+  {
+   "job": "1C-12",
+   "seq": 120,
+   "scene": "1C",
+   "set": "SKY_OFF_VERDOR",
+   "start_s": 34,
+   "start_frame": 816,
+   "frames": 96,
+   "pre": 12,
+   "post": 12,
+   "seconds": 4,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "morning (continuous from 1B)",
+    "weather": "clear; the last mist over the water and against the seaward side of the outer rocks; light breeze off the sea",
+    "notes": "CONTINUOUS from 1B-15: Leaf launches first (Abby), then Charcoal (Remi) tears the cleared launch space (the launch scar mended in X19). Same sun as 1B (east, ~31 deg up). The flight line (1C-10/11) runs along the coast with Leaf behind and on the near (inland) side; screen direction L -> R held through 1E.",
+    "sun": [
+     0.8384361386092437,
+     0.5150380749100542,
+     0.17821510280267075
+    ],
+    "exposure": 1.1
+   },
+   "staging": "EXTREME WIDE: top-down from 480 m, 35 mm, travelling with them: the sea floor through the shallows and the two shadows on it, Charcoal's far larger; travel left -> right (screen top = the sea).",
+   "deviation": null
+  },
+  {
+   "job": "1C-13",
+   "seq": 121,
+   "scene": "1C",
+   "set": "SKY_OFF_VERDOR",
+   "start_s": 40,
+   "start_frame": 960,
+   "frames": 144,
+   "pre": 12,
+   "post": 12,
+   "seconds": 6,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "morning (continuous from 1B)",
+    "weather": "clear; the last mist over the water and against the seaward side of the outer rocks; light breeze off the sea",
+    "notes": "CONTINUOUS from 1B-15: Leaf launches first (Abby), then Charcoal (Remi) tears the cleared launch space (the launch scar mended in X19). Same sun as 1B (east, ~31 deg up). The flight line (1C-10/11) runs along the coast with Leaf behind and on the near (inland) side; screen direction L -> R held through 1E.",
+    "sun": [
+     0.8384361386092437,
+     0.5150380749100542,
+     0.17821510280267075
+    ],
+    "exposure": 1.1
+   },
+   "staging": "WIDE: 135 mm from the inland side: Charcoal draws level and closes in (out 540 -> 500, ahead 25 -> 5, a little higher); his shadow crosses the water below; Leaf works harder with quick corrective beats.",
+   "deviation": null
+  },
+  {
+   "job": "1C-14",
+   "seq": 122,
+   "scene": "1C",
+   "set": "SKY_OFF_VERDOR",
+   "start_s": 48,
+   "start_frame": 1152,
+   "frames": 120,
+   "pre": 12,
+   "post": 12,
+   "seconds": 5,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [
+    {
+     "id": "L043",
+     "part": 0,
+     "ref": "L043",
+     "role": "REMI",
+     "file": "vo/L043.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.295,
+     "at_s": 0.47,
+     "speech_in_s": 0.5,
+     "speech_out_s": 1.735,
+     "words": [
+      {
+       "w": "everything",
+       "start_s": 0.47,
+       "end_s": 1
+      },
+      {
+       "w": "secure",
+       "start_s": 1,
+       "end_s": 1.69
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    },
+    {
+     "id": "L044",
+     "part": 0,
+     "ref": "L044",
+     "role": "ABBY",
+     "file": "vo/L044.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.56,
+     "at_s": 2.055,
+     "speech_in_s": 2.085,
+     "speech_out_s": 2.585,
+     "words": [
+      {
+       "w": "yes",
+       "start_s": 2.055,
+       "end_s": 2.565
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    },
+    {
+     "id": "L045",
+     "part": 0,
+     "ref": "L045",
+     "role": "REMI",
+     "file": "vo/L045.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.86,
+     "at_s": 2.955,
+     "speech_in_s": 2.985,
+     "speech_out_s": 3.785,
+     "words": [
+      {
+       "w": "all",
+       "start_s": 2.955,
+       "end_s": 3.265
+      },
+      {
+       "w": "right",
+       "start_s": 3.265,
+       "end_s": 3.735
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    }
+   ],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "morning (continuous from 1B)",
+    "weather": "clear; the last mist over the water and against the seaward side of the outer rocks; light breeze off the sea",
+    "notes": "CONTINUOUS from 1B-15: Leaf launches first (Abby), then Charcoal (Remi) tears the cleared launch space (the launch scar mended in X19). Same sun as 1B (east, ~31 deg up). The flight line (1C-10/11) runs along the coast with Leaf behind and on the near (inland) side; screen direction L -> R held through 1E.",
+    "sun": [
+     0.8384361386092437,
+     0.5150380749100542,
+     0.17821510280267075
+    ],
+    "exposure": 1.1
+   },
+   "staging": "MEDIUM: 50 mm off Charcoal's right shoulder, ahead of Remi, looking back over the neck: Remi right, Leaf and Abby lower in the background left. \"Everything secure?\" - \"Yes.\" - \"All right.\"",
+   "deviation": null
+  },
+  {
+   "job": "1C-15",
+   "seq": 123,
+   "scene": "1C",
+   "set": "SKY_OFF_VERDOR",
+   "start_s": 55,
+   "start_frame": 1320,
+   "frames": 216,
+   "pre": 12,
+   "post": 12,
+   "seconds": 9,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "morning (continuous from 1B)",
+    "weather": "clear; the last mist over the water and against the seaward side of the outer rocks; light breeze off the sea",
+    "notes": "CONTINUOUS from 1B-15: Leaf launches first (Abby), then Charcoal (Remi) tears the cleared launch space (the launch scar mended in X19). Same sun as 1B (east, ~31 deg up). The flight line (1C-10/11) runs along the coast with Leaf behind and on the near (inland) side; screen direction L -> R held through 1E.",
+    "sun": [
+     0.8384361386092437,
+     0.5150380749100542,
+     0.17821510280267075
+    ],
+    "exposure": 1.1
+   },
+   "staging": "EXTREME WIDE: 180 mm from the inland side, tracking with them (no orbit): their path curves gently seaward with the coast; the coast in the foreground left; nobody speaks.",
+   "deviation": null
+  },
+  {
+   "job": "1C-16",
+   "seq": 124,
+   "scene": "1C",
+   "set": "SKY_OFF_VERDOR",
+   "start_s": 66,
+   "start_frame": 1584,
+   "frames": 72,
+   "pre": 12,
+   "post": 12,
+   "seconds": 3,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "morning (continuous from 1B)",
+    "weather": "clear; the last mist over the water and against the seaward side of the outer rocks; light breeze off the sea",
+    "notes": "CONTINUOUS from 1B-15: Leaf launches first (Abby), then Charcoal (Remi) tears the cleared launch space (the launch scar mended in X19). Same sun as 1B (east, ~31 deg up). The flight line (1C-10/11) runs along the coast with Leaf behind and on the near (inland) side; screen direction L -> R held through 1E.",
+    "sun": [
+     0.8384361386092437,
+     0.5150380749100542,
+     0.17821510280267075
+    ],
+    "exposure": 1.1
+   },
+   "staging": "INSERT: 100 mm on Abby's two hands on the grips, easy (detail 1 - both hands, before the pass).",
+   "deviation": null
+  },
+  {
+   "job": "1C-17",
+   "seq": 125,
+   "scene": "1C",
+   "set": "SKY_OFF_VERDOR",
+   "start_s": 71,
+   "start_frame": 1704,
+   "frames": 72,
+   "pre": 12,
+   "post": 12,
+   "seconds": 3,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "morning (continuous from 1B)",
+    "weather": "clear; the last mist over the water and against the seaward side of the outer rocks; light breeze off the sea",
+    "notes": "CONTINUOUS from 1B-15: Leaf launches first (Abby), then Charcoal (Remi) tears the cleared launch space (the launch scar mended in X19). Same sun as 1B (east, ~31 deg up). The flight line (1C-10/11) runs along the coast with Leaf behind and on the near (inland) side; screen direction L -> R held through 1E.",
+    "sun": [
+     0.8384361386092437,
+     0.5150380749100542,
+     0.17821510280267075
+    ],
+    "exposure": 1.1
+   },
+   "staging": "CLOSE: 85 mm on Leaf's head from his right front: he glances across at Charcoal (right/seaward, out of frame) without fear, then back to the line.",
+   "deviation": null
+  },
+  {
+   "job": "1C-18",
+   "seq": 126,
+   "scene": "1C",
+   "set": "SKY_OFF_VERDOR",
+   "start_s": 76,
+   "start_frame": 1824,
+   "frames": 72,
+   "pre": 12,
+   "post": 12,
+   "seconds": 3,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "morning (continuous from 1B)",
+    "weather": "clear; the last mist over the water and against the seaward side of the outer rocks; light breeze off the sea",
+    "notes": "CONTINUOUS from 1B-15: Leaf launches first (Abby), then Charcoal (Remi) tears the cleared launch space (the launch scar mended in X19). Same sun as 1B (east, ~31 deg up). The flight line (1C-10/11) runs along the coast with Leaf behind and on the near (inland) side; screen direction L -> R held through 1E.",
+    "sun": [
+     0.8384361386092437,
+     0.5150380749100542,
+     0.17821510280267075
+    ],
+    "exposure": 1.1
+   },
+   "staging": "MEDIUM: 50 mm off Charcoal's right side: Remi relaxed, looking back at the island (Verdor, north-west) instead of scanning the sky; face three-quarter away.",
+   "deviation": null
+  },
+  {
+   "job": "1C-19",
+   "seq": 127,
+   "scene": "1C",
+   "set": "SKY_OFF_VERDOR",
+   "start_s": 81,
+   "start_frame": 1944,
+   "frames": 192,
+   "pre": 12,
+   "post": 12,
+   "seconds": 8,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "morning (continuous from 1B)",
+    "weather": "clear; the last mist over the water and against the seaward side of the outer rocks; light breeze off the sea",
+    "notes": "CONTINUOUS from 1B-15: Leaf launches first (Abby), then Charcoal (Remi) tears the cleared launch space (the launch scar mended in X19). Same sun as 1B (east, ~31 deg up). The flight line (1C-10/11) runs along the coast with Leaf behind and on the near (inland) side; screen direction L -> R held through 1E.",
+    "sun": [
+     0.8384361386092437,
+     0.5150380749100542,
+     0.17821510280267075
+    ],
+    "exposure": 1.1
+   },
+   "staging": "EXTREME WIDE: 160 mm slow aerial travel from inland, abeam and a little behind: the pair over the bright sea, Leaf left, Charcoal right; Verdor's headland receding in the left background. Private freedom, not a procession.",
+   "deviation": null
+  }
+ ]
+}
