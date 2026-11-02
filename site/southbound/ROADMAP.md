@@ -83,6 +83,16 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 - [x] 27 jobs with work vehicles, timers, pay per stop and levels
 - [x] 63 story missions in 3 acts (original story: Eli Navarro vs. the Delacroix family, the Ríos crew and Capt. Voss)
 
+## Phase 1.9 — Open-source 3D models instead of generated ones
+
+- [x] Animals: Quaternius CC0 animated deer, stag, coyote, wild horse, longhorn cattle + Khronos fox (replaces generated animals)
+- [x] Interiors furnished with Quaternius house-interior models + photoreal Khronos furniture (sofas, chairs, store fridges, lamps, plants)
+- [x] Photoreal Khronos concept car (drivable, PC starter car), open-source fish and bow models
+- [ ] Realistic open-source cars, boats, aircraft and modern guns: on Sketchfab / Poly Pizza / Poly Haven / itch.io,
+      which this cloud environment's network policy blocks. Allow `polyhaven.com`, `api.polyhaven.com`,
+      `dl.polyhaven.org`, `poly.pizza`, `static.poly.pizza`, `3dassets.dev`, `kenney.nl`, `quaternius.com`, `itch.io`
+      (environment settings → Network access) and the generated vehicles/guns can be swapped the same way.
+
 ## Phase 2 — World depth
 
 - [ ] Expand map to more of the continent's southern side (multiple states/regions)
