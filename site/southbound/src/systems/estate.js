@@ -196,7 +196,7 @@ export function installEstate(game) {
     player.pos.set(it.o.x, it.o.y + 0.05, it.o.z + it.D / 2 - 1.2);
     player.vel.set(0, 0, 0);
     player.heading = Math.PI;
-    if (game.rig) { inside.zoom = game.rig.zoom; game.rig.zoom = 0.6; }
+    if (game.rig) { inside.zoom = game.rig.zoom; game.rig.zoom = 0.6; game.rig.yaw = player.heading; }
     const p = propByBuilding.get(d.i);
     insidePoints.push(interact.add({ x: it.o.x, z: it.o.z + it.D / 2 - 0.4, y: it.o.y, r: 1.2, label: () => `${keyHint(game)} go outside`, color: 0x80ff80, use: leave }));
     if (p) insidePoints.push(interact.add({ x: it.o.x - 2, z: it.o.z + it.D / 2 - 2, y: it.o.y, r: 1.4, color: owned(p) ? 0x60ff90 : 0xffd040,
@@ -219,6 +219,7 @@ export function installEstate(game) {
     player.pos.set(d.x + d.nx * 1.2, hm.height(d.x, d.z) + 0.1, d.z + d.nz * 1.2);
     player.pos.y = collision.surface(player.pos.x, player.pos.z, player.pos.y + 2);
     player.heading = Math.atan2(d.nx, d.nz);
+    if (game.rig) game.rig.yaw = player.heading;
     inside = null; game.S.indoors = null; game.weather.indoors = false;
   }
   for (const d of doors) {
