@@ -27,6 +27,9 @@ export const VEHICLES = {
   'garbage-truck': { name: 'City Sanitation', len: 8.2, accel: 5.5, top: 32, grip: 5, weight: 0.4 },
 };
 
+// The body types built at load time (catalog models are built on first use)
+export const BASE_CAR_IDS = Object.keys(VEHICLES);
+
 function tunePerson(scene) {
   scene.traverse((o) => {
     if (!o.isMesh) return;
@@ -42,12 +45,12 @@ export async function loadLibrary(quality, progress = () => {}) {
   const loader = new GLTFLoader();
   const base = 'assets/';
   const people = quality.label === 'Phone' || quality.label === 'Low' ? PEOPLE_LITE : PEOPLE_ALL;
-  const carIds = Object.keys(VEHICLES);
+  const carIds = BASE_CAR_IDS;
   const total = people.length + carIds.length + 1;
   let done = 0;
   const step = (what) => progress(++done / total, what);
 
-  const lib = { people: {}, cars: {}, clips: {}, peopleIds: people.filter((p) => p !== 'mh_cop') };
+  const lib = { people: {}, cars: {}, clips: {}, peopleIds: people.filter((p) => p !== 'mh_cop'), quality };
 
   const anims = await loader.loadAsync(base + 'anims/ual.glb');
   step('Loading animations');

@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { CITY, TOWN } from './layout.js';
 import { mulberry32 } from '../util.js';
 import { worldUniforms } from './terrain.js';
+import { reflUniforms } from './water.js';
 
 function canvasTex(w, h, draw, anisotropy) {
   const c = document.createElement('canvas');
@@ -90,11 +91,13 @@ export function createRoads(graph, hm, quality, scene, collision, surf) {
       sh.uniforms.tAsph = { value: A.color }; sh.uniforms.tAsphN = { value: A.normal };
       sh.uniforms.tAsphR = { value: A.rough }; sh.uniforms.tAsphAO = { value: A.ao };
       sh.uniforms.uWet = worldUniforms.uWet;
+      Object.assign(sh.uniforms, reflUniforms);
       sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vRW;')
         .replace('#include <begin_vertex>', '#include <begin_vertex>\nvRW = (modelMatrix * vec4(transformed, 1.0)).xyz;');
       sh.fragmentShader = sh.fragmentShader.replace('#include <common>', `#include <common>
 varying vec3 vRW; uniform sampler2D tAsph; uniform sampler2D tAsphN; uniform sampler2D tAsphR; uniform sampler2D tAsphAO; float sbPaint;
-uniform float uWet; float sbPud;
+uniform float uWet; float sbPud; vec3 sbRN = vec3(0.0, 1.0, 0.0);
+uniform sampler2D tReflect; uniform float uReflectOn; uniform mat4 uReflMatrix; uniform float uReflY;
 float sbVN(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
   float a = fract(sin(dot(i, vec2(127.1, 311.7))) * 43758.5), b = fract(sin(dot(i + vec2(1, 0), vec2(127.1, 311.7))) * 43758.5);
   float c = fract(sin(dot(i + vec2(0, 1), vec2(127.1, 311.7))) * 43758.5), d = fract(sin(dot(i + vec2(1, 1), vec2(127.1, 311.7))) * 43758.5);
@@ -115,7 +118,18 @@ float sbVN(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f)
             nt.xy *= (1.0 - sbPaint * 0.6) * (1.0 - sbPud);
             vec3 nw = normalize(vec3(nt.x, max(nt.z, 0.2), nt.y));
             normal = normalize((viewMatrix * vec4(nw, 0.0)).xyz);
-          }`);
+            sbRN = nw;
+          }`)
+        .replace('#include <opaque_fragment>', `
+          if (uReflectOn > 0.5 && uWet > 0.02 && abs(vRW.y - uReflY) < 0.8) {
+            vec4 rp = uReflMatrix * vec4(vRW, 1.0);
+            vec2 ruv = rp.xy / rp.w + sbRN.xz * (0.05 - sbPud * 0.04);
+            vec3 refl = texture2D(tReflect, clamp(ruv, 0.001, 0.999)).rgb;
+            vec3 V = normalize(cameraPosition - vRW);
+            float F = 0.04 + 0.96 * pow(1.0 - clamp(V.y, 0.0, 1.0), 5.0);
+            outgoingLight = mix(outgoingLight, refl, clamp(F * (uWet * 0.55 + sbPud * 0.6) + sbPud * 0.25, 0.0, 0.92));
+          }
+          #include <opaque_fragment>`);
     };
     m.transparent = false;
     return m;

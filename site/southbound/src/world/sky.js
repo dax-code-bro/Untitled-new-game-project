@@ -101,8 +101,8 @@ export function createSky(renderer, scene, quality) {
       // weather: clouds swallow the sun, light goes flat and grey
       const W = state.weather || { cover: 0.52, dark: 0, flash: 0, rain: 0 };
       sun.intensity *= 1 - W.dark * 0.85;
-      hemi.intensity *= 1 - W.dark * 0.25;
-      hemi.color.lerp(_grey.setRGB(0.55, 0.58, 0.62).multiplyScalar(0.3 + 0.7 * day), W.dark * 0.6);
+      hemi.intensity *= 1 - W.dark * 0.25 * day;
+      hemi.color.lerp(_grey.setRGB(0.55, 0.58, 0.62).multiplyScalar(0.3 + 0.7 * day), W.dark * 0.6 * day);
       if (W.flash > 0) { hemi.intensity += W.flash * 2.5; hemi.color.lerp(_grey.setRGB(0.75, 0.8, 1.0), W.flash); }
 
       fogColorAt(h, fogCol);
@@ -119,12 +119,13 @@ export function createSky(renderer, scene, quality) {
       // clouds: lit by the sun, then the moon after dark; sunset light reaches them last
       u.uCloudTime.value += dt * Math.max(timeScale, 0.05) + (timeScale === 0 ? dt * 0.3 : 0);
       u.uSkyNight.value = skyNight.value;
-      const cloudDay = smoothstep(-0.1, 0.1, elev);
-      u.uLightDir.value.copy(useMoon ? moonDir : sunDir);
-      if (useMoon) u.uCloudSun.value.setRGB(0.05, 0.06, 0.085).multiplyScalar(smoothstep(-0.05, -0.3, elev));
-      else u.uCloudSun.value.setRGB(1.0, lerp(0.42, 0.95, warm), lerp(0.22, 0.88, warm)).multiplyScalar(3.4 * cloudDay);
+      const cloudDay = smoothstep(-0.24, 0.06, elev); // high clouds catch the sun after it sets
+      const warmC = smoothstep(-0.08, 0.4, elev);
+      u.uLightDir.value.copy(elev < -0.2 ? moonDir : sunDir);
+      u.uCloudSun.value.setRGB(1.0, lerp(0.3, 0.95, warmC), lerp(0.2, 0.88, warmC)).multiplyScalar(3.6 * cloudDay);
+      if (useMoon && elev < -0.2) u.uCloudSun.value.setRGB(0.05, 0.06, 0.085).multiplyScalar(smoothstep(-0.2, -0.35, elev));
       u.uCloudAmb.value.setRGB(lerp(0.012, 0.36, cloudDay), lerp(0.016, 0.42, cloudDay), lerp(0.03, 0.52, cloudDay));
-      if (elev > -0.05 && elev < 0.25) u.uCloudAmb.value.lerp(new THREE.Color(0.42, 0.28, 0.26), (1 - smoothstep(0.0, 0.25, elev)) * 0.6);
+      if (elev > -0.25 && elev < 0.25) u.uCloudAmb.value.lerp(_grey.setRGB(0.3, 0.24, 0.34), (1 - smoothstep(0.0, 0.25, elev)) * smoothstep(-0.25, -0.05, elev) * 0.7);
       u.uCloudSun.value.multiplyScalar(1 - W.dark * 0.55);
       u.uCloudAmb.value.multiplyScalar(1 - W.dark * 0.45);
       u.uCover.value = W.cover;

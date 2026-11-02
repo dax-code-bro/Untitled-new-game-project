@@ -18,6 +18,9 @@ import { Traffic } from './entities/traffic.js';
 import { Peds } from './entities/peds.js';
 import { Combat, WEAPONS } from './entities/combat.js';
 import { ArsenalUI } from './ui/arsenal-ui.js';
+import { Career, loadProfile, newProfile } from './systems/career.js';
+import { Interactions } from './systems/interact.js';
+import { installSystems } from './systems/index.js';
 import { Police } from './entities/police.js';
 import { loadLibrary } from './assets/library.js';
 import { loadSurfaces } from './assets/textures.js';
@@ -187,6 +190,30 @@ async function createGame(progress) {
   });
   arsenalUI.enable();
 
+  // ---- career (save game), interaction points and the gameplay systems ----
+  const profile = loadProfile() || newProfile();
+  S.money = profile.money;
+  if (profile.weapons.owned) { for (const id of profile.weapons.owned) combat.give(id); Object.assign(combat.ammo, profile.weapons.ammo || {}); }
+  const career = new Career(profile, {
+    getMoney: () => S.money, setMoney: (n) => { S.money = Math.max(0, Math.round(n)); }, toast: (m, t) => hud.toast(m, t),
+    snapshot: (p) => {
+      p.money = S.money; p.hour = sky.hour; p.day = sky.day; p.weather = weather.kind;
+      p.pos = [+player.pos.x.toFixed(1), +player.pos.z.toFixed(1)];
+      p.weapons = { owned: combat.owned.slice(), ammo: combat.ammo };
+    },
+  });
+  sky.hour = profile.hour; sky.day = profile.day;
+  const interact = new Interactions(scene, hm);
+  const game = {
+    S, scene, hm, graph, city, player, combat, hud, sky, weather, career, interact, parked, lib, q, settings, camera, input, traffic, peds, police, collision, rig,
+    pause: (b) => { S.frozen = b; },
+    teleport: (x, z, heading = 0) => { api.teleport(x, z, heading); },
+    enterVehicle: (v) => enterVehicle(v, null),
+    exitVehicle: () => { if (S.mode === 'car') exitVehicle(); },
+    vehicle: () => S.vehicle,
+  };
+  const systems = installSystems(game);
+
   const pauseEl = $('#pause');
   const setPaused = (p) => {
     S.paused = p;
@@ -253,7 +280,7 @@ async function createGame(progress) {
       if (witnesses(v.pos, 30) || police.nearPolice(60)) police.crime('carjack');
     } else parked.splice(parked.indexOf(v), 1);
     S.mode = 'car'; S.vehicle = v;
-    combat.gun.visible = false;
+    if (combat.gun) combat.gun.visible = false;
     v.onHitPed = (p, killed) => { if (killed) police.crime(p.role === 'cop' ? 'copKill' : 'kill'); else police.crime('assault'); peds.panic(p.pos, 25); };
     player.char.root.visible = false;
     hud.toast(`${v.spec.name}`, 2.5);
@@ -261,8 +288,10 @@ async function createGame(progress) {
   function exitVehicle() {
     const v = S.vehicle;
     const sx = Math.cos(v.heading), sz = -Math.sin(v.heading);
-    const x = v.pos.x + sx * (v.spec.width / 2 + 0.9), z = v.pos.z + sz * (v.spec.width / 2 + 0.9);
-    player.pos.set(x, collision.surface(x, z, v.pos.y + 1), z);
+    let x = v.pos.x + sx * (v.spec.width / 2 + 0.9), z = v.pos.z + sz * (v.spec.width / 2 + 0.9);
+    const ep = v.exitPoint ? v.exitPoint(hm) : null;
+    if (ep) { x = ep.x; z = ep.z; if (ep.bail) hud.toast('You bailed out', 2); }
+    player.pos.set(x, ep ? hm.height(x, z) + 0.1 : collision.surface(x, z, v.pos.y + 1), z);
     player.vel.set(0, 0, 0);
     player.heading = v.heading;
     player.char.root.visible = true;
@@ -331,7 +360,7 @@ async function createGame(progress) {
       }
       // nearby car?
       let best = null, bd = 4.2, fromTraffic = null;
-      for (const v of parked) { const d = v.pos.distanceTo(player.pos); if (d < bd) { bd = d; best = v; } }
+      for (const v of parked) { const d = v.pos.distanceTo(player.pos) - (v.isBoat || v.isAir ? v.radius * 0.8 : 0); if (d < bd) { bd = d; best = v; } }
       const tc = traffic.nearest(player.pos, bd);
       if (tc) { best = tc.v; fromTraffic = tc; }
       if (best) {
@@ -341,21 +370,28 @@ async function createGame(progress) {
       focus.copy(player.pos);
     } else {
       const v = S.vehicle;
-      const ctl = S.auto ? autopilot(v, dt) : { throttle: a.throttle, brake: a.brake, steer: -a.moveX, handbrake: a.handbrake };
+      const ctl = S.auto ? autopilot(v, dt) : { throttle: a.throttle, brake: a.brake, steer: -a.moveX, handbrake: a.handbrake, nitro: a.sprint };
       v.physics(dt, ctl, hm, collision);
-      for (const p of parked) {
+      if (v.isAir) prompt = `ALT ${Math.round(v.alt)} m · ${v.heli ? 'Space/Shift up-down, W/S tilt, A/D turn' : `PWR ${Math.round(v.power * 100)}% · W/S power, Space/Shift pitch, A/D bank`}`;
+      for (const p of v.isAir || v.isBoat ? [] : parked) {
         const dx = p.pos.x - v.pos.x, dz = p.pos.z - v.pos.z, d = Math.hypot(dx, dz);
         if (d < 3.2 && d > 1e-3) { v.pos.x -= (dx / d) * (3.2 - d); v.pos.z -= (dz / d) * (3.2 - d); v.vel.multiplyScalar(0.7); v.impact = Math.max(v.impact, 3); }
       }
       v.night = sky.night;
       v.sync(dt);
       if (v.impact > 4) rig.shake = Math.min(1, v.impact / 15);
-      if (a.enter && Math.abs(v.speed) < 6) exitVehicle();
+      if (a.enter && (Math.abs(v.speed) < 6 || v.isAir)) exitVehicle();
       else if (a.enter) prompt = 'Slow down to get out';
       if (v.drowned) prompt = 'The engine is flooded — press F to get out';
       focus.copy(v.pos);
     }
     for (const p of parked) { p.night = sky.night; p.sync(dt); }
+    if (!S.dead) {
+      const ip = interact.update(dt, focus, S.mode === 'car', S.mode === 'foot' && a.enter && !prompt, S.vehicle ? S.vehicle.speed : 0);
+      if (!prompt) prompt = ip;
+    }
+    systems.update(dt, a);
+    career.update(dt);
     if (S.vehicle && S.vehicle.health <= 0 && !S.vehicle.wrecked) { S.vehicle.wrecked = true; hud.toast('The engine is wrecked — get out (F)', 4); }
     if (S.vehicle?.wrecked) { S.vehicle.vel.multiplyScalar(Math.exp(-3 * dt)); }
 
@@ -412,7 +448,7 @@ async function createGame(progress) {
       pos: focus, yaw: rig.yaw, heading: S.mode === 'car' ? S.vehicle.heading : player.heading,
       driving: S.mode === 'car', speed: S.vehicle?.speed || 0, hour: sky.hour, day: sky.day, prompt,
       traffic: traffic.cars.map((c) => c.v.pos), police: police.cars.map((c) => c.v.pos),
-      health: player.health, armor: player.armor, money: S.money, wanted: police.wanted, wantedLost: police.lost,
+      health: player.health, armor: player.armor, money: S.money, wanted: police.wanted, wantedLost: police.lost, blips: interact.blips(focus),
       weaponIcon: WEAPONS[combat.weapon].icon,
       ammo: !combat.def.melee ? (combat.reloading > 0 ? 'RELOADING' : `${combat.ammo[combat.weapon].clip} / ${combat.ammo[combat.weapon].reserve}`) : '',
       weaponName: combat.def.name,
@@ -573,6 +609,7 @@ async function createGame(progress) {
     showRegion: () => { hud.lastRegion = ''; hud.toastTimer = 0.001; },
     renderer, scene, camera, debug: { hm, graph, collision },
   };
+  api.game = game;
   window.SB = api;
 
   return {

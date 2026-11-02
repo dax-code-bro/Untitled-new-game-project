@@ -35,7 +35,7 @@ function makeRain(count) {
         vec3 v = normalize(uFall);
         vec3 toCam = normalize(uCam - p);
         float d = length(uCam - p);
-        vec3 side = normalize(cross(v, toCam)) * (0.009 + d * 0.0012);
+        vec3 side = normalize(cross(v, toCam)) * (0.0055 + d * 0.0008);
         vec3 wp = p + v * position.y * (0.55 + aSeed.w * 0.4) + side * position.x;
         vQ = position.xy;
         vA = step(aSeed.w, uAmount) * smoothstep(18.0, 5.0, d) * smoothstep(0.6, 2.0, d);
@@ -44,7 +44,7 @@ function makeRain(count) {
     fragmentShader: /* glsl */ `
       uniform vec3 uColor; varying vec2 vQ; varying float vA;
       void main(){
-        float a = (1.0 - abs(vQ.x)) * (1.0 - abs(vQ.y) * 2.0) * vA * 0.5;
+        float a = (1.0 - abs(vQ.x)) * (1.0 - abs(vQ.y) * 2.0) * vA * 0.42;
         if (a <= 0.003) discard;
         gl_FragColor = vec4(uColor * a, 1.0);
       }`,
@@ -95,7 +95,7 @@ export function createWeather(scene, quality) {
       ru.uTime.value += dt;
       ru.uAmount.value = cur.rain;
       ru.uColor.value.setRGB(0.5, 0.52, 0.55).multiplyScalar(1 - worldUniforms.uNight.value * 0.75);
-      rain.visible = cur.rain > 0.01;
+      rain.visible = cur.rain > 0.01 && !state.indoors;
     },
   };
   return state;

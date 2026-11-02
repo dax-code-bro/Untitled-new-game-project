@@ -174,6 +174,44 @@ const P = {
 P.taxi = { ...P.sedan, L: 4.8, bar: 'taxi' };
 P.police = { ...P.sedan, L: 5.0, axF: 1.48, axR: -1.5, zA0: 0.8, zC0: -1.8, zC1: -1.12, doorR: -1.28, bar: 'siren', livery: 1, spokes: 0 };
 
+// Derive a new model from a base body: scale length/width/height and tweak
+// the roofline, then optional body styles (wagon, muscle, bus, crew cab, off-road).
+export function deriveSpec(baseKey, o = {}) {
+  const b = P[baseKey];
+  const L = o.L || b.L, W = o.W || b.W, kz = L / b.L, kx = W / b.W, ky = o.hk || 1;
+  const s = { ...b, L, W, bar: o.bar ?? b.bar, livery: o.livery ?? b.livery };
+  for (const k of ['axF', 'axR', 'zA0', 'zA1', 'zC0', 'zC1']) s[k] = b[k] * kz;
+  if (b.zB > -50) s.zB = b.zB * kz;
+  if (b.doorR < 50) s.doorR = b.doorR * kz;
+  if (b.glassBack > -50) s.glassBack = b.glassBack * kz;
+  for (const k of ['belt', 'roof', 'nose', 'hood', 'deck', 'tail']) s[k] = b[k] * ky;
+  s.hwc = b.hwc * kx;
+  s.head = [b.head[0] * kx, b.head[1] * ky, b.head[2] * kx, b.head[3]];
+  s.tail4 = [b.tail4[0] * kx, b.tail4[1] * ky, b.tail4[2] * kx, b.tail4[3]];
+  if (b.bed) s.bed = [b.bed[0] * kz, b.bed[1] * kz, b.bed[2] * ky];
+  if (b.box) s.box = [b.box[0] * kz, b.box[1] * kz, b.box[2] * ky];
+  if (b.stripe) s.stripe = b.stripe * ky;
+  if (o.rake) s.zA1 += o.rake;
+  if (o.fast && !b.box) s.zC1 = Math.min(s.zA1 - 0.6, s.zC1 + o.fast);
+  if (o.spokes !== undefined) s.spokes = o.spokes;
+  if (o.fender !== undefined) s.fender = o.fender;
+  if (o.Rw) s.Rw = o.Rw;
+  if (o.wagon) { s.zC0 = -L / 2 + 0.1; s.zC1 = -L / 2 + 0.25; s.deck = s.belt; s.doorR = s.axR + s.Rw + 0.05; s.tail4 = [s.tail4[0], s.belt + 0.08, 0.08, 0.16]; }
+  if (o.muscle) { s.zA0 -= 0.25; s.zA1 -= 0.3; s.zC1 -= 0.1; s.hood += 0.04; s.nose += 0.06; s.zB = s.zC1 + 0.35; s.doorR = 99; s.glassBack = s.zC1 - 0.1; }
+  if (o.offroad) { s.ride += 0.08; s.Rw *= 1.12; s.zC0 = -L / 2 + 0.12; s.zC1 = -L / 2 + 0.25; s.doorR = 99; s.zB = s.zA1 - 0.55; }
+  if (o.crew && s.bed) { s.zC0 -= 0.75; s.zC1 -= 0.75; s.bed = [s.bed[0] - 0.75, s.bed[1], s.bed[2]]; s.zB = s.zA1 - 0.65; s.doorR = s.zC0 + 0.12; }
+  if (o.bus) {
+    // full-length passenger box with a band of windows down both sides
+    s.zA0 = L / 2 - 0.25; s.zA1 = L / 2 - 0.45; s.zC0 = -L / 2 + 0.05; s.zC1 = -L / 2 + 0.08;
+    s.belt = 1.35 * ky; s.roof = 2.95 * ky; s.hood = s.belt; s.nose = 0.9; s.deck = s.belt; s.tail = s.belt;
+    s.axF = L / 2 - 2.3; s.axR = -L / 2 + 2.6; s.glassBack = -99; s.zB = -99; s.doorR = 99; s.Rw = 0.5; s.tw = 0.3; s.hwc = W / 2 - 0.02; s.tumble = 0.0;
+    s.head = [W / 2 - 0.3, 0.7, 0.16, 0.08]; s.tail4 = [W / 2 - 0.15, 0.9, 0.08, 0.18]; s.stripe = 1.05; s.cabover = true; delete s.box;
+  }
+  return s;
+}
+export function registerSpec(id, spec) { P[id] = spec; }
+export function hasSpec(id) { return !!P[id]; }
+
 function bodySDF(s) {
   const L2 = s.L / 2, W2 = s.W / 2;
   const parts = [];
@@ -218,6 +256,10 @@ function bodySDF(s) {
   const extras = [mirror, mirrorArm];
   if (s.bar === 'siren') extras.push(roundBox(0, s.roof + 0.07, s.cabover ? s.zA1 - 0.5 : (s.zA1 + s.zC1) / 2 + 0.25, 0.62, 0.065, 0.13, 0.05));
   if (s.bar === 'taxi') extras.push(roundBox(0, s.roof + 0.1, (s.zA1 + s.zC1) / 2, 0.36, 0.1, 0.11, 0.04));
+  if (s.tow) {
+    extras.push(roundBox(0, s.belt + 0.55, -s.L / 2 + 0.6, 0.12, 0.6, 0.12, 0.03));
+    extras.push(roundBox(0, s.belt + 0.95, -s.L / 2 + 0.05, 0.08, 0.08, 0.7, 0.03));
+  }
   if (s.cabover && s.box && !s.twoTone) {
     // ladder rails on the fire engine
     extras.push(mirrorX(roundBox(0.55, s.box[2] + 0.12, -1.0, 0.04, 0.05, 3.2, 0.02)));
@@ -246,7 +288,7 @@ function bodySDF(s) {
 // ------------------------------------------------------------ materials
 const BODY_GLSL = /* glsl */ `
 uniform vec3 uPaint, uPaint2;
-uniform float uMetal, uLights, uBrake, uSirenR, uSirenB, uLivery;
+uniform float uMetal, uLights, uBrake, uSirenR, uSirenB, uLivery, uTint, uLightK;
 uniform vec4 uCab, uCabZ, uBody, uAxle, uHead, uTail, uMisc, uBar;
 varying vec3 vCarP; varying vec3 vCarN;
 vec3 sbAlb; vec3 sbEmit; float sbRough, sbMetal, sbCoat;
@@ -287,7 +329,7 @@ void sbZones(){
         if (edge > 0.0) { glass = edge > 0.016 && abs(p.z - uAxle.w) > 0.045; trim = !glass; }
       }
     }
-    if (glass) { sbAlb = vec3(0.01, 0.012, 0.014); sbRough = 0.025; sbMetal = 0.0; sbCoat = 1.0; paint = false; }
+    if (glass) { sbAlb = vec3(0.01, 0.012, 0.014) * (1.0 - uTint * 0.8) + vec3(0.03, 0.035, 0.04) * (1.0 - uTint) * step(p.y, belt + (roof - belt) * 0.45); sbRough = 0.025; sbMetal = 0.0; sbCoat = 1.0; paint = false; }
     else if (trim) { sbAlb = vec3(0.018); sbRough = 0.3; sbMetal = 0.0; sbCoat = 0.6; paint = false; }
   }
   // front: headlights, grille, plate
@@ -300,7 +342,7 @@ void sbZones(){
       float proj = length(hp - vec2(-uHead.z * 0.45, -uHead.w * 0.15)) < uHead.w * 0.55 ? 1.0 : 0.0;
       sbAlb = vec3(0.5); sbMetal = 0.95; sbRough = 0.05; sbCoat = 1.0; paint = false;
       if (proj > 0.5) { sbAlb = vec3(0.04); sbMetal = 0.0; sbRough = 0.02; }
-      sbEmit = vec3(1.0, 0.96, 0.9) * (led * (1.2 + uLights * 6.0) + proj * uLights * 12.0 + 0.04 * (1.0 - led));
+      sbEmit = vec3(1.0, 0.96, 0.9) * (led * (1.2 + uLights * 6.0) + proj * uLights * 12.0 + 0.04 * (1.0 - led)) * uLightK;
     } else if (hl < 0.008) { sbAlb = vec3(0.06); sbRough = 0.25; sbMetal = 0.6; paint = false; }
     vec2 gc = vec2(0.0, uHead.y - uHead.w - 0.075);
     float gr = sbRect(p.xy, gc, vec2(uMisc.z, 0.075), 0.03);
@@ -350,7 +392,7 @@ function bodyUniforms(s) {
   return {
     uPaint: { value: new THREE.Color(0.6, 0.6, 0.62) }, uPaint2: { value: new THREE.Color(0.85, 0.85, 0.85) },
     uMetal: { value: 0.5 }, uLights: { value: 0 }, uBrake: { value: 0 }, uSirenR: { value: 0 }, uSirenB: { value: 0 },
-    uLivery: { value: s.livery || 0 },
+    uLivery: { value: s.livery || 0 }, uTint: { value: 0.2 }, uLightK: { value: 1 },
     uCab: V4(s.belt, s.roof, s.hwc, s.tumble), uCabZ: V4(s.zA0, s.zA1, s.zC0, s.zC1),
     uBody: V4(s.W / 2, s.L / 2, -s.L / 2, s.ride), uAxle: V4(s.axF, s.axR, s.Rw, s.zB),
     uHead: V4(...s.head), uTail: V4(...s.tail4),
@@ -359,6 +401,7 @@ function bodyUniforms(s) {
   };
 }
 
+export { getWheelMaterial };
 export function makeBodyMaterial(s, physical) {
   const Mat = physical ? THREE.MeshPhysicalMaterial : THREE.MeshStandardMaterial;
   const m = new Mat({ color: 0xffffff, roughness: 0.35, metalness: 0.3, ...(physical ? { clearcoat: 1, clearcoatRoughness: 0.04 } : {}) });
@@ -382,7 +425,15 @@ export function makeBodyMaterial(s, physical) {
 }
 
 // ------------------------------------------------------------ wheels
-function wheelGeometry(s) {
+const wheelCache = new Map();
+export function wheelGeometry(s, spokesOverride) {
+  const key = `${s.Rw}|${s.tw}|${spokesOverride ?? s.spokes}`;
+  if (wheelCache.has(key)) return wheelCache.get(key);
+  const g = wheelGeometryRaw({ ...s, spokes: spokesOverride ?? s.spokes });
+  wheelCache.set(key, g);
+  return g;
+}
+function wheelGeometryRaw(s) {
   const R = s.Rw, w = s.tw, rr = R * 0.68;
   const parts = [];
   const paint = (g, col, rough, metal) => {
@@ -406,7 +457,7 @@ function wheelGeometry(s) {
   face.absarc(0, 0, rr, 0, Math.PI * 2, false);
   const spokes = s.spokes;
   if (spokes > 0) {
-    const n = spokes, gap = spokes >= 10 ? 0.11 : 0.2;
+    const n = spokes, gap = spokes >= 14 ? 0.07 : spokes >= 10 ? 0.11 : 0.2;
     for (let i = 0; i < n; i++) {
       const a0 = (i / n) * Math.PI * 2 + gap, a1 = ((i + 1) / n) * Math.PI * 2 - gap;
       const h = new THREE.Path();
@@ -425,7 +476,7 @@ function wheelGeometry(s) {
   const rim = new THREE.ExtrudeGeometry(face, { depth: 0.03, bevelEnabled: true, bevelThickness: 0.012, bevelSize: 0.008, bevelSegments: 2, curveSegments: 40 });
   rim.rotateY(Math.PI / 2);
   rim.translate(w / 2 - 0.05, 0, 0);
-  const rimCol = s.spokes === 0 ? [0.32, 0.33, 0.34] : (s.spokes === 5 ? [0.08, 0.08, 0.085] : [0.62, 0.63, 0.65]);
+  const rimCol = s.spokes === 0 ? [0.32, 0.33, 0.34] : (s.spokes === 5 ? [0.08, 0.08, 0.085] : s.spokes === 14 ? [0.75, 0.62, 0.3] : [0.62, 0.63, 0.65]);
   paint(rim, rimCol, s.spokes === 5 ? 0.35 : 0.22, 1);
   // barrel, hub, brake disc and caliper seen through the spokes
   const barrel = new THREE.CylinderGeometry(rr, rr, w * 0.86, 40, 1, true); barrel.rotateZ(Math.PI / 2);
@@ -509,3 +560,4 @@ export const FIXED_PAINT = {
   'garbage-truck': [0.04, 0.16, 0.06, 0.2], delivery: [0.82, 0.82, 0.8, 0.0], 'sedan-sports': [0.55, 0.06, 0.01, 0.7],
 };
 export const SECOND_PAINT = { police: [0.85, 0.85, 0.85], ambulance: [0.5, 0.01, 0.01], firetruck: [0.85, 0.85, 0.8], 'garbage-truck': [0.75, 0.75, 0.72], delivery: [0.04, 0.12, 0.35] };
+export { surfaceNets, smax, smin, roundBox, block, profile, mirrorX, hyp2, hyp3 };

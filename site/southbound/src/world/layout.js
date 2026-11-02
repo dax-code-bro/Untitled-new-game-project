@@ -16,6 +16,8 @@ export const TOWN = {
   name: 'Mill Creek', x0: -1180, z0: -360, nx: 4, nz: 3, pitch: 72, street: 12,
   height: 0, // set after terrain is generated
 };
+// Airstrip on the plains (flattened and paved by the heightmap)
+export const AIRFIELD = { name: 'Redgrass Airfield', x0: 880, x1: 1500, z: -440, w: 34, height: 0 };
 export const LAKE = { name: 'Lake Arden', x: -250, z: -1150, r: 330, level: 0 };
 
 export function lakeRadius(angle) {

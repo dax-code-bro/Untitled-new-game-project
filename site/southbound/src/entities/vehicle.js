@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { clamp, lerp } from '../util.js';
 import { VEHICLES } from '../assets/library.js';
-import { makeBodyMaterial, randomPaint, FIXED_PAINT, SECOND_PAINT } from '../assets/carbuilder.js';
+import { makeBodyMaterial, randomPaint, FIXED_PAINT, SECOND_PAINT, buildCar, wheelGeometry } from '../assets/carbuilder.js';
 
 export function randomCarType(rnd) {
   const list = Object.entries(VEHICLES).filter(([, v]) => v.weight > 0);
@@ -29,6 +29,7 @@ export class Vehicle {
     this.group = new THREE.Group();
     this.body = new THREE.Group();
     this.group.add(this.body);
+    if (!lib.cars[type]) lib.cars[type] = buildCar(type, lib.quality); // catalog models: built on first use
     const proto = lib.cars[type];
     const model = proto.clone(true);
     this.procedural = !!proto.userData.procedural;
@@ -42,6 +43,7 @@ export class Vehicle {
       u.uPaint.value.setRGB(paint[0], paint[1], paint[2]); u.uMetal.value = paint[3];
       if (SECOND_PAINT[type]) u.uPaint2.value.setRGB(...SECOND_PAINT[type]);
       model.getObjectByName('body').traverse((o) => { if (o.isMesh) o.material = this.bodyMat; });
+      this.procSpec = spec;
     }
     // scale the model to its real-world length
     _box.setFromObject(model);
@@ -93,11 +95,37 @@ export class Vehicle {
     this.heading = 0; this.pitch = 0; this.roll = 0;
     this.vy = 0; this.speed = 0; this.steer = 0; this.braking = false;
     this.airborne = false; this.drowned = false; this.wheelSpin = 0;
-    this.lean = 0; this.impact = 0; this.health = 100; this.night = 0;
+    this.lean = 0; this.impact = 0; this.health = 100; this.maxHealth = 100; this.night = 0;
+    this.nitro = 0; this.nitroTank = 1; this.spoiler = null;
     this.radius = w / 2 + 0.1;
   }
 
   forward() { return { x: Math.sin(this.heading), z: Math.cos(this.heading) }; }
+
+  // tuning: swap rims, fit a spoiler
+  setRims(spokes) {
+    const spec = this.procSpec;
+    if (!spec) return;
+    const g = wheelGeometry(spec, spokes);
+    for (const w of this.wheels) w.node.traverse((o) => { if (o.isMesh) o.geometry = g; });
+  }
+  setSpoiler(level) {
+    if (this.spoiler) { this.body.remove(this.spoiler); this.spoiler = null; }
+    const spec = this.procSpec;
+    if (!level || !spec || spec.box || spec.bed) return;
+    const mat = this.bodyMat;
+    const g = new THREE.Group();
+    const w = spec.W * (level === 1 ? 0.8 : 0.92), deckY = spec.deck, z = -spec.L / 2 + 0.25;
+    if (level === 1) { const lip = new THREE.Mesh(new THREE.BoxGeometry(w, 0.04, 0.12), mat); lip.position.set(0, deckY + 0.03, z); g.add(lip); }
+    else {
+      const h = level === 2 ? 0.18 : 0.32;
+      const wing = new THREE.Mesh(new THREE.BoxGeometry(w, 0.03, level === 2 ? 0.22 : 0.3), mat); wing.position.set(0, deckY + h, z - 0.05); wing.rotation.x = -0.08; g.add(wing);
+      for (const sx of [-1, 1]) { const st = new THREE.Mesh(new THREE.BoxGeometry(0.04, h, 0.08), mat); st.position.set(sx * w * 0.35, deckY + h / 2, z); g.add(st); }
+    }
+    g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+    this.spoiler = g;
+    this.body.children[0].add(g);
+  }
 
   // Player driving
   physics(dt, input, hm, collision) {
@@ -112,10 +140,15 @@ export class Vehicle {
     if (grounded && !this.drowned) {
       if (thr > 0) {
         if (vF < -0.5) { vF += 18 * thr * dt; this.braking = true; }
-        else vF += t.accel * thr * Math.max(0, 1 - vF / t.top) * dt * (vF < 8 ? 1.25 : 1);
+        else {
+          // nitrous: Shift while driving, drains a tank that refills over time
+          const boost = input.nitro && this.nitro > 0 && this.nitroTank > 0 ? 1.8 : 1;
+          if (boost > 1) this.nitroTank = Math.max(0, this.nitroTank - dt * 0.25);
+          vF += t.accel * boost * thr * Math.max(0, 1 - vF / (t.top * (boost > 1 ? 1.15 : 1))) * dt * (vF < 8 ? 1.25 : 1);
+        }
       }
       if (brk > 0) {
-        if (vF > 0.5) { vF -= 22 * brk * dt; this.braking = true; }
+        if (vF > 0.5) { vF -= 22 * (t.brakeK || 1) * brk * dt; this.braking = true; }
         else vF = Math.max(vF - 6 * brk * dt, -9);
       }
       if (input.handbrake) { vF -= Math.sign(vF) * 6 * dt; this.braking = true; }

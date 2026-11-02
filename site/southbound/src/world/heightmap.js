@@ -1,6 +1,6 @@
 // Generates the terrain height field, water levels and the material splat map.
 import { ImprovedNoise } from 'three/addons/math/ImprovedNoise.js';
-import { WORLD, CITY, TOWN, LAKE, FOREST, PLAINS, BAYOU, CHANNELS, coastZ, lakeRadius } from './layout.js';
+import { WORLD, CITY, TOWN, LAKE, AIRFIELD, FOREST, PLAINS, BAYOU, CHANNELS, coastZ, lakeRadius } from './layout.js';
 import { clamp, lerp, smoothstep, distToSeg, nextFrame } from '../util.js';
 import { erode } from './erosion.js';
 
@@ -111,6 +111,8 @@ export class Heightmap {
     LAKE.level = Math.round(this.height(LAKE.x, LAKE.z)) - 1;
     this.flattenRect(CITY.x0 - 8, CITY.z0 - 8, CITY.x0 + CITY.nx * CITY.pitch + 8, CITY.z0 + CITY.nz * CITY.pitch + 8, CITY.height, 70);
     this.flattenRect(TOWN.x0 - 6, TOWN.z0 - 6, TOWN.x0 + TOWN.nx * TOWN.pitch + 6, TOWN.z0 + TOWN.nz * TOWN.pitch + 6, TOWN.height, 60);
+    AIRFIELD.height = Math.round(this.height((AIRFIELD.x0 + AIRFIELD.x1) / 2, AIRFIELD.z)) + 1;
+    this.flattenRect(AIRFIELD.x0 - 40, AIRFIELD.z - 70, AIRFIELD.x1 + 40, AIRFIELD.z + 40, AIRFIELD.height, 90);
     this.carveLake();
     progress(0.45, 'Filling Lake Arden');
     await nextFrame();
@@ -260,6 +262,8 @@ export class Heightmap {
         const forest = Math.max(forestMask(x, z), bay * 0.9);
         const dry = clamp(plainsMask(x, z) * 0.9 + fbm(x * 0.004, z * 0.004, 2, 51) * 0.6, 0, 1) * (1 - forest);
         let paved = splat[k * 4 + 3] / 255;
+        if (x > AIRFIELD.x0 && x < AIRFIELD.x1 && Math.abs(z - AIRFIELD.z) < AIRFIELD.w / 2) paved = 1;
+        if (x > AIRFIELD.x1 - 120 && x < AIRFIELD.x1 && z > AIRFIELD.z - 60 && z < AIRFIELD.z - 16) paved = 1; // apron
         if (x > cx0 && x < cx1 && z > cz0 && z < cz1) paved = 1;
         if (x > tx0 && x < tx1 && z > tz0 && z < tz1) paved = Math.max(paved, 0.85);
         splat[k * 4] = sand * 255;

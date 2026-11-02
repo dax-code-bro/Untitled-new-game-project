@@ -1,12 +1,12 @@
 // Ocean, lake and river surfaces sharing one animated water shader.
 import * as THREE from 'three';
-import { LAKE, CHANNELS, lakeRadius } from './layout.js';
+import { LAKE, CHANNELS, CITY, lakeRadius } from './layout.js';
 import { worldUniforms } from './terrain.js';
 import { GLSL_NOISE } from '../util.js';
 
 // Planar reflection shared by the lake and the ocean (both sit at y = 0).
-const reflUniforms = {
-  tReflect: { value: null }, uReflectOn: { value: 0 }, uReflMatrix: { value: new THREE.Matrix4() },
+export const reflUniforms = {
+  tReflect: { value: null }, uReflectOn: { value: 0 }, uReflMatrix: { value: new THREE.Matrix4() }, uReflY: { value: 0 },
 };
 
 function makeWaterMaterial(kind) {
@@ -30,7 +30,7 @@ vWPos = wp4.xyz;`)
       .replace('#include <common>', `#include <common>
 varying vec3 vWPos; varying vec2 vFlow;
 uniform float uTime; uniform float uNight; uniform sampler2D uHeightTex; uniform float uWorldHalf;
-uniform sampler2D tReflect; uniform float uReflectOn; uniform mat4 uReflMatrix;
+uniform sampler2D tReflect; uniform float uReflectOn; uniform mat4 uReflMatrix; uniform float uReflY;
 ${GLSL_NOISE}
 float sbDepth; float sbFoam; vec3 sbWN = vec3(0.0, 1.0, 0.0);
 vec2 waveGrad(vec2 p, float t){
@@ -77,7 +77,7 @@ vec2 waveGrad(vec2 p, float t){
   mat.onBeforeCompile = ((prev) => function (shader) {
     prev.call(this, shader);
     shader.fragmentShader = shader.fragmentShader.replace('#include <opaque_fragment>', `
-if (uReflectOn > 0.5 && abs(vWPos.y) < 0.6) {
+if (uReflectOn > 0.5 && abs(vWPos.y - uReflY) < 0.6) {
   vec4 rp = uReflMatrix * vec4(vWPos, 1.0);
   vec2 ruv = rp.xy / rp.w + sbWN.xz * 0.035;
   vec3 refl = texture2D(tReflect, clamp(ruv, 0.001, 0.999)).rgb;
@@ -108,7 +108,8 @@ function makeReflection(renderer, scale) {
     texture: rt.texture,
     render(scene, camera, waterGroup) {
       camPos.setFromMatrixPosition(camera.matrixWorld);
-      if (camPos.y < 0.2) return false;
+      P.y = reflUniforms.uReflY.value;
+      if (camPos.y < P.y + 0.2) return false;
       renderer.getDrawingBufferSize(size);
       const w = Math.max(64, Math.round(size.x * scale)), h = Math.max(64, Math.round(size.y * scale));
       if (rt.width !== w || rt.height !== h) rt.setSize(w, h);
@@ -206,12 +207,16 @@ export function createWater(scene, renderer = null, quality = {}) {
   const refl = renderer && quality.reflections ? makeReflection(renderer, quality.reflections) : null;
   if (refl) reflUniforms.tReflect.value = refl.texture;
   // the lake and the coast are the only water big enough to need a mirror
-  const nearBigWater = (p) => Math.hypot(p.x - LAKE.x, p.z - LAKE.z) < LAKE.r + 1500 || p.z > 900 || p.y < 60;
+  const nearBigWater = (p) => (Math.hypot(p.x - LAKE.x, p.z - LAKE.z) < LAKE.r + 1500 || p.z > 900 || p.y < 60) && p.y < 600;
+  // wet city streets mirror the lit windows and street lamps instead
+  const inWetCity = (p) => worldUniforms.uWet.value > 0.05 && p.x > CITY.x0 - 30 && p.x < CITY.x0 + CITY.nx * CITY.pitch + 30 && p.z > CITY.z0 - 30 && p.z < CITY.z0 + CITY.nz * CITY.pitch + 30;
   return {
     group,
     update(cam) { ocean.position.x = Math.round(cam.x / 80) * 80; ocean.position.z = Math.round(cam.z / 80) * 80; },
     renderReflection(scene, camera) {
-      reflUniforms.uReflectOn.value = refl && nearBigWater(camera.position) && refl.render(scene, camera, group) ? 1 : 0;
+      const city = inWetCity(camera.position);
+      reflUniforms.uReflY.value = city ? CITY.height + 0.08 : 0;
+      reflUniforms.uReflectOn.value = refl && (city || nearBigWater(camera.position)) && refl.render(scene, camera, group) ? 1 : 0;
     },
   };
 }
