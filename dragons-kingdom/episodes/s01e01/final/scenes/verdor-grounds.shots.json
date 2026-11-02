@@ -2072,8 +2072,8 @@
     ],
     "exposure": 1.4
    },
-   "staging": "WIDE: the ground camera on his line 18 m ahead of the launch spot, looking up and back: the wings open and beat overhead and he passes over the lens.",
-   "deviation": null
+   "staging": "WIDE: the ground camera on his line 50 m ahead of the launch spot, looking back at him: he comes on low, wings opening and beating, grows over the frame and the camera tilts up with him until the wings are overhead at the cut.",
+   "deviation": "Camera move: \"static, ground level\" becomes a locked-off tilt-up following him (the camera stays on the ground; the operator tilts so he stays in frame until the wings cover it)."
   },
   {
    "job": "1C-05",

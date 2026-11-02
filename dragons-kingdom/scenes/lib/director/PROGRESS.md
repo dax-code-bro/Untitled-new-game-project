@@ -3,6 +3,56 @@
 Owner paths: `scenes/lib/director/`, `episodes/s01e01/final/scenes/`, `episodes/s01e01/final/cut/`.
 How it works: `README.md` in this folder. Latest state first.
 
+## Session 14 (2026-11-02, short budgeted session: 1C-04 / 1C-06 fixes, SKY_OFF_VERDOR set + 1C-07..19 specs - previs only)
+
+- Reviewed the 1C videos rendered 2026-11-01 (`/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/director/work1B/shots/1C-0*.mp4`; sheets `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/director/st20/1C-04_sheet.jpg`,
+  `1C-05_sheet.jpg`, `1C-06_sheet.jpg`, every 12th frame, LOOKED AT):
+  - 1C-04: he passed over the lens at 1.6 s, frames 48-95 empty blue sky. FIX (verdor-grounds.spec.js): camera 50 m
+    along heading 190 ([35.3, G+0.3, -16.8], CH + 50 * fwd), rig 'tilt': look = 'charcoal.chest' to 2.8 s, then eases
+    to a fixed point 76 deg up looking back (no zenith pass / yaw flip); focus on his chest. Declared deviation
+    (static -> ground tilt). Stills `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/director/st20/1C-04_005.png`, `1C-04_058.png`, `1C-04_093.png` (strip
+    `st20/1C-04_new.jpg`) LOOKED AT: frame 5 head-on, wings spread, coming at us (rig at lower left); 58 his belly and
+    wings fill the frame overhead; 93 wings overhead, legs - he is in frame the whole shot.
+  - 1C-06: nearly all dust. FIX: `LAUNCH_FX(from, dust)` takes per-shot downwash overrides; 1C-06 gets decaying
+    bursts (s 1 / 0.55 / 0.25, no 4th), radius 24, sigma 0.22 (default 0.5), aim 3 deg higher ([42, G+6.6, -40]).
+    Still `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/director/st20/1C-06_048.png` LOOKED AT: sky + Charcoal clear in the top third (wings up, riders' side
+    unreadable at this size), the dust wall now the lower ~55 %; the torn-turf foreground is still hidden by
+    dust and the rig's gangway intrudes top right. If it still reads too dusty on video: sigma 0.15, or move the
+    camera 10 m west so the rig leaves frame.
+  - 1C-05 (not asked, noticed): the field reads very pale / washed in the sunward direction and Charcoal is large
+    for "100 m" (he flies past ~60-70 m from the lens). Keep for now; check in the 1C cut.
+- X3-10 coif blob: aim 0.25 m north (3 deg pan left). Still `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/director/st20/X3-10_030.png`
+  LOOKED AT: Remi in profile in the saddle, centre, turf behind; the keeper's coif + shoulder is now a smaller
+  grey-blue shape cut by the bottom-right corner (~10 % of the width) - it reads as the OTS foreground, no longer
+  a white blob. Optional: 1-2 deg more pan left if it still draws the eye on video.
+- SKY_OFF_VERDOR (NEW, first pass, NOT rendered): `sets/sky-off-verdor.js` = F3's world in the VERDOR frame
+  (the grounds' coastX near the field, cliffs rising south, bay floor, scanned rocks, the grounds' sea, physical
+  sky, sun from continuity '1C' sunDir(102, 31), exposure 1.1 - a guess: F3 graded +1.1); registry entry; scene
+  `final/scenes/sky-off-verdor.js`; specs `final/scenes/specs/sky-off-verdor.spec.js` for all 13 shots 1C-07..1C-19
+  (header = the formation model: south at 16 m/s, Leaf x 470 / y 50 inland, Charcoal x 540 / y 56 / +25 m ahead,
+  closing to x 500 / y 62 for the talk; formation clock T per shot; close / medium shots use `frame` with
+  track: true; wides use linear world keys). Lines L042 (1C-09 at 0.6 s), L043-L045 (1C-14) placed from the takes.
+  Previs (`node scenes/lib/director/tools/previs.mjs --set SKY_OFF_VERDOR --at 0.1,0.9`, sheets `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/director/pv14/`):
+  every subject in where intended (1C-10/11/13/15/19 Leaf LEFT, Charcoal RIGHT; 1C-12 both dragons in the
+  top-down after raising it to 480 m); edit check `--cuts`: 12 cuts, 0 flagged. 1C-16 hands are a previs blind
+  spot (seated-rider approximation) - needs a still. selftest 20 pass.
+  Known guesses to verify on the first stills: Abby's head as the POV camera (1C-08, abbyR hidden); Charcoal's
+  1C-08 keyed climb from [42, 26, 0] (out of the dust?) - the old dust is LAUNCH_FX aged with life 24; the
+  exposure; 1C-19 "Island, L-bg" is NOT honoured (abeam from inland, Verdor's headland is behind the lens) -
+  either another island ahead (OUTER_ROCKS?) or accept.
+- NEXT (exact, in order):
+  1. (done: X3-10 still looked at.) npm test this session: 49 tests, 48 pass, 0 fail, 1 skipped.
+  2. SKY_OFF_VERDOR stills - ONE set build, run in the background (~4-6 min build + ~1 min/still here):
+     `node scenes/lib/director/tools/still.mjs 1C-07@0.5 1C-08@0.5 1C-09@0.4 1C-10@0.5 1C-11@0.5 1C-12@0.5 1C-13@0.8
+     1C-14@0.3 1C-15@0.5 1C-16@0.5 1C-17@0.5 1C-18@0.5 1C-19@0.5 --preset draft --out <scratch>/st21`
+     (still.mjs builds once per shot - if that is 13 builds, run them in two halves). Check: sea + coast read,
+     exposure vs the grounds (1C-06 -> 1C-07 cut), shadows on the shallows (1C-12), riders seated, faces.
+  3. Owner / background videos (resumable queue, ~10 min/shot here):
+     `node scenes/lib/director/tools/render-shots.mjs --only 1C-04,1C-06,X3-10 --force --work <scratch>/work1B`
+     then the session-12/13 1B list (X3-02, X3-04, 1B-03, X3-15, X3-08, 1B-12, ...), then 1C-07..1C-19 once
+     step 2 looks right. Re-assemble the 1C cut as in session 11 (edl-1C).
+  4. Then 1C-20+ (VERDOR_AERIAL / OUTER_ROCKS / VERDOR_HARBOR / CLING_SQUARE have no builder yet).
+
 ## Session 13 (2026-11-01, short budgeted session: 1B sunward stills, START of 1C - STILLS / previs only)
 
 - 1B polish (stills in `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/director/st13/`, draft 960x540, `tools/still.mjs X3-04@0.75 X3-10@0.5 X3-15@0.48 1B-12@0.5`):

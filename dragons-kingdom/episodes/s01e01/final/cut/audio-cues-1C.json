@@ -2,6 +2,75 @@
  "about": "Every voice take placed in the cut: rec_s = where the WAV's file_in_s plays on the cut timeline (seconds from the cut's first frame); speech_rec_in/out = the words. Per scene below.",
  "fps": 24,
  "scenes": {
-  "1C": []
+  "1C": [
+   {
+    "scene": "1C",
+    "shot": "1C-09",
+    "ref": "L042",
+    "id": "L042",
+    "part": 0,
+    "role": "ABBY",
+    "file": "vo/L042.wav",
+    "file_in_s": 0,
+    "file_out_s": 1.33,
+    "rec_s": 36.07,
+    "shot_at_s": 0.57,
+    "speech_rec_in_s": 36.1,
+    "speech_rec_out_s": 37.37,
+    "gain_db": 0,
+    "continues": false
+   },
+   {
+    "scene": "1C",
+    "shot": "1C-14",
+    "ref": "L043",
+    "id": "L043",
+    "part": 0,
+    "role": "REMI",
+    "file": "vo/L043.wav",
+    "file_in_s": 0,
+    "file_out_s": 1.295,
+    "rec_s": 60.97,
+    "shot_at_s": 0.47,
+    "speech_rec_in_s": 61,
+    "speech_rec_out_s": 62.235,
+    "gain_db": 0,
+    "continues": false
+   },
+   {
+    "scene": "1C",
+    "shot": "1C-14",
+    "ref": "L044",
+    "id": "L044",
+    "part": 0,
+    "role": "ABBY",
+    "file": "vo/L044.wav",
+    "file_in_s": 0,
+    "file_out_s": 0.56,
+    "rec_s": 62.555,
+    "shot_at_s": 2.055,
+    "speech_rec_in_s": 62.585,
+    "speech_rec_out_s": 63.085,
+    "gain_db": 0,
+    "continues": false
+   },
+   {
+    "scene": "1C",
+    "shot": "1C-14",
+    "ref": "L045",
+    "id": "L045",
+    "part": 0,
+    "role": "REMI",
+    "file": "vo/L045.wav",
+    "file_in_s": 0,
+    "file_out_s": 0.86,
+    "rec_s": 63.455,
+    "shot_at_s": 2.955,
+    "speech_rec_in_s": 63.485,
+    "speech_rec_out_s": 64.285,
+    "gain_db": 0,
+    "continues": false
+   }
+  ]
  }
 }

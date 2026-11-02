@@ -59,8 +59,9 @@ const leafGo = (t0, tOffset) => ({ at: LF, face: LEAF_GO, tack: true, acts: t0 >
 const charGo = (t0, tOffset) => ({ at: CH, face: 190, tack: true, acts: t0 > 0 ? [[0, 'mount', {}], [t0, 'takeoff', { tOffset, blend: 0.8 }]] : [[0, 'takeoff', { tOffset }]] });
 // the launch scar: turf + downwash dust at the launch spot (fx library kinds; bursts on Charcoal's first beats)
 const SCAR = [43.0, G, -60.0];
-const LAUNCH_FX = (from) => [
-  { kind: 'dust-downwash', id: 'launch', from, to: null, at: SCAR, params: { bursts: [0, 2.2, 4.4, 6.6], radius: 30, strength: 1, color: 'loam' } },
+// `dust` overrides the downwash params per shot (1C-06 sits 22 m from the scar: thinner + weaker late bursts)
+const LAUNCH_FX = (from, dust = {}) => [
+  { kind: 'dust-downwash', id: 'launch', from, to: null, at: SCAR, params: { bursts: [0, 2.2, 4.4, 6.6], radius: 30, strength: 1, color: 'loam', ...dust } },
   { kind: 'debris-turf', id: 'launch', from, to: null, at: SCAR, params: { bursts: [0, 2.2], radius: 12, speed: 10 } },
 ];
 
@@ -363,7 +364,9 @@ export default {
       staging: 'OTS: over the keeper\'s shoulder on the gangway end (his back right) to Remi in the seat in profile: "Straps?" - "Checked twice."',
       // session 12: higher, looking down onto him so the turf, not the sunward sky / sea haze, is behind him
       // (the level line looked straight into the sun: washed out almost white)
-      cam: { rig: 'static', pos: [38.2, G + 7.6, -59.3], look: [42.6, G + 6.1, -58.0], mm: 40, fstop: 2.8, focus: 'remiR.head' },
+      // session 14: aim 0.25 m north (a 3 deg pan left) - the keeper's white coif was a bright out-of-focus blob
+      // in the right foreground; now only his shoulder edge holds the OTS
+      cam: { rig: 'static', pos: [38.2, G + 7.6, -59.3], look: [42.6, G + 6.1, -58.25], mm: 40, fstop: 2.8, focus: 'remiR.head' },
       set: SET1B_DOWN_SUN,
       cast: {
         charcoal: charLow(),
@@ -520,8 +523,13 @@ export default {
       cast: { charcoal: charGo(4.4, -4.4), remiR: {} },
     },
     '1C-04': {
-      staging: 'WIDE: the ground camera on his line 18 m ahead of the launch spot, looking up and back: the wings open and beat overhead and he passes over the lens.',
-      cam: { rig: 'static', pos: [40.9, G + 0.3, -48.3], look: [42.6, G + 12.0, -57.0], mm: 35, fstop: 5.6, focus: 12 },
+      staging: 'WIDE: the ground camera on his line 50 m ahead of the launch spot, looking back at him: he comes on low, wings opening and beating, grows over the frame and the camera tilts up with him until the wings are overhead at the cut.',
+      // session 14: was 18 m ahead with a fixed look up - he passed over the lens at 1.6 s and the second half
+      // of the shot was empty sky (1C-04.mp4 rendered 2026-11-01). Now 50 m along heading 190 (CH + 50 * fwd):
+      // his hips reach the camera at ~tau 6.6 = the cut; the operator tilts with his chest, then eases to a fixed
+      // point 76 deg up looking back (no pass through the zenith, no yaw flip).
+      deviation: 'Camera move: "static, ground level" becomes a locked-off tilt-up following him (the camera stays on the ground; the operator tilts so he stays in frame until the wings cover it).',
+      cam: { rig: 'tilt', pos: [35.3, G + 0.3, -16.8], look: [[0, 'charcoal.chest'], [2.8, 'charcoal.chest'], [4.0, [36.5, G + 30.0, -24.0], 'sine']], mm: 35, fstop: 5.6, focus: 'charcoal.chest' },
       set: SET1B_BACK,
       cast: { charcoal: charGo(0, 2.6), remiR: {} },
       fx: LAUNCH_FX(0.7),
@@ -536,10 +544,13 @@ export default {
     },
     '1C-06': {
       staging: 'WIDE: static behind the launch (north of the scar) looking south along his line: the torn turf in the foreground, the dust rolling toward and past camera; Charcoal small, top of frame, leaving.',
-      cam: { rig: 'static', pos: [45.5, G + 1.4, -82.0], look: [42.0, G + 4.0, -40.0], mm: 35, fstop: 8, focus: 30 },
+      // session 14: the 2026-11-01 video was nearly all dust (a 30 m wall jet with full-strength bursts up to
+      // tau 9.9, the camera 22 m from the scar). Ground effect fades as he climbs (21 m up at tau 7.7): the
+      // late bursts are weaker, the cloud thinner (sigma 0.5 -> 0.22) and the aim 3 deg higher so he reads.
+      cam: { rig: 'static', pos: [45.5, G + 1.4, -82.0], look: [42.0, G + 6.6, -40.0], mm: 35, fstop: 8, focus: 30 },
       set: SET1B_BACK,
       cast: { charcoal: charGo(0, 7.5), remiR: {} },
-      fx: LAUNCH_FX(-4.2),
+      fx: LAUNCH_FX(-4.2, { bursts: [{ t: 0, s: 1 }, { t: 2.2, s: 0.55 }, { t: 4.4, s: 0.25 }], radius: 24, sigma: 0.22 }),
     },
   },
 };
