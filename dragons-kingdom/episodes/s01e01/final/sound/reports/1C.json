@@ -16,23 +16,23 @@
  },
  "result": {
   "mix": "episodes/s01e01/final/audio/cuts/1C/mix.wav",
-  "I": -23,
+  "I": -22.3,
   "TP": -1.6,
-  "LRA": 11.4,
-  "sha256": "be829dac7ae9f240c041a0a329fb2ada76fcb54b53c857156e5c382fe9ed22c6",
+  "LRA": 12.9,
+  "sha256": "855b20fd7c36dc7e88cd06dc08915e81d0b7fbbf5fc9bbf91d5de8e0d8877bc6",
   "master_gain_db": 2,
   "limiter_ceiling_dbfs": -1.6,
-  "dialogue_gain_db": 0,
-  "min_dialogue_margin_lu": null,
-  "anchored": "reference",
+  "dialogue_gain_db": 11.4,
+  "min_dialogue_margin_lu": 14.679,
+  "anchored": "dialogue",
   "pass": true
  },
  "muxed": {
   "file": "episodes/s01e01/final/audio/cuts/1C/DragonsKingdom_S01E01_draft-cut_1C_sound.mp4",
   "duration_s": 382,
-  "aac_I": -23,
-  "aac_TP": -1.6,
-  "bytes": 22132160
+  "aac_I": -22.3,
+  "aac_TP": -1.5,
+  "bytes": 22688677
  },
  "beds": {
   "grounds_wind": {
@@ -200,6 +200,21 @@
    "shots": "X6-19..X6-20 (2)"
   }
  ],
- "voice_cues": 0,
- "speech_windows": []
+ "voice_cues": 4,
+ "speech_windows": [
+  {
+   "from_s": 36.1,
+   "to_s": 37.37,
+   "dialogue_M": -14.115,
+   "background_M": -28.794,
+   "margin_LU": 14.679
+  },
+  {
+   "from_s": 61,
+   "to_s": 64.285,
+   "dialogue_M": -15.773,
+   "background_M": -35.862,
+   "margin_LU": 20.088
+  }
+ ]
 }

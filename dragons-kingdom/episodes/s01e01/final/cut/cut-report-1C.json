@@ -1,6 +1,6 @@
 {
  "title": "Dragon's Kingdom S01E01 - draft cut: 1C",
- "made_at": "2026-11-01T18:20",
+ "made_at": "2026-11-02T05:03",
  "shots_dir": "$DK_DIRECTOR_WORK/shots",
  "size": "960x540",
  "fps": 24,
@@ -66,7 +66,7 @@
    "job": "1C-04",
    "scene": "1C",
    "kind": "3d",
-   "source": "rendered 2026-11-01T17:51",
+   "source": "rendered 2026-11-02T04:56",
    "frames": 96,
    "rec_in": 336,
    "trans": [
@@ -104,7 +104,7 @@
    "job": "1C-06",
    "scene": "1C",
    "kind": "3d",
-   "source": "rendered 2026-11-01T18:19",
+   "source": "rendered 2026-11-02T05:03",
    "frames": 96,
    "rec_in": 576,
    "trans": [
@@ -122,7 +122,7 @@
   {
    "job": "1C-07",
    "scene": "1C",
-   "kind": "missing",
+   "kind": "3d",
    "source": "slate",
    "frames": 60,
    "rec_in": 672,
@@ -141,7 +141,7 @@
   {
    "job": "1C-08",
    "scene": "1C",
-   "kind": "missing",
+   "kind": "3d",
    "source": "slate",
    "frames": 120,
    "rec_in": 732,
@@ -160,7 +160,7 @@
   {
    "job": "1C-09",
    "scene": "1C",
-   "kind": "missing",
+   "kind": "3d",
    "source": "slate",
    "frames": 96,
    "rec_in": 852,
@@ -179,7 +179,7 @@
   {
    "job": "1C-10",
    "scene": "1C",
-   "kind": "missing",
+   "kind": "3d",
    "source": "slate",
    "frames": 144,
    "rec_in": 948,
@@ -198,7 +198,7 @@
   {
    "job": "1C-11",
    "scene": "1C",
-   "kind": "missing",
+   "kind": "3d",
    "source": "slate",
    "frames": 120,
    "rec_in": 1092,
@@ -217,7 +217,7 @@
   {
    "job": "1C-12",
    "scene": "1C",
-   "kind": "missing",
+   "kind": "3d",
    "source": "slate",
    "frames": 96,
    "rec_in": 1212,
@@ -236,7 +236,7 @@
   {
    "job": "1C-13",
    "scene": "1C",
-   "kind": "missing",
+   "kind": "3d",
    "source": "slate",
    "frames": 144,
    "rec_in": 1308,
@@ -255,7 +255,7 @@
   {
    "job": "1C-14",
    "scene": "1C",
-   "kind": "missing",
+   "kind": "3d",
    "source": "slate",
    "frames": 120,
    "rec_in": 1452,
@@ -274,7 +274,7 @@
   {
    "job": "1C-15",
    "scene": "1C",
-   "kind": "missing",
+   "kind": "3d",
    "source": "slate",
    "frames": 216,
    "rec_in": 1572,
@@ -293,7 +293,7 @@
   {
    "job": "1C-16",
    "scene": "1C",
-   "kind": "missing",
+   "kind": "3d",
    "source": "slate",
    "frames": 72,
    "rec_in": 1788,
@@ -312,7 +312,7 @@
   {
    "job": "1C-17",
    "scene": "1C",
-   "kind": "missing",
+   "kind": "3d",
    "source": "slate",
    "frames": 72,
    "rec_in": 1860,
@@ -331,7 +331,7 @@
   {
    "job": "1C-18",
    "scene": "1C",
-   "kind": "missing",
+   "kind": "3d",
    "source": "slate",
    "frames": 72,
    "rec_in": 1932,
@@ -350,7 +350,7 @@
   {
    "job": "1C-19",
    "scene": "1C",
-   "kind": "missing",
+   "kind": "3d",
    "source": "slate",
    "frames": 192,
    "rec_in": 2004,
@@ -1545,19 +1545,60 @@
    ]
   }
  ],
- "audio": [],
+ "audio": [
+  {
+   "ref": "L042",
+   "role": "ABBY",
+   "shot": "1C-09",
+   "file": "vo/L042.wav",
+   "file_in_s": 0,
+   "file_out_s": 1.33,
+   "rec_s": 36.07,
+   "gain_db": 0
+  },
+  {
+   "ref": "L043",
+   "role": "REMI",
+   "shot": "1C-14",
+   "file": "vo/L043.wav",
+   "file_in_s": 0,
+   "file_out_s": 1.295,
+   "rec_s": 60.97,
+   "gain_db": 0
+  },
+  {
+   "ref": "L044",
+   "role": "ABBY",
+   "shot": "1C-14",
+   "file": "vo/L044.wav",
+   "file_in_s": 0,
+   "file_out_s": 0.56,
+   "rec_s": 62.555,
+   "gain_db": 0
+  },
+  {
+   "ref": "L045",
+   "role": "REMI",
+   "shot": "1C-14",
+   "file": "vo/L045.wav",
+   "file_in_s": 0,
+   "file_out_s": 0.86,
+   "rec_s": 63.455,
+   "gain_db": 0
+  }
+ ],
  "output": {
   "file": "episodes/s01e01/final/cut/DragonsKingdom_S01E01_draft-cut_1C.mp4",
   "frames": 9168,
   "duration_s": 382,
-  "size_mb": 9.3,
-  "assembled_s": 23
+  "size_mb": 10.1,
+  "assembled_s": 25
  },
  "summary": {
   "rendered": 6,
   "black": 0,
   "slates": 75,
-  "voice_cues": 0,
+  "voice_cues": 4,
   "review_flags": 0,
   "review_flags_accepted": 0
  }
