@@ -76,7 +76,18 @@ async function createGame(progress) {
   const q = resolveQuality(settings);
   const canvas = $('#game');
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: q.aa === 'msaa', powerPreference: 'high-performance', stencil: false });
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  // presets without the post chain (phone/low) get the filmic curve plus the
+  // same saturation/contrast grade inside every material's tone mapping
+  THREE.ShaderChunk.tonemapping_pars_fragment = THREE.ShaderChunk.tonemapping_pars_fragment.replace(
+    'vec3 CustomToneMapping( vec3 color ) { return color; }',
+    `vec3 CustomToneMapping( vec3 color ) {
+  vec3 c = ACESFilmicToneMapping( color );
+  float l = dot( c, vec3( 0.2126, 0.7152, 0.0722 ) );
+  c = mix( vec3( l ), c, 1.1 );
+  c = 0.18 * pow( max( c, 0.0 ) / 0.18, vec3( 1.05 ) );
+  return clamp( c, 0.0, 1.0 );
+}`);
+  renderer.toneMapping = THREE.CustomToneMapping;
   renderer.toneMappingExposure = 1.0;
   renderer.info.autoReset = false;
   renderer.shadowMap.enabled = q.shadows > 0;
@@ -103,6 +114,7 @@ async function createGame(progress) {
   progress(0.66, 'Shaping the terrain');
   await nextFrame();
   const terrain = createTerrain(hm, q, scene, surf);
+  collision.terrainCell = terrain.cell; // feet follow the drawn terrain triangles, not the smoother heightmap
   const water = createWater(scene, renderer, q);
   const roads = createRoads(graph, hm, q, scene, collision, surf);
   progress(0.74, 'Building Port Calvera and Mill Creek');
@@ -110,7 +122,7 @@ async function createGame(progress) {
   const city = createBuildings(hm, q, scene, collision, surf);
   progress(0.84, 'Growing Pinewood Hollow');
   await nextFrame();
-  const veg = await createVegetation(hm, q, scene, collision, city.cityBlocks, (p) => progress(0.84 + p * 0.07, 'Growing forests'));
+  const veg = await createVegetation(hm, q, scene, collision, city.cityBlocks, (p) => progress(0.84 + p * 0.07, 'Growing forests'), surf, settings.grass === false ? 0 : 1);
   addSidewalkColliders(collision);
   progress(0.92, 'Lighting the sky');
   await nextFrame();
@@ -291,6 +303,7 @@ async function createGame(progress) {
   const aimDir = new THREE.Vector3(), muzzle = new THREE.Vector3();
 
   const tmpV = new THREE.Vector3();
+  const _sunC = new THREE.Color();
   const focus = new THREE.Vector3();
   let last = performance.now();
 
@@ -456,9 +469,14 @@ async function createGame(progress) {
     const dd = basePreset.drawDistance * settings.drawDistance;
     terrain.update(camera.position, dd);
     veg.update(camera.position, dd);
+    if (veg.cover.update) {
+      veg.cover.update(camera.position, sky.sunDir, _sunC.copy(sky.sun.color).multiplyScalar(sky.sun.intensity), weather);
+      const pp = S.mode === 'foot' ? player.pos : S.vehicle ? S.vehicle.pos : focus;
+      veg.cover.push(0, pp.x, pp.y, pp.z, S.mode === 'foot' ? 0.9 : 2.6);
+    }
     water.update(camera.position);
     roads.update(sky.night);
-    scene.fog.density = 1.25 / Math.max(dd, 400) * (1 + sky.night * 0.5) * weather.fog;
+    scene.fog.density = 1.25 / Math.max(dd, 400) * (1 + sky.night * 0.5) * weather.fog * (0.6 + 0.4 * Math.max(sky.night, weather.dark));
     grassUniforms.uSunDir.value.copy(sky.sunDir);
     grassUniforms.uSunColor.value.copy(sky.sun.color).multiplyScalar(sky.sun.intensity * 0.35);
     grassUniforms.uAmbient.value.copy(sky.hemi.color).multiplyScalar(0.12 + sky.hemi.intensity * 0.9);
@@ -484,6 +502,10 @@ async function createGame(progress) {
     if (post) {
       post.grade.uniforms.uWarm.value = 0.012 + (sky.hour > 16 && sky.hour < 20 ? 0.018 : 0);
       post.grade.uniforms.uNight.value = sky.night;
+      // clear daylight gets the punchier, more saturated grade; storms and night stay muted
+      const dayK = (1 - sky.night) * (1 - weather.dark * 0.8);
+      post.grade.uniforms.uSat.value = 1.02 + dayK * 0.12;
+      post.grade.uniforms.uContrast.value = 1.02 + dayK * 0.07;
       const aimingNow = S.mode === 'foot' && player.aiming && armed;
       post.update(sky.sunDir, sky.sunDir.y > 0.02 && weather.cover < 0.75, aimingNow ? 18 : camera.position.distanceTo(focus) + 1, aimingNow);
     }
@@ -655,6 +677,7 @@ async function createGame(progress) {
     },
     pause: setPaused,
     freeze(f) { S.frozen = f; },
+    renderNow() { render(); },
     // Advance the game by exactly n fixed steps (used to capture smooth video on slow machines)
     step(n = 1, dt = 1 / 30) { for (let i = 0; i < n; i++) tick(dt); S.fps = 1 / dt; },
     toggleMap: () => hud.toggleMap(),

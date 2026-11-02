@@ -23,6 +23,13 @@ export const UAL_TO_MH = {
   'DEF-thighL': 'upperleg01L', 'DEF-shinL': 'lowerleg01L', 'DEF-footL': 'footL',
   'DEF-thighR': 'upperleg01R', 'DEF-shinR': 'lowerleg01R', 'DEF-footR': 'footR',
 };
+// fingers too, so hands relax / grip with the animation instead of staying in
+// the model's curled rest pose (MakeHuman: finger1 = thumb ... finger5 = pinky)
+for (const side of ['L', 'R']) {
+  ['thumb', 'f_index', 'f_middle', 'f_ring', 'f_pinky'].forEach((f, i) => {
+    for (let s = 1; s <= 3; s++) UAL_TO_MH[`DEF-${f}0${s}${side}`] = `finger${i + 1}-${s}${side}`;
+  });
+}
 
 function restWorld(root) {
   root.updateMatrixWorld(true);
@@ -52,7 +59,12 @@ export function bakeClips(srcRoot, clips, dstRoot, map, fps = 30) {
   for (const p of pairs) {
     p.align = new THREE.Quaternion();
     const sc = mappedChild(p.s, srcSet);
-    if (!sc) continue;
+    if (!sc) {
+      // end bones (finger tips) follow their parent's rest alignment
+      const pp = pairs.find((o) => o.d === p.d.parent);
+      if (pp && pp.align) p.align.copy(pp.align);
+      continue;
+    }
     const dc = srcSet.get(sc).d;
     const ds = srcRest.get(sc).p.clone().sub(srcRest.get(p.s).p);
     const dd = dstRest.get(dc).p.clone().sub(dstRest.get(p.d).p);

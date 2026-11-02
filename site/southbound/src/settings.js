@@ -123,7 +123,6 @@ export function resolveQuality(s) {
   if (s.ao !== null) p.ao = s.ao;
   if (s.shadows !== null) p.shadows = s.shadows;
   if (s.aa !== null) p.aa = s.aa;
-  if (s.grass === true) p.grass = { medium: 25000, high: 60000, ultra: 120000 }[s.preset] || 0;
   p.treeCount = Math.round(p.treeCount * s.treeDensity);
   p.traffic = Math.round(p.traffic * s.trafficDensity);
   p.drawDistance *= s.drawDistance;

@@ -174,9 +174,9 @@ export function createCloudSky(renderer, quality) {
   const sky = new Sky();
   sky.scale.setScalar(1000);
   const u = sky.material.uniforms;
-  u.turbidity.value = 3.2;
-  u.rayleigh.value = 2.1;
-  u.mieCoefficient.value = 0.004;
+  u.turbidity.value = 2.4;
+  u.rayleigh.value = 2.4;
+  u.mieCoefficient.value = 0.003;
   u.mieDirectionalG.value = 0.82;
   Object.assign(u, {
     tCloudNoise: { value: makeCloudNoise(quality.key === 'phone' ? 48 : 64) },

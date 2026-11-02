@@ -1,6 +1,7 @@
 // Spatial hash of static colliders: boxes (buildings), circles (trunks, poles),
 // and bridge decks (walkable/drivable surfaces above the terrain).
 import { distToSeg, lerp } from '../util.js';
+import { CITY, TOWN } from './layout.js';
 
 const CELL = 32;
 const key = (i, j) => i * 73856093 ^ j * 19349663;
@@ -10,6 +11,46 @@ export class CollisionWorld {
     this.hm = hm;
     this.cells = new Map();
     this.boxes = [];
+    this.terrainCell = 0;
+  }
+  // Height of the terrain exactly as the terrain mesh draws it (its triangles,
+  // not the bilinear heightmap), so feet and tyres sit on the visible ground.
+  terrainY(x, z) {
+    const c = this.terrainCell, hm = this.hm;
+    if (!c) return hm.height(x, z);
+    const half = hm.half;
+    const u = (x + half) / c, v = (z + half) / c;
+    const i = Math.floor(u), j = Math.floor(v), fx = u - i, fz = v - j;
+    const x0 = -half + i * c, z0 = -half + j * c;
+    if (fx + fz <= 1) {
+      const ha = hm.height(x0, z0), hb = hm.height(x0 + c, z0), hc = hm.height(x0, z0 + c);
+      return ha + (hb - ha) * fx + (hc - ha) * fz;
+    }
+    const hd = hm.height(x0 + c, z0 + c), hb = hm.height(x0 + c, z0), hc = hm.height(x0, z0 + c);
+    return hd + (hc - hd) * (1 - fx) + (hb - hd) * (1 - fz);
+  }
+  // City/town paving: streets (+0.10), curb rim (+0.18), sidewalk slabs (+0.22)
+  paved(x, z) {
+    for (const G of [CITY, TOWN]) {
+      const lx = x - G.x0, lz = z - G.z0, hs = G.street / 2;
+      if (lx < -hs || lz < -hs || lx > G.nx * G.pitch + hs || lz > G.nz * G.pitch + hs) continue;
+      const i = Math.floor(lx / G.pitch), j = Math.floor(lz / G.pitch);
+      if (i >= 0 && i < G.nx && j >= 0 && j < G.nz) {
+        const m = Math.max(Math.abs(lx - (i + 0.5) * G.pitch), Math.abs(lz - (j + 0.5) * G.pitch)), w = (G.pitch - G.street) / 2;
+        if (m < w) return G.height + 0.22;
+        if (m < w + 0.2) return G.height + 0.18;
+      }
+      return G.height + 0.1;
+    }
+    return null;
+  }
+  // road ribbons (drawn 0.1 m above the shaped terrain)
+  addRoad(pts, ys, width) {
+    for (let i = 0; i < pts.length - 1; i++) {
+      const a = pts[i], b = pts[i + 1], hw = width / 2;
+      this._insert(Math.min(a[0], b[0]) - hw, Math.min(a[1], b[1]) - hw, Math.max(a[0], b[0]) + hw, Math.max(a[1], b[1]) + hw,
+        { t: 3, ax: a[0], az: a[1], bx: b[0], bz: b[1], ya: ys[i], yb: ys[i + 1], hw });
+    }
   }
   _insert(minX, minZ, maxX, maxZ, item) {
     const i0 = Math.floor(minX / CELL), i1 = Math.floor(maxX / CELL);
@@ -45,15 +86,23 @@ export class CollisionWorld {
 
   // Ground height under (x,z) for something currently at height y.
   surface(x, z, y) {
-    let h = this.hm.height(x, z);
+    const pv = this.paved(x, z);
+    let h = pv !== null ? pv : this.terrainY(x, z);
     this.query(x, z, 1, (it) => {
-      if (it.t === 2) {
+      if (it.t === 3) {
+        if (pv !== null) return;
+        const r = distToSeg(x, z, it.ax, it.az, it.bx, it.bz);
+        if (r.d < it.hw) {
+          const dy = lerp(it.ya, it.yb, r.t) + 0.1;
+          if (dy > h && dy < y + 1.0) h = dy;
+        }
+      } else if (it.t === 2) {
         const r = distToSeg(x, z, it.ax, it.az, it.bx, it.bz);
         if (r.d < it.hw) {
           const dy = lerp(it.ya, it.yb, r.t) + 0.1;
           if (dy > h && dy < y + 1.6) h = dy;
         }
-      } else if (it.t === 0 && it.data && it.data.walkable) {
+      } else if (it.t === 0) {
         if (x > it.minX && x < it.maxX && z > it.minZ && z < it.maxZ && it.y1 < y + 0.6 && it.y1 > h) h = it.y1;
       }
     });
@@ -63,7 +112,7 @@ export class CollisionWorld {
   // Push a circle (x,z,r) at height range [y, y+height] out of colliders.
   // Returns {x, z, hit, nx, nz}
   resolve(x, z, r, y, height, out = {}) {
-    out.hit = false; out.nx = 0; out.nz = 0;
+    out.hit = false; out.nx = 0; out.nz = 0; out.box = null;
     for (let iter = 0; iter < 2; iter++) {
       this.query(x, z, r + 1, (it) => {
         if (it.t === 0) {
@@ -83,7 +132,7 @@ export class CollisionWorld {
             dx /= d; dz /= d;
             x = cx + dx * r; z = cz + dz * r;
           }
-          out.hit = true; out.nx = dx; out.nz = dz;
+          out.hit = true; out.nx = dx; out.nz = dz; out.box = it;
         } else if (it.t === 1) {
           let dx = x - it.x, dz = z - it.z;
           const d = Math.hypot(dx, dz), R = r + it.r;
