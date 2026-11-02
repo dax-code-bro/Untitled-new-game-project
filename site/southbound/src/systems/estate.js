@@ -139,9 +139,17 @@ export function installEstate(game) {
     } else if (kind === 'store') {
       const prodM = [0xb03030, 0x3070b0, 0xd0a020, 0x30904a, 0xe0e0e0].map((c) => M(c, 0.5));
       for (let x = -W / 2 + 2.2; x < W / 2 - 3; x += 2.6) {
-        const sh = put(QH('Shelf_Large'), 1.9, x, -0.6, Math.PI / 2, 'y');
-        if (!sh) F(0.6, 1.8, D - 5, x, -0.8, 0x9a9a9a, 0, true, 0.4);
-        for (let k = 0; k < 15; k++) { const pb = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.28, 0.18), prodM[(k + Math.floor(x)) % 5]); pb.position.set(x + (k % 2 ? 0.18 : -0.18), 0.45 + (k % 3) * 0.55, -0.6 - 1.2 + Math.floor(k / 3) * 0.6); g.add(pb); }
+        for (const zc of [-1.6, 0.8]) {
+          const sh = put(QH('Shelf_Large'), 1.9, x, zc, Math.PI / 2, 'y');
+          const sz = sh ? sh.userData.size : new THREE.Vector3(2, 1.9, 0.5);
+          if (!sh) F(0.5, 1.9, 2, x, zc, 0x9a9a9a, 0, true, 0.4);
+          // stock on each shelf level, across the shelf's width
+          for (let lv = 0; lv < 4; lv++) for (let k = 0; k < 6; k++) {
+            const pb = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.24, 0.2), prodM[(k + lv + Math.floor(x)) % 5]);
+            pb.position.set(x + (k % 2 ? 0.08 : -0.08), 0.12 + sz.y * (0.06 + lv * 0.24), zc + (k - 2.5) * (sz.x / 6.5));
+            g.add(pb);
+          }
+        }
       }
       for (let k = 0; k < 3; k++) put(K('CommercialRefrigerator'), 2.0, -W / 2 + 1.5 + k * 1.3, -D / 2 + 0.55, 0, 'y');
       put(QH('Kitchen_3Drawers'), 2.2, W / 2 - 2, D / 2 - 2.5, Math.PI, 'max');
