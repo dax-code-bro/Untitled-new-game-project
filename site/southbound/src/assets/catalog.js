@@ -45,6 +45,7 @@ export const CLASS_LIST = CLASSES.map((c) => c[0]);
   registerSpec('tow-truck', { ...deriveSpec('truck', { L: 5.9, W: 2.05 }), tow: true, spokes: 0 });
   VEHICLES['police-suv'] = { name: 'Calvera PD Interceptor SUV', len: 5.05, accel: 12, top: 60, grip: 7.8, weight: 0 };
   VEHICLES['tow-truck'] = { name: 'Gulfline Wrecker', len: 5.9, accel: 7.5, top: 42, grip: 6, weight: 0 };
+  VEHICLES.concept = { name: 'Gulfstar Concept', len: 4.45, accel: 15, top: 82, grip: 10, weight: 0 };
   for (const [cls, base, count, dims, hand, price, tw] of CLASSES) {
     if (!base) {
       for (const [id, name, pr] of FIXED[cls]) { LAND.push({ id, cls, name, price: pr || 25000, base: id, restricted: pr === 0 }); n++; }
@@ -70,6 +71,9 @@ export const CLASS_LIST = CLASSES.map((c) => c[0]);
     }
   }
 }
+
+// realistic open-source model (Khronos glTF sample 'CarConcept', CC-BY 4.0), PC presets
+LAND.push({ id: 'concept', cls: 'Super', name: 'Gulfstar Concept (photoreal)', price: 450000, base: 'concept' });
 
 // --- tuning: 63 parts per car (48 performance + 15 looks) -------------------
 // effect keys: accel, top, grip, brake, armor (extra health), ride (lowering, m), nitro

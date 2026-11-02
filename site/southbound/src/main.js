@@ -122,7 +122,7 @@ async function createGame(progress) {
   player.pos.set(spawn.x, collision.surface(spawn.x, spawn.z, 50), spawn.z);
   player.heading = Math.PI / 2;
   const parked = [];
-  const myCar = new Vehicle(lib, 'sedan-sports');
+  const myCar = new Vehicle(lib, lib.cars.concept ? 'concept' : 'sedan-sports');
   myCar.pos.set(CITY.x0 - 14, CITY.height + 0.1, spawn.z - 6);
   myCar.heading = Math.PI / 2;
   myCar.sync(0);

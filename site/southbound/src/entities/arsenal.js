@@ -6,6 +6,10 @@
 // assembled in code from receiver, barrel, stock, magazine, sights and grip
 // parts. All names are invented for this game.
 import * as THREE from 'three';
+import { loadOpen, loaded, instance, Q } from '../assets/open.js';
+// open-source bow models (Quaternius CC0 medieval weapons pack)
+const BOW_MODELS = [Q('medieval_weapons_pack', 'Bow_Wooden'), Q('medieval_weapons_pack', 'Bow_Wooden2')];
+BOW_MODELS.forEach(loadOpen);
 
 const MAKERS = ['Calvera Arms', 'Gulfline', 'Redgrass Works', 'Brazos Ordnance', 'Port Iron', 'Sabine & Co.', 'Mill Creek Forge', 'Arden Precision', 'Sierra Norte Arms', 'Bayou Tactical', 'Lone Heron', 'Cypress Armory'];
 const FINISH = [[0.03, 0.03, 0.035], [0.18, 0.16, 0.12], [0.24, 0.22, 0.17], [0.07, 0.09, 0.06], [0.32, 0.33, 0.35], [0.5, 0.5, 0.52], [0.14, 0.06, 0.03]];
@@ -118,7 +122,14 @@ export function buildWeaponModel(w) {
   const wood = mat([0.22, 0.1, 0.04], 0.55, 0), poly = m.wood ? wood : mat([0.04, 0.04, 0.045], 0.7, 0.1);
   const box = (sx, sy, sz, x, y, z, mm, rx = 0) => { const b = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), mm); b.position.set(x, y, z); b.rotation.x = rx; g.add(b); return b; };
   const cyl = (r, l, x, y, z, mm, seg = 12) => { const c = new THREE.Mesh(new THREE.CylinderGeometry(r, r, l, seg), mm); c.rotation.x = Math.PI / 2; c.position.set(x, y, z + l / 2); g.add(c); return c; };
-  if (m.bow) {
+  const bowG = m.bow ? loaded(BOW_MODELS[(w.id.length + (m.cams ? 1 : 0)) % 2]) : null;
+  if (bowG) {
+    const b = instance(bowG, m.bow * 1.05);
+    b.rotation.y = Math.PI / 2;
+    b.position.y = -m.bow * 0.5;
+    g.add(b);
+    g.userData.muzzle = new THREE.Vector3(0, 0.02, 0.1);
+  } else if (m.bow) {
     // riser + two curved limbs + string, held vertically
     const L = m.bow * 0.5;
     box(0.03, 0.22, 0.04, 0, 0, 0.02, poly);

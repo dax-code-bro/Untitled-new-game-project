@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { bakeClips, UAL_TO_MH } from './retarget.js';
 import { buildCar } from './carbuilder.js';
+import { loadOpen, K } from './open.js';
 
 // Realistic people built from CC0 MakeHuman assets (tools/southbound/build-human.py)
 export const PEOPLE_ALL = ['mh_m1', 'mh_m2', 'mh_m3', 'mh_m4', 'mh_f1', 'mh_f2', 'mh_cop'];
@@ -30,6 +31,29 @@ export const VEHICLES = {
 // The body types built at load time (catalog models are built on first use)
 export const BASE_CAR_IDS = Object.keys(VEHICLES);
 
+// Wrap the concept car: wheels under pivots named like the game expects, nose toward +z
+function prepareConcept(scene) {
+  const root = new THREE.Group();
+  const model = scene;
+  root.add(model);
+  root.updateMatrixWorld(true);
+  const box = new THREE.Box3();
+  const center = (name) => { const n = model.getObjectByName(name); return n ? box.setFromObject(n).getCenter(new THREE.Vector3()) : null; };
+  const head = center('BodyHeadlights'), tail = center('BodyTaillights');
+  if (head && tail && head.z < tail.z) { model.rotation.y = Math.PI; root.updateMatrixWorld(true); }
+  for (const [k, name] of [['FrontL', 'wheel-front-left'], ['FrontR', 'wheel-front-right'], ['RearL', 'wheel-back-left'], ['RearR', 'wheel-back-right']]) {
+    const tire = model.getObjectByName('Wheel' + k);
+    if (!tire) continue;
+    const c = box.setFromObject(tire).getCenter(new THREE.Vector3());
+    const pivot = new THREE.Group(); pivot.name = name; pivot.position.copy(c);
+    root.add(pivot); pivot.updateMatrixWorld(true);
+    for (const part of ['', 'Rim', 'BrakeDisc']) { const n = model.getObjectByName('Wheel' + k + part); if (n) pivot.attach(n); }
+  }
+  root.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  root.userData.hasLights = true; root.userData.paintable = true;
+  return root;
+}
+
 function tunePerson(scene) {
   scene.traverse((o) => {
     if (!o.isMesh) return;
@@ -54,6 +78,11 @@ export async function loadLibrary(quality, progress = () => {}) {
 
   const anims = await loader.loadAsync(base + 'anims/ual.glb');
   step('Loading animations');
+  // the realistic concept car (Khronos glTF sample, CC-BY 4.0 / CC0 base) on PC
+  if (quality.key !== 'phone' && quality.key !== 'low') {
+    const g = await loadOpen(K('CarConcept'));
+    if (g) lib.cars.concept = prepareConcept(g.scene);
+  }
   for (const id of carIds) {
     lib.cars[id] = buildCar(id, quality);
     step('Building vehicles');

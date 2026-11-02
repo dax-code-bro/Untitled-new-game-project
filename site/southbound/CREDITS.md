@@ -36,3 +36,23 @@ Where the files came from (GitHub mirrors of the original downloads):
 - `github.com/Papyszoo/CC0-Public-Domain-Textures`: ambientCG and Poly Haven textures as KTX2 (repo license CC0-1.0)
 
 To regenerate `assets/`, see `tools/southbound/pack-assets.mjs`.
+
+## Open-source 3D models (`assets/open/`, packed by `tools/southbound/pack-open.mjs`)
+
+From the [Khronos glTF Sample Assets](https://github.com/KhronosGroup/glTF-Sample-Assets) (textures re-encoded to WebP, meshes compressed with meshopt; Khronos logos removed):
+
+| Model | Used as | Credit / license |
+|---|---|---|
+| CarConcept | "Gulfstar Concept" supercar, the PC starter car | © 2024 Darmstadt Graphics Group GmbH, Eric Chadwick (model and textures), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/); based on a public-domain concept car by Unity Fan |
+| GlamVelvetSofa | living-room sofa | © 2021 Wayfair, LLC, Eric Chadwick, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) |
+| SheenWoodLeatherSofa | living-room sofa | © 2024 Darmstadt Graphics Group GmbH, Eric Chadwick (improvements), CC BY 4.0; original by Fran Calvente, CC0 |
+| ChairDamaskPurplegold | dining chair | © 2021 Wayfair, Eric Chadwick, CC BY 4.0 |
+| CommercialRefrigerator | store fridges | © 2025 Darmstadt Graphics Group GmbH, Eric Chadwick, CC BY 4.0; based on "Commercial Fridge" by Sean Thomas, CC BY 4.0 |
+| DiffuseTransmissionPlant | table plant | © 2024 Darmstadt Graphics Group GmbH, Eric Chadwick (materials), CC BY 4.0; original by Rico Cilliers, CC0 |
+| Fox | red fox (wildlife) | model by PixelMannen (CC0); rigging and animation © 2014 tomkranis, CC BY 4.0 |
+| SheenChair | chairs | © 2020 Wayfair, LLC, CC0 |
+| Lantern, BarramundiFish, BoomBox, WaterBottle, AntiqueCamera | props, caught fish | Microsoft and others, CC0 |
+
+From [Quaternius](https://quaternius.com) (CC0, via [quaternius-showcase](https://github.com/trebeljahr/quaternius-showcase)):
+Animals pack (deer, stag, wolf as coyote, horse, cow, bull — rigged and animated), House Interior pack (beds, sofas, kitchens,
+bathrooms, lamps, shelves, plants, curtains), Fish pack (fish, shark), Medieval Weapons pack (wooden bows).

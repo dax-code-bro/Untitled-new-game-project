@@ -7,6 +7,7 @@ import * as THREE from 'three';
 import { CITY, TOWN, LAKE } from '../world/layout.js';
 import { ShopUI } from '../ui/shop.js';
 import { nearestRoad, money, keyHint } from './world-util.js';
+import { loadOpen, loaded, instance, Q, K } from '../assets/open.js';
 
 const STREETS = ['Bayou Ave', 'Magnolia St', 'Pelican Way', 'Cypress Ln', 'Harbor Blvd', 'Gulf St', 'Live Oak Dr', 'Calvera Ave', 'Sabine St', 'Pecan Ct', 'Mockingbird Ln', 'Levee Rd', 'Cotton Row', 'Shrimp Dock Rd', 'Heron Pl', 'Mission St'];
 const TYPES = { 4: 'House', 2: 'Apartment', 5: 'Storefront', 3: 'Warehouse', 1: 'Office', 0: 'Penthouse' };
@@ -80,48 +81,103 @@ export function installEstate(game) {
     const winM = new THREE.MeshStandardMaterial({ color: 0x223040, emissive: 0xbfd6ee, emissiveIntensity: 0.8, roughness: 0.1 });
     for (let x = -W / 2 + 2; x < W / 2 - 1.5; x += 3.2) { const w = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.4), winM); w.position.set(x, 1.6, -D / 2 + 0.01); g.add(w); }
     const door = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 2.2), M(0x3a2a1c, 0.6)); door.position.set(0, 1.1, D / 2 - 0.01); door.rotation.y = Math.PI; g.add(door);
-    // furniture
-    const F = (w, h, dd, x, z, c, y = 0, solid = true, rough = 0.7) => boxAt(g, w, h, dd, x, y, z, M(c, rough), solid, o);
-    const rugC = [0x7a2e24, 0x2e4a6a, 0x6a5a3a, 0x3e5a3a][Math.floor(r() * 4)];
-    if (kind === 'home' || kind === 'apartment') {
-      F(4, 0.02, 3, -W / 4, 0.5, rugC, 0, false, 0.95);
-      F(2.6, 0.45, 0.95, -W / 4, -0.8, 0x5a6470); F(2.6, 0.5, 0.2, -W / 4, -1.2, 0x5a6470, 0.45); F(0.2, 0.3, 0.95, -W / 4 - 1.2, -0.8, 0x5a6470, 0.45); F(0.2, 0.3, 0.95, -W / 4 + 1.2, -0.8, 0x5a6470, 0.45);
-      F(1.2, 0.4, 0.6, -W / 4, 0.9, 0x6b4a2e);
-      F(1.6, 0.5, 0.45, -W / 4, 2.6, 0x2a2a2a); const tv = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 0.8), new THREE.MeshStandardMaterial({ color: 0x050608, emissive: 0x3060a0, emissiveIntensity: 0.6 })); tv.position.set(-W / 4, 1.0, 2.6 - 0.24); tv.rotation.y = Math.PI; g.add(tv);
-      F(2.0, 0.5, 2.2, W / 4 + 0.5, -D / 2 + 1.4, 0x8a7a66); F(2.0, 0.25, 2.1, W / 4 + 0.5, -D / 2 + 1.4, 0xece6da, 0.5); F(2.0, 0.9, 0.12, W / 4 + 0.5, -D / 2 + 0.35, 0x6b4a2e, 0.5);
-      F(1.2, 2.0, 0.6, W / 2 - 0.4, -D / 2 + 3.4, 0x6b4a2e);
-      for (let k = 0; k < 4; k++) F(0.62, 0.9, 0.62, W / 2 - 0.35, D / 2 - 1.6 - k * 0.64, 0xcfc9be);
-      F(0.7, 1.8, 0.7, W / 2 - 0.4, D / 2 - 4.4, 0xe0e0e0, 0, true, 0.3);
-      F(1.4, 0.75, 0.9, W / 4, D / 4, 0x7a5a3a); for (const sx of [-1, 1]) F(0.45, 0.9, 0.45, W / 4 + sx * 1.0, D / 4, 0x4a3a2a);
-      F(0.35, 1.5, 0.35, -W / 2 + 0.6, -D / 2 + 0.6, 0x2f5a2f, 0, false);
-    } else if (kind === 'office') {
-      for (let x = -W / 2 + 2; x < W / 2 - 1; x += 3) for (let z = -D / 2 + 2.2; z < D / 2 - 2.5; z += 2.6) {
-        F(1.6, 0.75, 0.8, x, z, 0xd9d6d0, 0, true, 0.5);
-        const mon = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.35, 0.04), new THREE.MeshStandardMaterial({ color: 0x080808, emissive: 0x4070b0, emissiveIntensity: 0.5 })); mon.position.set(x, 1.0, z - 0.2); g.add(mon);
-        F(0.5, 0.5, 0.5, x, z + 0.7, 0x222326);
+    // furniture: open-source models (Quaternius house interior pack + Khronos sample assets)
+    const QH = (n) => Q('house_interior_pack', n);
+    const put = (rel, size, x, z, rot = 0, axis = 'max', solid = true, y = 0) => {
+      const gl = loaded(rel);
+      if (!gl) return null;
+      const m = instance(gl, size, axis);
+      m.position.set(x, y, z); m.rotation.y = rot; g.add(m);
+      if (solid) {
+        const sz = m.userData.size, sw = Math.abs(Math.sin(rot)) > 0.5;
+        const hx = (sw ? sz.z : sz.x) / 2, hz = (sw ? sz.x : sz.z) / 2;
+        collision.addBox(o.x + x - hx, o.z + z - hz, o.x + x + hx, o.z + z + hz, o.y + y, o.y + y + sz.y);
       }
-      F(3, 1.1, 0.8, 0, D / 2 - 2.2, 0x5a4a3a);
+      return m;
+    };
+    const F = (w, h, dd, x, z, c, y = 0, solid = true, rough = 0.7) => boxAt(g, w, h, dd, x, y, z, M(c, rough), solid, o);
+    const pick = (arr) => arr[Math.floor(r() * arr.length)];
+    const plant = () => QH(pick(['Houseplant_1', 'Houseplant_3', 'Houseplant_5', 'Houseplant_7']));
+    if (kind === 'home' || kind === 'apartment') {
+      put(QH(pick(['Carpet_1', 'Carpet_2', 'Carpet_Round'])), 3.2, -W / 4, -D / 2 + 2.6, 0, 'max', false);
+      put(r() < 0.5 ? K('GlamVelvetSofa') : K('SheenWoodLeatherSofa'), 2.3, -W / 4, -D / 2 + 1.0, 0);
+      put(QH('Table_RoundSmall'), 0.9, -W / 4, -D / 2 + 2.5, 0);
+      put(QH('Drawer_1'), 1.5, -W / 4, -D / 2 + 4.3, Math.PI);
+      const tv = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.75, 0.06), new THREE.MeshStandardMaterial({ color: 0x050608, roughness: 0.2, emissive: 0x2a4f80, emissiveIntensity: 0.5 }));
+      tv.position.set(-W / 4, 1.45, -D / 2 + 4.3); g.add(tv);
+      put(QH(pick(['Light_Floor1', 'Light_Floor2', 'Light_Stand1'])), 1.7, -W / 2 + 0.6, -D / 2 + 0.6, 0, 'y');
+      put(QH('Bookshelf'), 2.0, -W / 2 + 0.35, 0.5, Math.PI / 2, 'y');
+      put(plant(), 1.2, -W / 2 + 0.6, D / 2 - 0.8, 0, 'y');
+      put(K('DiffuseTransmissionPlant'), 0.6, -W / 4 + 0.3, -D / 2 + 2.5, 0, 'y', false, 0.45);
+      put(QH(pick(['Bed_King', 'Bed_Single'])), 2.2, W / 4 + 0.4, -D / 2 + 1.3, 0);
+      put(QH('NightStand_1'), 0.6, W / 4 - 0.9, -D / 2 + 0.45, 0, 'y');
+      put(QH('Light_Desk'), 0.5, W / 4 - 0.9, -D / 2 + 0.45, 0, 'y', false, 0.62);
+      put(QH(pick(['Drawer_2', 'Drawer_3'])), 1.3, W / 2 - 0.35, -D / 2 + 2.6, -Math.PI / 2);
+      put(QH('Kitchen_Fridge'), 1.9, W / 2 - 0.45, D / 2 - 0.7, -Math.PI / 2, 'y');
+      put(QH('Kitchen_Oven'), 0.95, W / 2 - 0.4, D / 2 - 1.6, -Math.PI / 2, 'y');
+      put(QH('Kitchen_Sink'), 0.95, W / 2 - 0.4, D / 2 - 2.4, -Math.PI / 2, 'y');
+      put(QH('Kitchen_2Drawers'), 0.95, W / 2 - 0.4, D / 2 - 3.3, -Math.PI / 2, 'y');
+      put(QH('Table_RoundLarge'), 1.3, W / 4 - 0.6, D / 4, 0);
+      put(K('SheenChair'), 0.95, W / 4 - 0.6, D / 4 - 1.0, 0, 'y');
+      put(K('SheenChair'), 0.95, W / 4 - 0.6, D / 4 + 1.0, Math.PI, 'y');
+      put(K('ChairDamaskPurplegold'), 1.0, W / 4 - 1.6, D / 4, Math.PI / 2, 'y');
+      put(K('Lantern'), 0.45, W / 4 - 0.6, D / 4, 0, 'y', false, 0.75);
+      if (b.style === 4) { put(QH('Fireplace'), 1.6, -W / 2 + 0.4, -1.8, Math.PI / 2); put(QH('Bathroom_Toilet'), 0.8, -W / 2 + 0.5, D / 2 - 2.0, Math.PI / 2, 'y'); put(QH('Bathroom_Sink'), 0.9, -W / 2 + 0.4, D / 2 - 3.0, Math.PI / 2, 'y'); }
+      for (const cx of [-W / 4, W / 4]) put(QH('Curtains_Double'), 2.2, cx, -D / 2 + 0.12, 0, 'max', false, 0.4);
+      put(QH('Trashcan_Small1'), 0.4, W / 2 - 0.4, D / 2 - 4.0, 0, 'y');
+      put(K('BoomBox'), 0.5, -W / 4 + 0.7, -D / 2 + 4.3, Math.PI, 'max', false, 0.8);
+    } else if (kind === 'office') {
+      for (let x = -W / 2 + 2.2; x < W / 2 - 1.5; x += 3.2) for (let z = -D / 2 + 2.2; z < D / 2 - 2.5; z += 2.8) {
+        put(QH('Kitchen_2Drawers'), 1.5, x, z, 0, 'max');
+        const mon = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.34, 0.04), new THREE.MeshStandardMaterial({ color: 0x080808, emissive: 0x4070b0, emissiveIntensity: 0.5 })); mon.position.set(x, 1.15, z - 0.15); g.add(mon);
+        put(K('SheenChair'), 0.95, x, z + 0.8, Math.PI, 'y');
+      }
+      put(QH('Couch_Medium1'), 2.0, -W / 2 + 1.4, D / 2 - 1.0, Math.PI);
+      put(QH('Shelf_Large'), 2.0, W / 2 - 0.35, 0, -Math.PI / 2, 'y');
+      put(plant(), 1.3, W / 2 - 0.6, D / 2 - 0.6, 0, 'y'); put(plant(), 1.3, -W / 2 + 0.6, -D / 2 + 0.6, 0, 'y');
+      put(K('WaterBottle'), 0.3, -W / 2 + 2.0, D / 2 - 1.0, 0, 'y', false, 0.45);
     } else if (kind === 'store') {
       const prodM = [0xb03030, 0x3070b0, 0xd0a020, 0x30904a, 0xe0e0e0].map((c) => M(c, 0.5));
-      for (let x = -W / 2 + 2; x < W / 2 - 3; x += 2.6) {
-        F(0.6, 1.8, D - 5, x, -0.8, 0x9a9a9a, 0, true, 0.4);
-        for (let k = 0; k < 18; k++) { const p = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.3, 0.2), prodM[(k + Math.floor(x)) % 5]); p.position.set(x + (k % 2 ? 0.3 : -0.3), 0.5 + (k % 3) * 0.55, -0.8 - (D - 5) / 2 + 0.4 + Math.floor(k / 3) * ((D - 5) / 6)); g.add(p); }
+      for (let x = -W / 2 + 2.2; x < W / 2 - 3; x += 2.6) {
+        const sh = put(QH('Shelf_Large'), 1.9, x, -0.6, Math.PI / 2, 'y');
+        if (!sh) F(0.6, 1.8, D - 5, x, -0.8, 0x9a9a9a, 0, true, 0.4);
+        for (let k = 0; k < 15; k++) { const pb = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.28, 0.18), prodM[(k + Math.floor(x)) % 5]); pb.position.set(x + (k % 2 ? 0.18 : -0.18), 0.45 + (k % 3) * 0.55, -0.6 - 1.2 + Math.floor(k / 3) * 0.6); g.add(pb); }
       }
-      F(2.4, 1.0, 0.8, W / 2 - 2, D / 2 - 2.5, 0x6b4a2e);
+      for (let k = 0; k < 3; k++) put(K('CommercialRefrigerator'), 2.0, -W / 2 + 1.5 + k * 1.3, -D / 2 + 0.55, 0, 'y');
+      put(QH('Kitchen_3Drawers'), 2.2, W / 2 - 2, D / 2 - 2.5, Math.PI, 'max');
+      put(K('BoomBox'), 0.5, W / 2 - 2.4, D / 2 - 2.5, Math.PI, 'max', false, 0.95);
+      put(QH('Trashcan_Large'), 0.9, W / 2 - 0.6, D / 2 - 0.6, 0, 'y');
     } else if (kind === 'bar') {
-      F(W - 4, 1.1, 0.7, 0, -D / 2 + 2, 0x4a2e1a, 0, true, 0.35); F(W - 3, 2.2, 0.3, 0, -D / 2 + 0.3, 0x3a2416);
-      for (let x = -W / 2 + 2.5; x < W / 2 - 2; x += 1.1) F(0.4, 0.75, 0.4, x, -D / 2 + 2.9, 0x8a2a1a);
-      for (let x = -W / 2 + 2; x < W / 2 - 1; x += 3) { F(1.2, 0.75, 1.2, x, 1.5, 0x5a3a24); F(1.4, 0.05, 1.4, x, D / 2 - 3, rugC, 0, false); }
+      for (let k = 0; k < 3; k++) put(QH('Kitchen_3Drawers'), 2.2, -2.3 + k * 2.3, -D / 2 + 2, Math.PI, 'max');
+      F(W - 3, 2.2, 0.3, 0, -D / 2 + 0.3, 0x3a2416);
+      for (let x = -3.5; x <= 3.5; x += 1.2) put(QH('Stool'), 0.75, x, -D / 2 + 3.0, 0, 'y');
+      for (let x = -W / 2 + 2; x < W / 2 - 1; x += 3.2) { put(QH(pick(['Table_RoundSmall', 'Table_RoundSmall2'])), 1.0, x, 1.6, 0); put(QH('Chair_2'), 0.9, x - 0.8, 1.6, Math.PI / 2, 'y'); put(QH('Chair_2'), 0.9, x + 0.8, 1.6, -Math.PI / 2, 'y'); put(K('Lantern'), 0.4, x, 1.6, 0, 'y', false, 0.78); }
+      put(QH('Couch_L'), 2.6, -W / 2 + 1.6, D / 2 - 1.6, Math.PI);
+      put(QH('Light_Chandelier'), 1.0, 0, 0, 0, 'y', false, H - 1.05);
     } else {
-      for (let x = -W / 2 + 2; x < W / 2 - 2; x += 3.2) for (let z = -D / 2 + 2; z < D / 2 - 3; z += 4) { const hh = 1 + Math.floor(r() * 3); for (let k = 0; k < hh; k++) F(1.3, 1.1, 1.3, x + (r() - 0.5) * 0.3, z, 0x8a6a40, k * 1.1, k === 0); }
+      for (let x = -W / 2 + 2; x < W / 2 - 2; x += 3.4) put(QH('Shelf_Large'), 2.4, x, -D / 2 + 1, 0, 'y');
+      for (let x = -W / 2 + 2; x < W / 2 - 2; x += 3.2) for (let z = -D / 2 + 4; z < D / 2 - 3; z += 4) { const hh = 1 + Math.floor(r() * 3); for (let k = 0; k < hh; k++) F(1.3, 1.1, 1.3, x + (r() - 0.5) * 0.3, z, 0x8a6a40, k * 1.1, k === 0); }
     }
+    for (const lx of [-W / 4, W / 4]) put(QH(pick(['Light_Ceiling1', 'Light_Ceiling2', 'Light_Ceiling4'])), 0.6, lx, 0, 0, 'y', false, H - 0.62);
     // lights
     const lc = kind === 'office' || kind === 'store' || kind === 'warehouse' ? 0xf4f6ff : 0xffd9a8;
     for (const lx of [-W / 4, W / 4]) { const L = new THREE.PointLight(lc, kind === 'warehouse' ? 60 : 22, Math.max(W, D), 1.6); L.position.set(lx, H - 0.4, 0); g.add(L); const fx = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.06, 0.8), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: lc, emissiveIntensity: 2 })); fx.position.set(lx, H - 0.05, 0); g.add(fx); }
     return { g, o, W, D, H, kind };
   }
 
-  function enter(d) {
+  const INTERIOR_MODELS = [
+    ...['Carpet_1', 'Carpet_2', 'Carpet_Round', 'Table_RoundSmall', 'Table_RoundSmall2', 'Table_RoundLarge', 'Drawer_1', 'Drawer_2', 'Drawer_3', 'Light_Floor1', 'Light_Floor2', 'Light_Stand1', 'Bookshelf', 'Houseplant_1', 'Houseplant_3', 'Houseplant_5', 'Houseplant_7',
+      'Bed_King', 'Bed_Single', 'NightStand_1', 'Light_Desk', 'Kitchen_Fridge', 'Kitchen_Oven', 'Kitchen_Sink', 'Kitchen_2Drawers', 'Kitchen_3Drawers', 'Fireplace', 'Bathroom_Toilet', 'Bathroom_Sink', 'Curtains_Double', 'Trashcan_Small1', 'Trashcan_Large',
+      'Couch_Medium1', 'Couch_L', 'Shelf_Large', 'Stool', 'Chair_2', 'Light_Chandelier', 'Light_Ceiling1', 'Light_Ceiling2', 'Light_Ceiling4'].map((n) => Q('house_interior_pack', n)),
+    K('GlamVelvetSofa'), K('SheenChair'), K('ChairDamaskPurplegold'), K('Lantern'), K('BoomBox'), K('WaterBottle'), K('DiffuseTransmissionPlant'),
+  ];
+  const HEAVY = [K('SheenWoodLeatherSofa'), K('CommercialRefrigerator')];
+  // fetch the furniture in the background shortly after the game starts
+  setTimeout(() => { Promise.all(INTERIOR_MODELS.map(loadOpen)).then(() => HEAVY.forEach(loadOpen)); }, 4000);
+  async function enter(d) {
+    if (inside) return;
+    const need = [...INTERIOR_MODELS, ...(d.b.style === 5 || d.b.style === 2 || d.b.style === 4 ? HEAVY : [])].filter((rel) => !loaded(rel));
+    if (need.length) { hud.toast('Loading interior…', 1.5); await Promise.all(need.map(loadOpen)); }
     let it = built.get(d.i);
     if (!it) { it = buildInterior(d); built.set(d.i, it); }
     scene.add(it.g);

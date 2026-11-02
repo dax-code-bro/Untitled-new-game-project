@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { clamp, lerp } from '../util.js';
 import { VEHICLES } from '../assets/library.js';
-import { makeBodyMaterial, randomPaint, FIXED_PAINT, SECOND_PAINT, buildCar, wheelGeometry } from '../assets/carbuilder.js';
+import { makeBodyMaterial, randomPaint, FIXED_PAINT, SECOND_PAINT, buildCar, wheelGeometry, hasSpec } from '../assets/carbuilder.js';
 
 export function randomCarType(rnd) {
   const list = Object.entries(VEHICLES).filter(([, v]) => v.weight > 0);
@@ -29,7 +29,8 @@ export class Vehicle {
     this.group = new THREE.Group();
     this.body = new THREE.Group();
     this.group.add(this.body);
-    if (!lib.cars[type]) lib.cars[type] = buildCar(type, lib.quality); // catalog models: built on first use
+    if (!lib.cars[type]) { if (hasSpec(type)) lib.cars[type] = buildCar(type, lib.quality); else type = 'sedan-sports'; } // catalog models: built on first use
+    this.type = type;
     const proto = lib.cars[type];
     const model = proto.clone(true);
     this.procedural = !!proto.userData.procedural;
@@ -44,6 +45,11 @@ export class Vehicle {
       if (SECOND_PAINT[type]) u.uPaint2.value.setRGB(...SECOND_PAINT[type]);
       model.getObjectByName('body').traverse((o) => { if (o.isMesh) o.material = this.bodyMat; });
       this.procSpec = spec;
+    }
+    if (proto.userData.paintable) {
+      // per-car paint on the realistic model's body panels
+      const paint = FIXED_PAINT[type] || randomPaint();
+      model.traverse((o) => { if (o.isMesh && /^Paint/.test(o.material.name)) { o.material = o.material.clone(); o.material.color.setRGB(paint[0], paint[1], paint[2]); o.material.metalness = Math.max(o.material.metalness, paint[3] * 0.6); } });
     }
     // scale the model to its real-world length
     _box.setFromObject(model);
@@ -73,7 +79,7 @@ export class Vehicle {
       m.position.set(x, y, z); this.body.add(m); return m;
     };
     this.tail = L.red.clone();
-    if (!this.procedural) for (const s of [-1, 1]) {
+    if (!this.procedural && !proto.userData.hasLights) for (const s of [-1, 1]) {
       lamp(L.head, s * (w / 2 - 0.3), h * 0.42, v.len / 2 + 0.01);
       lamp(this.tail, s * (w / 2 - 0.25), h * 0.45, -v.len / 2 - 0.01);
     }

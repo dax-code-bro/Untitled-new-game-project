@@ -5,6 +5,9 @@ import * as THREE from 'three';
 import { LAKE, BAYOU, regionAt } from '../world/layout.js';
 import { ShopUI } from '../ui/shop.js';
 import { money, keyHint } from './world-util.js';
+import { loadOpen, loaded, instance, Q, K } from '../assets/open.js';
+const FISH_MODELS = [K('BarramundiFish'), ...['Fish1', 'Fish2', 'Fish3'].map((n) => Q('fish_pack', n))];
+const SHARK = Q('fish_pack', 'Shark');
 
 // [name, min lb, max lb, $/lb, rarity]
 const FISH = {
@@ -51,11 +54,28 @@ export function installFishing(game) {
   });
   for (const m of game.marineAir?.marinas || []) interact.add({ x: m.land.x - 6, z: m.land.z + 4, label: () => `${keyHint(game)} sell your catch`, color: 0x60c0ff, blip: { color: '#60c0ff', size: 4 }, use: () => market.show('sell') });
 
+  FISH_MODELS.forEach(loadOpen); loadOpen(SHARK);
+  let trophy = null, trophyT = 0;
+  const showCatch = (f) => {
+    if (trophy) scene.remove(trophy);
+    const big = f.lb > 8;
+    const g = (/shark/i.test(f.name) && loaded(SHARK)) || loaded(big ? FISH_MODELS[0] : FISH_MODELS[1 + Math.floor(Math.random() * (FISH_MODELS.length - 1))]) || loaded(FISH_MODELS[0]);
+    if (!g) return;
+    trophy = instance(g, Math.min(1.6, 0.25 + Math.cbrt(f.lb) * 0.22));
+    trophy.rotation.z = Math.PI / 2;
+    scene.add(trophy); trophyT = 3;
+  };
   const stop = (msg) => { st = null; line.visible = bobber.visible = rod.visible = false; if (msg) hud.toast(msg, 1.8); };
 
   return {
     market,
     update(dt, a, free) {
+      if (trophy) {
+        trophyT -= dt;
+        trophy.position.set(player.pos.x + Math.sin(player.heading) * 0.6, player.pos.y + 1.25, player.pos.z + Math.cos(player.heading) * 0.6);
+        trophy.rotation.y = player.heading + Math.PI / 2;
+        if (trophyT <= 0) { scene.remove(trophy); trophy = null; }
+      }
       const boat = game.vehicle();
       const onBoat = boat && boat.isBoat && Math.abs(boat.speed) < 0.6;
       if (!st && game.S.mode !== 'foot' && !onBoat) return '';
@@ -118,6 +138,7 @@ export function installFishing(game) {
         const log = P.fishLog[f.name] || { n: 0, best: 0 }; log.n++; log.best = Math.max(log.best, f.lb); P.fishLog[f.name] = log;
         P.stats.fishCaught++;
         game.hud.bigMessage('CAUGHT!', `${f.name} · ${f.lb.toFixed(1)} lb`, 2.5);
+        showCatch(f);
         career.saveSoon();
         stop();
         return '';
