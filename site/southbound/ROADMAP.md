@@ -93,6 +93,15 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
       `dl.polyhaven.org`, `poly.pizza`, `static.poly.pizza`, `3dassets.dev`, `kenney.nl`, `quaternius.com`, `itch.io`
       (environment settings → Network access) and the generated vehicles/guns can be swapped the same way.
 
+## Phase 1.10 — HUD, exact hitboxes, QA
+
+- [x] HUD: vehicle damage silhouette + speed (bottom right), chase-only wanted stars, 10 s area card (name, time, wanted),
+      minimap icons (homes, jobs, shops, animals as road signs, cops blue, attackers red, your car as a silhouette), free camera (C)
+- [x] Exact hitboxes: shots test real triangles (skinned people/animals in pose, vehicles, trunks, rocks, poles, furniture) via BVH;
+      vehicles collide with their exact oriented footprint (buildings, trees, poles, cars, player)
+- [x] QA harness (`node tools/southbound/qa.mjs <preset> [--all-doors]`): 499 checks (925 with every door) pass on Phone and High
+- [x] Polish: blurred reflection sky (no grain), photo-scanned interior walls/floors, rain ripples, streaky wet reflections
+
 ## Phase 2 — World depth
 
 - [ ] Expand map to more of the continent's southern side (multiple states/regions)
