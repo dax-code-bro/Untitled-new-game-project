@@ -53,7 +53,17 @@ for (const s of steps) {
     catch (e) {
       // the compositor is too slow: grab the WebGL canvas instead (no HTML UI on top)
       const data = await page.evaluate(() => { window.SB.renderer.render(window.SB.scene, window.SB.camera); return window.SB.renderer.domElement.toDataURL('image/png'); });
-      fs.writeFileSync(path.join(out, s.shot + '.png'), Buffer.from(data.split(',')[1], 'base64'));
+      const base = Buffer.from(data.split(',')[1], 'base64');
+      try {
+        // HUD layer on its own (no WebGL to wait for), composited over the 3D frame
+        await page.evaluate(() => { document.querySelector('canvas#game').style.visibility = 'hidden'; document.body.style.background = 'transparent'; document.documentElement.style.background = 'transparent'; });
+        const hud = await page.screenshot({ omitBackground: true, timeout: 120000 });
+        await page.evaluate(() => { document.querySelector('canvas#game').style.visibility = ''; document.body.style.background = ''; document.documentElement.style.background = ''; });
+        const sharp = require('sharp');
+        const meta = await sharp(hud).metadata();
+        const img = await sharp(base).resize(meta.width, meta.height).composite([{ input: hud }]).png().toBuffer();
+        fs.writeFileSync(path.join(out, s.shot + '.png'), img);
+      } catch (e2) { fs.writeFileSync(path.join(out, s.shot + '.png'), base); }
     }
     if (!s.keepFrozen) await page.evaluate(() => window.SB.freeze(false));
     console.log('shot', s.shot);

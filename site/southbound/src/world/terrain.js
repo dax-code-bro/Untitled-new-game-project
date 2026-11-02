@@ -24,6 +24,7 @@ export const worldUniforms = {
   uSplatTex: { value: null },
   uWorldHalf: { value: WORLD.half },
   uWet: { value: 0 }, // 0 dry .. 1 soaked (weather)
+  uRain: { value: 0 }, // current rain intensity (ripples)
 };
 
 export function createTerrain(hm, quality, scene, surf) {

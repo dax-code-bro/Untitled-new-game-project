@@ -56,8 +56,26 @@ export function installEstate(game) {
   let inside = null, insidePoints = [];
   const IO = (i) => new THREE.Vector3(-1900 + (i % 24) * 70, 1400, -1900 + Math.floor(i / 24) * 70);
   const M = (c, r = 0.7, m = 0) => new THREE.MeshStandardMaterial({ color: c, roughness: r, metalness: m });
+  // photo-scanned surfaces for walls and floors, UVs scaled to real size (no stretching)
+  const S = game.surf;
+  const texMat = (key, tint, rough) => {
+    const t = S && S[key];
+    if (!t || !t.color) return null;
+    return new THREE.MeshStandardMaterial({ map: t.color, normalMap: t.normal || null, roughnessMap: t.rough || null, color: tint, roughness: rough, normalScale: new THREE.Vector2(0.6, 0.6) });
+  };
+  const scaleUV = (geo, w, h, d, size) => {
+    const uv = geo.attributes.uv, n = geo.attributes.normal;
+    for (let i = 0; i < uv.count; i++) {
+      const ax = Math.abs(n.getX(i)), ay = Math.abs(n.getY(i));
+      const su = ax > 0.5 ? d : w, sv = ay > 0.5 ? d : h;
+      uv.setXY(i, uv.getX(i) * su / size, uv.getY(i) * sv / size);
+    }
+    uv.needsUpdate = true;
+  };
   const boxAt = (g, w, h, d, x, y, z, mat, solid, origin) => {
-    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+    const geo = new THREE.BoxGeometry(w, h, d);
+    if (mat.map) scaleUV(geo, w, h, d, mat.userData.texSize || 2.5);
+    const m = new THREE.Mesh(geo, mat);
     m.position.set(x, y + h / 2, z); m.castShadow = m.receiveShadow = true; g.add(m);
     if (solid) collision.addBox(origin.x + x - w / 2, origin.z + z - d / 2, origin.x + x + w / 2, origin.z + z + d / 2, origin.y + y, origin.y + y + h, solid === 'walk' ? { walkable: true } : null);
     return m;
@@ -70,7 +88,8 @@ export function installEstate(game) {
     const g = new THREE.Group(); g.position.copy(o);
     const wallC = [0xd8d0c0, 0xc9d3d8, 0xe6dccb, 0xb9c4b0, 0xd9c2b0, 0xf0ece4][Math.floor(r() * 6)];
     const floorC = kind === 'warehouse' ? 0x6d6d68 : kind === 'office' ? 0x4a4f55 : [0x7a5434, 0x8c6a46, 0x5c3f28, 0xb8b2a4][Math.floor(r() * 4)];
-    const wallM = M(wallC, 0.9), floorM = M(floorC, kind === 'home' || kind === 'apartment' ? 0.45 : 0.8);
+    const wallM = texMat('plaster', wallC, 0.9) || M(wallC, 0.9), floorM = (kind === 'warehouse' || kind === 'store' || kind === 'office' ? texMat('concrete', floorC === 0x4a4f55 ? 0x8a8f95 : 0xb0aca4, 0.8) : null) || M(floorC, kind === 'home' || kind === 'apartment' ? 0.45 : 0.8);
+    wallM.userData.texSize = 3.0; floorM.userData.texSize = 2.5;
     boxAt(g, W + 0.4, 0.2, D + 0.4, 0, -0.2, 0, floorM, 'walk', o);
     boxAt(g, W + 0.4, 0.2, D + 0.4, 0, H, 0, M(0xf2f0ea, 0.9), false, o);
     boxAt(g, W + 0.4, H, 0.2, 0, 0, -D / 2 - 0.1, wallM, true, o);
@@ -102,9 +121,9 @@ export function installEstate(game) {
       put(QH(pick(['Carpet_1', 'Carpet_2', 'Carpet_Round'])), 3.2, -W / 4, -D / 2 + 2.6, 0, 'max', false);
       put(r() < 0.5 ? K('GlamVelvetSofa') : K('SheenWoodLeatherSofa'), 2.3, -W / 4, -D / 2 + 1.0, 0);
       put(QH('Table_RoundSmall'), 0.9, -W / 4, -D / 2 + 2.5, 0);
-      put(QH('Drawer_1'), 1.5, -W / 4, -D / 2 + 4.3, Math.PI);
+      const stand = put(QH('Drawer_1'), 1.5, -W / 4, -D / 2 + 4.3, Math.PI);
       const tv = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.75, 0.06), new THREE.MeshStandardMaterial({ color: 0x050608, roughness: 0.2, emissive: 0x2a4f80, emissiveIntensity: 0.5 }));
-      tv.position.set(-W / 4, 1.45, -D / 2 + 4.3); g.add(tv);
+      tv.position.set(-W / 4, (stand ? stand.userData.size.y : 0.7) + 0.4, -D / 2 + 4.3); g.add(tv);
       put(QH(pick(['Light_Floor1', 'Light_Floor2', 'Light_Stand1'])), 1.7, -W / 2 + 0.6, -D / 2 + 0.6, 0, 'y');
       put(QH('Bookshelf'), 2.0, -W / 2 + 0.35, 0.5, Math.PI / 2, 'y');
       put(plant(), 1.2, -W / 2 + 0.6, D / 2 - 0.8, 0, 'y');
@@ -128,9 +147,11 @@ export function installEstate(game) {
       put(K('BoomBox'), 0.5, -W / 4 + 0.7, -D / 2 + 4.3, Math.PI, 'max', false, 0.8);
     } else if (kind === 'office') {
       for (let x = -W / 2 + 2.2; x < W / 2 - 1.5; x += 3.2) for (let z = -D / 2 + 2.2; z < D / 2 - 2.5; z += 2.8) {
-        put(QH('Kitchen_2Drawers'), 1.5, x, z, 0, 'max');
-        const mon = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.34, 0.04), new THREE.MeshStandardMaterial({ color: 0x080808, emissive: 0x4070b0, emissiveIntensity: 0.5 })); mon.position.set(x, 1.15, z - 0.15); g.add(mon);
-        put(K('SheenChair'), 0.95, x, z + 0.8, Math.PI, 'y');
+        const desk = put(QH('Kitchen_2Drawers'), 0.78, x, z, 0, 'y');
+        const top = desk ? desk.userData.size.y : 0.78;
+        const mon = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.34, 0.04), new THREE.MeshStandardMaterial({ color: 0x080808, emissive: 0x4070b0, emissiveIntensity: 0.5 })); mon.position.set(x, top + 0.2, z - 0.1); g.add(mon);
+        put(QH('Light_Desk'), 0.45, x + 0.45, z - 0.1, 0, 'y', false, top);
+        put(QH(r() < 0.5 ? 'Chair_3' : 'Chair_4'), 0.95, x, z + 0.75, Math.PI, 'y');
       }
       put(QH('Couch_Medium1'), 2.0, -W / 2 + 1.4, D / 2 - 1.0, Math.PI);
       put(QH('Shelf_Large'), 2.0, W / 2 - 0.35, 0, -Math.PI / 2, 'y');
@@ -139,9 +160,17 @@ export function installEstate(game) {
     } else if (kind === 'store') {
       const prodM = [0xb03030, 0x3070b0, 0xd0a020, 0x30904a, 0xe0e0e0].map((c) => M(c, 0.5));
       for (let x = -W / 2 + 2.2; x < W / 2 - 3; x += 2.6) {
-        const sh = put(QH('Shelf_Large'), 1.9, x, -0.6, Math.PI / 2, 'y');
-        if (!sh) F(0.6, 1.8, D - 5, x, -0.8, 0x9a9a9a, 0, true, 0.4);
-        for (let k = 0; k < 15; k++) { const pb = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.28, 0.18), prodM[(k + Math.floor(x)) % 5]); pb.position.set(x + (k % 2 ? 0.18 : -0.18), 0.45 + (k % 3) * 0.55, -0.6 - 1.2 + Math.floor(k / 3) * 0.6); g.add(pb); }
+        for (const zc of [-1.6, 0.8]) {
+          const sh = put(QH('Shelf_Large'), 1.9, x, zc, Math.PI / 2, 'y');
+          const sz = sh ? sh.userData.size : new THREE.Vector3(2, 1.9, 0.5);
+          if (!sh) F(0.5, 1.9, 2, x, zc, 0x9a9a9a, 0, true, 0.4);
+          // stock on each shelf level, across the shelf's width
+          for (let lv = 0; lv < 4; lv++) for (let k = 0; k < 6; k++) {
+            const pb = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.24, 0.2), prodM[(k + lv + Math.floor(x)) % 5]);
+            pb.position.set(x + (k % 2 ? 0.08 : -0.08), 0.12 + sz.y * (0.06 + lv * 0.24), zc + (k - 2.5) * (sz.x / 6.5));
+            g.add(pb);
+          }
+        }
       }
       for (let k = 0; k < 3; k++) put(K('CommercialRefrigerator'), 2.0, -W / 2 + 1.5 + k * 1.3, -D / 2 + 0.55, 0, 'y');
       put(QH('Kitchen_3Drawers'), 2.2, W / 2 - 2, D / 2 - 2.5, Math.PI, 'max');
@@ -168,7 +197,7 @@ export function installEstate(game) {
   const INTERIOR_MODELS = [
     ...['Carpet_1', 'Carpet_2', 'Carpet_Round', 'Table_RoundSmall', 'Table_RoundSmall2', 'Table_RoundLarge', 'Drawer_1', 'Drawer_2', 'Drawer_3', 'Light_Floor1', 'Light_Floor2', 'Light_Stand1', 'Bookshelf', 'Houseplant_1', 'Houseplant_3', 'Houseplant_5', 'Houseplant_7',
       'Bed_King', 'Bed_Single', 'NightStand_1', 'Light_Desk', 'Kitchen_Fridge', 'Kitchen_Oven', 'Kitchen_Sink', 'Kitchen_2Drawers', 'Kitchen_3Drawers', 'Fireplace', 'Bathroom_Toilet', 'Bathroom_Sink', 'Curtains_Double', 'Trashcan_Small1', 'Trashcan_Large',
-      'Couch_Medium1', 'Couch_L', 'Shelf_Large', 'Stool', 'Chair_2', 'Light_Chandelier', 'Light_Ceiling1', 'Light_Ceiling2', 'Light_Ceiling4'].map((n) => Q('house_interior_pack', n)),
+      'Couch_Medium1', 'Couch_L', 'Shelf_Large', 'Stool', 'Chair_2', 'Chair_3', 'Chair_4', 'Light_Chandelier', 'Light_Ceiling1', 'Light_Ceiling2', 'Light_Ceiling4'].map((n) => Q('house_interior_pack', n)),
     K('GlamVelvetSofa'), K('SheenChair'), K('ChairDamaskPurplegold'), K('Lantern'), K('BoomBox'), K('WaterBottle'), K('DiffuseTransmissionPlant'),
   ];
   const HEAVY = [K('SheenWoodLeatherSofa'), K('CommercialRefrigerator')];
@@ -186,7 +215,7 @@ export function installEstate(game) {
     player.pos.set(it.o.x, it.o.y + 0.05, it.o.z + it.D / 2 - 1.2);
     player.vel.set(0, 0, 0);
     player.heading = Math.PI;
-    if (game.rig) { inside.zoom = game.rig.zoom; game.rig.zoom = 0.6; }
+    if (game.rig) { inside.zoom = game.rig.zoom; game.rig.zoom = 0.6; game.rig.yaw = player.heading; }
     const p = propByBuilding.get(d.i);
     insidePoints.push(interact.add({ x: it.o.x, z: it.o.z + it.D / 2 - 0.4, y: it.o.y, r: 1.2, label: () => `${keyHint(game)} go outside`, color: 0x80ff80, use: leave }));
     if (p) insidePoints.push(interact.add({ x: it.o.x - 2, z: it.o.z + it.D / 2 - 2, y: it.o.y, r: 1.4, color: owned(p) ? 0x60ff90 : 0xffd040,
@@ -209,6 +238,7 @@ export function installEstate(game) {
     player.pos.set(d.x + d.nx * 1.2, hm.height(d.x, d.z) + 0.1, d.z + d.nz * 1.2);
     player.pos.y = collision.surface(player.pos.x, player.pos.z, player.pos.y + 2);
     player.heading = Math.atan2(d.nx, d.nz);
+    if (game.rig) game.rig.yaw = player.heading;
     inside = null; game.S.indoors = null; game.weather.indoors = false;
   }
   for (const d of doors) {
@@ -223,7 +253,7 @@ export function installEstate(game) {
     if (p) interact.points[interact.points.length - 1].blip = null;
   }
   // owned properties: map blips + daily income from businesses
-  const ownedBlips = props.map((p) => interact.add({ x: p.door.x, z: p.door.z, r: 0.1, marker: false, show: () => owned(p) && !inside, label: '', use: () => {}, blip: { color: '#60ff90', size: 5, global: true } }));
+  const ownedBlips = props.map((p) => interact.add({ x: p.door.x, z: p.door.z, r: 0.1, marker: false, show: () => owned(p) && !inside, label: '', use: () => {}, blip: { color: '#60ff90', size: 5, global: true, icon: '🏠', bg: 'rgba(30,110,50,0.9)' } }));
   void ownedBlips;
   let lastDay = game.sky.day;
 
@@ -237,7 +267,7 @@ export function installEstate(game) {
     act: (p) => { game.setWaypoint?.(p.door.x, p.door.z, p.name); realtor.close(); },
   });
   const officeDoor = doors.find((d) => d.b.style === 5 && Math.hypot(d.x - (CITY.x0 + 60), d.z - (CITY.z0 + 3 * CITY.pitch)) < 200) || doors[0];
-  interact.add({ x: officeDoor.x + officeDoor.nx * 2.5 + 2, z: officeDoor.z + officeDoor.nz * 2.5, label: () => `${keyHint(game)} browse Gulf Coast Realty listings`, color: 0x60ff90, blip: { color: '#9fffb8', size: 5, global: true }, show: () => !inside, use: () => realtor.show() });
+  interact.add({ x: officeDoor.x + officeDoor.nx * 2.5 + 2, z: officeDoor.z + officeDoor.nz * 2.5, label: () => `${keyHint(game)} browse Gulf Coast Realty listings`, color: 0x60ff90, blip: { color: '#9fffb8', size: 5, global: true, icon: '🏡' }, show: () => !inside, use: () => realtor.show() });
 
   // spawn at home
   if (P.home) { const p = props.find((x) => x.id === P.home); if (p) game.teleport(p.door.x + p.door.nx * 1.5, p.door.z + p.door.nz * 1.5, Math.atan2(p.door.nx, p.door.nz)); }

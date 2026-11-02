@@ -285,7 +285,7 @@ function buildAirModel(s, paint, trim, quality) {
   if (s.kind === 'plane') {
     const r = s.r;
     parts.push({ kind: 'body', d: (x, y, z) => {
-      const t = (z + L2) / s.L; // 0 tail .. 1 nose
+      const t = clamp((z + L2) / s.L, 0, 1); // 0 tail .. 1 nose
       const rr = r * (t < 0.55 ? 0.25 + 0.75 * Math.pow(t / 0.55, 0.7) : 1 - Math.pow((t - 0.55) / 0.45, 3) * 0.55);
       return smax(hyp2(x, (y - 1.2) * (y > 1.2 ? 1 : 1.15)) - rr, Math.abs(z) - L2, 0.1);
     } });

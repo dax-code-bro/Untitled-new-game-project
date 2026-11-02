@@ -38,6 +38,9 @@ export const JOBS = [
   { id: 'bounty', name: 'Bounty Hunter', at: C(0, 2), kind: 'bounty', pay: 900, timer: 600, text: 'Track down the fugitive and take them out' },
 ];
 
+const JOB_ICONS = { taxi: '🚕', bus: '🚌', parcel: '📦', pizza: '🍕', trucker: '🚚', paramedic: '🚑', fire: '🚒', police: '🚓', tow: '🛻', garbage: '🗑️', roadcrew: '🚧', mechanic: '🔧', messenger: '✉️', security: '🛡️',
+  charter: '🛥️', fisherman: '🐟', guide: '🦌', duster: '🌾', tours: '🚁', medevac: '🚑', lumber: '🪓', landscaper: '🌳', construction: '🏗️', electrician: '⚡', plumber: '🚰', ranch: '🐄', bounty: '🎯' };
+
 export function installJobs(game) {
   const { career, interact, hud, player, hm, graph } = game;
   const P = career.p;
@@ -68,7 +71,7 @@ export function installJobs(game) {
     if (job.marker) interact.remove(job.marker);
     const [x, z] = job.stops[job.stop];
     const r = job.def.fly ? 26 : job.def.veh === null || job.def.kind ? 3 : 7;
-    job.marker = interact.add({ x, z, r, any: true, marker: true, height: job.def.fly ? 60 : 6, color: 0xffe040, blip: { color: '#ffe040', size: 7, global: true }, label: () => '', use: () => {} });
+    job.marker = interact.add({ x, z, r, any: true, marker: true, height: job.def.fly ? 60 : 6, color: 0xffe040, blip: { color: '#ffe040', size: 7, global: true, icon: '📍', bg: 'rgba(160,120,0,0.9)' }, label: () => '', use: () => {} });
     job.waitT = job.def.wait || 0;
   };
   const finish = (ok, msg) => {
@@ -112,7 +115,7 @@ export function installJobs(game) {
 
   for (const def of JOBS) {
     const at = where(def);
-    interact.add({ x: at[0], z: at[1], color: 0xffe040, blip: { color: '#ffe040', size: 4 }, show: () => !game.S.indoors && (!job || job.def === def),
+    interact.add({ x: at[0], z: at[1], color: 0xffe040, blip: { color: '#ffe040', size: 4, icon: JOB_ICONS[def.id] || '💼' }, show: () => !game.S.indoors && (!job || job.def === def),
       label: () => job && job.def === def ? `${keyHint(game)} quit the ${def.name} shift` : `${keyHint(game)} work as ${def.name} (level ${lvl(def.id)} · ~${money((def.pay * (1 + (lvl(def.id) - 1) * 0.15)) * (def.stops || def.need || 1))})`,
       use: () => start(def) });
   }

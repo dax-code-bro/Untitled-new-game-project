@@ -205,6 +205,7 @@ export async function createVegetation(hm, quality, scene, collision, cityBlocks
     const b = new THREE.InstancedMesh(v.bark, v.barkMat, cap);
     const l = new THREE.InstancedMesh(v.leaves, v.leafMat, cap);
     for (const m of [b, l]) { m.count = 0; m.frustumCulled = false; m.castShadow = quality.shadows > 0; m.receiveShadow = true; scene.add(m); }
+    b.userData.hitStatic = true; l.userData.noHit = true; // trunks and branches stop bullets, leaves don't
     nearBark.push(b); nearLeaves.push(l);
   }
   const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(), p = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);
@@ -296,7 +297,7 @@ export async function createVegetation(hm, quality, scene, collision, cityBlocks
         });
         im.castShadow = quality.shadows >= 2; im.receiveShadow = true;
         im.computeBoundingSphere();
-        im.userData.noReflect = true; scene.add(im); rockMeshes.push(im);
+        im.userData.noReflect = true; im.userData.hitStatic = true; scene.add(im); rockMeshes.push(im);
       }
     });
   } catch (e) { console.warn('rocks unavailable', e); }

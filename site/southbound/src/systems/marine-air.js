@@ -35,6 +35,7 @@ export function installMarineAir(game) {
     pier.position.set((m.land.x + m.water.x) / 2, hm.waterLevel(m.water.x, m.water.z) + 0.6, (m.land.z + m.water.z) / 2);
     pier.rotation.y = Math.atan2(dx, dz);
     pier.castShadow = pier.receiveShadow = true;
+    pier.userData.hitStatic = true;
     scene.add(pier);
     // walkable deck, as a chain of small boxes along the pier
     const top = pier.position.y + 0.15;
@@ -58,6 +59,7 @@ export function installMarineAir(game) {
     const hangar = new THREE.Mesh(new THREE.BoxGeometry(40, 12, 28), new THREE.MeshStandardMaterial({ color: 0x8a8c88, roughness: 0.6, metalness: 0.5 }));
     hangar.position.set(AIRFIELD.x1 - 60, AIRFIELD.height + 6, AIRFIELD.z - 80);
     hangar.castShadow = hangar.receiveShadow = true;
+    hangar.userData.hitStatic = true;
     scene.add(hangar);
     game.collision.addBox?.(hangar.position.x, hangar.position.z, 20, 14);
   }
@@ -119,10 +121,10 @@ export function installMarineAir(game) {
   const airShop = makeShop('air', 'Redgrass Airfield · Aircraft', AIRCRAFT, AIR_UPGRADES);
 
   for (const m of marinas) {
-    interact.add({ x: m.land.x, z: m.land.z, label: () => `${keyHint(game)} visit ${m.name} (boats)`, color: 0x40e0d0, blip: { color: '#40e0d0', size: 5, global: true },
+    interact.add({ x: m.land.x, z: m.land.z, label: () => `${keyHint(game)} visit ${m.name} (boats)`, color: 0x40e0d0, blip: { color: '#40e0d0', size: 5, global: true, icon: '⚓' },
       use: () => { activeMarina = m; boatShop.show('buy', m.name); } });
   }
-  interact.add({ x: AIRFIELD.x1 - 60, z: AIRFIELD.z - 62, label: () => `${keyHint(game)} visit the airfield office (aircraft)`, color: 0xa0a0ff, blip: { color: '#a0a0ff', size: 6, global: true }, use: () => airShop.show('buy') });
+  interact.add({ x: AIRFIELD.x1 - 60, z: AIRFIELD.z - 62, label: () => `${keyHint(game)} visit the airfield office (aircraft)`, color: 0xa0a0ff, blip: { color: '#a0a0ff', size: 6, global: true, icon: '✈️' }, use: () => airShop.show('buy') });
 
   // a couple of free boats and a plane to try at the start
   if (marinas[0]) spawnCraft(BOATS.find((b) => b.id === 'speedboat'), 'boat', boatSpot(marinas[0]));

@@ -142,7 +142,7 @@ export function installMissions(game) {
 
   let run = null; // { m, step, marker, target, t, count0, veh, foes[] }
   const nextMission = () => MISSIONS.find((m) => !P.missions.done.includes(m.id));
-  const giverPoint = interact.add({ x: 0, z: 0, r: 2.4, color: 0xff3040, height: 3, blip: { color: '#ff3040', size: 7, global: true },
+  const giverPoint = interact.add({ x: 0, z: 0, r: 2.4, color: 0xff3040, height: 3, blip: { color: '#ff3040', size: 7, global: true, icon: '★', bg: 'rgba(190,20,30,0.95)' },
     show: () => !run && !!nextMission() && !game.S.indoors,
     label: () => { const m = nextMission(); return m ? `${keyHint(game)} start "${m.title}" — ${m.who} (${MISSIONS.indexOf(m) + 1}/63)` : ''; },
     use: () => begin(nextMission()) });
@@ -156,7 +156,7 @@ export function installMissions(game) {
   };
   placeGiver();
 
-  const mark = (x, z, r = 7, opts = {}) => { if (run.marker) interact.remove(run.marker); run.marker = interact.add({ x, z, r, any: true, height: opts.height || 8, color: 0xff3040, blip: { color: '#ff3040', size: 7, global: true }, label: () => '', use: () => {} }); };
+  const mark = (x, z, r = 7, opts = {}) => { if (run.marker) interact.remove(run.marker); run.marker = interact.add({ x, z, r, any: true, height: opts.height || 8, color: 0xff3040, blip: { color: '#ff3040', size: 7, global: true, icon: '📍', bg: 'rgba(190,20,30,0.95)' }, label: () => '', use: () => {} }); };
   const begin = (m) => {
     run = { m, step: -1, t: 0 };
     hud.bigMessage(m.title.toUpperCase(), `${m.act} · ${m.who}`, 3.5);
@@ -203,6 +203,8 @@ export function installMissions(game) {
   return {
     MISSIONS, places, get active() { return run; },
     start: (i) => begin(MISSIONS[i]),
+    cancel: () => { if (!run) return; if (run.marker) interact.remove(run.marker); run = null; placeGiver(); },
+    advanceStep: () => { if (run) advance(); },
     update(dt) {
       if (subT > 0 && (subT -= dt) <= 0) sub.style.opacity = 0;
       if (!run || game.S.frozen) return '';

@@ -94,6 +94,7 @@ export function createWeather(scene, quality) {
       ru.uCam.value.copy(camera.position);
       ru.uTime.value += dt;
       ru.uAmount.value = cur.rain;
+      worldUniforms.uRain.value = state.indoors ? 0 : cur.rain;
       ru.uColor.value.setRGB(0.5, 0.52, 0.55).multiplyScalar(1 - worldUniforms.uNight.value * 0.75);
       rain.visible = cur.rain > 0.01 && !state.indoors;
     },

@@ -32,7 +32,7 @@ export class CameraRig {
       dist = (6.8 + opts.vehicle.spec.len * 0.35 + Math.min(Math.abs(opts.speed) * 0.05, 2.2)) * this.zoom * modeK;
       side = 0;
       // swing back behind the car when the player is not looking around
-      if (performance.now() - opts.lastLook > 1400 && Math.abs(opts.speed) > 2) {
+      if (!this.free && performance.now() - opts.lastLook > 1400 && Math.abs(opts.speed) > 2) {
         const behind = opts.speed < -2 ? opts.heading + Math.PI : opts.heading;
         this.yaw += wrapAngle(behind - this.yaw) * Math.min(1, dt * 2.2);
         this.pitch += (0.16 - this.pitch) * Math.min(1, dt * 1.5);

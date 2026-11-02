@@ -56,7 +56,7 @@ export function installGarage(game) {
       const g = shopCar && ownedOf(shopCar);
       const up = g ? g.up : {};
       if (t === 'paint') return { name: it[0], sub: it[2] > 0.5 ? 'metallic' : 'solid', stats: [], btn: money(500), cls: '' };
-      if (t === 'repair') return { name: 'Full repair', sub: `Body ${Math.round(shopCar.health)}/${shopCar.maxHealth}`, stats: [], btn: money(250) };
+      if (t === 'repair') return shopCar ? { name: 'Full repair', sub: `Body ${Math.round(shopCar.health)}/${shopCar.maxHealth}`, stats: [], btn: money(250) } : { name: 'Full repair', sub: 'drive a car into the shop first', stats: [], btn: '—', cls: 'dis' };
       const fitted = it.kind === 'perf' ? (up[it.group] || 0) >= it.tier : matchesLook(up, it);
       const stats = it.kind === 'perf' ? Object.entries(it.fx).map(([k, v]) => [k, null, `${k === 'armor' ? '+' + v * it.tier : k === 'ride' ? `${Math.round(v * it.tier * 100)} cm` : '+' + Math.round(v * it.tier * 100) + '%'}`]) : [];
       return { name: it.name, sub: it.group, stats, btn: fitted ? 'Fitted' : money(it.price), cls: fitted ? 'own' : '' };
@@ -67,7 +67,7 @@ export function installGarage(game) {
       const price = t === 'paint' ? 500 : t === 'repair' ? 250 : it.price;
       if (t === 'perf' && g && (g.up[it.group] || 0) >= it.tier) return;
       if (!career.spend(price)) return;
-      if (t === 'repair') { shopCar.health = shopCar.maxHealth; shopCar.wrecked = false; return; }
+      if (t === 'repair') { shopCar.health = shopCar.maxHealth; shopCar.wrecked = false; shopCar.dmg = null; return; }
       if (!g) { g = addToGarage(shopCar.type); shopCar.uid = g.uid; hud.toast('Car registered to you', 2); }
       if (t === 'paint') g.up.paint = [...it[1], it[2]];
       else if (it.kind === 'perf') g.up[it.group] = it.tier;
@@ -83,13 +83,13 @@ export function installGarage(game) {
   const place = (x, z) => nearestRoad(game.graph, x, z) || { x, z, tx: 1, tz: 0 };
   const cityDealer = { x: CITY.x0 - 34, z: CITY.z0 + 4 * CITY.pitch - 8 };
   lot = (() => { const r = place(cityDealer.x + 8, cityDealer.z); return { x: r.x, z: r.z, h: Math.atan2(r.tx, r.tz) }; })();
-  interact.add({ x: cityDealer.x, z: cityDealer.z, label: () => `${keyHint(game)} browse Gulfstar Autos (93 cars)`, color: 0x40c0ff, blip: { color: '#40c0ff', size: 5, global: true }, use: () => dealer.show(null, 'Gulfstar Autos') });
+  interact.add({ x: cityDealer.x, z: cityDealer.z, label: () => `${keyHint(game)} browse Gulfstar Autos (93 cars)`, color: 0x40c0ff, blip: { color: '#40c0ff', size: 5, global: true, icon: '🚗' }, use: () => dealer.show(null, 'Gulfstar Autos') });
   const townDealer = { x: TOWN.x0 - 22, z: TOWN.z0 + TOWN.pitch };
-  interact.add({ x: townDealer.x, z: townDealer.z, label: () => `${keyHint(game)} browse Mill Creek Motors`, color: 0x40c0ff, blip: { color: '#40c0ff', size: 5, global: true },
+  interact.add({ x: townDealer.x, z: townDealer.z, label: () => `${keyHint(game)} browse Mill Creek Motors`, color: 0x40c0ff, blip: { color: '#40c0ff', size: 5, global: true, icon: '🚗' },
     use: () => { const r = place(townDealer.x + 6, townDealer.z); lot = { x: r.x, z: r.z, h: Math.atan2(r.tx, r.tz) }; dealer.show(null, 'Mill Creek Motors'); } });
   for (const [x, z, name] of [[CITY.x0 + 2 * CITY.pitch, CITY.z0 + CITY.nz * CITY.pitch - 8, 'Calvera Customs'], [TOWN.x0 + 2 * TOWN.pitch, TOWN.z0 - 6, 'Calvera Customs · Mill Creek']]) {
     const r = place(x, z);
-    interact.add({ x: r.x, z: r.z, r: 4.5, drive: true, label: name, color: 0xff60c0, blip: { color: '#ff60c0', size: 5, global: true },
+    interact.add({ x: r.x, z: r.z, r: 4.5, drive: true, label: name, color: 0xff60c0, blip: { color: '#ff60c0', size: 5, global: true, icon: '🔧' },
       use: () => { shopCar = game.vehicle(); if (shopCar) customs.show('perf', name); } });
   }
 

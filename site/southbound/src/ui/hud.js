@@ -30,6 +30,31 @@ export class HUD {
     this.wicon = this.el('#wicon'); this.ammoEl = this.el('#ammo');
     this.cross = this.el('#crosshair'); this.big = this.el('#bigmsg');
     this.shownMoney = -1;
+    this.vehPanel = this.el('#vehpanel');
+    this.vehCtx = this.el('#vehsil').getContext('2d');
+    this.moneyT = 0; this.regionT = 0;
+  }
+
+  // top-down silhouette of the vehicle, filling red where it is damaged
+  drawVehicle(kind, dmg) {
+    const c = this.vehCtx, W = 140, H = 200;
+    c.clearRect(0, 0, W, H);
+    c.save();
+    c.beginPath();
+    if (kind === 'boat') { c.moveTo(70, 8); c.quadraticCurveTo(118, 60, 112, 120); c.lineTo(108, 190); c.lineTo(32, 190); c.lineTo(28, 120); c.quadraticCurveTo(22, 60, 70, 8); }
+    else if (kind === 'plane') { c.ellipse(70, 100, 12, 92, 0, 0, Math.PI * 2); c.rect(6, 62, 128, 22); c.rect(38, 168, 64, 14); }
+    else if (kind === 'heli') { c.ellipse(70, 62, 34, 50, 0, 0, Math.PI * 2); c.rect(64, 100, 12, 86); c.rect(48, 176, 44, 10); }
+    else { const r = 22; c.moveTo(38 + r, 14); c.arcTo(104, 14, 104, 186, r); c.arcTo(104, 186, 36, 186, r); c.arcTo(36, 186, 36, 14, r); c.arcTo(36, 14, 104, 14, r); }
+    c.closePath();
+    c.fillStyle = 'rgba(190,190,190,0.85)'; c.fill();
+    c.lineWidth = 3; c.strokeStyle = 'rgba(20,20,20,0.85)'; c.stroke();
+    c.clip();
+    // damage zones (front = top)
+    const z = dmg || {};
+    const zone = (v, x, y, w, h) => { if (v > 0.02) { c.fillStyle = `rgba(220,30,25,${Math.min(0.95, 0.25 + v * 0.75)})`; c.fillRect(x, y, w, h); } };
+    zone(z.front, 0, 0, W, 66); zone(z.rear, 0, 134, W, 66); zone(z.left, 0, 66, W / 2, 68); zone(z.right, W / 2, 66, W / 2, 68);
+    if (kind === 'car') { c.fillStyle = 'rgba(30,34,40,0.55)'; c.fillRect(46, 60, 48, 22); c.fillRect(48, 128, 44, 16); }
+    c.restore();
   }
 
   renderWorldMap(hm, graph, buildings) {
@@ -113,18 +138,32 @@ export class HUD {
     mm.scale(k * s, k * s);
     mm.translate(-(st.pos.x + WORLD.half) / s, -(st.pos.z + WORLD.half) / s);
     mm.drawImage(this.miniMap, 0, 0);
-    mm.fillStyle = '#ff5a3c';
-    for (const c of st.traffic) mm.fillRect((c.x + WORLD.half) / s - 1.2, (c.z + WORLD.half) / s - 1.2, 2.4, 2.4);
-    if (st.police) {
-      mm.fillStyle = (performance.now() / 250) % 2 < 1 ? '#3b7bff' : '#ff3b3b';
-      for (const c of st.police) mm.fillRect((c.x + WORLD.half) / s - 2, (c.z + WORLD.half) / s - 2, 4, 4);
+    // project world points to minimap pixels (icons are then drawn upright)
+    const T = mm.getTransform();
+    const proj = (x, z) => T.transformPoint(new DOMPoint((x + WORLD.half) / s, (z + WORLD.half) / s));
+    mm.restore();
+    mm.save();
+    mm.beginPath(); mm.arc(W / 2, W / 2, W / 2 - 2, 0, Math.PI * 2); mm.clip();
+    const icon = (p, glyph, bg, size = 15) => {
+      mm.fillStyle = bg; mm.strokeStyle = 'rgba(0,0,0,0.8)'; mm.lineWidth = 1.5;
+      mm.beginPath(); mm.arc(p.x, p.y, size * 0.62, 0, Math.PI * 2); mm.fill(); mm.stroke();
+      mm.font = `${Math.round(size * 0.78)}px system-ui, "Apple Color Emoji", "Segoe UI Emoji", sans-serif`; mm.textAlign = 'center'; mm.textBaseline = 'middle';
+      mm.fillText(glyph, p.x, p.y + 1);
+    };
+    for (const b of st.blips || []) { const p = proj(b.x, b.z); if (b.icon) icon(p, b.icon, b.bg || 'rgba(20,16,12,0.85)', b.size > 6 ? 18 : 15); else { mm.fillStyle = b.color; mm.beginPath(); mm.arc(p.x, p.y, 4, 0, Math.PI * 2); mm.fill(); } }
+    for (const a of st.animals || []) {
+      const p = proj(a.x, a.z);
+      mm.save(); mm.translate(p.x, p.y); mm.rotate(Math.PI / 4); mm.fillStyle = '#f2c230'; mm.strokeStyle = '#111'; mm.lineWidth = 1.5; mm.fillRect(-6, -6, 12, 12); mm.strokeRect(-6, -6, 12, 12); mm.restore();
+      mm.font = '9px system-ui, "Apple Color Emoji", "Segoe UI Emoji", sans-serif'; mm.textAlign = 'center'; mm.textBaseline = 'middle'; mm.fillText(a.icon, p.x, p.y + 0.5);
     }
-    if (st.blips) {
-      for (const b of st.blips) {
-        mm.fillStyle = b.color; mm.strokeStyle = '#000'; mm.lineWidth = 0.8;
-        mm.beginPath(); mm.arc((b.x + WORLD.half) / s, (b.z + WORLD.half) / s, b.size * 0.8, 0, Math.PI * 2); mm.fill(); mm.stroke();
-      }
+    for (const v of st.myVehicles || []) {
+      const p = proj(v.x, v.z);
+      mm.save(); mm.translate(p.x, p.y); mm.rotate(-(v.heading - st.yaw) + Math.PI);
+      mm.fillStyle = '#fff'; mm.strokeStyle = '#000'; mm.lineWidth = 1.2;
+      mm.beginPath(); mm.roundRect ? mm.roundRect(-3.5, -6, 7, 12, 2.5) : mm.rect(-3.5, -6, 7, 12); mm.fill(); mm.stroke(); mm.restore();
     }
+    mm.fillStyle = '#3b7bff'; for (const c of st.police || []) { const p = proj(c.x, c.z); mm.beginPath(); mm.arc(p.x, p.y, 3.5, 0, Math.PI * 2); mm.fill(); }
+    mm.fillStyle = '#ff2b2b'; for (const c of st.hostiles || []) { const p = proj(c.x, c.z); mm.beginPath(); mm.arc(p.x, p.y, 3.5, 0, Math.PI * 2); mm.fill(); }
     mm.restore();
     // player arrow
     mm.save();
@@ -142,6 +181,8 @@ export class HUD {
       const B = this.big, bc = this.bigCtx;
       bc.drawImage(this.worldMap, 0, 0, B.width, B.height);
       const px = ((st.pos.x + WORLD.half) / WORLD.size) * B.width, pz = ((st.pos.z + WORLD.half) / WORLD.size) * B.height;
+      bc.font = '18px system-ui, "Apple Color Emoji", "Segoe UI Emoji", sans-serif'; bc.textAlign = 'center'; bc.textBaseline = 'middle';
+      for (const b of st.blips || []) if (b.icon) { const bx = ((b.x + WORLD.half) / WORLD.size) * B.width, bz = ((b.z + WORLD.half) / WORLD.size) * B.height; bc.fillStyle = 'rgba(20,16,12,0.85)'; bc.beginPath(); bc.arc(bx, bz, 12, 0, Math.PI * 2); bc.fill(); bc.fillText(b.icon, bx, bz + 1); }
       bc.save(); bc.translate(px, pz); bc.rotate(-st.heading + Math.PI);
       bc.fillStyle = '#ff3b2f'; bc.strokeStyle = '#fff'; bc.lineWidth = 2;
       bc.beginPath(); bc.moveTo(0, -12); bc.lineTo(8, 9); bc.lineTo(0, 4); bc.lineTo(-8, 9); bc.closePath(); bc.fill(); bc.stroke();
@@ -149,8 +190,10 @@ export class HUD {
     }
 
     // speedometer
-    this.speedo.classList.toggle('show', st.driving);
+    this.vehPanel.classList.toggle('show', !!st.driving);
     if (st.driving) {
+      const key = `${st.vehKind}|${JSON.stringify(st.vehDmg || {})}`;
+      if (key !== this._vehKey) { this._vehKey = key; this.drawVehicle(st.vehKind, st.vehDmg); }
       const mph = this.settings.units === 'mph';
       this.speedEl.textContent = Math.round(Math.abs(st.speed) * (mph ? 2.237 : 3.6));
       this.speedUnit.textContent = mph ? 'MPH' : 'KM/H';
@@ -159,13 +202,15 @@ export class HUD {
     const h = Math.floor(st.hour), m = Math.floor((st.hour - h) * 60);
     const ampm = h >= 12 ? 'PM' : 'AM', h12 = ((h + 11) % 12) + 1;
     this.clockEl.textContent = `Day ${st.day} · ${h12}:${String(m).padStart(2, '0')} ${ampm}`;
-    // region banner
+    // area card: name, local time and wanted level for 10 s when you enter a new area
     const reg = regionAt(st.pos.x, st.pos.z);
     if (reg.name !== this.lastRegion) {
       this.lastRegion = reg.name;
-      this.regionEl.innerHTML = `<b>${reg.name}</b><span>${reg.sub}</span>`;
+      this.regionEl.querySelector('b').textContent = reg.name;
+      this.regionEl.querySelector('.when').textContent = `${h12}:${String(m).padStart(2, '0')} ${ampm} · ${reg.sub}`;
+      this.regionEl.querySelector('.stars').textContent = st.wanted > 0 ? '★'.repeat(st.wanted) + '☆'.repeat(5 - st.wanted) : '';
       this.regionEl.classList.add('show');
-      this.regionTimer = 4;
+      this.regionTimer = 10;
     }
     if (this.regionTimer > 0 && (this.regionTimer -= dt) <= 0) this.regionEl.classList.remove('show');
     if (this.toastTimer > 0 && (this.toastTimer -= dt) <= 0) this.toastEl.classList.remove('show');
@@ -179,9 +224,12 @@ export class HUD {
       if (st.money !== this.shownMoney) {
         if (st.money > this.shownMoney && this.shownMoney >= 0) { this.moneyEl.classList.remove('gain'); void this.moneyEl.offsetWidth; this.moneyEl.classList.add('gain'); }
         this.shownMoney = st.money;
+        this.moneyEl.classList.add('flash'); this.moneyT = 4;
         this.moneyEl.textContent = '$' + st.money.toLocaleString('en-US');
       }
       this.stars.forEach((el, i) => el.classList.toggle('on', i < st.wanted));
+      this.wantedEl.classList.toggle('active', st.wanted > 0);
+      this.el('#weapon').classList.toggle('armed', !!st.armed);
       this.wantedEl.classList.toggle('flash', !!st.wantedLost);
       this.wicon.textContent = st.weaponIcon;
       const wl = st.ammo ? `${st.weaponName || ''}  ${st.ammo}` : '';
@@ -189,6 +237,7 @@ export class HUD {
       this.cross.classList.toggle('show', !!st.aiming);
       if (st.hitMarker) { this.cross.classList.add('hit'); clearTimeout(this._hm); this._hm = setTimeout(() => this.cross.classList.remove('hit'), 120); }
     }
+    if (this.moneyT > 0 && (this.moneyT -= dt) <= 0) this.moneyEl.classList.remove('flash');
     this.fpsEl.style.display = this.settings.showFps ? 'block' : 'none';
     if (this.settings.showFps) this.fpsEl.textContent = st.fpsText;
   }

@@ -55,8 +55,10 @@ export class Vehicle {
     _box.setFromObject(model);
     const size = _box.getSize(new THREE.Vector3());
     const k = v.len / size.z;
+    const ctr = _box.getCenter(new THREE.Vector3());
     model.scale.setScalar(k);
-    model.position.y = -_box.min.y * k;
+    // centre the model on the vehicle's origin so its footprint and hitbox line up exactly
+    model.position.set(-ctr.x * k, -_box.min.y * k, -ctr.z * k);
     this.body.add(model);
     this.wheels = [];
     let wf = 0, wr = 0, wheelR = 0.35;
@@ -68,10 +70,10 @@ export class Vehicle {
       // which way does this wheel's local X point? (mirrored wheels spin the other way)
       const sign = _v.copy(X).applyQuaternion(o.quaternion).x >= 0 ? 1 : -1;
       this.wheels.push({ node: o, base: o.quaternion.clone(), front: m[1] === 'front', sign });
-      if (m[1] === 'front') wf = o.position.z * k; else wr = o.position.z * k;
+      if (m[1] === 'front') wf = (o.position.z - ctr.z) * k; else wr = (o.position.z - ctr.z) * k;
     });
     const w = size.x * k, h = size.y * k;
-    this.spec = { ...v, width: w, height: h, wf: wf || v.len * 0.3, wr: wr || -v.len * 0.3, wheelR };
+    this.spec = { ...v, width: this.procSpec ? this.procSpec.W * k : w, height: h, wf: wf || v.len * 0.3, wr: wr || -v.len * 0.3, wheelR };
     // lights
     const L = mats();
     const lamp = (mat, x, y, z, sx = 0.28, sy = 0.12) => {
@@ -178,14 +180,12 @@ export class Vehicle {
     this.pos.x += this.vel.x * dt;
     this.pos.z += this.vel.y * dt;
 
-    // collisions with buildings, trees, poles (front + rear circles)
+    // collisions with buildings, trees, poles: the car's exact footprint (oriented box)
     this.impact = 0;
-    const r = this.radius;
     let cx = 0, cz = 0, hits = 0, nx = 0, nz = 0;
-    for (const off of [t.len / 2 - r, -(t.len / 2 - r)]) {
-      const px = this.pos.x + nfx * off, pz = this.pos.z + nfz * off;
-      const res = collision.resolve(px, pz, r, this.pos.y, 1.6);
-      if (res.hit) { cx += res.x - px; cz += res.z - pz; nx += res.nx; nz += res.nz; hits++; }
+    {
+      const res = collision.resolveOBB(this.pos.x, this.pos.z, t.width / 2, t.len / 2, this.heading, this.pos.y, Math.min(t.height || 1.6, 2.5));
+      if (res.hit) { cx = res.x - this.pos.x; cz = res.z - this.pos.z; nx = res.nx; nz = res.nz; hits = 1; }
     }
     if (hits) {
       this.pos.x += cx; this.pos.z += cz;
