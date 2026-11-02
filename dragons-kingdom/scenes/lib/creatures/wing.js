@@ -45,6 +45,7 @@ function polyDist(points, p) {
  */
 export function membrane(wing, boneIndex, opts = {}) {
   const res = opts.res ?? 0.05;
+  const legThigh = opts.legThigh ?? 0;
   const pos = [], uvA = [], edge = [], si = [], sw = [], idx = [];
   const fingers = wing.fingers;
   const side = wing.sd;
@@ -71,6 +72,16 @@ export function membrane(wing, boneIndex, opts = {}) {
       const bn = h.bones[Math.min(r.seg, h.bones.length - 1)];
       const bi = boneIndex[bn];
       if (bi === undefined) throw new Error(`membrane: unknown bone ${bn}`);
+      // legThigh (m, opt-in): sheet that is far from the shank rides on the THIGH, only the band
+      // right at the shank attachment follows the shank (a bat's plagiopatagium: when the knee
+      // folds the shank does not swing a whole panel of membrane down with it - 1B-03 spikes)
+      const mt = legThigh > 0 && /^hl_[LR]_[1-9]$/.test(bn) && bn.replace(/_\d$/, '_0');
+      if (mt && boneIndex[mt] !== undefined) {
+        const keep = Math.max(0, Math.min(1, 1 - (r.d - res) / legThigh));
+        const ti = boneIndex[mt];
+        acc.set(bi, (acc.get(bi) || 0) + w * keep); acc.set(ti, (acc.get(ti) || 0) + w * (1 - keep)); total += w;
+        continue;
+      }
       acc.set(bi, (acc.get(bi) || 0) + w); total += w;
     }
     const ent = [...acc.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4);

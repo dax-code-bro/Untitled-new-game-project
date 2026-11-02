@@ -4,6 +4,47 @@ Owner paths: `scenes/lib/creatures/`, `scenes/lookdev/creatures-*.js` (+ creatur
 README.md in this folder is the full description of how the models are built; this file is
 only the state of the work.
 
+## REALISM ROUND 2 - session 5 (2026-11-02, short budgeted session)
+Stills (draft) under `scratchpad/eng1/creatures/r2s5/`: `v1/1B-03_042.png` (leg tuck only), `v2/1B-03_042.png` (+ Charcoal
+lowCurl), `1b03_crop_s4_v1_v2.png` (crop x120-480 y150-450: session 4 | v1 | v2), `v2/X3-15_042.png` (first headVar),
+`v3/X3-15_042.png` (final headVar), `x315_crop_s4_s5v3.png` (crop x620-940 y80-320 x2: session 4 | now).
+Harnesses (CORRECTED camera + placement - see below): `r2s5/fingR.mjs [k]` (right-wing finger joints + finger-tube
+vertices in the spike box, 1B-03 projection), `r2s5/proj4.mjs` (which meshes land in the spike box), `r2s5/proj3.mjs`,
+`r2s5/low.mjs` (patch-4 lowest vertices).
+SESSION 4's DIAGNOSIS WAS WRONG: its harnesses used vfov 2*atan(12/40) and rotation.y = +190 deg. The director uses a
+Super35 sensor (24.89 mm wide -> 14.0 mm high at 16:9: vfov = 2*atan(7/40)) and `yawFromHeading(190)` = PI - 190 deg.
+With the real camera the 1B-03 "spikes" are Charcoal's RIGHT-wing finger tips (finger tubes w_R_f0_3 / f1_3, last
+phalanx hanging from ~12.6 m to 11.4 m world), not membrane. Also session 4's `lowCurl [-6, 0, -8]` was written on
+line 154 = STARLIGHT's design (kept: it is harmless and folds her tips up too), Charcoal had no lowCurl (default
+[-6, 6, 18] = tips curl down).
+Done (code):
+- anatomy.js Charcoal `fold.lowCurl: [-6, 0, -8]` (the low stand / crouch fold): last phalanges level (f*_3 at 12.56 m,
+  was 12.16 with tips at 11.4); no finger vertex left in the spike box. 1B-03 v2: the two hanging points are GONE
+  (`1b03_crop_s4_v1_v2.png`), the right finger bundle ends in a short blunt nub by the wrist.
+- wing.js `membrane(..., { legThigh })` (m, opt-in, creature cfg `memLegThigh` x L; Charcoal 0.04): plagiopatagium
+  vertices farther than ~legThigh from the shank ride on the THIGH (only the band at the shank follows the shank).
+- drape.js opt `legTuck` (0..1, + `legFold` 0.3, `sideName`): in a ground-fold drape every shank/foot-weighted vertex
+  is folded up about the knee onto the thigh line (pinned ones too). Charcoal drapeOpts stand/lie/crouch legTuck 1.
+  Effect in 1B-03: the slack plagiopatagium bag under the right arm is gone; the wing's lower edge is now a clean
+  line above the forearm/leg (v1 vs s4 in the crop sheet). Patch-4 lowest in the stand drape 10.90 -> 12.32 m world.
+- materials.js head `headVar` (uLook3.w, default 0 = off; Charcoal 0.45): per-plate albedo 0.5..1.2 (darker on
+  average, decorrelated from the generic scale shade), crown wear suppressed on the head (dark tops), per-plate
+  roughness + specular jitter, fine pits (small dark, rough, slight normal dent). X3-15 v3: plates now differ in value
+  and sheen, overall darker, fine scratch/pit texture on the big plates (`x315_crop_s4_s5v3.png`). v2 used a coarse
+  pit noise that read as WOOD GRAIN - fixed in v3 (pit scale 0.11 x scale size, gradient 0.06).
+RESULTS (looked at): 1B-03 spikes fixed; X3-15 improved but still a tile mosaic (uniform dark seams around every
+plate).
+- npm test: 49 tests, 48 pass, 0 fail, 1 skipped, exit 0. Style frames / creatures lookdev NOT re-rendered this
+  session (budget) - the two director stills above built Charcoal with all changes.
+NEXT (exact):
+1. X3-15: the seam network is still the tell - vary seam width/darkness per plate edge (some plates abut with no
+   visible groove, some overlap), add 2-3 plate-spanning cracks/scars, and lift a few plate edges (imbricate) on the
+   brow; reference: saltwater crocodile cranial table / Komodo head ECU. Re-still `X3-15` at draft, crop x620-940 y80-320.
+2. Check the legTuck/legThigh change in a flight / walk shot (the shank band still follows the shank, the rest rides
+   on the thigh: look for membrane stretching at the knee in `takeoff`, `walkLow`) - e.g. creatures lookdev at draft.
+3. X3-02 grey (session 3 item 3) still open: albedo x0 diagnostic.
+4. Session 2 items 4-5 (memFoldOcc for Leaf/Starlight; Leaf/Starlight mount contacts, displacement hierarchy, gait).
+
 ## REALISM ROUND 2 - session 4 (2026-11-01, short budgeted session)
 Stills (draft) under `scratchpad/eng1/creatures/r2s4/`: `v1/1B-03_042.png`, `v1/X3-15_040.png` (director's VERDOR_GROUNDS,
 1B now with the director's darker LOOK1B), `1b03_s3v2_s4v1.png` (1B-03 session 3 v2 | now), `x315_s3v1_s4v1.png` (X3-15
