@@ -175,6 +175,7 @@ export class Peds {
   think(p, dt, player) {
     if (p.mode === 'dead') return;
     if (p.role === 'cop') { if (this.copThink) this.copThink(p, dt); return; }
+    if (p.role === 'foe') { if (this.foeThink) this.foeThink(p, dt); return; }
     let want = 0;
     if (p.mode === 'flee') {
       p.timer -= dt;

@@ -13,6 +13,7 @@
 //   boat place | fly place | hunt n | fish n | survive seconds | pay amount | talk
 import { CITY, TOWN, LAKE, BAYOU, PLAINS, FOREST, AIRFIELD } from '../world/layout.js';
 import { roadPointAround, nearestRoad, spawnParked, money, keyHint } from './world-util.js';
+import { locomotion } from '../entities/human.js';
 
 const ACTS = ['Act I · Homecoming', 'Act II · The Harbor War', 'Act III · Southbound'];
 const W = {
@@ -107,6 +108,31 @@ export function installMissions(game) {
   // snap land places onto roads so they are reachable
   for (const k of ['millcreek', 'customs', 'impound', 'downtown', 'precinct', 'eastside', 'riverbend', 'lakehouse', 'airfield']) { const r = nearestRoad(graph, places[k][0], places[k][1]); if (r && r.dist < 120) places[k] = [r.x, r.z]; }
 
+  // armed mission enemies: close in and shoot at the player
+  game.peds.foeThink = (p, dt) => {
+    if (p.mode === 'dead') return;
+    const tx = player.pos.x - p.pos.x, tz = player.pos.z - p.pos.z, d = Math.hypot(tx, tz);
+    let da = Math.atan2(tx, tz) - p.heading; da = Math.atan2(Math.sin(da), Math.cos(da));
+    p.heading += da * Math.min(1, dt * 6);
+    if (d > 60) { p.h.play('Idle_Loop', 0.3); return; }
+    if (d > 12) {
+      const sp = 4.5;
+      p.pos.x += Math.sin(p.heading) * sp * dt; p.pos.z += Math.cos(p.heading) * sp * dt;
+      const r = game.collision.resolve(p.pos.x, p.pos.z, 0.35, p.pos.y, 1.8); p.pos.x = r.x; p.pos.z = r.z;
+      p.pos.y = game.collision.surface(p.pos.x, p.pos.z, p.pos.y + 0.5);
+      const [clip, s] = locomotion(sp); p.h.play(clip, 0.2, s);
+    } else {
+      p.gunT = (p.gunT ?? 1) - dt;
+      if (p.gunT <= 0) {
+        p.gunT = 0.8 + Math.random() * 0.9;
+        p.h.play('Pistol_Shoot', 0.05, 1.4, true);
+        game.combat.audio?.gunshot(0.5);
+        if (Math.random() < Math.max(0.12, 0.55 - d / 40) * (game.S.mode === 'car' ? 0.6 : 1)) game.police.onPlayerHit?.(5 + Math.random() * 7, p.pos);
+      } else if (p.h.locked <= 0) p.h.play('Pistol_Aim_Neutral', 0.15);
+    }
+    p.h.root.position.copy(p.pos); p.h.root.rotation.y = p.heading;
+  };
+
   // subtitles
   const sub = document.createElement('div');
   sub.style.cssText = 'position:fixed;left:50%;bottom:16%;transform:translateX(-50%);max-width:min(760px,90vw);text-align:center;color:#fff;font:600 17px Inter,system-ui,sans-serif;text-shadow:0 2px 6px #000,0 0 2px #000;z-index:15;pointer-events:none;opacity:0;transition:opacity .3s';
@@ -154,7 +180,7 @@ export function installMissions(game) {
       mark(run.veh.pos.x, run.veh.pos.z, 3);
     } else if (kind === 'kill') {
       const [x, z] = at(a2); run.foes = [];
-      for (let i = 0; i < a1; i++) { const p = game.peds.spawnAt(x + (Math.random() - 0.5) * 20, z + (Math.random() - 0.5) * 20, player.pos); if (p) { p.foe = true; run.foes.push(p); } }
+      for (let i = 0; i < a1; i++) { const p = game.peds.spawnAt(x + (Math.random() - 0.5) * 20, z + (Math.random() - 0.5) * 20, player.pos); if (p) { p.foe = true; p.role = 'foe'; p.hp = 120; run.foes.push(p); } }
       mark(x, z, 25, { height: 4 });
     } else if (kind === 'escape') { game.police.wanted = Math.max(game.police.wanted || 0, a1); game.police.cool = 0; }
     else if (kind === 'pay') { if (!career.spend(a1)) { say(run.m.who, `Come back when you have ${money(a1)}.`, 4); fail(); } else advance(); }

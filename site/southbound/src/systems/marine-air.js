@@ -36,6 +36,13 @@ export function installMarineAir(game) {
     pier.rotation.y = Math.atan2(dx, dz);
     pier.castShadow = pier.receiveShadow = true;
     scene.add(pier);
+    // walkable deck, as a chain of small boxes along the pier
+    const top = pier.position.y + 0.15;
+    for (let t = 0; t <= L; t += 1.5) {
+      const x = m.land.x + (dx / (L - 6)) * (t - 3), z = m.land.z + (dz / (L - 6)) * (t - 3);
+      game.collision.addBox(x - 1.4, z - 1.4, x + 1.4, z + 1.4, top - 0.3, top, { walkable: true });
+    }
+    m.pierEnd = { x: m.water.x + Math.sin(Math.atan2(dx, dz)) * 2, z: m.water.z + Math.cos(Math.atan2(dx, dz)) * 2 };
   }
 
   // ---- runway markings + hangar
@@ -70,7 +77,7 @@ export function installMarineAir(game) {
     return marinas.reduce((a, m) => (Math.hypot(m.land.x - p.x, m.land.z - p.z) < Math.hypot(a.land.x - p.x, a.land.z - p.z) ? m : a), marinas[0]);
   };
   let activeMarina = marinas[0];
-  const boatSpot = (m) => ({ x: m.water.x + Math.sin(m.dir) * 2, z: m.water.z + Math.cos(m.dir) * 2, h: m.dir });
+  const boatSpot = (m) => { const a = Math.atan2(m.water.x - m.land.x, m.water.z - m.land.z); return { x: m.pierEnd.x + Math.cos(a) * 4.5, z: m.pierEnd.z - Math.sin(a) * 4.5, h: a }; };
   const lastOwned = (cat) => {
     const v = game.vehicle();
     if (v && v.uid && ((cat === 'boat' && v.isBoat) || (cat === 'air' && v.isAir))) return P.garage.find((g) => g.uid === v.uid);
