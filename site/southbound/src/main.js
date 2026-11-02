@@ -264,6 +264,7 @@ async function createGame(progress) {
   };
   police.onPlayerHit = (amount, from) => hurtPlayer(amount, from);
   const respawn = (at, title, sub, fee) => {
+    if (S.indoors && game.estate) game.estate.leave();
     S.dead = 4.5;
     hud.bigMessage(title, sub, 4);
     setTimeout(() => {
@@ -591,6 +592,7 @@ async function createGame(progress) {
     setWeather(kind) { weather.set(kind); weather.snap(); S.weatherLocked = true; },
     setOverride(o) { S.override = o; },
     teleport(x, z, heading = 0) {
+      if (S.indoors && game.estate) game.estate.leave(); // never carry the indoor state across a teleport
       const y = collision.surface(x, z, 500);
       if (S.mode === 'car') { S.vehicle.pos.set(x, y, z); S.vehicle.heading = heading; S.vehicle.vel.set(0, 0); }
       else { player.pos.set(x, y, z); player.heading = heading; }
@@ -661,6 +663,7 @@ async function createGame(progress) {
   };
   api.game = game;
   api.V3 = THREE.Vector3;
+  api.THREE = THREE;
   api.catalogs = { LAND, BOATS, AIRCRAFT, WEAPONS, ATTACHMENTS };
   api.arsenalAct = (id) => arsenalUI.act(id, 'att');
   game.Vehicle = Vehicle;
