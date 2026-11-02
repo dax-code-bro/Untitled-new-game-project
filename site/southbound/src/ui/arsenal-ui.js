@@ -107,14 +107,16 @@ export class ArsenalUI {
       return;
     }
     const cat = CATEGORIES.find((x) => x.k === this.tab);
+    const mx = (f) => Math.max(...cat.ids.map((id) => f(WEAPONS[id])));
+    const mD = mx((w) => w.damage * w.pellets), mR = mx((w) => 1 / w.rate), mG = mx((w) => w.range), mP = mx((w) => (w.damage * w.pellets) / w.rate);
     list.innerHTML = cat.ids.map((id) => {
       const w = WEAPONS[id], own = c.owned.includes(id), eq = c.weapon === id;
       const dps = (w.damage * w.pellets) / w.rate;
       return `<div class="row"><div class="n"><b>${w.name}</b><small>${w.platform} · ${w.clip} rd${w.silent ? ' · silent' : ''}${w.scope ? ` · ${w.scope}x` : ''}</small></div>
-        <div class="s0"><span class="lbl">Damage</span>${bar(w.damage * w.pellets, 400)}</div>
-        <div class="s1"><span class="lbl">Fire rate</span>${bar(1 / w.rate, 16)}</div>
-        <div class="s2"><span class="lbl">Range</span>${bar(w.range, 1200)}</div>
-        <div class="s3"><span class="lbl">DPS ${Math.round(dps)}</span>${bar(dps, 600)}</div>
+        <div class="s0"><span class="lbl">Damage ${Math.round(w.damage * w.pellets)}</span>${bar(w.damage * w.pellets, mD)}</div>
+        <div class="s1"><span class="lbl">Fire rate</span>${bar(1 / w.rate, mR)}</div>
+        <div class="s2"><span class="lbl">Range</span>${bar(w.range, mG)}</div>
+        <div class="s3"><span class="lbl">DPS ${Math.round(dps)}</span>${bar(dps, mP)}</div>
         <button data-id="${id}" class="${own ? 'own' : ''}">${eq ? 'Equipped' : own ? 'Equip' : '$' + w.price.toLocaleString('en-US')}</button></div>`;
     }).join('');
   }
