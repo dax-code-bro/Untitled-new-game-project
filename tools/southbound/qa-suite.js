@@ -7,7 +7,7 @@ async (opts) => {
   const report = { pass: 0, fail: 0, errors: [], notes: [] };
   const t0 = performance.now();
   const ok = (cond, name) => { if (cond) report.pass++; else { report.fail++; report.errors.push('FAIL ' + name); } };
-  const run = async (name, fn) => { try { await fn(); } catch (e) { report.fail++; report.errors.push(`EXC ${name}: ${e && e.message}\n${(e && e.stack || '').split('\n').slice(1, 3).join(' | ')}`); } };
+  const run = async (name, fn) => { console.log('QA> ' + name); const _t = performance.now(); try { await fn(); } catch (e) { report.fail++; report.errors.push(`EXC ${name}: ${e && e.message}\n${(e && e.stack || '').split('\n').slice(1, 3).join(' | ')}`); } const _ms = performance.now() - _t; if (_ms > 8000) console.log(`QA< ${name} took ${Math.round(_ms / 1000)}s`); };
   const finite = (v) => Number.isFinite(v.x) && Number.isFinite(v.y) && Number.isFinite(v.z);
   const yieldUI = () => new Promise((r) => setTimeout(r, 0));
   const ctl = { throttle: 1, brake: 0, steer: 0.3, handbrake: false, nitro: true };
@@ -101,14 +101,16 @@ async (opts) => {
   });
   await run('weapons: hold every knife and hand weapon', async () => {
     const c = G.combat;
+    const prev = { weapon: c.weapon, holstered: c.holstered, dual: c.dual, slots: { ...c.slots } };
     const melee = opts.weapons.filter((id) => id !== 'fists' && c.constructor.slotOf(id) === 'melee');
     for (const id of melee) {
       c.give(id); c.slots.melee = id; c.equip('melee');
       ok(c.weapon === id && !c.holstered, `${id} equips from the melee slot`);
       ok(!!c.model(id), `${id} has a model to hold`);
-      window.SB.step(3, 1 / 30);
+      window.SB.skipRender(true); window.SB.step(3, 1 / 30); window.SB.skipRender(false);
     }
-    c.weapon = 'fists'; c.holstered = true;
+    // leave the combat state exactly as we found it for the tests that follow
+    c.weapon = prev.weapon; c.holstered = prev.holstered; c.dual = prev.dual; Object.assign(c.slots, prev.slots); delete c.slots.melee;
   });
   await run('attachments: fit every attachment', async () => {
     const ui = opts.arsenalAct;

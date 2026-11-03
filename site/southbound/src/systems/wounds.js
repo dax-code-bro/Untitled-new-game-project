@@ -35,6 +35,7 @@ export function installWounds(game) {
       hud.toast(`Picked up: ${w.name}`, 1.8); remove(d);
     } });
     drops.push(d);
+    if (drops.length > 10) remove(drops[0]); // keep only the most recent few lying around
   };
   const remove = (d) => { scene.remove(d.m); interact.remove(d.pt); drops.splice(drops.indexOf(d), 1); };
 

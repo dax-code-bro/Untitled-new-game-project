@@ -21,7 +21,8 @@ await new Promise((r) => server.listen(0, r));
 const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
 const page = await browser.newPage({ viewport: { width: 960, height: 540 } });
 const consoleErrors = [];
-page.on('console', (m) => { if (m.type() === 'error' || (m.type() === 'warning' && /open model failed|NaN/.test(m.text()))) consoleErrors.push(`[${m.type()}] ${m.text().slice(0, 300)}`); });
+page.on('console', (m) => { if (process.env.QA_LIVE && /^QA[<>] /.test(m.text())) console.log(m.text());
+  if (m.type() === 'error' || (m.type() === 'warning' && /open model failed|NaN/.test(m.text()))) consoleErrors.push(`[${m.type()}] ${m.text().slice(0, 300)}`); });
 page.on('pageerror', (e) => consoleErrors.push('[pageerror] ' + e.message));
 await page.addInitScript(() => { window.SB_SKIP_INTRO = true; });
 await page.addInitScript((pr) => { try { localStorage.setItem('southbound.settings.v1', JSON.stringify({ platform: 'pc', preset: pr, dynamicRes: false, showFps: false, timeScale: 0 })); localStorage.removeItem('southbound.save.v1'); } catch (e) { /* */ } }, preset);
@@ -30,7 +31,7 @@ await page.waitForTimeout(500);
 await page.click('#play');
 await page.waitForFunction(() => window.SB && window.SB.state, null, { timeout: 600000 });
 await page.waitForTimeout(30000); // background model loads
-const suite = fs.readFileSync(path.join(here, 'qa-suite.js'), 'utf8');
+const suite = fs.readFileSync(process.env.QA_SUITE || path.join(here, 'qa-suite.js'), 'utf8'); // QA_SUITE: run a different suite file
 const report = await page.evaluate(`(${suite})(${JSON.stringify({ allDoors: process.argv.includes('--all-doors') })})`);
 console.log(`QA: ${report.pass} passed, ${report.fail} failed, ${report.seconds}s`);
 for (const n of report.notes) console.log('note:', n);

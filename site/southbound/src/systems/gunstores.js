@@ -84,8 +84,15 @@ export function installGunStores(game) {
   }
   game.gunStoreDefs = STORES;
   game.gunShops = keepers.map((k) => ({ id: k.st.id, name: k.st.name, x: k.shop.counter.x, z: k.shop.counter.z, face: k.shop.keeperFace }));
+  // one lamp for every shop interior: it lights whichever shop you're in or next to.
+  // (A light per building would make every shader in the game loop over all of them.)
+  const shopLamp = new THREE.PointLight(0xfff0d8, 0, 13, 2);
+  scene.add(shopLamp);
   return {
     update(dt) {
+      let best = null, bd = 30 * 30;
+      for (const p of game.shopLamps || []) { const d = (p.x - game.player.pos.x) ** 2 + (p.z - game.player.pos.z) ** 2; if (d < bd) { bd = d; best = p; } }
+      if (best) { shopLamp.position.copy(best); shopLamp.intensity = 10; } else shopLamp.intensity = 0;
       // shop doors swing open as you walk up
       for (const d of game.shopDoors || []) {
         const open = shopOpen(d.id, game.sky.hour);
@@ -179,7 +186,8 @@ export function buildShop(game, r, st) {
     const sign = new THREE.Mesh(new THREE.PlaneGeometry(7, 1.17), new THREE.MeshStandardMaterial({ map: tex, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 0.35 }));
     sign.position.set(0, st.style === 'block' ? H - 0.15 : H - 0.5, D / 2 + (st.style === 'block' ? 0.37 : 0.26)); g.add(sign); // corner stores: on the fascia band
     if (st.style === 'civic') { sign.scale.set(0.6, 0.6, 1); sign.position.set(0, H + 0.92, D / 2 + 2.43); } // civic: on the pediment, above the columns
-    const lamp = new THREE.PointLight(0xfff0d8, 10, 12, 2); lamp.position.set(0, H - 0.5, -0.5); g.add(lamp);
+    // a ceiling light panel; the actual light is one shared lamp that follows you between shops
+    const panel = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.04, 0.6), new THREE.MeshBasicMaterial({ color: 0xfff6e8 })); panel.position.set(0, H - 0.08, -0.5); panel.userData.noHit = true; g.add(panel);
     scene.add(g);
     g.updateMatrixWorld(true);
     const wb = (lx0, lz0, lx1, lz1, y0 = y - 1, y1 = y + H) => {
@@ -196,6 +204,8 @@ export function buildShop(game, r, st) {
     const keeper = L(0, -D / 2 + 1.7); keeper.y = y;
     const counter = L(0, -D / 2 + 3.6);
     const doorAt = L(0, D / 2 + 0.5);
+    const lampAt = L(0, -0.5); lampAt.y = y + H - 0.5;
+    (game.shopLamps = game.shopLamps || []).push(lampAt);
     (game.shopDoors = game.shopDoors || []).push({ leaves: front.leaves, sign: front.sign, id: st.id, x: doorAt.x, z: doorAt.z, a: 0 });
     return { g, y, keeper, keeperFace: g.rotation.y, counter: { x: counter.x, z: counter.z } };
   }
