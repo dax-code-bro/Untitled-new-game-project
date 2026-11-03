@@ -504,6 +504,53 @@ else {
     }
     ok(res.every((r) => r.up > 60 && r.lo > 60 && r.far === 0), `lip colour zone: ${res.map((r) => `${r.id} ${r.up} upper / ${r.lo} lower-lip vertices, ${r.far} beyond the lips`).join('; ')}`);
   }
+  // rider grip (ridergrip.js): a grab bar built the way creatures/rider.js addGrip builds it (at the drape
+  // palms); every seated rider's hands close round it - palm down onto the bar, the bar inside the curled
+  // fingers, fingertips past the bar's far side; abby_ride_injured keeps her injured LEFT arm off the bar
+  {
+    const { createRider } = await import('./index.js');
+    const rows = [];
+    let good = true;
+    for (const id of ['abby_ride', 'remi_ride', 'abby_ride_injured']) {
+      if (!fs.existsSync(cache(id))) continue;
+      const header = JSON.parse(fs.readFileSync(cache(id)));
+      const b = fs.readFileSync(path.join(HERE, 'cache', id + '.bin'));
+      const rider = createRider({ data: { [id]: { header, bin: b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength) } } }, { id });
+      const ch = rider.character;
+      const W = (n) => ch.bone(n).getWorldPosition(new THREE.Vector3());
+      rider.update(0); rider.root.updateMatrixWorld(true);
+      const palmPt = (sd) => W(`wrist.${sd}`).lerp(W(`finger3-1.${sd}`), 0.85);
+      const pl = palmPt('L'), pr = palmPt('R');
+      const before = { L: pl.clone(), R: pr.clone(), wL: W('wrist.L'), wR: W('wrist.R') };
+      const across = pr.clone().sub(pl), len = across.length() + 0.14;
+      const geo = new THREE.CylinderGeometry(0.017, 0.017, len, 12, 1); geo.rotateZ(Math.PI / 2);
+      const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial());
+      m.position.copy(rider.root.worldToLocal(pl.clone().add(pr).multiplyScalar(0.5)));
+      m.quaternion.setFromUnitVectors(new THREE.Vector3(1, 0, 0), across.clone().normalize());
+      const g = new THREE.Group(); g.name = 'grip'; g.add(m); rider.root.add(g);
+      rider.update(0.7); rider.root.updateMatrixWorld(true);
+      const ax = across.clone().normalize();
+      for (const sd of ['L', 'R']) {
+        const C = (sd === 'L' ? before.L : before.R).clone();
+        const off = (p) => { const d = p.clone().sub(C); return d.addScaledVector(ax, -d.dot(ax)); };
+        const knuck = W(`finger3-1.${sd}`), tip = W(`finger3-3.${sd}`), wr = W(`wrist.${sd}`);
+        // the palm's normal (index -> little x wrist -> middle, as rig.js handFrame)
+        const lat = W(`finger5-1.${sd}`).sub(W(`finger2-1.${sd}`)), fw = knuck.clone().sub(wr);
+        const palm = (sd === 'L' ? new THREE.Vector3().crossVectors(lat, fw) : new THREE.Vector3().crossVectors(fw, lat)).normalize();
+        const injured = id === 'abby_ride_injured' && sd === 'L';
+        const r = { id, sd, palmUp: +palm.y.toFixed(2), knuckToBar: +(off(knuck).length() * 100).toFixed(1), tipToBar: +(off(tip).length() * 100).toFixed(1), tipY: +((tip.y - C.y) * 100).toFixed(1), wristMove: +(wr.distanceTo(sd === 'L' ? before.wL : before.wR) * 100).toFixed(1) };
+        rows.push(r);
+        if (injured) { if (r.wristMove > 0.5) good = false; continue; }
+        // palm faces down onto the bar, knuckle row within 5 cm of its axis, the middle fingertip
+        // within 3.5 cm of the axis (wrapped round it, not pointing away) and not above it
+        // (abby_ride_injured: addGrip spans the bar from her held-in LEFT hand, so it slants across her lap
+        // and the right hand only half reaches its end - looser limits, see PROGRESS)
+        const loose = id === 'abby_ride_injured';
+        if (!(r.palmUp < -0.3 && r.knuckToBar < (loose ? 6.5 : 5) && r.tipToBar < 3.5 && r.tipY < (loose ? 3 : 1.5))) good = false;
+      }
+    }
+    if (rows.length) ok(good, `rider grip: hands closed round the grab bar (${rows.map((r) => `${r.id}.${r.sd} palm.y ${r.palmUp} knuckle ${r.knuckToBar} cm tip ${r.tipToBar} cm tipY ${r.tipY} wrist moved ${r.wristMove} cm`).join('; ')})`);
+  }
   // worn props never follow a hand: no belt / buckle / purse vertex keeps an arm or hand weight
   {
     let bad = 0;

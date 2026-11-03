@@ -186,7 +186,8 @@ import { createSaddle, mountRider } from '../lib/creatures/index.js';
 const human = await loadHuman();                    // preloads remi_ride, abby_ride, fall_ride, scout_ride (+ standing)
 mountRider(leaf, createSaddle(leaf, {}), createRider(human, { outfit: 'abby' }));
 // outfit: 'remi' | 'abby' | 'fall' | 'scout' | 'abby_injured' (or { name }); pose: 'stand' for the standing builds
-// rider.update(t) adds breathing / blinks
+// rider.update(t) adds breathing / blinks; once mounted, the hands close round the grab bar (ridergrip.js;
+// createRider(human, { grip: false }) or rider.update(t, { grip: false }) keeps the drape hands)
 ```
 
 Crowds - `loadCrowd()` + `person(crowd, outfit, action, { seed })` is a drop-in for
