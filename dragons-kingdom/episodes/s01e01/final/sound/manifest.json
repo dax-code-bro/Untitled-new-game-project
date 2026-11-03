@@ -39,7 +39,7 @@
   },
   {
    "id": "fx-procedural",
-   "what": "Spot effects (footsteps on stone/straw/timber/turf, cloth, rig chains, buckles, leather, door, latch, knocks, egg scratch, shell ticks/cracks/creaks/breaks, dragon and hatchling breaths, weight shifts, wingbeats, wind through grass, snorts, pipe taps, stair runners): sound/fx/synth.mjs recipes placed by sound/fx/spots.json",
+   "what": "Spot effects (footsteps on stone/straw/timber/turf, cloth, rig chains, buckles, leather, door, latch, knocks, egg scratch, shell ticks/cracks/creaks/breaks, dragon and hatchling breaths, weight shifts, wingbeats, wind through grass, snorts, pipe taps, stair runners; s7 harbour set: gulls (FM yelps), ship's bell (inharmonic partials), fish slaps, rope strain, net drips, dragon calls, wordless crowd walla from formant-filtered glottal pulse trains): sound/fx/synth.mjs recipes placed by sound/fx/spots.json",
    "origin": "synthesised in JavaScript by sound/fx/synth.mjs (seeded PRNG noise, impulse trains, decaying partials, biquad filters) and reverberated by sound/fx/fx.mjs (Freeverb-style algorithm, own code); no recording, sample or download",
    "licence": "the project's own work (no third-party material)",
    "credit": "Sound design line in credits.txt",

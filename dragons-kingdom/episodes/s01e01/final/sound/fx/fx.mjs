@@ -14,7 +14,21 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const SPOTS_FILE = path.join(HERE, 'spots.json');
 
 // Freeverb-style reverb (8 damped combs + 4 allpasses per channel), in place on L/R. Cheap and deterministic.
-function reverb(L, R, { room, damp, wet, predelay_ms = 0 }) {
+// `echoes`: optional discrete reflections [[delay_ms, gain_db, lowpass_hz], ...] off a near hard surface (s7: Leaf's beats
+// off the harbour wall in X4-02), added from the dry signal, right channel 7 ms later for width
+function echoes(L, R, list) {
+  const dl = Float32Array.from(L), dr = Float32Array.from(R);
+  for (const [ms, db, lp = 3000] of list) {
+    const o = Math.round(ms / 1000 * SR), or = o + Math.round(0.007 * SR), g = Math.pow(10, db / 20), a = Math.exp(-2 * Math.PI * lp / SR);
+    let yl = 0, yr = 0;
+    for (let k = 0; k < L.length; k++) {
+      yl = (1 - a) * (k >= o ? dl[k - o] : 0) + a * yl; yr = (1 - a) * (k >= or ? dr[k - or] : 0) + a * yr;
+      L[k] += g * yl; R[k] += g * yr;
+    }
+  }
+}
+function reverb(L, R, { room, damp, wet, predelay_ms = 0, echoes: ech }) {
+  if (ech) echoes(L, R, ech);
   const sc = SR / 44100, combs = [1116, 1188, 1277, 1356, 1422, 1491, 1557, 1617], aps = [556, 441, 341, 225];
   const fb = room, pd = Math.round(predelay_ms / 1000 * SR);
   // one tight pass per filter (combs in parallel into y, then the allpasses in series)

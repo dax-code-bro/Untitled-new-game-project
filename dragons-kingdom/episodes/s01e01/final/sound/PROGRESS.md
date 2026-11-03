@@ -1,5 +1,47 @@
 # Sound track: progress (for the next session)
 
+## State (2026-11-03, session 7: X4 harbour spots + 1C wingbeat that reads as a wing)
+
+- **Leaf's `wingbeat_light` rebuilt** (`fx/synth.mjs`). The s6 version (0.62 s whoosh) was measured with
+  `scratchpad/eng1/sound/s7/measure.mjs`: rise 10-90 % 185 ms, 350 ms above -12 dB, 61 % of its spectral density at
+  250-500 Hz (the same band as `flight_wind`), no flutter -> a gust, not a wing. New "fwup": faint pre-swell, a 45 ms
+  push (110-1300 Hz) that still PEAKS at dur*up (0.31 s, so every row's `at` / sync is unchanged), 70 ms decay, a
+  20-27 Hz membrane flutter on 1-4.2 kHz noise and a small thump: rise 40-55 ms, 120-140 ms above -12 dB, ~15 % at
+  1-4 kHz. Shorter stroke = ~4 dB less energy at the same peak, so all 14 `wingbeat_light` rows got +3 dB.
+  In the 1C mix (`scratchpad/eng1/sound/s7/beatsnr.py`, 50 ms windows at the predicted peaks): 1C-17 beats sit +7 dB
+  over the wind bed at 1-4 kHz (was +4 before the +3 dB), 1C-11 mix beat-vs-gap +12.5 dB at 1-4 kHz. Seen:
+  `s7/1C-17-fx-amb-mix.png` (fx / ambience / mix spectrograms of 1C-17: three short broadband strokes at 0.37 / 1.63 /
+  2.87 s = the predicted 0.36 / 1.61 / 2.86, clearly separate from the steady wind, visible in the mix).
+- **X4 harbour spots** (33 rows in `fx/spots.json`, X4-01..X4-13, placed by shot offsets on the slates; they move with
+  the shots when the director renders them). New recipes (all synthesised): `gull` (2:1 FM yelp series, formants
+  2.1/3.3 kHz), `boat_bell` (bronze partials 0.5/1/1.19/1.5/2/2.66/3.18/4.1 with beating), `fish_slap`, `rope_strain`,
+  `net_drip` (rising-chirp droplets), `dragon_call` (`size` 1 = Leaf's bright "kree-ip", 1.6 = the quay dragon's
+  lower rough answer), `walla` (wordless babble: glottal sawtooth through per-syllable vowel formants, phrases +
+  pauses, `pause` dip for X4-07). New spaces: `harbour` (one 140 ms reflection) and `stone_wall` (82/150/260 ms
+  reflections: Leaf ~14 m above the wall in X4-02) via a new `echoes` key in `fx.mjs` spaces; `space_of_set`
+  VERDOR_AERIAL -> air, VERDOR_HARBOR -> harbour. Seen: `s7/x4-sheet-spec.png` (every new recipe's spectrogram),
+  `s7/X4-mix.png` (mix 91.5-137.5 s), `s7/X4-07-zoom.png` (walla syllable blobs 300-1500 Hz, thinning in the 1.4-2.7 s
+  pause, the heavy beat at 1.6 s).
+- **harbour_quay** bed: the noise "murmur" layers (bp 480 / 1500 with a 3-6 Hz flutter: hiss-like, ~0.3 modulation
+  depth) lowered 8 / 7 dB to a far wash; the talk is now `walla` spots per harbour shot.
+- **1C re-mix**: `final/audio/cuts/1C/DragonsKingdom_S01E01_draft-cut_1C_sound.mp4` program -16.7 LUFS (whole cut
+  -20.2), TP -1.6 dBTP (AAC -16.7 / -1.4), min dialogue margin 12.7 LU, PASS, sha256 5889acc21560a7e7. Dialogue
+  unchanged -> ASR not re-run. NOT listened to by a person.
+
+## Next steps (in order)
+
+1. **Listen** to 1C 28-95 s on the PC: does the new Leaf stroke read as a wing? Knobs: the flutter gain (3.2) and
+   the push decay (0.07 s) in `wingbeat_light`; row `gain_db`. Then the X4 slates 91.5-150 s (gulls, bell, walla).
+2. When X4 shots get rendered: check the X4-08 call on picture (spec `call` act at 0.8 s; answer at 1.75 s), X4-02
+   beats vs Leaf's wing (same 0.8 Hz model, `at` 0.05), X4-10 mast pass whoosh at 2.6 s, X4-07 heavy beat vs the
+   shadow crossing. X4-03: spec has Charcoal GLIDING, shotlist says "deep slow beats overhead" - only an air rush is
+   spotted (REQUEST director). If he flaps: add `wingbeat` at 0.16 every 1.6 s.
+3. VO REQUESTS (not synth): the crew's wordless rhythm call (X4-05), the lookout's laugh (X4-10), the instructor's
+   call + Abby's laugh (X4-13), recorded crew/market walla to replace the `walla` placeholder.
+4. Score: M8 fades by X4-01 +3 s; X4-20 needs "the light theme" again when X4 exists.
+5. Earlier items below still stand (flight_wind level for 1D/1E, M6 basses re-render check, Cling square bed +
+   diegetic festival music, VSCO 2 CE via sfizz, per-line voice treatment, episode-timeline mix).
+
 ## State (2026-11-02, session 6: wingbeat sync on the rendered 1C flight + harbour bed)
 
 - **Wingbeat sync** (director s15 request): 1C-07..19 are now rendered drafts (director work dir
