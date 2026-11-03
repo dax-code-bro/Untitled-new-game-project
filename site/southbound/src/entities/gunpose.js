@@ -76,12 +76,15 @@ const GRIP = {
   fore: { F: new THREE.Vector3(-0.72, 0.6, 0.2), S: new THREE.Vector3(0, 0, 1) },
 };
 
+const _c1 = new THREE.Vector3(), _c2 = new THREE.Vector3(), _c3 = new THREE.Vector3(), _fq1 = new THREE.Quaternion(), _fq2 = new THREE.Quaternion(), _fq3 = new THREE.Quaternion();
 export class GunPose {
   constructor(human) {
     const m = human.model;
     const b = (n) => m.getObjectByName(n);
     const hand = (s) => ({ upper: b('upperarm01' + s), lower: b('lowerarm01' + s), wrist: b('wrist' + s), index: b('finger2-1' + s), pinky: b('finger5-1' + s), clav: b('clavicle' + s) });
     this.R = hand('R'); this.L = hand('L');
+    // finger chains (thumb, index, middle, ring, pinky), three joints each
+    this.F = {}; for (const s of ['R', 'L']) this.F[s] = [1, 2, 3, 4, 5].map((n) => [1, 2, 3].map((j) => b(`finger${n}-${j}${s}`)).filter(Boolean));
     this.chest = b('spine01'); this.neck = b('neck01'); this.head = b('head');
     this.ok = !!(this.R.upper && this.R.lower && this.R.wrist && this.R.index && this.R.pinky && this.L.upper && this.L.wrist && this.chest);
     this.human = human;
@@ -217,6 +220,9 @@ export class GunPose {
     this.attachToHand(gun, this.R);
     if (s.state === 'reload') {
       const k = s.reload;
+      // tip the gun over so the magwell faces the fresh magazine, then back
+      const tilt = Math.sin(Math.min(1, k / 0.75) * Math.PI);
+      gun.rotateZ(-tilt * 0.55); gun.rotateX(tilt * 0.18); gun.updateMatrixWorld(true);
       const well = gun.localToWorld(_g.set(0, -0.12, 0.0)).clone();
       const pouch = F.chest.clone().addScaledVector(F.up, -0.45).addScaledVector(F.right, -0.15).addScaledVector(F.fw, 0.05);
       const t = k < 0.3 ? smooth(k / 0.3) : k < 0.6 ? 1 - smooth((k - 0.3) / 0.3) : 0;
@@ -224,6 +230,32 @@ export class GunPose {
       this.reach(this.L, lT, F, 'L');
       orientHand(this.L, gunVec(gun, GRIP.cup.F), gunVec(gun, GRIP.cup.S));
     }
+  }
+
+  // Curl the fingers after the arms are placed. Flexion turns each joint about
+  // the knuckle line, so it works whatever the bones' own axes are.
+  //   grip: 'pistol' (right hand on a grip), 'fore' (left hand on a handguard), 'cup' (left hand under a pistol)
+  curl(side, grip, trigger = 0) {
+    if (!this.ok) return;
+    const chains = this.F[side]; if (!chains || chains.length < 5) return;
+    const H = side === 'R' ? this.R : this.L;
+    H.index.getWorldPosition(_c1); H.pinky.getWorldPosition(_c2);
+    const axis = _c3.subVectors(_c1, _c2).normalize().multiplyScalar(side === 'R' ? 1 : -1);
+    const A = {
+      pistol: [[0.35, 0.45, 0.3], trigger > 0.3 ? [0.55, 0.85, 0.5] : [0.12, 0.08, 0.04], [1.05, 1.2, 0.8], [1.1, 1.25, 0.85], [1.15, 1.3, 0.9]],
+      fore: [[0.25, 0.3, 0.2], [0.75, 0.9, 0.6], [0.85, 1.0, 0.7], [0.9, 1.05, 0.75], [0.95, 1.1, 0.8]],
+      cup: [[0.2, 0.25, 0.2], [0.55, 0.7, 0.45], [0.6, 0.75, 0.5], [0.65, 0.8, 0.55], [0.7, 0.85, 0.6]],
+    }[grip];
+    chains.forEach((chain, f) => {
+      chain.forEach((bone, j) => {
+        const ang = A[f][j] * (f === 0 ? 0.6 : 1);
+        bone.getWorldQuaternion(_fq1);
+        _fq2.setFromAxisAngle(axis, ang).multiply(_fq1);
+        bone.parent.getWorldQuaternion(_fq3).invert();
+        bone.quaternion.copy(_fq3.multiply(_fq2));
+        bone.updateMatrixWorld(true);
+      });
+    });
   }
 
   // gun transform: `anchor` (gun-local point) goes to `pos`, barrel along dir

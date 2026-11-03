@@ -656,6 +656,9 @@ async function createGame(progress) {
             inspect: S.inspectT / 3.2, fp: rig.fp, eye: getEye().clone(), dual: combat.dual });
         }
         combat.gun = combat.dual && combat._side && mL ? mL : m;
+        // hands that hold the gun: fingers wrapped, trigger finger along the frame until it fires
+        if (info && info.kind !== 'launcher') { gunPose.curl('R', 'pistol', S.gunKick || 0); if (!combat.dual) gunPose.curl('L', info.kind === 'pistol' || info.kind === 'revolver' ? 'cup' : 'fore'); }
+        if (S.gunKick > 0.01) { m.position.addScaledVector(aimDir, -S.gunKick * 0.045); m.rotateX(-S.gunKick * 0.14); m.updateMatrixWorld(true); }
         // draw: the gun comes up from the holster
         if (S.drawT > 0) { const k = S.drawT / 0.35; m.position.y -= k * 0.35; m.updateMatrixWorld(true); }
       }
@@ -699,6 +702,13 @@ async function createGame(progress) {
       else if (armed && a.fire && player.aiming && !S.aimFriend && combat.cooldown <= 0 && S.dead <= 0) {
         combat.muzzleWorld(muzzle);
         const hit = combat.attack(camera.position.clone(), aimDir.clone(), muzzle.clone(), targets, player.pos);
+        if (combat.fired) {
+          // recoil: the muzzle climbs and the gun shoves back; each gun by its own recoil
+          const w = combat.fired; combat.fired = null;
+          const k = (w.recoil || 0.05) * (w.cat === 'shotgun' ? 1.5 : w.cat === 'sniper' || w.cat === 'marksman' ? 1.25 : w.cat === 'launcher' ? 1.8 : 1) * (S.scoped ? 0.6 : 1);
+          S.kick = (S.kick || 0) + k * 0.9; rig.pitch += k * 0.9; rig.yaw += (Math.random() - 0.5) * k * 0.6;
+          S.gunKick = Math.min(1.2, (S.gunKick || 0) + 0.25 + k * 5);
+        }
         if (hit) game.onShotEffects?.(combat.gun, combat.def);
         if (hit) {
           player.h.play('Pistol_Shoot', 0.04, 1.6, true);
@@ -790,6 +800,10 @@ async function createGame(progress) {
     if (S.vehicle?.wrecked) { S.vehicle.vel.multiplyScalar(Math.exp(-3 * dt)); }
 
     const onFoot = S.mode === 'foot' ? player.pos : null;
+    // recoil recovers; gunshots echo off the streets, rooms or open country
+    if (S.kick > 0) { const back = S.kick * Math.min(1, dt * 7); rig.pitch -= back * 0.75; S.kick -= back; }
+    if (S.gunKick) S.gunKick *= Math.exp(-dt * 14);
+    { const rg = regionAt(focus.x, focus.z); audio.env = S.indoors ? 'indoors' : rg.sub === 'City' || rg.sub === 'Town' ? 'city' : 'open'; }
     // the city by the clock: fewer people and cars late at night, more patrols
     {
       const hr = sky.hour, late = hr < 5 || hr >= 23.5 ? 1 : hr < 6.5 || hr >= 21 ? 0.55 : 0;

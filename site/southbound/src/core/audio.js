@@ -108,8 +108,33 @@ export class GameAudio {
       o.connect(g); g.connect(this.amb); o.start(s); o.stop(s + 0.06);
     }
   }
-  gunshot(vol = 1) {
+  // every gun sounds like itself: a crack, a boom, a tail and an echo shaped by
+  // its calibre and action, plus a small fingerprint per gun model
+  shotSig(w) {
+    if (!w) return null;
+    if (w._sig) return w._sig;
+    let h = 0; for (const c of w.id || '') h = (h * 31 + c.charCodeAt(0)) | 0;
+    const j = (k, n = 0) => 1 + ((((h >> n) & 1023) / 1023) - 0.5) * k;
+    const p = w.platform || '', cal = w.caliber || '';
+    let s = { crack: 6500, boom: 170, boomGain: 0.6, tail: 0.25, snap: 0, gain: 0.9, kind: 'gun' };
+    if (w.cat === 'pistol') s = /magnum|\.357|\.44/.test(p + cal) ? { crack: 5000, boom: 110, boomGain: 0.95, tail: 0.45, snap: 0.2, gain: 1.05 } : p === 'machine' ? { crack: 7200, boom: 190, boomGain: 0.5, tail: 0.18, snap: 0, gain: 0.85 } : { crack: 6600, boom: 165, boomGain: 0.62, tail: 0.24, snap: 0.1, gain: 0.9 };
+    else if (w.cat === 'shotgun') s = { crack: 3400, boom: 78, boomGain: 1.15, tail: 0.6, snap: 0, gain: 1.15 };
+    else if (w.cat === 'sniper') s = { crack: 6000, boom: 68, boomGain: 1.2, tail: 1.1, snap: 0.45, gain: 1.35 };
+    else if (w.cat === 'marksman') s = { crack: 6800, boom: 92, boomGain: 1.0, tail: 0.75, snap: 0.35, gain: 1.15 };
+    else if (w.cat === 'launcher') s = { kind: 'launch', crack: 1800, boom: 60, boomGain: 1.2, tail: 0.9, snap: 0, gain: 1.3 };
+    else if (w.cat === 'bow') s = { kind: 'bow', crack: 2500, boom: 220, boomGain: 0.3, tail: 0.15, snap: 0, gain: 0.5 };
+    else if (/pdw|smg/.test(p)) s = { crack: 7200, boom: 185, boomGain: 0.5, tail: 0.2, snap: 0.05, gain: 0.85 };
+    else if (/battle|dmr/.test(p) || /7\.62|\.308/.test(cal)) s = { crack: 7000, boom: 95, boomGain: 0.95, tail: 0.7, snap: 0.4, gain: 1.15 };
+    else s = { crack: 9000, boom: 128, boomGain: 0.75, tail: 0.55, snap: 0.5, gain: 1.0 }; // 5.56 carbines
+    s.crack *= j(0.25); s.boom *= j(0.3, 3); s.tail *= j(0.25, 6); s.boomGain *= j(0.2, 2);
+    s.kind = s.kind || 'gun'; s.silent = !!w.silent;
+    w._sig = s;
+    return s;
+  }
+  gunshot(vol = 1, w = null) {
     if (!this.ctx) return;
+    const sig = this.shotSig(w);
+    if (sig) return this.shot(vol, sig);
     const ctx = this.ctx, t = ctx.currentTime;
     const src = ctx.createBufferSource(); src.buffer = this.noiseBuf;
     const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.setValueAtTime(5000, t); f.frequency.exponentialRampToValueAtTime(300, t + 0.25);
@@ -119,6 +144,35 @@ export class GameAudio {
     o.frequency.setValueAtTime(140, t); o.frequency.exponentialRampToValueAtTime(40, t + 0.12);
     og.gain.setValueAtTime(0.7 * vol, t); og.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
     o.connect(og); og.connect(this.sfx); o.start(t); o.stop(t + 0.16);
+  }
+  shot(vol, s) {
+    const ctx = this.ctx, t = ctx.currentTime, out = this.sfx;
+    const echo = this.env === 'city' ? [0.11, 0.35] : this.env === 'indoors' ? [0.04, 0.5] : [0.32, 0.2];
+    const burst = (at, v, crack, tail) => {
+      const src = ctx.createBufferSource(); src.buffer = this.noiseBuf;
+      const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.setValueAtTime(crack, at); f.frequency.exponentialRampToValueAtTime(260, at + tail);
+      const g = ctx.createGain(); g.gain.setValueAtTime(v, at); g.gain.exponentialRampToValueAtTime(0.001, at + tail + 0.08);
+      src.connect(f); f.connect(g); g.connect(out); src.start(at, Math.random()); src.stop(at + tail + 0.1);
+    };
+    const boom = (at, v, f0, dur) => {
+      const o = ctx.createOscillator(), og = ctx.createGain(); o.type = 'sine';
+      o.frequency.setValueAtTime(f0 * 1.5, at); o.frequency.exponentialRampToValueAtTime(Math.max(25, f0 * 0.35), at + dur);
+      og.gain.setValueAtTime(v, at); og.gain.exponentialRampToValueAtTime(0.001, at + dur + 0.03);
+      o.connect(og); og.connect(out); o.start(at); o.stop(at + dur + 0.05);
+    };
+    if (s.kind === 'bow') {
+      const o = ctx.createOscillator(), og = ctx.createGain(); o.type = 'triangle'; o.frequency.setValueAtTime(s.boom, t); o.frequency.exponentialRampToValueAtTime(s.boom * 0.7, t + 0.15);
+      og.gain.setValueAtTime(0.35 * vol, t); og.gain.exponentialRampToValueAtTime(0.001, t + 0.18); o.connect(og); og.connect(out); o.start(t); o.stop(t + 0.2);
+      burst(t + 0.02, 0.12 * vol, 3000, 0.12); return;
+    }
+    if (s.silent) { burst(t, 0.3 * vol, 1100, 0.12); boom(t, 0.25 * vol, s.boom * 0.8, 0.08); return; }
+    const v = s.gain * vol;
+    burst(t, 0.9 * v, s.crack, s.tail);
+    boom(t, s.boomGain * 0.75 * v, s.boom, s.kind === 'launch' ? 0.35 : 0.14);
+    if (s.snap) { const src = ctx.createBufferSource(); src.buffer = this.noiseBuf; const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 3600; bp.Q.value = 2; const g = ctx.createGain(); g.gain.setValueAtTime(s.snap * v, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.03); src.connect(bp); bp.connect(g); g.connect(out); src.start(t); src.stop(t + 0.04); }
+    if (s.kind === 'launch') burst(t + 0.05, 0.4 * v, 1500, 0.8);
+    // the echo off buildings, or rolling across open country
+    burst(t + echo[0], echo[1] * 0.5 * v, s.crack * 0.35, s.tail * 1.6);
   }
   siren(level) {
     if (!this.ctx) return;

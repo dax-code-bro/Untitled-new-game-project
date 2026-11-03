@@ -220,7 +220,8 @@ export class Combat {
     a.clip--;
     this.cooldown = w.rate;
     const am = AMMO[this.ammoType[this.weapon]] || AMMO.FMJ;
-    if (!w.silent) this.audio?.gunshot((w.cat === 'launcher' || w.cat === 'sniper' ? 1.4 : w.cat === 'pistol' ? 0.9 : 1.1) * (am.quiet ? 0.5 : 1));
+    this.audio?.gunshot(am.quiet ? 0.55 : 1, w.silent ? { ...w, silent: true, id: w.id } : w);
+    this.fired = w; // the game applies recoil for this shot
     this.flash.position.copy(muzzle); this.flash.intensity = w.silent ? 0 : 4; this.flashT = 0.05;
     let first = null;
     const pellets = am.slug ? 1 : Math.round(w.pellets * (am.pellets || 1));

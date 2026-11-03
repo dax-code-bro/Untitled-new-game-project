@@ -71,13 +71,16 @@ export function installArmory(game) {
 
   // ---------------- what John is wearing
   player.gearArmor = true;
-  const worn = wearGear(player.h, P.gear);
+  // how far John's clothes stand off his body (jackets, hoodies): the carrier goes on top
+  const puff = () => { const t = parseKey(P.outfit?.top), o = parseKey(P.outfit?.outer); return Math.max(t?.style.inflate || 0, o?.style.inflate || 0) * 0.9 + (o ? 0.006 : 0); };
+  const worn = wearGear(player.h, P.gear, { puff });
   const refresh = () => {
     worn.apply(P.gear);
     const a = gearById('armor', P.gear.armor);
     player.armor = a && a.level ? Math.round(P.plateCond * 100) : 0;
   };
   refresh();
+  game.refreshGear = refresh; // a new outfit can change how far out the carrier sits
   const prevHead = game.setHeadwearVisible;
   game.setHeadwearVisible = (v) => { prevHead?.(v); worn.headVisible(v); };
 

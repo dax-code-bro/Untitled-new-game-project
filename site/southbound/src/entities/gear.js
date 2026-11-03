@@ -81,21 +81,23 @@ function camoTex(hex) {
 const fabricOf = (g) => g.pattern === 'camo' ? new THREE.MeshStandardMaterial({ map: camoTex(g.color), roughness: 0.9 }) : M(g.color, 0.9);
 
 // carrier around the chest: origin at the chest centre, +z forward (metres)
-export function buildCarrier(a) {
+export function buildCarrier(a, puff = 0) {
+  // `puff`: how far the clothes stand off the body (a puffy jacket pushes the carrier out)
+  const P = 0.022 + puff;
   const g = new THREE.Group(), cloth = fabricOf(a), dark = M(0x151515, 0.8);
   const add = (geo, m, x, y, z) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); g.add(o); return o; };
   const thick = a.plates ? 0.04 : 0.022, w = a.plates ? 0.29 : 0.34, h = a.plates ? 0.34 : 0.4;
-  add(new THREE.BoxGeometry(w, h, thick), cloth, 0, 0.0, 0.165);
-  add(new THREE.BoxGeometry(w, h, thick), cloth, 0, 0.0, -0.17);
+  add(new THREE.BoxGeometry(w, h, thick), cloth, 0, 0.0, 0.165 + P);
+  add(new THREE.BoxGeometry(w, h, thick), cloth, 0, 0.0, -0.17 - P);
   // cummerbund
   const band = new THREE.CylinderGeometry(1, 1, 0.13, 28, 1, true);
-  const b = add(band, cloth, 0, -0.12, 0); b.scale.set(0.2, 1, 0.175); b.material = cloth.clone(); b.material.side = THREE.DoubleSide;
+  const b = add(band, cloth, 0, -0.12, -0.005); b.scale.set(0.205 + P, 1, 0.18 + P); b.material = cloth.clone(); b.material.side = THREE.DoubleSide;
   // shoulder straps
-  for (const s of [-1, 1]) { const st = add(new THREE.BoxGeometry(0.055, 0.02, 0.34), cloth, s * 0.1, 0.2, 0); st.rotation.x = 0; }
-  if (a.plates || a.rig) for (let i = -1; i <= 1; i++) { add(new THREE.BoxGeometry(0.075, 0.12, 0.05), cloth, i * 0.085, -0.075, 0.2); add(new THREE.BoxGeometry(0.06, 0.02, 0.052), dark, i * 0.085, -0.02, 0.2); }
-  if (a.plates) { add(new THREE.BoxGeometry(0.16, 0.08, 0.035), cloth, 0, 0.08, 0.195); add(new THREE.BoxGeometry(0.12, 0.012, 0.01), M(0xc8c8c8, 0.6), 0, 0.125, 0.214); }
-  if (a.sides) for (const s of [-1, 1]) add(new THREE.BoxGeometry(0.03, 0.15, 0.16), cloth, s * 0.205, -0.1, 0);
-  if (a.id === 'soft-patrol') { const badge = add(new THREE.BoxGeometry(0.06, 0.07, 0.008), M(0xc9a640, 0.3, 0.9), -0.08, 0.08, 0.18); void badge; }
+  for (const s of [-1, 1]) { const st = add(new THREE.BoxGeometry(0.055, 0.02, 0.36 + P * 2), cloth, s * 0.1, 0.205 + P * 0.5, 0); st.rotation.x = 0; }
+  if (a.plates || a.rig) for (let i = -1; i <= 1; i++) { add(new THREE.BoxGeometry(0.075, 0.12, 0.05), cloth, i * 0.085, -0.075, 0.2 + P); add(new THREE.BoxGeometry(0.06, 0.02, 0.052), dark, i * 0.085, -0.02, 0.2 + P); }
+  if (a.plates) { add(new THREE.BoxGeometry(0.16, 0.08, 0.035), cloth, 0, 0.08, 0.195 + P); add(new THREE.BoxGeometry(0.12, 0.012, 0.01), M(0xc8c8c8, 0.6), 0, 0.125, 0.214 + P); }
+  if (a.sides) for (const s of [-1, 1]) add(new THREE.BoxGeometry(0.03, 0.15, 0.16), cloth, s * (0.212 + P), -0.1, 0);
+  if (a.id === 'soft-patrol') { const badge = add(new THREE.BoxGeometry(0.06, 0.07, 0.008), M(0xc9a640, 0.3, 0.9), -0.08, 0.08, 0.18 + P); void badge; }
   if (a.rig) { g.children.slice(0, 2).forEach((o) => { o.visible = false; }); }
   g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.userData.noHit = true; } });
   return g;
@@ -130,7 +132,7 @@ export function buildBag(b) {
 }
 
 // Put a set of gear on a person. Returns a handle to swap it later.
-export function wearGear(h, gear) {
+export function wearGear(h, gear, opts = {}) {
   const mesh = suitMesh(h);
   const state = { parts: [] };
   const clear = () => { for (const p of state.parts) p.parent?.remove(p); state.parts.length = 0; };
@@ -139,7 +141,7 @@ export function wearGear(h, gear) {
     if (!mesh) return;
     const mpu = bodyMetres(h, mesh);
     const a = gearById('armor', gs.armor), hm = gearById('helmet', gs.helmet), b = gearById('bag', gs.bag);
-    if (a && !a.hidden) { const m = buildCarrier(a); if (attachToBone(mesh, 'spine02', m, [0, 0.49, -0.115], mpu)) state.parts.push(m); }
+    if (a && !a.hidden) { const m = buildCarrier(a, (typeof opts.puff === 'function' ? opts.puff() : opts.puff) || 0); if (attachToBone(mesh, 'spine02', m, [0, 0.49, -0.115], mpu)) state.parts.push(m); }
     if (hm) { const m = buildHelmet(hm); m.userData.head = true; if (attachToBone(mesh, 'head', m, [0, 0.905, -0.075], mpu)) state.parts.push(m); }
     if (b) { const m = buildBag(b); if (attachToBone(mesh, 'spine02', m, [0, 0.52, -0.115], mpu)) state.parts.push(m); }
   };
