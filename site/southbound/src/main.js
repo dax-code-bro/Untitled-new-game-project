@@ -484,7 +484,7 @@ async function createGame(progress) {
     S.hitMarker = true;
   };
   const witnesses = (pos, r) => peds.list.some((p) => p.mode !== 'dead' && p.pos.distanceTo(pos) < r);
-  const aimDir = new THREE.Vector3(), muzzle = new THREE.Vector3();
+  const aimDir = new THREE.Vector3(), muzzle = new THREE.Vector3(), _fa = new THREE.Vector3();
 
   const tmpV = new THREE.Vector3();
   const _sunC = new THREE.Color();
@@ -672,8 +672,27 @@ async function createGame(progress) {
         headBone.quaternion.copy(pq.multiply(tq));
       }
       const targets = { peds, vehicles: [...traffic.cars.map((c) => c.v), ...police.cars.map((c) => c.v), ...parked, ...(law.heli() ? [law.heli()] : [])], animals: game.hunting ? game.hunting.list : [], statics: S.indoors ? indoorMeshes() : hitStatics };
-      if (armed && a.firePressed && game.safetyOn?.()) { audio.thud?.(0.05); hud.toast('Safety is on (K)', 1); }
-      else if (armed && a.fire && player.aiming && combat.cooldown <= 0 && S.dead <= 0) {
+      // what the reticle is on: one of your crew (grey: the gun won't fire), a threat (red),
+      // or a civilian, who reacts to having a gun pointed at them
+      S.aimFriend = false; S.aimHostile = false;
+      if (armed && player.aiming && S.mode === 'foot') {
+        const o = camera.position;
+        for (const fp of game.friendlies?.() || []) {
+          _fa.set(fp.x - o.x, fp.y + 1.0 - o.y, fp.z - o.z);
+          const t = _fa.dot(aimDir); if (t < 0 || t > 90) continue;
+          if (_fa.addScaledVector(aimDir, -t).length() < 0.45) { S.aimFriend = true; break; }
+        }
+        const pr = peds.raycast(o.clone(), aimDir.clone(), 40);
+        if (pr && pr.p) {
+          const p = pr.p;
+          S.aimHostile = ['foe', 'hunter', 'rival', 'armedciv', 'mugger'].includes(p.role) || (p.role === 'cop' && police.wanted > 0);
+          if ((!p.role || p.role === 'handsup') && p.mode !== 'dead' && !p.wound?.down) game.aimedAt?.(p);
+        }
+      }
+      hud.cross.classList.toggle('friend', S.aimFriend); hud.cross.classList.toggle('hostile', !S.aimFriend && S.aimHostile);
+      if (armed && a.firePressed && player.aiming && S.aimFriend) { audio.click?.(1); hud.toast('You can\'t shoot your own crew.', 1.2); }
+      else if (armed && a.firePressed && game.safetyOn?.()) { audio.thud?.(0.05); hud.toast('Safety is on (K)', 1); }
+      else if (armed && a.fire && player.aiming && !S.aimFriend && combat.cooldown <= 0 && S.dead <= 0) {
         combat.muzzleWorld(muzzle);
         const hit = combat.attack(camera.position.clone(), aimDir.clone(), muzzle.clone(), targets, player.pos);
         if (hit) game.onShotEffects?.(combat.gun, combat.def);

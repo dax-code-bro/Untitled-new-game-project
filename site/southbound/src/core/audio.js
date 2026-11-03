@@ -157,6 +157,15 @@ export class GameAudio {
     src.connect(lp); lp.connect(g); g.connect(this.amb); src.start(t); src.stop(t + 4.6);
   }
 
+  // a dry trigger: the hammer falls on nothing
+  click(k = 1) {
+    if (!this.ctx) return;
+    const ctx = this.ctx, t = ctx.currentTime;
+    const src = ctx.createBufferSource(); src.buffer = this.noiseBuf;
+    const f = ctx.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = 2400;
+    const g = ctx.createGain(); g.gain.setValueAtTime(0.5 * k, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
+    src.connect(f); f.connect(g); g.connect(this.sfx); src.start(t); src.stop(t + 0.05);
+  }
   thud(k) {
     const ctx = this.ctx, t = ctx.currentTime;
     const src = ctx.createBufferSource(); src.buffer = this.noiseBuf;

@@ -163,12 +163,14 @@ body.touch #speedo { right: calc(max(16px, env(safe-area-inset-right)) + 160px);
 #weapon { display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.45); padding: 4px 10px; border-radius: 6px; }
 #wicon { font-size: calc(26px * var(--hud)); }
 #ammo { font-family: Anton, Impact, sans-serif; font-weight: 400; font-size: calc(18px * var(--hud)); }
-#crosshair { position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; margin: -11px 0 0 -11px; display: none; }
-#crosshair::before, #crosshair::after { content: ''; position: absolute; background: #fff; box-shadow: 0 0 2px #000; }
+#crosshair { position: absolute; left: 50%; top: 50%; width: 9px; height: 9px; margin: -6px 0 0 -6px; display: none; border: 2px solid #fff; border-radius: 50%; box-shadow: 0 0 2px rgba(0,0,0,.8), inset 0 0 2px rgba(0,0,0,.6); transition: border-color .12s, transform .12s; }
+#crosshair.friend { border-color: #8d8d8d; opacity: .75; }
+#crosshair.hostile { border-color: #ff5a4a; transform: scale(1.15); }
+#crosshair::before, #crosshair::after { content: none; }
 #crosshair::before { left: 10px; top: 0; width: 2px; height: 22px; clip-path: polygon(0 0, 100% 0, 100% 36%, 0 36%, 0 64%, 100% 64%, 100% 100%, 0 100%); }
 #crosshair::after { top: 10px; left: 0; height: 2px; width: 22px; clip-path: polygon(0 0, 36% 0, 36% 100%, 0 100%, 0 0, 64% 0, 100% 0, 100% 100%, 64% 100%); }
 #crosshair.show { display: block; }
-#crosshair.hit::before, #crosshair.hit::after { background: #ff4a3a; }
+#crosshair.hit { border-color: #ff4a3a; transform: scale(1.35); }
 #bigmsg { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.6s; background: radial-gradient(ellipse, rgba(0,0,0,0.2), rgba(0,0,0,0.75)); }
 #bigmsg.show { opacity: 1; }
 #bigmsg b { font-family: Anton, Impact, sans-serif; font-weight: 400; font-size: calc(78px * var(--hud)); letter-spacing: 0.08em; color: #e2572b; text-shadow: 0 4px 0 #000; }

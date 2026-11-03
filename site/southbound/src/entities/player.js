@@ -104,7 +104,12 @@ export class Player {
     if (this.aiming) this.heading += wrapAngle(camYaw - this.heading) * Math.min(1, dt * 18);
     else if (mag > 0.05) this.heading += wrapAngle(Math.atan2(dx, dz) - this.heading) * Math.min(1, dt * 10);
 
-    if (a.jump && this.grounded && !this.swimming && !this.aiming) { this.vel.y = 5.2; this.grounded = false; this.h.play('Jump_Start', 0.08, 1.3, true); }
+    if (a.jump && this.grounded && !this.swimming && !this.aiming) {
+      // a real hop: about half a metre, not a cartoon leap
+      this.vel.y = 4.3; this.grounded = false; this.airT = 0;
+      this.runJump = this.speed > 1.2;
+      if (!this.runJump) this.h.play('Jump_Start', 0.1, 1.5, true);
+    }
     this.vel.y -= 18 * dt;
     this.pos.x += this.vel.x * dt;
     this.pos.z += this.vel.z * dt;
@@ -131,7 +136,7 @@ export class Player {
     } else if (this.pos.y <= ground + 0.05) {
       if (!wasAir && ground - prevY < 0.5) this.stepOff += prevY - ground; // curb/stair step: ease the body up
       this.pos.y = ground; this.vel.y = 0; this.grounded = true;
-      if (wasAir) this.h.play('Jump_Land', 0.05, 1.6, true);
+      if (wasAir) { this.h.layer('Jump_Loop', 0); if (this.fallV < -7.5) this.h.play('Jump_Land', 0.05, 1.5, true); } // only a real drop gets a heavy landing
     } else if (this.grounded && this.pos.y - ground < 0.45 && this.vel.y <= 0) {
       this.stepOff += this.pos.y - ground;
       this.pos.y = ground; this.vel.y = 0;
@@ -146,7 +151,17 @@ export class Player {
     // animation
     const h = this.h;
     if (this.swimming) h.play(this.speed > 0.4 ? 'Swim_Fwd_Loop' : 'Swim_Idle_Loop', 0.3);
-    else if (!this.grounded) { if (h.locked <= 0) h.play('Jump_Loop', 0.2); }
+    else if (!this.grounded) {
+      // in the air: keep the stride (running jump) and tuck the legs a little
+      this.airT = (this.airT || 0) + dt; this.fallV = this.vel.y;
+      if (this.runJump) { if (h.current) h.current.timeScale = 0.35; h.layer('Jump_Loop', Math.min(0.4, this.airT * 2)); }
+      else if (h.locked <= 0) { h.play('Idle_Loop', 0.25); h.layer('Jump_Loop', 0.45); }
+    }
+    else if (this.aiming && this.speed > 0.3) {
+      // walking with the gun up: the legs walk (backwards when you back up), the arms stay on the gun
+      const fwd = (this.vel.x * Math.sin(this.heading) + this.vel.z * Math.cos(this.heading)) / Math.max(0.01, this.speed);
+      if (h.locked <= 0) h.play('Walk_Loop', 0.15, (fwd >= -0.25 ? 1 : -1) * Math.max(0.6, this.speed / 1.5) * (Math.abs(fwd) < 0.4 ? 0.8 : 1));
+    }
     else if (this.aiming && armed) { if (h.locked <= 0) h.play('Pistol_Aim_Neutral', 0.12); }
     else if (h.locked <= 0) {
       const [clip, sp] = locomotion(this.speed);

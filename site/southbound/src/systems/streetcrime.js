@@ -73,8 +73,45 @@ export function installStreetCrime(game) {
     } else if (p.h.locked <= 0) p.h.play(knife ? 'Idle_Loop' : 'Pistol_Aim_Neutral', 0.15);
     if (p.gun) { p.h.root.position.copy(p.pos); p.h.root.rotation.y = p.heading; p.h.root.updateMatrixWorld(true); p.pose.attachToHand(p.gun, p.pose.R); p.gun.visible = true; }
   };
+  // ---------------- a gun pointed at you
+  const HANDS = ['"Whoa, whoa! Don\'t shoot!"', '"Take whatever you want, man!"', '"Please, I got kids!"', '"Easy, easy... I\'m not doing nothing."', '"Okay! Okay! Hands up!"'];
+  const BEG = ['"Please... please don\'t..."', '"I won\'t tell anybody, I swear!"', '"Oh God, oh God..."'];
+  const handsPost = (p) => () => {
+    if (p.role !== 'handsup' || !p.aimRx) { p.h.post = null; return; }
+    p.pose = p.pose || new GunPose(p.h);
+    if (!p.pose.ok) return;
+    p.h.root.position.copy(p.pos); p.h.root.rotation.y = p.heading; p.h.root.updateMatrixWorld(true);
+    const F = p.pose.frame(p.heading);
+    const k = Math.min(1, p.aimRx.age * 3); // the arms come up, they don't snap
+    const top = F.chest.clone().addScaledVector(F.up, (p.aimRx.kind === 'beg' ? 0.42 : 0.6) * k - 0.25 * (1 - k));
+    p.pose.reach(p.pose.R, top.clone().addScaledVector(F.right, 0.24).addScaledVector(F.fw, 0.08), F, 'R');
+    p.pose.reach(p.pose.L, top.clone().addScaledVector(F.right, -0.24).addScaledVector(F.fw, 0.08), F, 'L');
+  };
+  game.aimedAt = (p) => {
+    if (p.role === 'handsup') { p.aimRx.t = 2.5; return; }
+    if (p.aimCool > 0) return;
+    if (p.carry && Math.random() < 0.3) { startFight(p); return; }
+    const r = Math.random(), kind = r < 0.6 ? 'hands' : r < 0.82 ? 'flee' : 'beg';
+    const near = p.pos.distanceTo(player.pos) < 25;
+    if (kind === 'flee') { p.mode = 'flee'; p.threat = player.pos.clone(); p.timer = 10; p.aimCool = 20; if (near) hud.toast(pick(['"He\'s got a gun!"', '"Help! Somebody help!"']), 1.6); return; }
+    p.role = 'handsup'; p.aimRx = { kind, t: 2.5, age: 0 }; p.h.post = handsPost(p);
+    if (near) hud.toast(pick(kind === 'beg' ? BEG : HANDS), 2);
+  };
+  const handsThink = (p, dt) => {
+    const R = p.aimRx; R.t -= dt; R.age += dt;
+    p.heading = Math.atan2(player.pos.x - p.pos.x, player.pos.z - p.pos.z);
+    p.h.play(R.kind === 'beg' ? 'Crouch_Idle_Loop' : 'Idle_Loop', 0.25);
+    if (R.t <= 0) {
+      // you lowered the gun: they run, and most of them call it in
+      p.role = undefined; p.aimRx = null; p.h.post = null; p.aimCool = 30;
+      p.mode = 'flee'; p.threat = player.pos.clone(); p.timer = 10;
+      if (Math.random() < 0.7) game.reportCrime?.('weapon', p.pos, p);
+    }
+  };
   const prevThink = peds.think.bind(peds);
   peds.think = (p, dt, pl) => {
+    if (p.aimCool > 0) p.aimCool -= dt;
+    if (p.mode !== 'dead' && p.role === 'handsup') return handsThink(p, dt);
     if (p.mode !== 'dead' && p.role === 'armedciv') return peds.armedThink(p, dt);
     if (p.mode !== 'dead' && p.role === 'witness') return witnessThink(p, dt);
     return prevThink(p, dt, pl);

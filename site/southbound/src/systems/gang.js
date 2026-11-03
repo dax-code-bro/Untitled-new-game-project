@@ -215,6 +215,8 @@ export function installGang(game) {
   const SPOTS = [[0, 2, 'Idle_Talking_Loop'], [-3.2, -2.6, 'Sitting_Idle_Loop'], [-2.4, -2.9, 'Sitting_Idle_Loop'], [2.6, -0.6, 'Idle_Loop'], [0.6, -2.6, 'Idle_Talking_Loop'],
     [5.5, -2.5, 'Crouch_Idle_Loop'], [-6, 4, 'Idle_Loop'], [7, 2, 'Idle_Talking_Loop'], [-1.5, 5, 'Idle_Loop'], [3, 4.6, 'Idle_Talking_Loop'], [8, -6, 'Idle_Loop'],
     [-8, -1, 'Idle_Loop'], [4.5, 1.5, 'Idle_Talking_Loop'], [-4.5, 0.5, 'Idle_Loop']];
+  // everyone at the yard is a friend: aiming at them greys the reticle and the gun won't fire
+  game.friendlies = () => crew.filter((m) => m.h.root.visible).map((m) => m.h.root.position);
   const crew = GANG.map((M, i) => {
     const h = dressMember(lib, M);
     const [lx, lz, pose] = SPOTS[i % SPOTS.length];

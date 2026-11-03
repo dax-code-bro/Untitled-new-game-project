@@ -68,6 +68,7 @@ export class Human {
   update(dt) {
     if (this.locked > 0) this.locked -= dt;
     this.mixer.update(dt);
+    if (this.post) this.post(dt); // pose tweaks on top of the clip (hands up, etc.)
   }
 
   dispose() { this.mixer.stopAllAction(); this.mixer.uncacheRoot(this.model); }
