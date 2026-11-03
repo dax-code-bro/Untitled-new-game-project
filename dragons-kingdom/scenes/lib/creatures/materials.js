@@ -457,7 +457,11 @@ void dkSkin(inout vec3 albedo) {
     // the rim's slope (the outer ~quarter of the plate profile, wider than the groove) is what reads as
     // grout under a raking key: flatten it except on deep seams and the under side of an overlap
     float rimM = smoothstep(0.7, 1.0, vq);
-    vg *= 1.0 - hv1 * rimM * clamp(0.6 + 0.35 * abut + 0.35 * top - 0.6 * deep - 0.6 * under, 0.0, 0.92);
+    // (r2 s7) default flatten 0.6 -> 0.45: fully flat rims read as broken slate / dried mud
+    vg *= 1.0 - hv1 * rimM * clamp(0.45 + 0.35 * abut + 0.35 * top - 0.6 * deep - 0.6 * under, 0.0, 0.92);
+    // (r2 s7) each plate sits at its own slight tilt (a constant gradient per cell: the plate catches
+    // the key a little more or less as a whole), so neighbours never share one flat plane like paving
+    vg += hv1 * (vec3(plateJ, plateJ2, fract(plateJ * 5.31 + plateJ2 * 2.7)) - 0.5) * 0.6 * (1.0 - 0.5 * deep);
     vcav = max(vcav, hv1 * under * rimM * 0.75);
     vh += hv1 * top * cav0 * gA * 0.25;
     vcr = max(vcr, hv1 * top * cav0 * 0.9);

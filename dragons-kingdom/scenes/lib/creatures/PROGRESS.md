@@ -4,6 +4,30 @@ Owner paths: `scenes/lib/creatures/`, `scenes/lookdev/creatures-*.js` (+ creatur
 README.md in this folder is the full description of how the models are built; this file is
 only the state of the work.
 
+## REALISM ROUND 2 - session 7 (2026-11-03, short budgeted session)
+Stills (draft) under `scratchpad/eng1/creatures/r2s7/`: `v1/X3-15_042.png`, crop sheet `x315_s6v3_s7v1.png` (crop
+x620-940 y80-320 x2: session 6 v3 | now), `knee/1C-03_101.png` (Charcoal gathering for the vault, u 0.6),
+`knee/1C-04_048.png` (Charcoal passing overhead, u 0.5), `knee/knee_pair.png`, `knee/c103_crop.png` (2x knee region).
+Done (code, materials.js head block, Charcoal only via headVar):
+- default rim flatten 0.6 -> 0.45 (abut/top/deep/under modifiers unchanged, cap 0.92).
+- per-plate tilt: `vg += hv1 * (vec3(plateJ, plateJ2, ..) - 0.5) * 0.6 * (1 - 0.5 deep)` after the flatten - a
+  constant gradient per cell, so neighbouring plates catch the key differently instead of sharing one plane.
+RESULTS (looked at): X3-15 - plates a little rounder at the rims and more varied in value plate to plate; the
+"broken slate" read is reduced but NOT gone: the big angular plates (lower right of the crop) still look like flat
+stone chips, partly from their straight Voronoi edges and the streaky fine pit texture.
+- Knee check (legTuck/legThigh): 1C-03 u0.6 (backlit, ground level, Charcoal crouched to vault) - no stretched
+  membrane or spike at the knee; the folded plagiopatagium shows as a clean pale lit fold by the hip. 1C-04 u0.5
+  (underside, overhead) - membrane meets the body/legs cleanly, no tearing. Both are silhouettes / far, so a lit
+  side view of a Charcoal walk is still worth one still (none of the 1B shots has Charcoal walking).
+- npm test: 49 tests, 48 pass, 0 fail, 1 skipped, exit 0. Style frames / creatures lookdev NOT re-rendered (budget).
+NEXT (exact):
+1. X3-15 slate read: round the plate OUTLINES (dkVor3 border: blend q toward a smooth-min distance on head cells,
+   or lower the anisotropy so head cells are less polygonal) and soften/shorten the pit streaks on the big plates
+   (pit noise scale 0.11 -> 0.07, threshold 0.66 -> 0.72); maybe a low dome on the biggest brow plates. Re-still X3-15.
+2. Lit side view of Charcoal walking low (creatures lookdev `walkLow` at draft) for the knee/membrane check.
+3. Re-render style frames + creatures lookdev at draft (not done since session 3).
+4. X3-02 grey; session 2 items 4-5 (Leaf/Starlight memFoldOcc, contacts, gait).
+
 ## REALISM ROUND 2 - session 6 (2026-11-02, short budgeted session)
 Stills (draft) under `scratchpad/eng1/creatures/r2s6/`: `v1/`, `v2/`, `v3/X3-15_042.png` (v3 = final), crop sheets
 `x315_s5_s6v1.png`, `x315_s5_s6v2.png`, `x315_s5_s6v3.png` (crop x620-940 y80-320 x2: session 5 v3 | now),
