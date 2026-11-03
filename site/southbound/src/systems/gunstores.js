@@ -135,17 +135,19 @@ export function buildShop(game, r, st) {
     const wall = st.style ? wallMaterial(st) : M(st.wall || 0x8c7f6e), trim = M(0x2b2420), wood = M(0x5a3a22, 0.6), floor = M(0x6d6458, 0.8), glass = new THREE.MeshStandardMaterial({ color: 0x223038, roughness: 0.05, metalness: 0.3, transparent: true, opacity: 0.35 });
     const box = (w, h, d, x, yy, z, m, hit = true) => { const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); b.position.set(x, yy, z); b.castShadow = b.receiveShadow = true; if (hit) b.userData.hitStatic = true; g.add(b); return b; };
     box(W, 1, D + 2.4, 0, -0.5, 1.2, floor);
-    const parts = { back: [], sides: [], roof: [], awning: [] };
+    const parts = { back: [], sides: [], roof: [], awning: [], front: [] };
     parts.back.push(box(W + 2 * t, H, t, 0, H / 2, -D / 2, wall)); // back
     parts.sides.push(box(t, H, D, -W / 2, H / 2, 0, wall), box(t, H, D, W / 2, H / 2, 0, wall)); // sides
     // front: door gap in the middle, shop windows either side
     const side = (W - 1.8) / 2;
+    const frontParts = [];
     for (const s of [-1, 1]) {
-      box(side, 0.9, t, s * (0.9 + side / 2), 0.45, D / 2, wall);
-      box(side, 1.0, t, s * (0.9 + side / 2), H - 0.5, D / 2, wall);
-      box(side - 0.1, H - 1.9, 0.05, s * (0.9 + side / 2), 0.9 + (H - 1.9) / 2, D / 2, glass, false);
+      frontParts.push(box(side, 0.9, t, s * (0.9 + side / 2), 0.45, D / 2, wall));
+      frontParts.push(box(side, 1.0, t, s * (0.9 + side / 2), H - 0.5, D / 2, wall));
+      frontParts.push(box(side - 0.1, H - 1.9, 0.05, s * (0.9 + side / 2), 0.9 + (H - 1.9) / 2, D / 2, glass, false));
     }
-    box(1.8, H - 2.5, t, 0, 2.5 + (H - 2.5) / 2, D / 2, wall); // over the door
+    frontParts.push(box(1.8, H - 2.5, t, 0, 2.5 + (H - 2.5) / 2, D / 2, wall)); // over the door
+    parts.front.push(...frontParts);
     parts.roof.push(box(W + 2 * t + 0.4, 0.25, D + 0.6, 0, H + 0.12, 0, trim)); // roof
     parts.awning.push(box(W + 0.6, 0.12, 1.4, 0, 2.75, D / 2 + 0.7, trim)); // awning
     // the street face: style, door, OPEN sign

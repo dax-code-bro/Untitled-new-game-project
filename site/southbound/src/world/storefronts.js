@@ -122,14 +122,28 @@ export function dressStorefront(g, st, { W, D, H, t, box, M, hide }) {
     const poster = textTex('poster', 128, 192, (x) => { x.fillStyle = '#ffd400'; x.fillRect(0, 0, 128, 192); x.fillStyle = '#b3241f'; x.font = 'bold 34px Impact, sans-serif'; x.textAlign = 'center'; x.fillText('ICE', 64, 60); x.fillText('COLD', 64, 100); x.fillStyle = '#111'; x.font = 'bold 22px Impact'; x.fillText('2 FOR $3', 64, 150); });
     for (const s of [-1, 1]) add(new THREE.PlaneGeometry(0.7, 1.05), new THREE.MeshStandardMaterial({ map: poster, roughness: 0.8 }), s * (W / 2 - 1.3), 1.8, front + 0.03);
   } else if (style === 'quonset') {
-    hide('roof'); hide('awning'); hide('sides'); hide('back');
-    const shell = add(new THREE.CylinderGeometry(W / 2 + 0.2, W / 2 + 0.2, D + 0.3, 28, 1, true, -Math.PI / 2, Math.PI), wallMaterial(st), 0, 0, 0);
-    shell.rotation.x = Math.PI / 2; shell.scale.set(1, 1, (H + 0.9) / (W / 2 + 0.2)); shell.material.side = THREE.DoubleSide;
-    const arch = new THREE.Shape(); arch.absarc(0, 0, W / 2 + 0.2, 0, Math.PI, false); arch.lineTo(-W / 2 - 0.2, 0);
-    const hole = new THREE.Path(); hole.moveTo(-W / 2 - 0.1, -0.1); hole.lineTo(W / 2 + 0.1, -0.1); hole.lineTo(W / 2 + 0.1, H); hole.lineTo(-W / 2 - 0.1, H); hole.closePath(); arch.holes.push(hole);
-    const endM = M(st.wall || 0x5d5a40, 0.7, 0.3);
-    const fe = add(new THREE.ShapeGeometry(arch, 24), endM, 0, 0, D / 2 + 0.17); fe.scale.y = (H + 0.9) / (W / 2 + 0.2);
-    const be = add(new THREE.ShapeGeometry(arch, 24), endM, 0, 0, -D / 2 - 0.17, Math.PI); be.scale.y = (H + 0.9) / (W / 2 + 0.2);
+    // a half-round corrugated hut wider than the shop box, with flat end walls
+    hide('roof'); hide('awning'); hide('sides'); hide('back'); hide('front');
+    const R = W / 2 + 0.25, top = H + 1.1;
+    const shell = add(new THREE.CylinderGeometry(R, R, D + 0.3, 28, 1, true, -Math.PI / 2, Math.PI), wallMaterial(st), 0, 0, 0);
+    shell.rotation.x = Math.PI / 2; shell.scale.set(1, 1, top / R); shell.material.side = THREE.DoubleSide;
+    // end wall: the arch with a notch for the door (one simple polygon, no holes)
+    const end = (notch) => {
+      const sh = new THREE.Shape();
+      if (notch) { sh.moveTo(0.9, 0); sh.lineTo(R, 0); } else sh.moveTo(R, 0);
+      for (let i = 1; i <= 24; i++) { const a = (i / 24) * Math.PI; sh.lineTo(R * Math.cos(a), top * Math.sin(a)); }
+      if (notch) { sh.lineTo(-0.9, 0); sh.lineTo(-0.9, 2.5); sh.lineTo(0.9, 2.5); }
+      sh.closePath();
+      return new THREE.ShapeGeometry(sh);
+    };
+    const endM = M(st.wall || 0x5d5a40, 0.7, 0.3); endM.side = THREE.DoubleSide;
+    add(end(true), endM, 0, 0, D / 2 + 0.02);
+    add(end(false), endM, 0, 0, -D / 2 - 0.02);
+    // small windows either side of the door, and a canopy over it
+    for (const s of [-1, 1]) {
+      add(new THREE.PlaneGeometry(1.3, 0.9), new THREE.MeshStandardMaterial({ color: 0x223038, roughness: 0.1, metalness: 0.3 }), s * 2.6, 1.8, D / 2 + 0.04);
+      add(new THREE.BoxGeometry(1.4, 1.0, 0.04), M(0x2a2a20, 0.6), s * 2.6, 1.8, D / 2 + 0.03);
+    }
     add(new THREE.BoxGeometry(2.4, 0.08, 1.2), M(0x3a3a2a, 0.8), 0, 2.85, D / 2 + 0.6);
   } else if (style === 'civic') {
     hide('awning');
@@ -160,5 +174,6 @@ export function dressStorefront(g, st, { W, D, H, t, box, M, hide }) {
   }
   const sign = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 0.26), new THREE.MeshStandardMaterial({ map: openSign(), emissive: 0xffffff, emissiveMap: openSign(), emissiveIntensity: 1.4 }));
   sign.position.set(-(0.9 + (W - 1.8) / 4), 2.15, D / 2 - 0.06); sign.userData.noHit = true; g.add(sign);
+  if (style === 'quonset') sign.position.set(-2.6, 1.8, D / 2 + 0.06);
   return { leaves, sign };
 }

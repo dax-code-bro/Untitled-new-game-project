@@ -164,7 +164,7 @@ export function installArmory(game) {
 
   // ---------------- status chips (wounds, concealment)
   const chip = document.createElement('div'); chip.id = 'sbstatus';
-  chip.style.cssText = 'position:fixed;left:16px;bottom:96px;z-index:12;display:flex;flex-direction:column;gap:5px;pointer-events:none;font:600 12px Inter,system-ui,sans-serif';
+  chip.style.cssText = 'position:fixed;left:16px;bottom:240px;z-index:12;display:flex;flex-direction:column;gap:5px;pointer-events:none;font:600 12px Inter,system-ui,sans-serif';
   document.body.appendChild(chip);
   let chipKey = '';
   const drawChips = () => {
