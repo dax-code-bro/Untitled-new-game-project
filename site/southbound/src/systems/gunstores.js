@@ -177,7 +177,7 @@ export function buildShop(game, r, st) {
     x2.fillStyle = st.signText || '#e8d3a8'; let fs = 58; do { x2.font = `bold ${fs}px Oswald, Impact, sans-serif`; fs -= 2; } while (x2.measureText(st.name.toUpperCase()).width > 700 && fs > 20); x2.textAlign = 'center'; x2.textBaseline = 'middle'; x2.fillText(st.name.toUpperCase(), 384, 66);
     const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
     const sign = new THREE.Mesh(new THREE.PlaneGeometry(7, 1.17), new THREE.MeshStandardMaterial({ map: tex, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 0.35 }));
-    sign.position.set(0, H - 0.5, D / 2 + 0.26); g.add(sign);
+    sign.position.set(0, st.style === 'block' ? H - 0.15 : H - 0.5, D / 2 + (st.style === 'block' ? 0.37 : 0.26)); g.add(sign); // corner stores: on the fascia band
     const lamp = new THREE.PointLight(0xfff0d8, 10, 12, 2); lamp.position.set(0, H - 0.5, -0.5); g.add(lamp);
     scene.add(g);
     g.updateMatrixWorld(true);
