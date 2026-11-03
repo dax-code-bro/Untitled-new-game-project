@@ -11,6 +11,52 @@ import { loadOpen, loaded, instance, Q } from '../assets/open.js';
 const BOW_MODELS = [Q('medieval_weapons_pack', 'Bow_Wooden'), Q('medieval_weapons_pack', 'Bow_Wooden2')];
 BOW_MODELS.forEach(loadOpen);
 
+// Open-source firearm models (Quaternius Survival pack + Modular Sci-Fi Guns
+// pack, both CC0). Every model has its barrel along +X; the table gives its
+// real length (m) and where hands go, as fractions of its bounding box
+// (x: 0 = butt .. 1 = muzzle, y: 0 = bottom .. 1 = top):
+//   g grip (shooting hand), f fore-end (support hand), w magazine well,
+//   b bolt / charging handle, t rear sight.
+const SV = 'survival_pack/', SF = 'modular_sci_fi_guns_pack/';
+export const GUN_MODELS = {
+  pistol1: { m: SV + 'Pistol_1', len: 0.21, g: [0.16, 0.32], w: [0.15, 0], t: [0.08, 1], kind: 'pistol' },
+  pistol2: { m: SV + 'Pistol_2', len: 0.2, g: [0.16, 0.32], w: [0.15, 0], t: [0.08, 1], kind: 'pistol' },
+  revolver1: { m: SV + 'Revolver_1', len: 0.31, g: [0.1, 0.3], w: [0.32, 0.6], t: [0.25, 1], kind: 'pistol', revolver: 1 },
+  revolver2: { m: SV + 'Revolver_2', len: 0.24, g: [0.13, 0.3], w: [0.4, 0.6], t: [0.3, 1], kind: 'pistol', revolver: 1 },
+  revolver3: { m: SV + 'Revolver_3', len: 0.28, g: [0.1, 0.3], w: [0.35, 0.6], t: [0.28, 1], kind: 'pistol', revolver: 1 },
+  mpistol: { m: SF + 'Pistol_3', len: 0.26, g: [0.3, 0.3], w: [0.3, 0], t: [0.2, 1], kind: 'pistol', scifi: 1 },
+  shotgun1: { m: SV + 'Shotgun_1', len: 1.05, g: [0.25, 0.5], f: [0.63, 0.45], w: [0.42, 0.45], b: [0.4, 0.8], t: [0.42, 1], kind: 'long', action: 'pump' },
+  shotgun2: { m: SV + 'Shotgun_2', len: 1.1, g: [0.26, 0.55], f: [0.6, 0.5], w: [0.42, 0.5], b: [0.4, 0.85], t: [0.45, 1], kind: 'long', action: 'pump' },
+  sawedoff: { m: SV + 'Shotgun_SawedOff', len: 0.62, g: [0.12, 0.42], f: [0.45, 0.55], w: [0.4, 0.75], b: [0.3, 0.9], t: [0.3, 1], kind: 'long', action: 'pump' },
+  shortstock: { m: SV + 'Shotgun_ShortStock', len: 0.85, g: [0.2, 0.45], f: [0.58, 0.55], w: [0.4, 0.5], b: [0.38, 0.85], t: [0.38, 1], kind: 'long', action: 'pump' },
+  ar1: { m: SF + 'AR_1', len: 0.9, g: [0.42, 0.25], f: [0.74, 0.6], w: [0.52, 0.4], b: [0.4, 0.9], t: [0.38, 1], kind: 'long', scifi: 1 },
+  ar2: { m: SF + 'AR_2', len: 0.86, g: [0.5, 0.25], f: [0.8, 0.45], w: [0.6, 0.3], b: [0.45, 0.9], t: [0.4, 1], kind: 'long', scifi: 1 },
+  ar3: { m: SF + 'AR_3', len: 0.66, g: [0.44, 0.3], f: [0.84, 0.6], w: [0.74, 0.35], b: [0.5, 0.95], t: [0.45, 1], kind: 'long', scifi: 1 },
+  ar4: { m: SF + 'AR_4', len: 0.9, g: [0.6, 0.25], f: [0.85, 0.55], w: [0.68, 0.4], b: [0.5, 0.9], t: [0.45, 1], kind: 'long', scifi: 1 },
+  ar5: { m: SF + 'AR_5', len: 0.74, g: [0.45, 0.2], f: [0.8, 0.5], w: [0.25, 0.3], b: [0.6, 0.9], t: [0.5, 1], kind: 'long', scifi: 1 },
+  ar6: { m: SF + 'AR_6', len: 0.9, g: [0.42, 0.3], f: [0.78, 0.55], w: [0.55, 0.3], b: [0.45, 0.9], t: [0.42, 1], kind: 'long', scifi: 1 },
+  smg1: { m: SF + 'SMG_1', len: 0.58, g: [0.46, 0.35], f: [0.72, 0.4], w: [0.72, 0.35], b: [0.55, 0.95], t: [0.45, 1], kind: 'long', scifi: 1 },
+  smg2: { m: SF + 'SMG_2', len: 0.66, g: [0.38, 0.3], f: [0.72, 0.6], w: [0.62, 0.3], b: [0.45, 0.9], t: [0.4, 1], kind: 'long', scifi: 1 },
+  sniper1: { m: SF + 'Sniper_1', len: 1.2, g: [0.36, 0.25], f: [0.6, 0.6], w: [0.45, 0.35], b: [0.45, 0.9], t: [0.4, 1], kind: 'long', action: 'bolt', scifi: 1 },
+  sniper2: { m: SF + 'Sniper_2', len: 1.3, g: [0.33, 0.25], f: [0.6, 0.6], w: [0.42, 0.35], b: [0.42, 0.9], t: [0.38, 1], kind: 'long', action: 'bolt', scifi: 1 },
+  sniper3: { m: SF + 'Sniper_3', len: 1.18, g: [0.36, 0.25], f: [0.6, 0.6], w: [0.45, 0.35], b: [0.45, 0.9], t: [0.4, 1], kind: 'long', scifi: 1 },
+  grenadel: { m: SF + 'Grenade_1', len: 0.8, g: [0.45, 0.25], f: [0.75, 0.5], w: [0.6, 0.3], b: [0.5, 0.9], t: [0.4, 1], kind: 'long', action: 'pump', scifi: 1 },
+};
+const PLATFORM_MODELS = {
+  service: ['pistol1', 'pistol2'], compact: ['pistol2', 'pistol1'], magnum: ['revolver1', 'revolver3', 'revolver2'], machine: ['mpistol'], target: ['revolver1', 'pistol1'],
+  carbine: ['ar1', 'ar4'], battle: ['ar2', 'ar6'], bullpup: ['ar5'], pdw: ['ar3', 'smg1', 'smg2'],
+  pump: ['shotgun1', 'shortstock'], auto: ['shotgun2'], double: ['sawedoff'],
+  bolt: ['sniper1', 'sniper3'], heavy: ['sniper2'], dmr: ['sniper3', 'ar6'], lever: ['shotgun2'], semi: ['sniper1'],
+  grenade: ['grenadel'],
+};
+export function gunModelFor(w) {
+  const list = PLATFORM_MODELS[w.platform];
+  if (!list) return null;
+  let h = 0; for (const c of w.id) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return GUN_MODELS[list[h % list.length]];
+}
+for (const g of Object.values(GUN_MODELS)) loadOpen(Q(...g.m.split('/')));
+
 const MAKERS = ['Calvera Arms', 'Gulfline', 'Redgrass Works', 'Brazos Ordnance', 'Port Iron', 'Sabine & Co.', 'Mill Creek Forge', 'Arden Precision', 'Sierra Norte Arms', 'Bayou Tactical', 'Lone Heron', 'Cypress Armory'];
 const FINISH = [[0.03, 0.03, 0.035], [0.18, 0.16, 0.12], [0.24, 0.22, 0.17], [0.07, 0.09, 0.06], [0.32, 0.33, 0.35], [0.5, 0.5, 0.52], [0.14, 0.06, 0.03]];
 
@@ -115,7 +161,59 @@ function mat(rgb, rough, metal) {
   if (!matCache.has(key)) matCache.set(key, new THREE.MeshStandardMaterial({ color: new THREE.Color(...rgb), roughness: rough, metalness: metal }));
   return matCache.get(key);
 }
+// Real materials for the open models' flat colours
+function realMaterial(name, finish, scifi) {
+  const n = name.toLowerCase();
+  if (n.includes('wood')) return mat(n.includes('dark') ? [0.16, 0.07, 0.03] : [0.3, 0.14, 0.05], 0.5, 0);
+  if (n === 'main') return mat(finish, 0.45, 0.35); // the sci-fi accent colour becomes the weapon's finish
+  if (n.includes('white') || n.includes('lightmetal')) return mat([0.2, 0.2, 0.21], 0.32, 0.9);
+  if (n.includes('grey') || n === 'metal') return mat([0.09, 0.09, 0.095], 0.3, 0.9);
+  if (n.includes('darkmetal')) return mat([0.05, 0.05, 0.055], 0.35, 0.85);
+  if (n.includes('red')) return mat([0.5, 0.06, 0.04], 0.5, 0.1);
+  return mat([0.025, 0.025, 0.028], 0.6, 0.15); // black polymer
+}
+
+// Gun group in "hold space": origin at the shooting hand's wrist, +Z muzzle,
+// +Y up. userData.hold says where everything is for the pose system.
+function buildOpenGun(w, G) {
+  const src = loaded(Q(...G.m.split('/')));
+  if (!src) return null;
+  const g = new THREE.Group();
+  const inner = src.scene.clone(true);
+  inner.traverse((o) => { if (o.isMesh) { o.material = realMaterial(o.material.name || '', w.finish || [0.05, 0.05, 0.05], G.scifi); o.castShadow = true; } });
+  inner.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(inner);
+  const size = box.getSize(new THREE.Vector3());
+  const k = (G.len * (w.model?.s || 1)) / size.x;
+  // barrel +X -> +Z
+  const holder = new THREE.Group();
+  holder.add(inner);
+  inner.position.set(-box.min.x, -box.min.y, -(box.min.z + box.max.z) / 2);
+  holder.rotation.y = -Math.PI / 2;
+  holder.scale.setScalar(k);
+  const L = size.x * k, H = size.y * k;
+  const at = (fx, fy) => new THREE.Vector3(0, fy * H, fx * L); // butt-relative point in hold space
+  const grip = at(...G.g);
+  // the wrist sits behind and a little above the middle of the grip
+  const wrist = grip.clone().add(new THREE.Vector3(0, 0.035, -0.055));
+  holder.position.sub(wrist);
+  g.add(holder);
+  const rel = (v) => v.clone().sub(wrist);
+  const fore = G.f ? rel(at(...G.f)).add(new THREE.Vector3(0.035, -0.045, -0.02)) : rel(at(G.g[0] + 0.1, G.g[1]));
+  g.userData.muzzle = rel(at(1, 0.8));
+  g.userData.hold = {
+    kind: G.kind, action: G.action || 'mag', revolver: !!G.revolver, len: L,
+    fore, well: rel(at(...(G.w || G.g))).add(new THREE.Vector3(0.03, -0.06, 0)), bolt: rel(at(...(G.b || [0.4, 0.9]))).add(new THREE.Vector3(-0.04, 0.03, 0)),
+    butt: rel(at(0, 0.62)), mid: rel(at(0.45, 0.5)), sight: rel(at(...(G.t || [0.4, 1]))), sightY: 0, sightZ: 0,
+    inspectStyle: (w.id.length * 7 + (w.id.charCodeAt(w.id.length - 1) || 0)) % 3,
+  };
+  g.userData.open = G.m;
+  return g;
+}
+
 export function buildWeaponModel(w) {
+  const G = gunModelFor(w);
+  if (G) { const og = buildOpenGun(w, G); if (og) return og; }
   const g = new THREE.Group();
   const m = w.model || {};
   const metal = mat(w.finish || [0.03, 0.03, 0.035], 0.35, 0.8), dark = mat([0.02, 0.02, 0.022], 0.6, 0.3);
@@ -165,6 +263,18 @@ export function buildWeaponModel(w) {
     }
   }
   g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+  // procedural fallback (launcher tube, bows, or before a model has loaded)
+  const len = (m.len || 0.2) * (m.s || 1);
+  const isLong = !m.bow && len > 0.3;
+  const shift = new THREE.Vector3(0, 0.035, -0.055);
+  g.children.forEach((c) => c.position.sub(shift));
+  g.userData.muzzle.sub(shift);
+  g.userData.hold = {
+    kind: m.bow ? 'bow' : isLong ? 'long' : 'pistol', action: 'mag', revolver: !!m.revolver, len,
+    fore: new THREE.Vector3(0.035, -0.08, len * 0.55), well: new THREE.Vector3(0.03, -0.12, len * 0.15), bolt: new THREE.Vector3(-0.04, 0.05, len * 0.1),
+    butt: new THREE.Vector3(0, -0.02, -(m.stock || 0.1) * (m.s || 1) - 0.05), mid: new THREE.Vector3(0, 0, len * 0.3), sight: new THREE.Vector3(0, 0.05, 0), sightY: 0, sightZ: 0,
+    inspectStyle: w.id.length % 3,
+  };
   return g;
 }
 

@@ -72,9 +72,17 @@ export class Input {
       }
     };
     addEventListener('touchend', end); addEventListener('touchcancel', end);
+    // drag from the weapon button to point at a wheel slot
+    this.wheelDrag = { id: null, x0: 0, y0: 0, dx: 0, dy: 0 };
+    addEventListener('touchmove', (e) => {
+      for (const t of e.changedTouches) if (t.identifier === this.wheelDrag.id) { this.wheelDrag.dx = t.clientX - this.wheelDrag.x0; this.wheelDrag.dy = t.clientY - this.wheelDrag.y0; }
+    }, { passive: true });
+    const endDrag = (e) => { for (const t of e.changedTouches) if (t.identifier === this.wheelDrag.id) { this.wheelDrag.id = null; this.touchButtons.delete('weapon'); } };
+    addEventListener('touchend', endDrag); addEventListener('touchcancel', endDrag);
     root.querySelectorAll('[data-btn]').forEach((b) => {
       const id = b.dataset.btn;
       b.addEventListener('touchstart', (e) => {
+        if (id === 'weapon') { const t = e.changedTouches[0]; Object.assign(this.wheelDrag, { id: t.identifier, x0: t.clientX, y0: t.clientY, dx: 0, dy: 0 }); }
         this.touchButtons.add(id); this.touchPressed.add(id);
         if (id === 'aim') { this.touchAim = !this.touchAim; b.classList.toggle('on', this.touchAim); }
         e.preventDefault();
@@ -111,8 +119,14 @@ export class Input {
       aim: this.mouse.has(2) || this.touchAim || k('KeyE'),
       fire: this.mouse.has(0) || this.btn('fire') || k('ControlLeft'),
       firePressed: this.mousePressed.has(0) || this.btnHit('fire') || this.hit('ControlLeft'),
-      weapon: this.hit('KeyQ') || this.hit('Digit1') || this.hit('Digit2') || this.btnHit('weapon'),
-      reload: this.hit('KeyR'),
+      // weapon wheel: held open with Tab / Q / the gun button / LB
+      wheel: k('Tab') || k('KeyQ') || this.btn('weapon'),
+      wheelDX: this.wheelDrag ? this.wheelDrag.dx : 0, wheelDY: this.wheelDrag ? this.wheelDrag.dy : 0, wheelTouch: !!(this.wheelDrag && this.wheelDrag.id !== null),
+      wheelPrev: this.hit('KeyZ'), wheelNext: this.hit('KeyX'),
+      holster: this.hit('KeyH') || this.hit('Digit1'),
+      reload: this.hit('KeyR') || this.btnHit('reload'),
+      interact: k('KeyF') || this.btn('interact'),
+      interactHit: this.hit('KeyF') || this.btnHit('interact'),
     };
     // gamepad
     const pads = navigator.getGamepads ? navigator.getGamepads() : [];
@@ -132,8 +146,14 @@ export class Input {
       if ((g.buttons[6]?.value || 0) > 0.5) a.aim = true;
       if ((g.buttons[7]?.value || 0) > 0.5) { a.fire = true; a.firePressed = a.firePressed || !this._padRT; }
       this._padRT = (g.buttons[7]?.value || 0) > 0.5;
-      if (g.buttons[2]?.pressed && !this._padX) a.weapon = true;
+      if (g.buttons[4]?.pressed) a.wheel = true; // LB: weapon wheel
+      if (g.buttons[2]?.pressed && !this._padX) a.reload = true;
       this._padX = g.buttons[2]?.pressed;
+      if (g.buttons[1]?.pressed) a.interact = true; // B: hold to interact
+      if (g.buttons[1]?.pressed && !this._padB) a.interactHit = true;
+      this._padB = g.buttons[1]?.pressed;
+      if (g.buttons[11]?.pressed && !this._padRS) a.camera = true; // R3: camera / first person
+      this._padRS = g.buttons[11]?.pressed;
       this._padA = g.buttons[0]?.pressed; this._padY = g.buttons[3]?.pressed; this._padStart = g.buttons[9]?.pressed;
     }
     a.moveX = Math.max(-1, Math.min(1, a.moveX));

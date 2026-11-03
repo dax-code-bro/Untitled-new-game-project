@@ -12,7 +12,8 @@ export class CameraRig {
     this.zoom = 1;
     this.target = new THREE.Vector3();
     this.shake = 0;
-    this.mode = 0; // 0 normal, 1 far, 2 close
+    this.mode = 0; // 0 normal, 1 far, 2 close, 3 first person (on foot)
+    this._dir = new THREE.Vector3();
   }
 
   update(dt, a, focus, opts, collision) {
@@ -22,8 +23,24 @@ export class CameraRig {
     this.pitch += a.lookY * s * (this.settings.invertY ? -1 : 1);
     this.pitch = clamp(this.pitch, -0.6, 1.25);
     this.zoom = clamp(this.zoom + a.zoom * 0.1, 0.6, 2.2);
-    if (a.camera) this.mode = (this.mode + 1) % 3;
-    const modeK = [1, 1.6, 0.7][this.mode];
+    if (a.camera) this.mode = (this.mode + 1) % 4;
+    this.fp = this.mode === 3 && !opts.vehicle && !!opts.eye;
+    const modeK = [1, 1.6, 0.7, 1][this.mode];
+    if (this.fp) {
+      // first person: from the eyes, a touch in front so the head never shows
+      const cam = this.camera;
+      const fx = Math.sin(this.yaw), fz = Math.cos(this.yaw), cp = Math.cos(this.pitch), sp = Math.sin(this.pitch);
+      const d = this._dir.set(fx * cp, -sp, fz * cp);
+      cam.position.copy(opts.eye).addScaledVector(d, 0.1);
+      cam.position.x += fx * 0.04; cam.position.z += fz * 0.04;
+      cam.lookAt(cam.position.x + d.x, cam.position.y + d.y, cam.position.z + d.z);
+      const fov = this.settings.fov + 6 - (opts.aiming ? 22 : 0);
+      if (cam.near !== 0.04) { cam.near = 0.04; cam.updateProjectionMatrix(); }
+      if (Math.abs(cam.fov - fov) > 0.05) { cam.fov = lerp(cam.fov, fov, Math.min(1, dt * 12)); cam.updateProjectionMatrix(); }
+      this.dist = 0.1;
+      return;
+    }
+    if (this.camera.near !== 0.3) { this.camera.near = 0.3; this.camera.updateProjectionMatrix(); }
 
     let height = 1.55, dist = 4.6 * this.zoom * modeK, side = 0.45;
     if (opts.aiming) { dist = 2.2; side = 0.75; height = 1.6; }

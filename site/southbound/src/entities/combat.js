@@ -2,7 +2,8 @@
 import * as THREE from 'three';
 import { clamp } from '../util.js';
 
-import { WEAPONS, buildWeaponModel } from './arsenal.js';
+import { WEAPONS, buildWeaponModel, gunModelFor } from './arsenal.js';
+import { loaded, Q } from '../assets/open.js';
 import { raycastObjects, raycastStatic } from '../core/hits.js';
 export { WEAPONS };
 
@@ -16,8 +17,14 @@ export class Combat {
     this.ammo = {};
     for (const id of STARTER) this.give(id);
     this.weapon = 'fists';
+    this.holstered = true; // RDR-style: guns stay holstered until drawn from the wheel
+    this.dual = false; // two sidearms at once
+    this.offhand = null; // the left-hand sidearm when dual wielding
+    this.slots = {}; // weapon wheel: chosen weapon per slot
     this.cooldown = 0;
     this.reloading = 0;
+    this.reloadDur = 1.4;
+    this._side = 0;
     this.models = {};
     this.gun = null;
     this.pending = [];
@@ -34,6 +41,35 @@ export class Combat {
   }
 
   get def() { return WEAPONS[this.weapon]; }
+  // a gun is out in the hands (not holstered, not fists)
+  get drawn() { return !this.holstered && !this.def.melee; }
+
+  // wheel slot a weapon belongs to
+  static slotOf(id) {
+    const w = WEAPONS[id];
+    if (!w || w.melee) return 'unarmed';
+    return { pistol: 'sidearm', rifle: 'long', shotgun: 'shotgun', sniper: 'sniper', marksman: 'sniper', bow: 'bow', launcher: 'heavy' }[w.cat] || 'long';
+  }
+  ownedIn(slot) { return this.owned.filter((id) => Combat.slotOf(id) === slot); }
+  slotWeapon(slot) {
+    const list = this.ownedIn(slot);
+    if (!list.length) return null;
+    if (!list.includes(this.slots[slot])) this.slots[slot] = list[0];
+    return this.slots[slot];
+  }
+  // equip from the wheel ('unarmed' holsters)
+  equip(slot, dual = false) {
+    if (slot === 'unarmed') { this.holstered = true; this.dual = false; return; }
+    const id = this.slotWeapon(slot);
+    if (!id) return;
+    this.weapon = id; this.holstered = false; this.reloading = 0;
+    this.dual = false; this.offhand = null;
+    if (dual && slot === 'sidearm') {
+      const others = this.ownedIn('sidearm').filter((x) => x !== id);
+      this.offhand = others[0] || id;
+      this.dual = true;
+    }
+  }
 
   give(id) {
     const w = WEAPONS[id];
@@ -46,23 +82,38 @@ export class Combat {
     return true;
   }
 
-  // current weapon model (built on first use)
-  model() {
-    if (this.def.melee) return null;
-    if (!this.models[this.weapon]) { const m = buildWeaponModel(this.def); m.visible = false; this.scene.add(m); this.models[this.weapon] = m; }
-    return this.models[this.weapon];
+  // weapon model (built on first use; rebuilt once its open-source model has loaded)
+  model(id = this.weapon, tag = '') {
+    const w = WEAPONS[id];
+    if (!w || w.melee) return null;
+    const key = id + tag;
+    let m = this.models[key];
+    const G = gunModelFor(w);
+    if (m && !m.userData.open && G && loaded(Q(...G.m.split('/')))) { this.scene.remove(m); m = null; }
+    if (!m) { m = buildWeaponModel(w); m.visible = false; this.scene.add(m); this.models[key] = m; }
+    return m;
   }
+  hideAll(except = []) { for (const m of Object.values(this.models)) if (!except.includes(m)) m.visible = false; }
 
   cycle() {
     const i = this.owned.indexOf(this.weapon);
     this.weapon = this.owned[(i + 1) % this.owned.length];
+    this.holstered = this.def.melee; this.dual = false;
     this.reloading = 0;
   }
 
   reload() {
     const a = this.ammo[this.weapon];
-    if (!a || a.clip === WEAPONS[this.weapon].clip || a.reserve <= 0 || this.reloading > 0) return false;
-    this.reloading = 1.4;
+    const b = this.dual && this.offhand ? this.ammo[this.offhand] : null;
+    const full = (x, id) => !x || x.clip === WEAPONS[id].clip || x.reserve <= 0;
+    if (this.reloading > 0 || (full(a, this.weapon) && (!b || full(b, this.offhand)))) return false;
+    // each action type takes its own time
+    const w = this.def, info = this.models[this.weapon]?.userData.hold;
+    const missing = w.clip - (a ? a.clip : 0);
+    this.reloadDur = w.cat === 'pistol' ? (info?.revolver ? 2.3 : 1.5) * (this.dual ? 1.6 : 1)
+      : w.cat === 'shotgun' ? 1.2 + Math.min(missing, 6) * 0.35
+      : w.cat === 'sniper' ? 2.6 : w.cat === 'launcher' ? 2.8 : w.cat === 'bow' ? 0.9 : 2.1;
+    this.reloading = this.reloadDur;
     return true;
   }
 
@@ -147,7 +198,12 @@ export class Combat {
       }
       return { kind: 'swing', melee: true };
     }
-    const a = this.ammo[this.weapon];
+    let a = this.ammo[this.weapon];
+    if (this.dual && this.offhand) {
+      // alternate hands; the left gun spends its own magazine
+      this._side ^= 1;
+      if (this._side && this.ammo[this.offhand]?.clip > 0) a = this.ammo[this.offhand];
+    }
     if (a.clip <= 0) { this.reload(); return null; }
     a.clip--;
     this.cooldown = w.rate;
@@ -233,8 +289,10 @@ export class Combat {
       if (p.t >= p.T) { this.scene.remove(p.obj); this.impact(p.hit, p.w, p.targets, p.src); this.pending.splice(i, 1); }
     }
     if (this.reloading > 0 && (this.reloading -= dt) <= 0) {
-      const a = this.ammo[this.weapon];
-      if (a) { const need = WEAPONS[this.weapon].clip - a.clip, take = Math.min(need, a.reserve); a.clip += take; a.reserve -= take; }
+      for (const id of this.dual && this.offhand ? [this.weapon, this.offhand] : [this.weapon]) {
+        const a = this.ammo[id];
+        if (a) { const need = WEAPONS[id].clip - a.clip, take = Math.min(need, a.reserve); a.clip += take; a.reserve -= take; }
+      }
       this.reloading = 0;
     }
     if (this.flashT > 0 && (this.flashT -= dt) <= 0) { this.flash.intensity = 0; this.flash.distance = 4; }

@@ -90,7 +90,7 @@ export function createSky(renderer, scene, quality) {
       sun.position.copy(focus).addScaledVector(dir, 600);
       sun.target.position.copy(focus);
       // Snap the shadow camera to texels to stop shimmering
-      const texel = (2 * R) / quality.shadowMap;
+      const texel = (2 * sun.shadow.camera.right) / quality.shadowMap;
       sun.target.position.x = Math.round(sun.target.position.x / texel) * texel;
       sun.target.position.z = Math.round(sun.target.position.z / texel) * texel;
       sun.position.x = sun.target.position.x + dir.x * 600;
