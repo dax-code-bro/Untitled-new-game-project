@@ -25,11 +25,11 @@ import { parseKey } from '../entities/clothing.js';
 
 const STORES = [
   { id: 'a-city', name: 'Gulf Coast Tactical', keeper: 'Reggie Batiste', blurb: 'Body armour, packs, holsters, medical. Law enforcement discounts.', priceK: 1.15,
-    wall: 0x3a3d36, signBg: '#1b1f16', signFg: '#c8b46a', signText: '#f1ead0', style: 'tactical',
+    wall: 0x3a3d36, signBg: '#1b1f16', signFg: '#c8b46a', signText: '#f1ead0', style: 'metal', hours: 'Mon–Sat 9–7|LE/Mil discount',
     at: () => [[CITY.x0 - 46, CITY.z0 + 5 * CITY.pitch + 20], [CITY.x0 + 7.5 * CITY.pitch, CITY.z0 - 40], [CITY.x0 + CITY.nx * CITY.pitch + 46, CITY.z0 + 0.5 * CITY.pitch], [CITY.x0 + 6.5 * CITY.pitch, CITY.z0 + CITY.nz * CITY.pitch + 46], [CITY.x0 - 46, CITY.z0 + 0.5 * CITY.pitch]],
     look: { id: 'reggie', base: 'mh_m4', skin: 'dark', suit: [0.3, 0.32, 0.24], hair: 'black', h: 1.03, w: 1.2, acc: ['cap'], lines: ['Plates, packs, patches. What are we protecting today?', 'Level IV will stop a lot. Not everything. Remember that.'] }, gear: { armor: 'pc-ceramic' } },
   { id: 'a-town', name: 'Sabine Army Surplus', keeper: 'Dot Fontenot', blurb: 'Surplus gear and first aid. Cash, no questions.', priceK: 0.95,
-    wall: 0x5d5a40, signBg: '#2b2a1a', signFg: '#d8c890', signText: '#f2ecd2', style: 'surplus',
+    wall: 0x5d5a40, signBg: '#2b2a1a', signFg: '#d8c890', signText: '#f2ecd2', style: 'quonset', hours: 'Thu–Sun 9–5|Cash only',
     at: () => [[TOWN.x0 + 3 * TOWN.pitch, TOWN.z0 + TOWN.nz * TOWN.pitch + 34], [TOWN.x0 - 34, TOWN.z0 + 0.5 * TOWN.pitch], [TOWN.x0 + TOWN.nx * TOWN.pitch + 34, TOWN.z0 + 0.5 * TOWN.pitch], [TOWN.x0 + 0.5 * TOWN.pitch, TOWN.z0 - 34]],
     look: { id: 'dot', base: 'mh_f2', skin: 'light', suit: [0.38, 0.4, 0.28], hair: 'grey', h: 0.95, w: 1.15, acc: ['glasses'], lines: ['My husband brought half this home from Germany. Don\'t ask.', 'Tourniquets are by the register. Buy two.'] }, gear: { armor: 'soft-patrol' } },
 ];

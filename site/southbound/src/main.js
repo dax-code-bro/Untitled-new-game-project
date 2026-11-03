@@ -31,6 +31,8 @@ import { installProps } from './systems/props.js';
 import { installArmory } from './systems/armory.js';
 import { installWounds } from './systems/wounds.js';
 import { installStreetCrime } from './systems/streetcrime.js';
+import { installAuction } from './systems/auction.js';
+import { createWayfinding } from './world/wayfinding.js';
 import { installCarCombat } from './systems/carcombat.js';
 import { installStreetLife } from './systems/streetlife.js';
 import { installWorldEvents } from './systems/world-events.js';
@@ -422,6 +424,18 @@ async function createGame(progress) {
   game.tracer = game.tracer || ((a, b) => combat.tracer(a, b));
   const streetCrime = installStreetCrime(game);
   const wounds = installWounds(game);
+  const auction = installAuction(game);
+  // every place worth finding: road signs point to them, the phone lists them
+  game.places = [
+    ...(game.gunShops || []).map((s) => ({ name: s.name, kind: 'Gunsmith', icon: '🔫', x: s.x, z: s.z })),
+    ...(game.armorShops || []).map((s) => ({ name: s.name, kind: 'Armour & medical', icon: '🦺', x: s.x, z: s.z })),
+    ...(game.shopSpots || []).map((s) => ({ name: s.name, kind: s.kind === 'mart' ? 'Food & drink' : 'Clothing', icon: s.kind === 'mart' ? '🥪' : '👕', x: s.x, z: s.z })),
+    ...(game.hardwareShops || []).map(([x, z, name]) => ({ name, kind: 'Hardware', icon: '🔨', x, z })),
+    ...(game.barbers || []).map(([x, z, name]) => ({ name, kind: 'Barber', icon: '✂️', x, z })),
+    ...(game.auctionHouse ? [{ name: game.auctionHouse.name, kind: 'Property & vehicle auction', icon: '🔨', x: game.auctionHouse.x, z: game.auctionHouse.z }] : []),
+  ];
+  const wayfinding = createWayfinding(game, game.places.filter((p) => p.kind !== 'Barber'));
+  game.wayfinding = wayfinding;
   combat.ammoType = { ...(career.p.weapons.ammoType || {}) };
   Object.assign(game, { hurtPlayer });
   const carCombat = installCarCombat(game, { explodeAt });
@@ -708,6 +722,8 @@ async function createGame(progress) {
     armory.update(dt);
     wounds.update(dt);
     streetCrime.update(dt);
+    auction.update(dt);
+    wayfinding.update(dt);
     worldEvents.update(dt);
     details.update(dt);
     career.update(dt);

@@ -70,7 +70,8 @@ export function installDetails(game) {
     hair.scale.set(1 + hr * 0.12, 1 + hr * 0.25, 1 + hr * 0.12);
   };
   applyGroom();
-  for (const [x, z, name] of [[CITY.x0 + 2 * CITY.pitch + 14, CITY.z0 - 6, 'Slick\'s Barbershop'], [TOWN.x0 + TOWN.pitch + 10, TOWN.z0 + TOWN.nz * TOWN.pitch + 4, 'Mill Creek Barber']]) {
+  game.barbers = [[CITY.x0 + 2 * CITY.pitch + 14, CITY.z0 - 6, 'Slick\'s Barbershop'], [TOWN.x0 + TOWN.pitch + 10, TOWN.z0 + TOWN.nz * TOWN.pitch + 4, 'Mill Creek Barber']];
+  for (const [x, z, name] of game.barbers) {
     const pole = new THREE.Group();
     const tex = (() => { const c = document.createElement('canvas'); c.width = 16; c.height = 64; const x2 = c.getContext('2d'); for (let i = 0; i < 8; i++) { x2.fillStyle = ['#c22', '#fff', '#23c', '#fff'][i % 4]; x2.fillRect(0, i * 8, 16, 8); } const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; return t; })();
     const cyl = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.9, 16), new THREE.MeshStandardMaterial({ map: tex, emissive: 0x333333, emissiveMap: tex }));

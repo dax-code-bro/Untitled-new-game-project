@@ -99,7 +99,7 @@ export function installTools(game) {
     },
     act: (t) => { if (t.supply) { if (career.spend(t.price)) { P.supplies = P.supplies || { metal: 0, glass: 0, springs: 0 }; P.supplies[t.supply] += t.n; hud.toast(`Bought ${t.name}`, 1.2); } return; } if (career.spend(t.price)) { career.addTool(t.id, t.fx.bait || t.fx.arrows ? 1 : 1); if (t.fx.bait) P.baitCount = (P.baitCount || 0) + t.fx.bait; hud.toast(`Bought ${t.name}`, 1.2); } },
   });
-  const shops = [
+  const shops = game.hardwareShops = [
     [CITY.x0 + 5 * CITY.pitch - 30, CITY.z0 - 26, 'Calvera Hardware', 'Construction'],
     [TOWN.x0 + TOWN.pitch * 2 + 10, TOWN.z0 + TOWN.nz * TOWN.pitch + 18, 'Mill Creek Feed & Hardware', 'Farm'],
     [TOWN.x0 - 26, TOWN.z0 + 2 * TOWN.pitch, 'Bayou Outfitters (hunting)', 'Hunting'],

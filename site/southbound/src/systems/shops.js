@@ -14,15 +14,15 @@ import { DEFAULT_OUTFIT, makeOutfitter, COLORS } from '../entities/clothing.js';
 
 const CLOTHING = [
   { id: 'c-city', name: 'Calvera Outfitters', keeper: 'Dolores Vidrine', blurb: 'Everything, in every colour. City prices.', priceK: 1.3,
-    slots: ['top', 'outer', 'bottom', 'shoes', 'hat', 'eye', 'neck', 'gloves'], wall: 0x6f7f86, signBg: '#13262a', signFg: '#9fc4c0', signText: '#e9f4f2',
+    slots: ['top', 'outer', 'bottom', 'shoes', 'hat', 'eye', 'neck', 'gloves'], wall: 0xa9cbc6, style: 'stucco', awning: 0x2f7d74, hours: 'Every day|10am – 9pm', signBg: '#13262a', signFg: '#9fc4c0', signText: '#e9f4f2',
     at: () => [[CITY.x0 + 2.5 * CITY.pitch, CITY.z0 - 40], [CITY.x0 + 6.5 * CITY.pitch, CITY.z0 - 40], [CITY.x0 - 46, CITY.z0 + 1 * CITY.pitch + 48], [CITY.x0 + CITY.nx * CITY.pitch + 46, CITY.z0 + 1.5 * CITY.pitch], [CITY.x0 + CITY.nx * CITY.pitch + 46, CITY.z0 + 4.5 * CITY.pitch], [CITY.x0 + 1.5 * CITY.pitch, CITY.z0 + CITY.nz * CITY.pitch + 46], [CITY.x0 + 5.5 * CITY.pitch, CITY.z0 + CITY.nz * CITY.pitch + 46]],
     look: { id: 'dolores', base: 'mh_f1', skin: 'brown', suit: [0.15, 0.32, 0.33], hair: 'black', h: 0.98, w: 0.95, acc: ['glasses'], lines: ['That shirt has seen things, baby. Let\'s fix you up.', 'Fitting room\'s in the back. Mirror doesn\'t lie.'] } },
   { id: 'c-town', name: 'Mill Creek Dry Goods', keeper: 'Earl Thibodeaux', blurb: 'Workwear, boots and hats. Fair prices.', priceK: 1.0,
-    slots: ['top', 'outer', 'bottom', 'shoes', 'hat', 'gloves'], wall: 0x8a6f52, signBg: '#2a1c10', signFg: '#d8b46a', signText: '#f2e3c2',
+    slots: ['top', 'outer', 'bottom', 'shoes', 'hat', 'gloves'], wall: 0x8a6a4a, style: 'brick', hours: 'Mon–Sat 8–6|Sunday closed', signBg: '#2a1c10', signFg: '#d8b46a', signText: '#f2e3c2',
     at: () => [[TOWN.x0 + 2 * TOWN.pitch, TOWN.z0 - 34], [TOWN.x0 - 34, TOWN.z0 + 2 * TOWN.pitch], [TOWN.x0 + TOWN.nx * TOWN.pitch + 34, TOWN.z0 + 2 * TOWN.pitch]],
     look: { id: 'earl', base: 'mh_m4', skin: 'light', suit: [0.42, 0.35, 0.25], hair: 'grey', h: 1.0, w: 1.1, acc: ['cap'], lines: ['Boots are by the door. Try \'em on, they don\'t bite.', 'Mama made half these shirts. The good half.'] } },
   { id: 'c-bayou', name: 'Bayou Bait & Boots', keeper: 'Clotile Guidry', blurb: 'Rubber boots, fishing shirts, hats. Cheap.', priceK: 0.9,
-    slots: ['top', 'bottom', 'shoes', 'hat', 'neck', 'gloves'], wall: 0x5d6b52, signBg: '#18200f', signFg: '#b8c88a', signText: '#eef3d8',
+    slots: ['top', 'bottom', 'shoes', 'hat', 'neck', 'gloves'], wall: 0x6f8590, style: 'siding', roof: 0x9aa0a6, hours: 'Every day|6am – 7pm', signBg: '#18200f', signFg: '#b8c88a', signText: '#eef3d8',
     at: () => [[BAYOU.x + 300, BAYOU.z - 160], [BAYOU.x + 200, BAYOU.z - 340], [BAYOU.x + 420, BAYOU.z - 240]],
     look: { id: 'clotile', base: 'mh_f2', skin: 'tan', suit: [0.3, 0.38, 0.3], hair: 'brown', h: 0.96, w: 1.05, acc: ['bandana'], lines: ['White boots are half off. Everybody needs white boots.', 'You smell like gun oil, cher.'] } },
 ];
@@ -189,7 +189,7 @@ export function installShops(game) {
   ];
   const names = ['Pete', 'Lynette', 'Boo', 'Arnold', 'Shanice', 'Ray'];
   MARTS.forEach((m, i) => {
-    const st = { ...m, name: 'Gulf Mart', keeper: names[i % names.length], wall: 0xb8b2a2, signBg: '#7a1410', signFg: '#f4c430', signText: '#ffffff', decorate: decorateMart,
+    const st = { ...m, name: 'Gulf Mart', keeper: names[i % names.length], wall: 0xe8e4dc, style: 'block', band: 0xb3241f, hours: 'OPEN|24 HOURS', signBg: '#7a1410', signFg: '#f4c430', signText: '#ffffff', decorate: decorateMart,
       look: { id: 'mart' + i, base: m.look, skin: ['brown', 'tan', 'light', 'dark'][i % 4], suit: [0.55, 0.12, 0.1], hair: ['black', 'brown', 'grey'][i % 3], h: 1, w: 1 + (i % 3) * 0.08, acc: i % 2 ? ['cap'] : [], lines: [] } };
     const shop = place(st, 'mart');
     if (!shop) return;
@@ -200,7 +200,7 @@ export function installShops(game) {
       use: () => { mart.k = m.priceK; mart.show('here', `Gulf Mart · ${st.keeper} at the register`); } });
   });
 
-  game.shopSpots = keepers.map((k) => ({ id: k.st.id, kind: k.kind, x: k.shop.counter.x, z: k.shop.counter.z, face: k.shop.keeperFace }));
+  game.shopSpots = keepers.map((k) => ({ id: k.st.id, name: k.st.name, kind: k.kind, x: k.shop.counter.x, z: k.shop.counter.z, face: k.shop.keeperFace }));
   return {
     keepers,
     update(dt) {

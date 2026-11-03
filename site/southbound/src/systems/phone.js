@@ -88,11 +88,12 @@ export function installPhone(game) {
   const nameOf = (g) => g.cat === 'boat' ? BOATS.find((b) => b.id === g.type)?.name : g.cat === 'air' ? AIRCRAFT.find((a) => a.id === g.type)?.name : VEHICLES[g.type]?.name;
   const phone = new ShopUI({
     title: '📱 Phone', getMoney: () => career.money, pause: game.pause,
-    tabs: [{ k: 'inv', label: 'Inventory' }, { k: 'garage', label: 'Garage' }, { k: 'weapons', label: 'Weapons' }, { k: 'props', label: 'Properties' }, { k: 'jobs', label: 'Jobs (27)' }, { k: 'story', label: 'Story (63)' }, { k: 'apps', label: 'Runr' }, { k: 'stats', label: 'Stats & save' }],
+    tabs: [{ k: 'inv', label: 'Inventory' }, { k: 'garage', label: 'Garage' }, { k: 'weapons', label: 'Weapons' }, { k: 'props', label: 'Properties' }, { k: 'jobs', label: 'Jobs (27)' }, { k: 'story', label: 'Story (63)' }, { k: 'places', label: 'Places' }, { k: 'apps', label: 'Runr' }, { k: 'stats', label: 'Stats & save' }],
     note: (t) => ({
       inv: `Pelts: ${Object.values(P.pelts).reduce((a, b) => a + b, 0)} · Fish: ${Object.values(P.fish).filter(Boolean).reduce((a, f) => a + f.n, 0)} · Bait: ${P.baitCount || 0}`,
       garage: 'Owned cars are delivered to the nearest road; boats to the nearest marina; aircraft to the airfield.',
       weapons: `${game.combat.owned.length - 1} of ${Object.keys(WEAPONS).length - 2} weapons owned. Buy more from the three gunsmiths, or have one delivered through Runr.`,
+      places: 'Every shop and service in Calvera, nearest first. Tap one to set your GPS. Blue road signs point the way too.',
       apps: `Runr — errands, deliveries and towing. ${couriers.length ? `${couriers.length} on the way.` : 'Nothing on the way.'}`,
       props: `${P.properties.length} of 198 owned.`,
       jobs: 'Tap a job to set GPS to its job board.',
@@ -107,6 +108,7 @@ export function installPhone(game) {
       if (t === 'jobs') return game.jobs.JOBS;
       if (t === 'story') return game.missions.MISSIONS;
       if (t === 'apps') return services();
+      if (t === 'places') return [...(game.places || [])].sort((a, b) => Math.hypot(a.x - player.pos.x, a.z - player.pos.z) - Math.hypot(b.x - player.pos.x, b.z - player.pos.z));
       return [{ save: true }, ...Object.entries(P.stats).map(([k, v]) => ({ k, v }))];
     },
     row: (it, t) => {
@@ -117,6 +119,7 @@ export function installPhone(game) {
       if (t === 'props') return { name: it.name, sub: `${it.type} · ${it.region}${P.home === it.id ? ' · home' : ''}`, stats: [], btn: 'GPS' };
       if (t === 'jobs') { const j = P.jobs[it.id]; return { name: it.name, sub: `${it.text}${j ? ` · level ${j.level}, ${j.runs} shifts` : ''}`, stats: [], btn: 'GPS', cls: j ? 'own' : '' }; }
       if (t === 'story') { const done = P.missions.done.includes(it.id), next = !done && game.missions.MISSIONS.find((m) => !P.missions.done.includes(m.id)) === it; return { name: `${it.id.slice(1)}. ${it.title}`, sub: `${it.act} · ${it.who} · ${money(it.reward)}`, stats: [], btn: done ? 'Done' : next ? 'Next' : 'Locked', cls: done ? 'own' : next ? '' : 'dis' }; }
+      if (t === 'places') { const d = Math.hypot(it.x - player.pos.x, it.z - player.pos.z); return { name: `${it.icon || ''} ${it.name}`, sub: `${it.kind} · ${d < 1609 ? Math.round(d * 3.281 / 100) * 100 + ' ft' : (d / 1609).toFixed(1) + ' mi'} away`, stats: [], btn: 'GPS' }; }
       if (t === 'apps') { const pr = it.price?.(); return { name: it.name, sub: it.sub(), stats: [], btn: it.dis ? '—' : pr ? '$' + pr : 'Open', cls: it.dis ? 'dis' : '' }; }
       if (it.save) return { name: 'Save game', sub: P.saved ? `last saved ${new Date(P.saved).toLocaleTimeString()}` : 'not saved yet', stats: [], btn: 'Save' };
       return { name: it.k.replace(/([A-Z])/g, ' $1'), sub: String(typeof it.v === 'number' ? Math.round(it.v).toLocaleString('en-US') : it.v), stats: [], btn: '·', cls: 'dis' };
@@ -128,6 +131,7 @@ export function installPhone(game) {
       if (t === 'props') { game.setWaypoint(it.door.x, it.door.z, it.name); phone.close(); return; }
       if (t === 'jobs') { const at = it.at === 'marina' ? [game.marineAir.marinas[0].land.x, game.marineAir.marinas[0].land.z] : it.at; game.setWaypoint(at[0], at[1], it.name); phone.close(); return; }
       if (t === 'story') return;
+      if (t === 'places') { game.setWaypoint(it.x, it.z, it.name); phone.close(); return; }
       if (t === 'apps') { if (!it.dis) it.run(); return; }
       if (it.save) { career.save(); hud.toast('Game saved', 1.5); }
     },
