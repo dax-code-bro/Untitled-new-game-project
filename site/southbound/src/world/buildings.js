@@ -2,6 +2,7 @@
 // town houses, lake houses, farms and cabins. One facade shader draws the
 // windows (lit at night) so thousands of buildings cost only a few draw calls.
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { CITY, TOWN, LAKE, PLAINS, FOREST, lakeRadius, coastZ, REGIONS } from './layout.js';
 import { distToSeg } from '../util.js';
 import { mulberry32, GLSL_NOISE } from '../util.js';
@@ -427,5 +428,26 @@ export function createBuildings(hm, quality, scene, collision, surf, graph = nul
   propMesh.receiveShadow = true;
   scene.add(propMesh);
 
+  // gutters and downspouts on houses and low buildings (one merged mesh)
+  {
+    const parts = [];
+    const pipe = (x, y0, y1, z) => parts.push(new THREE.CylinderGeometry(0.05, 0.05, y1 - y0, 6).translate(x, (y0 + y1) / 2, z));
+    for (const b of B) {
+      if (b.h > 13) continue;
+      const top = b.y + b.h - 0.05, x0 = b.x - b.w / 2 - 0.06, x1 = b.x + b.w / 2 + 0.06, z0 = b.z - b.d / 2 - 0.06, z1 = b.z + b.d / 2 + 0.06;
+      // gutters along the two long sides, a downspout at each end of them
+      const alongX = b.w >= b.d;
+      for (const s of [0, 1]) {
+        if (alongX) { const z = s ? z1 : z0; parts.push(new THREE.BoxGeometry(b.w + 0.1, 0.1, 0.12).translate(b.x, top, z)); pipe(x0, b.y, top, z); pipe(x1, b.y, top, z); }
+        else { const x = s ? x1 : x0; parts.push(new THREE.BoxGeometry(0.12, 0.1, b.d + 0.1).translate(x, top, b.z)); pipe(x, b.y, top, z0); pipe(x, b.y, top, z1); }
+      }
+      if (parts.length > 9000) break;
+    }
+    if (parts.length) {
+      const m = new THREE.Mesh(mergeGeometries(parts), new THREE.MeshStandardMaterial({ color: 0xd8d4cc, roughness: 0.5, metalness: 0.4 }));
+      m.castShadow = true; m.receiveShadow = true; m.userData.noHit = true;
+      scene.add(m);
+    }
+  }
   return { buildings: B, cityBlocks, lakeHouses, junk, count: B.length };
 }

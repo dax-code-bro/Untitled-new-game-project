@@ -190,6 +190,36 @@ export async function createVegetation(hm, quality, scene, collision, cityBlocks
     }
   }
 
+  // ---- the edge of town: no hard line between the last block and the woods.
+  // Yard trees and hedges right at the edge, thickening into stands of trees and
+  // then real woods a few hundred metres out (denser in the forest direction).
+  {
+    const bx0 = CITY.x0 - 30, bx1 = CITY.x0 + CITY.nx * CITY.pitch + 30, bz0 = CITY.z0 - 30, bz1 = CITY.z0 + CITY.nz * CITY.pitch + 30;
+    const edgeD = (x, z) => { const dx = Math.max(bx0 - x, 0, x - bx1), dz = Math.max(bz0 - z, 0, z - bz1); return Math.hypot(dx, dz); };
+    const want = Math.round(target * 0.12);
+    let added = 0, bt = 0;
+    while (added < want && bt++ < want * 30) {
+      const x = bx0 - 420 + rnd() * (bx1 - bx0 + 840), z = bz0 - 420 + rnd() * (bz1 - bz0 + 840);
+      const d = edgeD(x, z);
+      if (d < 8 || d > 420) continue;
+      if (hm.splatAt(x, z, 3) > 0.12) continue; // not on roads
+      if (rnd() > 0.12 + Math.min(1, d / 380) * 0.75) continue; // sparse at the edge, dense further out
+      const f = forestMask(x, z);
+      if (d < 70) {
+        // yards: a shade tree or a hedge row
+        if (rnd() < 0.45) { if (place(pick(['oak_a', 'oak_b', 'ash_a']), x, z)) added++; }
+        else { const ang = rnd() * Math.PI; for (let k = 0; k < 5; k++) if (place('bush_c', x + Math.cos(ang) * k * 1.6, z + Math.sin(ang) * k * 1.6, false)) added++; }
+      } else {
+        // stands of trees that join up further out
+        const n = 2 + ((rnd() * (d / 60)) | 0);
+        for (let k = 0; k < n; k++) {
+          const id = f > 0.3 || rnd() < 0.3 ? pick(['pine_a', 'pine_b', 'oak_b', 'ash_b']) : pick(['oak_a', 'oak_b', 'ash_a', 'ash_b', 'bush_a']);
+          if (place(id, x + (rnd() - 0.5) * 14, z + (rnd() - 0.5) * 14, !id.startsWith('bush'))) added++;
+        }
+      }
+    }
+  }
+
   // ---- open country: bush clusters, lone trees and scrub across the plains and meadows
   {
     const want = Math.round(target * 0.35);

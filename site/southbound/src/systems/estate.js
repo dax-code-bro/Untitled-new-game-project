@@ -4,7 +4,8 @@
 // lights, walls and floors you can walk on. Each building's rooms live at their
 // own spot high above the far corner of the map, so collisions never overlap.
 import * as THREE from 'three';
-import { CITY, TOWN, LAKE } from '../world/layout.js';
+import { CITY, TOWN, LAKE, regionAt } from '../world/layout.js';
+import { Human } from '../entities/human.js';
 import { ShopUI } from '../ui/shop.js';
 import { nearestRoad, money, keyHint } from './world-util.js';
 import { loadOpen, loaded, instance, Q, K } from '../assets/open.js';
@@ -81,9 +82,24 @@ export function installEstate(game) {
     return m;
   };
 
+  // what a building is inside (same dice as the interior builder)
+  const kindOf = (d) => { const r = rng(d.i * 31 + 7), a = r(), c = r(); return { 4: 'home', 2: a < 0.5 ? 'home' : 'apartment', 5: c < 0.35 ? 'bar' : 'store', 3: 'warehouse', 1: 'office', 0: 'office' }[d.b.style] || 'home'; };
+  // Is this door open right now? Homes are mostly locked; shops keep hours.
+  const lockState = (d, p) => {
+    if (p && owned(p)) return 'open';
+    if (d.broken > 0) return 'open';
+    const h = game.sky.hour, k = kindOf(d), dice = rng(d.i * 131 + 3)();
+    if (p && h >= 9 && h < 17) return 'open'; // for sale: open for viewings in the daytime
+    if (k === 'store') return h >= 7 && h < 23 ? 'open' : 'locked';
+    if (k === 'bar') return h >= 11 || h < 2 ? 'open' : 'locked';
+    if (k === 'office') return h >= 8 && h < 18 ? 'open' : 'locked';
+    if (k === 'warehouse') return dice < 0.7 ? 'locked' : 'open';
+    return dice < 0.7 ? 'locked' : 'open';
+  };
+  const someoneHome = (d) => { const h = game.sky.hour, night = h < 7 || h > 19; return rng(d.i * 71 + Math.floor(game.sky.day))() < (night ? 0.8 : 0.4); };
   function buildInterior(d) {
     const b = d.b, o = IO(d.i), r = rng(d.i * 31 + 7);
-    const kind = { 4: 'home', 2: r() < 0.5 ? 'home' : 'apartment', 5: r() < 0.35 ? 'bar' : 'store', 3: 'warehouse', 1: 'office', 0: 'office' }[b.style] || 'home';
+    const kind = kindOf(d); r(); r(); // keep the furniture dice where they were
     const W = Math.max(9, Math.min(b.w - 1, kind === 'warehouse' ? 26 : 18)), D = Math.max(8, Math.min(b.d - 1, kind === 'warehouse' ? 22 : 14)), H = kind === 'warehouse' ? 7 : 3.2;
     const g = new THREE.Group(); g.position.copy(o);
     const wallC = [0xeeebe6, 0xd6dce0, 0xe6e2da, 0xc6d1c4, 0xdcd6d0, 0xf4f3f0][Math.floor(r() * 6)]; // neutral paints (warm beige + amber bulbs read as yellow-brown)
@@ -143,6 +159,16 @@ export function installEstate(game) {
       put(K('Lantern'), 0.45, W / 4 - 0.6, D / 4, 0, 'y', false, 0.75);
       if (b.style === 4) { put(QH('Fireplace'), 1.6, -W / 2 + 0.4, -1.8, Math.PI / 2); put(QH('Bathroom_Toilet'), 0.8, -W / 2 + 0.5, D / 2 - 2.0, Math.PI / 2, 'y'); put(QH('Bathroom_Sink'), 0.9, -W / 2 + 0.4, D / 2 - 3.0, Math.PI / 2, 'y'); }
       for (const cx of [-W / 4, W / 4]) put(QH('Curtains_Double'), 2.2, cx, -D / 2 + 0.12, 0, 'max', false, 0.4);
+      // rooms: the bedroom gets walls and a doorway; houses get a walled bathroom
+      const pw = 0.12, door = 1.0;
+      boxAt(g, pw, H, D / 2 - 1.6, 0.15, 0, -D / 2 + (D / 2 - 1.6) / 2, wallM, true, o); // living | bedroom
+      boxAt(g, pw, H, 0.4, 0.15, 0, -0.4, wallM, true, o);
+      boxAt(g, W / 2 - 0.15 - 1.4 - door, H, pw, 0.15 + (W / 2 - 0.15 - 1.4 - door) / 2, 0, -0.2, wallM, true, o); // bedroom front, door near the kitchen
+      boxAt(g, 1.4, H, pw, W / 2 - 0.7, 0, -0.2, wallM, true, o);
+      if (b.style === 4) {
+        boxAt(g, pw, H, 4 - door - 0.3, -W / 2 + 2.4, 0, D / 2 - 4 + (4 - door - 0.3) / 2, wallM, true, o);
+        boxAt(g, 2.4, H, pw, -W / 2 + 1.2, 0, D / 2 - 4, wallM, true, o);
+      }
       put(QH('Trashcan_Small1'), 0.4, W / 2 - 0.4, D / 2 - 4.0, 0, 'y');
       put(K('BoomBox'), 0.5, -W / 4 + 0.7, -D / 2 + 4.3, Math.PI, 'max', false, 0.8);
     } else if (kind === 'office') {
@@ -240,6 +266,61 @@ export function installEstate(game) {
     insidePoints.push(interact.add({ x: it.o.x + 1.4, z: it.o.z + it.D / 2 - 0.7, y: it.o.y, r: 0.9, label: () => `${keyHint(game)} pull the fire alarm`, color: 0xff4040, use: () => game.fireAlarm?.(inside) }));
     hud.toast(`${p ? p.name : ['Home', 'Apartment', 'Office', 'Store', 'Bar', 'Warehouse'][['home', 'apartment', 'office', 'store', 'bar', 'warehouse'].indexOf(it.kind)]}`, 2);
   }
+  // a locked door: knock, kick it in, or leave it
+  function tryDoor(d, p) {
+    const k = kindOf(d), home = k === 'home' || k === 'apartment';
+    if (lockState(d, p) === 'open') {
+      if (home && !(p && owned(p)) && !(p && game.sky.hour >= 9 && game.sky.hour < 17) && someoneHome(d)) { enter(d); occupy(d, 'trespass'); return; }
+      enter(d); return;
+    }
+    const opts = [];
+    if (home) opts.push(['Knock', () => {
+      if (someoneHome(d)) hud.toast(['"Who is it? ...We don\'t want any. Go away."', '"It\'s late! Go home!"', '"I don\'t know you. I\'m not opening this door."'][(Math.random() * 3) | 0], 3);
+      else hud.toast('Nobody answers.', 2);
+    }]);
+    opts.push(['Kick it in (break-in)', () => breakIn(d, p, home)]);
+    opts.push(['Leave it', () => {}]);
+    game.openDialog?.(home ? 'Front door' : 'Door', home ? 'The door is locked.' : 'Locked. Closed for the night.', opts);
+  }
+  function breakIn(d, p, home) {
+    hud.toast('*THUD* ...*THUD* ...*CRACK*', 2);
+    game.audio?.thud?.(1); setTimeout(() => game.audio?.thud?.(1), 600); setTimeout(() => game.audio?.thud?.(1.2), 1200);
+    setTimeout(() => {
+      d.broken = 24; // the door stays broken until someone fixes it (a game day)
+      // neighbours hear it
+      game.reportCrime?.('breakin', new THREE.Vector3(d.x, 0, d.z));
+      enter(d).then?.(() => { if (home && someoneHome(d)) occupy(d, 'breakin'); else if (!home && Math.random() < 0.5) hud.toast('An alarm starts beeping somewhere.', 2.5); });
+    }, 1500);
+  }
+  // the people who live there
+  let occ = null;
+  function occupy(d, why) {
+    if (!inside || inside.d !== d) return;
+    const it = inside.it, armed = Math.random() < (regionAt(d.x, d.z).sub === 'City' ? 0.15 : 0.3);
+    const h = new Human(game.lib, game.lib.peopleIds[d.i % game.lib.peopleIds.length]);
+    h.root.position.set(it.o.x + (Math.random() - 0.5) * 2, it.o.y + 0.05, it.o.z - it.D / 2 + 2.2);
+    h.root.rotation.y = 0; h.play(armed ? 'Pistol_Aim_Neutral' : 'Crouch_Idle_Loop', 0);
+    it.g.parent?.add(h.root);
+    occ = { h, d, armed, t: 0, called: false, why };
+    hud.toast(armed ? '"I\'ve got a gun! Get out of my house!"' : why === 'breakin' ? '"Oh my God! Get out! I\'m calling 911!"' : '"Who are you?! Get out of my house!"', 3);
+  }
+  function updateOccupant(dt) {
+    if (!occ) return;
+    if (!inside || inside.d !== occ.d) { occ.h.root.parent?.remove(occ.h.root); if (!occ.called && occ.t > 1) { /* you left in time */ } occ = null; return; }
+    occ.t += dt;
+    const pp = player.pos, hp = occ.h.root.position;
+    occ.h.root.rotation.y = Math.atan2(pp.x - hp.x, pp.z - hp.z);
+    occ.h.update(dt);
+    if (occ.armed) {
+      if ((occ.shotT = (occ.shotT ?? 1.4) - dt) <= 0) {
+        occ.shotT = 1.3 + Math.random() * 0.8; occ.h.play('Pistol_Shoot', 0.05, 1.3, true); game.audio?.gunshot?.(0.8);
+        if (Math.random() < 0.55) game.hurtPlayer?.(8 + Math.random() * 7, hp.clone(), 2);
+      }
+    } else if (!occ.called && occ.t > (occ.why === 'breakin' ? 6 : 9)) {
+      occ.called = true; hud.toast('They\'re on the phone with the police.', 2.5);
+      game.police?.crime(occ.why === 'breakin' ? 'breakin' : 'trespass');
+    }
+  }
   function leave() {
     if (!inside) return;
     const { d, it } = inside;
@@ -259,8 +340,8 @@ export function installEstate(game) {
       color: p && owned(p) ? 0x60ff90 : 0xffd040, height: 1.2,
       blip: p ? { color: '#60ff90', size: 4, global: true } : null,
       show: () => !inside,
-      label: () => p ? `${keyHint(game)} enter ${p.name}${owned(p) ? ' (yours)' : ` · for sale ${money(p.price)}`}` : `${keyHint(game)} go inside`,
-      use: () => enter(d) });
+      label: () => { const ls = lockState(d, p); return p ? `${keyHint(game)} ${ls === 'locked' ? 'try the door of' : 'enter'} ${p.name}${owned(p) ? ' (yours)' : ` · for sale ${money(p.price)}`}` : `${keyHint(game)} ${ls === 'locked' ? 'try the door' : 'go inside'}`; },
+      use: () => tryDoor(d, p) });
     // only owned homes show on the map
     if (p) interact.points[interact.points.length - 1].blip = null;
   }
@@ -286,7 +367,12 @@ export function installEstate(game) {
 
   return {
     props, doors, realtor, enter, leave, get inside() { return inside; },
-    update() {
+    update(dt = 0) {
+      updateOccupant(dt);
+      // broken doors get fixed after about a game day
+      const now = game.sky.day * 24 + game.sky.hour;
+      if (this._t != null) { const gh = now - this._t; if (gh > 0 && gh < 48) for (const d of doors) if (d.broken > 0) d.broken -= gh; }
+      this._t = now;
       if (game.sky.day !== lastDay) {
         lastDay = game.sky.day;
         let pay = 0;

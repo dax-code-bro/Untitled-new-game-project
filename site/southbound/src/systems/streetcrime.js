@@ -14,8 +14,8 @@ import { regionAt } from '../world/layout.js';
 import { keyHint } from './world-util.js';
 import { locomotion } from '../entities/human.js';
 
-const PRICE = { theft: 300, shots: 150, assault: 250, weapon: 120, kill: 900, carjack: 300, disturbance: 80 };
-const SEVERITY = { theft: 2, disturbance: 1, weapon: 1, shots: 2, carjack: 2, assault: 3, kill: 5 };
+const PRICE = { breakin: 400, trespass: 150, theft: 300, shots: 150, assault: 250, weapon: 120, kill: 900, carjack: 300, disturbance: 80 };
+const SEVERITY = { breakin: 3, trespass: 1, theft: 2, disturbance: 1, weapon: 1, shots: 2, carjack: 2, assault: 3, kill: 5 };
 const pick = (a) => a[(Math.random() * a.length) | 0];
 
 export function installStreetCrime(game) {

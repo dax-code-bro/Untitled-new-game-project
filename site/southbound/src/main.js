@@ -31,6 +31,8 @@ import { installProps } from './systems/props.js';
 import { installArmory } from './systems/armory.js';
 import { placeCivic } from './systems/civic.js';
 import { installNeeds } from './systems/needs.js';
+import { installStrays } from './systems/strays.js';
+import { createPowerLines } from './world/powerlines.js';
 import { installWounds } from './systems/wounds.js';
 import { installStreetCrime } from './systems/streetcrime.js';
 import { installAuction } from './systems/auction.js';
@@ -148,6 +150,7 @@ async function createGame(progress) {
   await nextFrame();
   const city = createBuildings(hm, q, scene, collision, surf, graph);
   const billboards = createBillboards(scene, graph, hm, collision, q);
+  createPowerLines(scene, graph, hm, collision, q);
   progress(0.84, 'Growing Pinewood Hollow');
   await nextFrame();
   const veg = await createVegetation(hm, q, scene, collision, city.cityBlocks, (p) => progress(0.84 + p * 0.07, 'Growing forests'), surf, settings.grass === false ? 0 : 1);
@@ -445,6 +448,7 @@ async function createGame(progress) {
   game.billboards = billboards;
   const armory = installArmory(game);
   const needs = installNeeds(game);
+  const strays = installStrays(game);
   game.tracer = game.tracer || ((a, b) => combat.tracer(a, b));
   police.patrols = () => traffic.cars.filter((c) => c.v.patrol).map((c) => c.v);
   const streetCrime = installStreetCrime(game);
@@ -774,6 +778,7 @@ async function createGame(progress) {
     props.update(dt);
     armory.update(dt);
     civic.update(dt);
+    strays.update(dt);
     wounds.update(dt);
     streetCrime.update(dt);
     auction.update(dt);
