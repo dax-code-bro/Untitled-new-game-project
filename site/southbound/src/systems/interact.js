@@ -57,7 +57,7 @@ export class Interactions {
     }
     this.pool.forEach((m, i) => {
       const p = this.marked && this.marked[i];
-      m.visible = !!p;
+      m.visible = false; // no glowing circles: places are found on the map and entered for real
       if (!p) return;
       m.position.set(p.x, p.y + 0.05, p.z);
       m.scale.set(p.r * 0.45, p.height || (p.drive ? 3 : 1.6), p.r * 0.45);
@@ -79,7 +79,7 @@ export class Interactions {
       // drive-in points trigger once the car has stopped inside the marker
       if (Math.abs(speed) < 1.5) this.hold += dt; else this.hold = 0;
       if (this.hold > 0.6 && !this.fired) { this.fired = true; best.use(); return ''; }
-      return this.fired ? '' : `${label} — stop in the marker`;
+      return this.fired ? '' : `${label} — pull in and stop`;
     }
     if (enterPressed) { this.consumed = true; best.use(); return ''; }
     return label;

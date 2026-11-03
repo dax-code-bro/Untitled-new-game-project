@@ -26,16 +26,17 @@ frame rate. Dynamic resolution keeps the frame rate at that target.
 | Move / drive | WASD / arrows | Left stick, RT / LT | Left joystick |
 | Look | Mouse (click to capture) | Right stick | Drag right side |
 | Sprint | Shift | L3 | » button (or push the stick fully) |
-| Jump / handbrake | Space | A / RB | ⤒ button |
-| Enter / exit vehicle | F | Y | 🚗 button |
-| Aim | Right mouse / E | LT | 🎯 (toggle) |
+| Jump / handbrake / climb | Space (walk into a ledge to mantle it) | A / RB | ⤒ button |
+| Get in / out of a vehicle, use doors and shops | F | Y | ◎ (tap) |
+| Interact with people (hold): greet / antagonize / surrender | hold F, then G / T | hold B, then D-pad up / down | hold ◎, then Greet / Antagonize |
+| Weapon wheel (hold, point, release) | hold Tab or Q, mouse to pick, wheel / Z X to switch | hold LB, right stick | hold 🔫 and drag |
+| Holster / draw | H (or tap Q) | | tap 🔫 |
+| Aim (draws your gun; with it holstered near someone, focuses on them) | Right mouse / E | LT | L2 |
 | Fire / punch | Left mouse / Ctrl | RT | 💥 |
-| Switch weapon | Q / 1 / 2 | X | 🔫 |
-| Arsenal (buy guns and attachments) | B | | 🛒 Arsenal button |
-| Reload | R | | auto |
-| Horn | H | | |
-| Camera distance | V, mouse wheel | | |
-| Map | M | | 🗺️ button |
+| Reload | R | X | auto |
+| Camera: near / far / close / first person | V, mouse wheel | R3 | |
+| Free camera | C | | Pause menu |
+| Map, phone, arsenal | M, I, B | | Pause menu |
 | Pause / settings | Esc | Start | ❚❚ button |
 
 ## The map (first slice)

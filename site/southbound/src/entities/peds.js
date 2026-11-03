@@ -17,7 +17,7 @@ function cornerPos(G, i, j, c) {
 export class Peds {
   constructor(lib, quality, scene, collision, settings) {
     this.lib = lib; this.scene = scene; this.collision = collision; this.settings = settings;
-    this.max = { Phone: 10, Low: 14, Medium: 26, High: 38, Ultra: 55 }[quality.label] ?? 24;
+    this.max = { Phone: 18, Low: 24, Medium: 44, High: 68, Ultra: 96 }[quality.label] ?? 40;
     this.list = [];
     this.pickups = [];
     this.rnd = mulberry32(911);
@@ -176,6 +176,10 @@ export class Peds {
     if (p.mode === 'dead') return;
     if (p.role === 'cop') { if (this.copThink) this.copThink(p, dt); return; }
     if (p.role === 'foe') { if (this.foeThink) this.foeThink(p, dt); return; }
+    if (p.role === 'hunter') { if (this.hunterThink) this.hunterThink(p, dt); return; }
+    if (p.role === 'brawler') { if (this.brawlThink) this.brawlThink(p, dt); return; }
+    if (p.role === 'walker') { if (this.walkerThink) this.walkerThink(p, dt); return; }
+    if (p.scripted) return;
     let want = 0;
     if (p.mode === 'flee') {
       p.timer -= dt;

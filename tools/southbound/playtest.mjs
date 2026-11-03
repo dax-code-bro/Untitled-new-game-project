@@ -52,13 +52,20 @@ await page.addInitScript((pr) => {
 
 const shot = async (name) => {
   const frozen = await page.evaluate(() => { if (window.SB) { window.SB.freeze(true); return true; } return false; });
-  await page.screenshot({ path: path.join(out, `${name}.png`), timeout: 600000 });
+  // raw CDP capture: Playwright's screenshot waits on document.fonts.ready, which can stall in the sandbox
+  const cdp = await page.context().newCDPSession(page);
+  const { data } = await cdp.send('Page.captureScreenshot', { format: 'png' });
+  fs.writeFileSync(path.join(out, `${name}.png`), Buffer.from(data, 'base64'));
+  await cdp.detach();
   if (frozen) await page.evaluate(() => window.SB.freeze(false));
   console.log('shot', name);
 };
 const wait = (ms) => page.waitForTimeout(ms);
 const sb = (fn, arg) => page.evaluate(fn, arg);
 
+// web fonts can't load in the sandbox and would stall screenshots: use system fonts in tests
+await page.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
+await page.addInitScript(() => { addEventListener('DOMContentLoaded', () => { const st = document.createElement('style'); st.textContent = '*{font-family:system-ui,sans-serif!important}'; document.head.appendChild(st); }); });
 await page.goto(url);
 await wait(800);
 if (scenario !== 'video') await shot('00-menu');

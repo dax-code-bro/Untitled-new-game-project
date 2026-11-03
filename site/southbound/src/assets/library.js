@@ -49,6 +49,22 @@ function prepareConcept(scene) {
     root.add(pivot); pivot.updateMatrixWorld(true);
     for (const part of ['', 'Rim', 'BrakeDisc']) { const n = model.getObjectByName('Wheel' + k + part); if (n) pivot.attach(n); }
   }
+  // door pivots on the front hinge, so the doors can swing open when you get in
+  root.updateMatrixWorld(true);
+  for (const side of ['L', 'R']) {
+    const parts = [];
+    root.traverse((o) => { if (o.isMesh && new RegExp(`Door${side}`).test(o.name)) parts.push(o); });
+    if (!parts.length) continue;
+    const b = new THREE.Box3();
+    parts.forEach((o) => b.expandByObject(o));
+    const c = b.getCenter(new THREE.Vector3());
+    const pivot = new THREE.Group();
+    pivot.position.set(c.x > 0 ? b.max.x - 0.05 : b.min.x + 0.05, c.y, b.max.z - 0.05);
+    root.add(pivot); pivot.updateMatrixWorld(true);
+    parts.forEach((o) => pivot.attach(o));
+    pivot.name = c.x > 0 ? 'door-drv' : 'door-pass'; // the car's left (+x) is the driver's side
+    pivot.userData.open = c.x > 0 ? -1.1 : 1.1;
+  }
   root.traverse((o) => {
     if (!o.isMesh) return;
     o.castShadow = true; o.receiveShadow = true;

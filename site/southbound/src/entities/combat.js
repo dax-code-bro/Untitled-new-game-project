@@ -237,6 +237,13 @@ export class Combat {
     return hit;
   }
 
+  // a tracer line (enemy fire)
+  tracer(a, b) {
+    const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints([a.clone(), b.clone().add(new THREE.Vector3((Math.random() - 0.5) * 3, Math.random() * 1.5, (Math.random() - 0.5) * 3))]), this.tracerMat.clone());
+    this.scene.add(line);
+    this.fx.push({ obj: line, t: 0.07, max: 0.07 });
+  }
+
   impact(hit, w, targets, from) {
     if (w.explosive) return this.explode(hit.point, w, targets, from);
     if (hit.kind === 'animal') {
