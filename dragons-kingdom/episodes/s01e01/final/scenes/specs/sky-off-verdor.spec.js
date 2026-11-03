@@ -185,7 +185,9 @@ export default {
       // it), and the frame showed mostly Abby's back. st25 over her right shoulder (from 335) was all back too. Now from
       // straight AHEAD on Leaf's centre line (between the wing roots, above his neck), a little above the grips, looking
       // back at both hands; her face is above the frame top / far out of focus at f/4.)
-      cam: { rig: 'follow', frame: { subjects: [['abbyR.hand.R', [-0.22, -0.05]], ['abbyR.hand.L', [0.22, -0.05]]], from: 180, dist: 1.3, rise: 0.45, track: true }, mm: 100, fstop: 4, focus: 'abbyR.hand.R' },
+      // (s17: after perf bcf1965 (grip pose, wrists ~6 cm back/up) Leaf's neck crest filled ~40 % top-left at rise 0.45:
+      // camera raised to 1.0 m, 1.6 m out, 4 deg off the centre line - looks DOWN past the crest onto the hands.)
+      cam: { rig: 'follow', frame: { subjects: [['abbyR.hand.R', [-0.22, -0.05]], ['abbyR.hand.L', [0.22, -0.05]]], from: 184, dist: 1.6, rise: 1.0, track: true }, mm: 100, fstop: 4, focus: 'abbyR.hand.R' },
       set: { shadowExtent: 30 },
       cast: {
         leaf: { tack: true, ...inForm(TALK.leaf[0], TALK.leaf[1], TALK.leaf[2], T['1C-16'], 3), acts: LEAF_FLY() },

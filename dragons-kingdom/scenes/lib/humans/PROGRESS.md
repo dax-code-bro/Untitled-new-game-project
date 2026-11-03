@@ -832,3 +832,85 @@ NEXT (in order):
 2. Close the fingers ONTO the bar (per-joint curl solved from the bar radius and phalanx lengths) instead
    of the fixed BAR_GRIP preset - Remi's bigger hand leaves 2 cm between tip and axis.
 3. Check the grip at 4K in humans-riders.js (Remi on Charcoal, Abby on Leaf) and in 1C-14 (Remi wide).
+
+## LOOK round 2g (2026-11-03, short session) - jointed fingers (knuckle creases), hand tone, nails, sclera tint
+
+Trigger: director rev17 1C-16 (rider-grip insert, sun) - hands read as pale cones (no knuckle / joint read).
+FIXED (runtime only, no rebuild, API unchanged):
+1. loader.js `handCreases()`: new skin attribute `hcr` (vec2) per bind-pose vertex = signed distance along the
+   finger from the nearest finger joint (m, + = distal) and the joint kind (1 MCP, 2 PIP, 3 DIP / thumb IP),
+   from the header's bone heads (fingerK-1/-2/-3 heads; tip = -3 head + 0.75 x middle segment); back-of-hand
+   vertices keep their true (negative) distance from the MCP so the band stays on the knuckles.
+   Debug-painted and verified (|s| / kind / dorsal mask) on abby at preview.
+2. materials.js skinMaterial `knuckleCrease()`: dorsal knuckle wrinkles as bands ACROSS the finger (~1.3 mm
+   apart, wavy, broken; PIP 1.0, DIP 0.7, MCP 0.4; dorsal via aux3.b) in colour (x0.52/0.45/0.45 in the
+   lines) and as bump grooves (0.18 mm); when the lines get below ~3 px they average into a darker, redder
+   knuckle patch, so at draft a finger still reads as jointed segments.
+3. Hand tone: hands (aux3.g) x(0.93, 0.83, 0.79) at 0.85 - redder / a touch darker than the face (the face
+   tone on the hands read bloodless in sun). Nails: glossy plate (roughness -> 0.3), plate a little pinker,
+   free edge paler (nail mask x fingertip mask > 0.82).
+4. Eye: default uScleraTint (1.0, 0.93, 0.87) -> (1.0, 0.92, 0.88). Daylight eye macros (humans-dev t 5.5,
+   focusEye) alexandria sclera 168/160/152 (cheek 189/154/141), crowd05 (brown skin) sclera mean 150/146/140,
+   brightest sclera pixel 168 - no clipping with the x1.3 gain.
+Checked: selftest-perf all passed; npm test 48 pass / 0 fail / 1 skipped.
+Images (scratch): /tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/look8/
+ba_crop.png (abby hands view preview, fingers 2x: top before, bottom after), ba_small.png (whole view),
+before/1C-16_036.png + after/1C-16_036.png (director still 1C-16@0.5 draft), 1C-16_hands_before_after.png
+(2x crop), hands_dbg_crop.png (attribute debug paint), eyes_alex_crowd05.png.
+RESULT at 1C-16 draft: modest - hands a little warmer, faint joint bands; the cone read there is mostly the
+POSE + LIGHT: fingertips taper to points hanging below the bar, no thumb visible, top-down sun blows the
+back of the hand out (REQUEST performance / director, below).
+
+NEXT (in order):
+1. 1C-16: REQUEST performance (ridergrip.js): thumb wrapped round the bar's near side (visible from above),
+   fingers less splayed / tips tucked under the bar (they hang below it as points). REQUEST director: a
+   lower 3/4 angle instead of straight top-down; check the hand exposure in sun (backs at ~240).
+2. Fingertip shape: MakeHuman fingertips taper to a point at draft - a pad bulge (slight normal / shading
+   roundness at the tip mask) or a build-time tip fattening in postfix.py on the next rebuild.
+3. Back-of-hand veins + extensor tendons for adults (needs a dorsal-hand mask: add to skin_zones on rebuild
+   or derive in loader from bone frames like handCreases); palm flexion creases (same hcr, palm side).
+4. crowd05 (brown skin, darkskinned texture) has a bright blue iris - pick a brown iris in characters.py on
+   the next rebuild (check other darkskinned ids too).
+5. Older list from 2f: upper-lash tip dither, buried caruncle mesh, tear line on remi/alexandria, stubble,
+   hair root-to-tip + flyaways, cloth weave / hem dirt, Abby's child face.
+
+## perf s9 (rider grip, 1C-16) - short session
+Owner notes (perf-next.md): (1) thumb round the bar's near side, fingertips tucked under with less splay;
+(2) selftest rider-grip test: level bar for '_injured' builds (creatures 71c2b43), tighter limits.
+Done (ridergrip.js):
+- WRAP FIT: after the first pose, the middle finger's knuckle / PIP / DIP are fitted with a circle in the
+  bar's cross-section; the wrist target slides until that circle is centred on the bar axis, and each finger's
+  curl is scaled (0.35..1.45) until its PIP/DIP sit at bar radius + 0.1 x palm length (4 iterations, pure in t).
+  Result (Node): middle DIP 2.4 cm below the bar centre (was -0.9, tips hung in front), knuckle 2.7 cm from the
+  axis (was 3.9, knuckle row in front of the bar); little finger no longer passes through the bar (PIP r 1.5 cm
+  vs 0.6).
+- BAR_GRIP: `together: 0.9` (fingers side by side, converging) instead of `spread: -0.08`; new keys `tilt`
+  (hand tipped over the bar, 0.25 = old value) and `thumbWrap`.
+- wrapThumb(): thumb phalanges aimed round the bar's near side (rider's side) and under, toward the other hand.
+  SHIPPED OFF (`thumbWrap: 0`): the built coats weight cuff vertices to finger1-1/1-2/1-3 (abby_ride coat:
+  ~170 vertices with weight > 0.2), so wrapping the thumb dragged the sleeve cuffs up to 19 cm down over the
+  hands (render showed the sleeve panels crossing the hands). Enable with `rider.grip = { shape: {...BAR_GRIP,
+  thumbWrap: 1} }` once the cuffs are fixed (REQUEST look/build below). Metacarpal finger1-1 is never aimed.
+- selftest-perf rider-grip test: bar for `_injured` builds now LEVEL exactly like creatures addGrip (right
+  palm mirrored across the root bone's x in the rider root frame); one set of limits for every build:
+  palm.y < -0.3, knuckle < 4 cm, DIP < 3.5 cm from the axis AND tucked (tipY < -1 cm), thumb on the near side
+  (fwd < -1 cm, within 6 cm; 4 cm when thumbWrap is on). Values now: abby 2.7/2.6/-2.5, remi 2.9/2.9/-2.7,
+  abby_ride_injured.R 2.7/2.5/-2.2, injured LEFT arm unmoved (0.2 cm).
+Checked: selftest-perf all passed (51 ok); npm test 48 pass / 0 fail / 1 skipped.
+Images (scratch eng1/perf9/): before/1C-16_036.png, after/1C-16_036.png (director still 1C-16@0.5 draft),
+1C-16_hands_before_after.png (2x crop, top before / bottom after), full_ba.png.
+RESULT at 1C-16 draft: knuckles now ride on top of the bar, fingers closer together and wrapped over the
+front; the tips still show as small rounded points under the bar's lower edge (shorter than before). Thumb
+still not visible from this camera (it is behind the bar, the camera is in FRONT of Abby looking back).
+
+NEXT (perf, in order):
+1. REQUEST look/build: strip garment (coat) cuff weights from finger1-* / metacarpal* bones (reassign to
+   wrist / lowerarm02) in the build post-step or loader; then set BAR_GRIP.thumbWrap 1, re-render 1C-16 and
+   check the sleeves stay put (Node check: skin the coat on CPU, max vertex move thumb1 vs thumb0 should be
+   < 1 cm; the probe script is at scratch eng1/perf9/_probe_grip.mjs - copy into humans/cache/ to run).
+2. Tips still peek under the bar: try Rt = bar radius + 0.08 x palm length (tighter wrap) and/or extra DIP
+   curl (handShape uses c x 0.75 at the DIP - a separate `dip` scale in the shape would let the last
+   joint close more than the PIP); check the pinky (it is the shortest, knuckle lowest).
+3. Note for the director: 1C-16's camera is in FRONT of Abby looking back, so the "near side" thumb is
+   behind the bar from the lens; a thumb that reads in this shot needs the thumbWrap path plus a camera a
+   little higher, or a second insert from over her shoulder.

@@ -4,6 +4,41 @@ Owner paths: `scenes/lib/creatures/`, `scenes/lookdev/creatures-*.js` (+ creatur
 README.md in this folder is the full description of how the models are built; this file is
 only the state of the work.
 
+## REALISM ROUND 2 - session 8 (2026-11-03, short budgeted session)
+Stills (draft) under `scratchpad/eng1/creatures/r2s8/`: `v2/X3-15_040.png` (final; `v1/` = without the seam offset),
+crop sheet `x315_s7_s8v2.png` (crop x620-940 y80-320 x2: session 7 | now), `leaf_call_pair.png` + `leaf_call_head.png`
+(creatures-dev.js, Leaf flight t 0.3 corr 1: call 0 | call 1), harness `grip.mjs` (Node: addGrip bar per rider build).
+Done (code):
+- rider.js `addGrip(tack, rider, holder, opts)` (now also exported; mountRider passes its opts): a one-armed rider
+  (build id ending `_injured`, i.e. abby_ride_injured - Abby's LEFT arm held in; or opts.gripHands 'R') gets a LEVEL bar
+  at the usual place: the free right palm mirrored across the pelvis (root bone x), same height and reach. Measured
+  (grip.mjs, rider.update(0.7) with ridergrip): abby_ride_injured bar axis [-1,0,0] (was slanting from the held-in
+  left hand), length 0.325 m (abby_ride 0.327), right knuckle 3.8 cm / tip 1.0 cm from its bar end = same as abby_ride.
+  NOT rendered (no injured-ride shot stilled). ridergrip.js / selftest-perf.mjs (perf track) unchanged: their test
+  builds its own bar and still uses the loose limits for abby_ride_injured - REQUESTED perf to tighten.
+- glsl.js: `dkVorK` global (smooth-min sharpness of dkVor3's border distance, default 9 = unchanged for every other
+  caller) + a seam offset `(9/K - 1) * 0.045` on l2 (0 at K 9) so a softer K rounds the CORNERS without widening
+  every plain seam. materials.js: `dkVorK = mix(9, 5.5, headVar-on * isHead)` (Charcoal head only); head pits
+  scale 0.11 -> 0.07 and threshold 0.66 -> 0.72 (smoothstep 0.72..0.8).
+- poses.js: flight `call` channel (o.call 0..1, flight AND glide; `callMod`): neck base +0.1 / top +0.16 rad, head
+  +0.3 rad up, jaw +0.5 rad with a 7.5 Hz +-0.06 tremolo (pure in t), no blink while calling. Director X4-08 uses
+  `['flight', { corr: 1, call: 1 }]` already - it works with no director change (blend in/out by the act blend).
+RESULTS (looked at): X3-15 - plate outlines visibly rounder (domed scutes / river-cobble corners instead of cut
+slate chips), pit streaks finer and fainter; grooves a touch wider than s7 even with the offset (v1 vs v2 nearly the
+same). Remaining tells: a few large angular "shard" facets (upper middle and right of the crop: long triangular
+dark/light planes - probably overlap `top` plates combined with the per-plate tilt on very large cells); the plates
+now read slightly like cobbles (too regular a dome). Leaf call: jaw clearly open with teeth showing, head up, neck
+lifted; reads as a call at 960x540. Mouth interior dark (no pink at this size).
+- npm test: 49 tests, 48 pass, 0 fail, 1 skipped, exit 0. Style frames / creatures lookdev NOT re-rendered (budget).
+NEXT (exact):
+1. X3-15 shards: find which cells make the long triangular planes (debug: tint `top`/`under`/`deep` and plateJ in
+   the head block, still X3-15@0.48) - likely clamp the per-plate tilt by cell size, or skip the tilt on `top` plates;
+   then a little less dome on the biggest plates (headDome 12 -> 9 on Charcoal) so they read less like cobbles.
+2. Still an injured-rider shot (grep `abby_injured` in episodes/s01e01/final/scenes/specs) to SEE the level bar.
+3. Lit side view of Charcoal walking low (creatures-dev.json: charcoal, pose walkLow, cam side) - membrane knee.
+4. Re-render style frames + creatures lookdev at draft (not done since session 3).
+5. X3-02 grey; session 2 items 4-5 (Leaf/Starlight memFoldOcc, contacts, gait).
+
 ## REALISM ROUND 2 - session 7 (2026-11-03, short budgeted session)
 Stills (draft) under `scratchpad/eng1/creatures/r2s7/`: `v1/X3-15_042.png`, crop sheet `x315_s6v3_s7v1.png` (crop
 x620-940 y80-320 x2: session 6 v3 | now), `knee/1C-03_101.png` (Charcoal gathering for the vault, u 0.6),

@@ -42,7 +42,10 @@ About 2 minutes for the 6-minute cut on the 4-vCPU cloud machine (all CPU, FFmpe
    **flight beats are phased to the animation**: `poses.flight` starts every cycle at shot time 0 with the wings up and the
    downstroke over the first 57 %, so mid-downstroke = 0.285 x period + k x period; Leaf 1.25 s (0.8 s at hz 1.25),
    Charcoal 1.6 s (hz 0.625) - set `at` = mid-downstroke - the recipe's peak time, no jitter),
-   `air_rush` (flight air past camera; `dark`, `whistle`), `knock`, `latch`, `door`, `pipe_tap`, `runners`. `fx/fx.mjs`
+   `air_rush` (flight air past camera; `dark`, `whistle`), `knock`, `latch`, `door`, `pipe_tap`, `runners`; harbour (s7):
+   `gull`, `boat_bell`, `fish_slap`, `rope_strain`, `net_drip`, `dragon_call` (`size` 1 Leaf .. 1.6 a bigger dragon), `walla`
+   (wordless crowd placeholder; `voices`, `far`, `pause`). A space may add discrete `echoes` [[ms, dB, lowpass Hz], ...]
+   (`stone_wall`, `harbour`). `fx/fx.mjs`
    places them, sends each to the reverb of its space (`space_of_set`: stone corridor, stone room, open, sea, air = almost dry for the sky) and writes the
    fx stem; byte-identical on re-run (checked). `defaults.stem_gain_db` sets the whole fx level by ear. Render the stem
    alone: `node episodes/s01e01/final/sound/fx/fx.mjs --cut 1B --out /tmp/fx.wav`.

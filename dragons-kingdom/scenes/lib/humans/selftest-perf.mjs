@@ -508,7 +508,10 @@ else {
   // palms); every seated rider's hands close round it - palm down onto the bar, the bar inside the curled
   // fingers, fingertips past the bar's far side; abby_ride_injured keeps her injured LEFT arm off the bar
   {
-    const { createRider } = await import('./index.js');
+    const { createRider, BAR_GRIP } = await import('./index.js');
+    // BAR_GRIP.thumbWrap off (default until the coat cuffs lose their thumb weights, see PROGRESS): the
+    // thumb stays behind the bar on the rider's side, within 6 cm of its axis; on: wrapped, within 4 cm
+    const thumbWrap = !!BAR_GRIP.thumbWrap;
     const rows = [];
     let good = true;
     for (const id of ['abby_ride', 'remi_ride', 'abby_ride_injured']) {
@@ -520,7 +523,14 @@ else {
       const W = (n) => ch.bone(n).getWorldPosition(new THREE.Vector3());
       rider.update(0); rider.root.updateMatrixWorld(true);
       const palmPt = (sd) => W(`wrist.${sd}`).lerp(W(`finger3-1.${sd}`), 0.85);
-      const pl = palmPt('L'), pr = palmPt('R');
+      let pl = palmPt('L');
+      const pr = palmPt('R');
+      // addGrip: a one-armed (_injured) build gets a LEVEL bar - the free right palm mirrored across the
+      // rider's midline (the root bone, in the rider root's frame), same height and reach
+      if (/_injured$/.test(id)) {
+        const L = rider.root.worldToLocal(pr.clone()), cx = rider.root.worldToLocal(W('root')).x;
+        pl = rider.root.localToWorld(new THREE.Vector3(2 * cx - L.x, L.y, L.z));
+      }
       const before = { L: pl.clone(), R: pr.clone(), wL: W('wrist.L'), wR: W('wrist.R') };
       const across = pr.clone().sub(pl), len = across.length() + 0.14;
       const geo = new THREE.CylinderGeometry(0.017, 0.017, len, 12, 1); geo.rotateZ(Math.PI / 2);
@@ -530,6 +540,9 @@ else {
       const g = new THREE.Group(); g.name = 'grip'; g.add(m); rider.root.add(g);
       rider.update(0.7); rider.root.updateMatrixWorld(true);
       const ax = across.clone().normalize();
+      // the bar's forward (away from the rider's chest, square to the bar and level)
+      const fwdB = new THREE.Vector3().crossVectors(ax, new THREE.Vector3(0, 1, 0)).normalize();
+      if (fwdB.dot(pl.clone().add(pr).multiplyScalar(0.5).sub(W('spine03'))) < 0) fwdB.negate();
       for (const sd of ['L', 'R']) {
         const C = (sd === 'L' ? before.L : before.R).clone();
         const off = (p) => { const d = p.clone().sub(C); return d.addScaledVector(ax, -d.dot(ax)); };
@@ -538,18 +551,19 @@ else {
         const lat = W(`finger5-1.${sd}`).sub(W(`finger2-1.${sd}`)), fw = knuck.clone().sub(wr);
         const palm = (sd === 'L' ? new THREE.Vector3().crossVectors(lat, fw) : new THREE.Vector3().crossVectors(fw, lat)).normalize();
         const injured = id === 'abby_ride_injured' && sd === 'L';
-        const r = { id, sd, palmUp: +palm.y.toFixed(2), knuckToBar: +(off(knuck).length() * 100).toFixed(1), tipToBar: +(off(tip).length() * 100).toFixed(1), tipY: +((tip.y - C.y) * 100).toFixed(1), wristMove: +(wr.distanceTo(sd === 'L' ? before.wL : before.wR) * 100).toFixed(1) };
+        const th = W(`finger1-3.${sd}`);
+        const r = { id, sd, thumbFwd: +(th.clone().sub(C).dot(fwdB) * 100).toFixed(1), thumbToBar: +(off(th).length() * 100).toFixed(1), palmUp: +palm.y.toFixed(2), knuckToBar: +(off(knuck).length() * 100).toFixed(1), tipToBar: +(off(tip).length() * 100).toFixed(1), tipY: +((tip.y - C.y) * 100).toFixed(1), wristMove: +(wr.distanceTo(sd === 'L' ? before.wL : before.wR) * 100).toFixed(1) };
         rows.push(r);
         if (injured) { if (r.wristMove > 0.5) good = false; continue; }
-        // palm faces down onto the bar, knuckle row within 5 cm of its axis, the middle fingertip
-        // within 3.5 cm of the axis (wrapped round it, not pointing away) and not above it
-        // (abby_ride_injured: addGrip spans the bar from her held-in LEFT hand, so it slants across her lap
-        // and the right hand only half reaches its end - looser limits, see PROGRESS)
-        const loose = id === 'abby_ride_injured';
-        if (!(r.palmUp < -0.3 && r.knuckToBar < (loose ? 6.5 : 5) && r.tipToBar < 3.5 && r.tipY < (loose ? 3 : 1.5))) good = false;
+        // palm faces down onto the bar, knuckle row within 4 cm of its axis, the middle finger's last
+        // joint within 3.5 cm of the axis and TUCKED UNDER it (1 cm or more below its centre - not
+        // hanging in front as a point); the thumb's last joint on the bar's near (rider's) side (within
+        // 4 cm of its axis with thumbWrap, 6 cm without). Same limits for every build (the
+        // injured build's bar is level, so its free right hand grips like the others)
+        if (!(r.palmUp < -0.3 && r.knuckToBar < 4 && r.tipToBar < 3.5 && r.tipY < -1 && r.thumbFwd < -1 && r.thumbToBar < (thumbWrap ? 4 : 6))) good = false;
       }
     }
-    if (rows.length) ok(good, `rider grip: hands closed round the grab bar (${rows.map((r) => `${r.id}.${r.sd} palm.y ${r.palmUp} knuckle ${r.knuckToBar} cm tip ${r.tipToBar} cm tipY ${r.tipY} wrist moved ${r.wristMove} cm`).join('; ')})`);
+    if (rows.length) ok(good, `rider grip: hands closed round the grab bar (${rows.map((r) => `${r.id}.${r.sd} palm.y ${r.palmUp} knuckle ${r.knuckToBar} cm tip ${r.tipToBar} cm tipY ${r.tipY} thumb ${r.thumbToBar} cm (fwd ${r.thumbFwd}) wrist moved ${r.wristMove} cm`).join('; ')})`);
   }
   // worn props never follow a hand: no belt / buckle / purse vertex keeps an arm or hand weight
   {

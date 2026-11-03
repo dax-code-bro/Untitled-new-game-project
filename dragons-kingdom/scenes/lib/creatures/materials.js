@@ -377,6 +377,9 @@ void dkSkin(inout vec3 albedo) {
   float vh = 0.0, vcav = 0.0, vcr = 0.0, vid = 0.0, ve = 0.5, vup = 0.0, vq = 0.0; vec3 vg = vec3(0.0);
   float gDet = 1.0;
   float tiltJ = uSkin3.z + uHeadLk.w * isHead;
+  // (r2 s8) X3-15 "broken slate": on the head plates (headVar, Charcoal) the border distance is a softer
+  // smooth-min, so a plate's corners round off and its outline reads as a domed scute, not a cut chip
+  dkVorK = mix(9.0, 5.5, clamp(uLook3.w * 2.2, 0.0, 1.0) * isHead);
   if (chainM < 0.5) {
     // the pattern of a level depends only on its size (offset (n) for size 2^n), so the
     // pattern is continuous where the octave index changes
@@ -430,10 +433,10 @@ void dkSkin(inout vec3 albedo) {
   float plateJ = fract(vid * 13.71 + 0.37), plateJ2 = fract(vid * 29.3 + 0.71);
   float pitM = 0.0;
   if (hVar > 0.0) {
-    float pc = max(vMask2.z, L * 0.001) * 0.11;
+    float pc = max(vMask2.z, L * 0.001) * 0.07;   // (r2 s8) 0.11 -> 0.07: finer, shorter pits
     vec4 pn = dkNoised(vRest / pc + 41.7);
     float pfade = 1.0 - smoothstep(0.3, 0.8, fwr / pc);
-    pitM = smoothstep(0.66, 0.78, pn.x) * (1.0 - vcav) * pfade * hVar;
+    pitM = smoothstep(0.72, 0.8, pn.x) * (1.0 - vcav) * pfade * hVar;   // (r2 s8) 0.66 -> 0.72: sparser, softer streaks
     vg -= pn.yzw * pitM * 0.06 / max(relief3, 1e-3);
     // (r2 s6) seams are not a uniform grout network: per EDGE (ve, the same value on both sides) some
     // plates abut with no groove, some seams are deep and dark, and some edges overlap - the top

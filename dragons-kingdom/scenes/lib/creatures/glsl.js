@@ -249,6 +249,7 @@ struct DKV3 { float h; vec3 g; float cav; float crown; float id; float id2; floa
 // (r2 s6) e: a random per cell EDGE (symmetric in the two cells: the same on both sides of a seam),
 // up: +1 / -1 which of the two cells lies on top where that edge is an overlap (antisymmetric)
 float dkKeel3 = 0.0;   // keel height along each scale (set by the caller)
+float dkVorK = 9.0;    // (r2 s8) smooth-min sharpness of the border distance: lower = rounder plate outlines (corners fill in)
 // shape: q = d1 / F2s, where F2s is a SMOOTH minimum of the distances to all the other
 // cell points (no creases inside a scale where the second-nearest neighbour changes):
 // 0 at the scale's centre, ~1 on its border -> height 1 - q^k: k = 2 a rounded bead,
@@ -256,7 +257,7 @@ float dkKeel3 = 0.0;   // keel height along each scale (set by the caller)
 DKV3 dkVor3(vec3 p, vec3 T, float an, float tilt, float k, float cavW, float jit) {
   vec3 ip = floor(p), fp = fract(p);
   float ka = 1.0 / an - 1.0;
-  const float K = 9.0;
+  float K = dkVorK;
   float d1 = 1e9; vec3 m1 = vec3(0.0); vec3 c1 = vec3(0.0); float d2 = 1e9; vec3 c2 = vec3(0.0);
   float ws = 0.0; vec3 wg = vec3(0.0); float w1 = 0.0; vec3 g1w = vec3(0.0);
   for (int kk = -1; kk <= 1; kk++) for (int j = -1; j <= 1; j++) for (int i = -1; i <= 1; i++) {
@@ -273,7 +274,10 @@ DKV3 dkVor3(vec3 p, vec3 T, float an, float tilt, float k, float cavW, float jit
   }
   DKV3 V;
   float wo = max(ws - w1, 1e-30);
-  float l2 = -log(wo) / K;                               // smooth distance to the other cells
+  // smooth distance to the other cells; (r2 s8) a softer K also pulls l2 down along plain seams (the
+  // far cells add up), widening every groove - the offset gives that back so only the corners round
+  // off (exactly 0 at the default K = 9, so every other caller is unchanged)
+  float l2 = -log(wo) / K + (9.0 / K - 1.0) * 0.045;
   vec3 g2 = (wg - w1 * g1w) / wo;
   float q = clamp(d1 / max(l2, 1e-4), 0.0, 1.0);
   vec3 gq = (g1w * l2 - d1 * g2) / (l2 * l2);

@@ -3,6 +3,41 @@
 Owner paths: `scenes/lib/director/`, `episodes/s01e01/final/scenes/`, `episodes/s01e01/final/cut/`.
 How it works: `README.md` in this folder. Latest state first.
 
+## Session 17 (2026-11-03, short budgeted session: 1C-16 re-frame after the rider grip, 1C-14 hands, X4 plan - STILLS only)
+
+Shot ids, lengths, line cue times UNCHANGED. **Flight timing for sound: nothing changed** (no flight act touched).
+- (1) 1C-16: after perf bcf1965 (riders grip the bar; Abby's wrists ~6 cm back/up) Leaf's neck crest filled ~40 % of
+  the frame top-left (eng1/perf/perf-grip/1C-16_029.png). FIX in `sky-off-verdor.spec.js`: camera from 184 (4 deg off
+  the centre line), dist 1.3 -> 1.6, rise 0.45 -> 1.0 - looks DOWN past the crest onto the hands. st31 stills at
+  0.25 / 0.5 / 0.75 (0.75 s, 1.5 s, 2.25 s) LOOKED AT: crest gone, both hands closed over the bar (fingers wrap the
+  front, knuckles up), belt + coat above them, NO wing membrane over the lens at any of the three beat phases; only a
+  small green crest spike near her right wrist. The frame is now nearly top-down on her lap - reads as "hands on the
+  grips, easy". Remaining (humans track): fingertips read slightly claw-like at 100 mm; thumbs hidden.
+- 1C-14 re-still (st31 @ 0.5): Remi's hands both on his grip bar (1:1 crop checked), he looks left toward Abby; Leaf +
+  Abby clear above Charcoal's wing, upper left. Unchanged from s16 otherwise (solver still 0.36 off; accepted in s16).
+- (2) X4 start: `episodes/s01e01/final/scenes/specs/verdor-aerial.spec.js` = FIRST-PASS PLAN, NOT WIRED (no registry
+  entry, no builder: build-shots ignores it; selftest 20/20 ok). It fixes the harbour-town MAP in the VERDOR frame
+  (harbour bay at z ~1480-1880 south of the 1C flight line, quay x ~262 facing east, Santa Maria at the quay's north
+  end, town terraces west of the quay rising to ~42 m, palace on the high ground WNW [60, 58, 1430] with the chamber's
+  opening on its EAST face, terrace farm, school field south of the town), the formation clock continuing 1C's
+  (X4-01 at T 62), and staging + camera plans for the 16 aerial shots (ground shots X4-04/05/07/09 = VERDOR_HARBOR,
+  same map). Requests noted inline: lean-on-tool posture (X4-06), a flight `call` channel for Leaf (X4-08).
+- Stills: `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/director/st31/` (1C-16_018/036/054.png, 1C-14_060.png, crops.png). Contact sheet: `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/director/s17/sheet.jpg`.
+- NEXT (exact, in order):
+  1. Videos (DO NOT run in a short session - owner/background only, ~10 min/shot here):
+     `node scenes/lib/director/tools/render-shots.mjs --only 1C-10,1C-13,1C-14,1C-16,1C-19 --force --work /tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/director/work1B`
+     (1C-14 + 1C-16 MUST re-render: rider grip pose changed in bcf1965; also any 1C shot showing riders' hands up close:
+     1C-09, 1C-18). Still pending from s15: `--only 1C-07,1C-08,1C-09,1C-11,1C-12,1C-15,1C-17,1C-18` and `--only 1C-04,1C-06,X3-10`.
+     Then re-assemble the 1C cut (edl-1C, session 11) and sample EVERY 6th frame of 1C-16 / 1C-14.
+  2. VERDOR_AERIAL builder: add `VERDOR_AERIAL` to `registry.js` SETS (file 'verdor-aerial.js', builder 'verdor-aerial',
+     frame VERDOR, continuity 1C = sunDir(102, 31), exposure 1.1) AND write `scenes/lib/director/sets/verdor-aerial.js`
+     in the same commit (selftest requires the builder file). Start from sets/sky-off-verdor.js (ocean, coast terrain,
+     formation cast) + architecture/verdor.js harbor() (rotate its +z sea axis to +x) / palace() + the houses kit at far
+     LOD for the town terraces + props Santa Maria. Check the palace placement against BIRTHING_CHAMBER (east window)
+     and the 1A walk (palace south of the field). Then drop `wired: false`, run build-shots + `tools/previs.mjs` on
+     X4-01/03/14/20 first (map read), then stills.
+  3. VERDOR_HARBOR (ground shots X4-04/05/07/09) on the same MAP; then OUTER_ROCKS (X6) at the coast's far end.
+
 ## Session 16 (2026-11-03, short budgeted session: owner's rev15 notes on 1C - STILLS only, no video renders)
 
 All fixes in `episodes/s01e01/final/scenes/specs/sky-off-verdor.spec.js`. Shot ids, lengths, line cue times UNCHANGED.

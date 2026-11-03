@@ -27,14 +27,14 @@
  "result": {
   "mix": "episodes/s01e01/final/audio/cuts/1C/mix.wav",
   "I": -16.7,
-  "I_full": -20.1,
+  "I_full": -20.2,
   "TP": -1.6,
   "LRA": 9.9,
-  "sha256": "2c8b2dc893d6f7a22d9a2ac186c5c38b6b542c5552ebbaaed3ce11d0e73d5626",
+  "sha256": "5889acc21560a7e707cab2a9d1938a57a65ef6883e7fa71dd5e361d7957dc0bf",
   "master_gain_db": 2,
   "limiter_ceiling_dbfs": -1.6,
   "dialogue_gain_db": 11.4,
-  "min_dialogue_margin_lu": 12.646,
+  "min_dialogue_margin_lu": 12.666,
   "anchored": "dialogue",
   "pass": true
  },
@@ -44,7 +44,7 @@
   "aac_I": -16.7,
   "aac_I_full": -20.2,
   "aac_TP": -1.4,
-  "bytes": 48120176
+  "bytes": 48236183
  },
  "beds": {
   "grounds_wind": {
@@ -64,7 +64,7 @@
   },
   "harbour_quay": {
    "target_lufs": -24,
-   "raw_lufs_60s": -23.5,
+   "raw_lufs_60s": -23.4,
    "duck_db": 8
   },
   "sea_shore": {
@@ -124,26 +124,37 @@
  "music_cue_sheet": "episodes/s01e01/final/sound/music/cues.json",
  "fx": {
   "spot_sheet": "episodes/s01e01/final/sound/fx/spots.json",
-  "events": 102,
+  "events": 147,
   "peak_dbfs": -4.1,
   "spaces": [
    "air",
-   "open"
+   "harbour",
+   "open",
+   "stone_wall"
   ],
-  "sha256": "3c01b6bbbdcea645b47e60a10f8ff2327cad0cfe6e7b37f9ab32bb1740241805",
+  "sha256": "3e6102fe46ef0e38489dba0ce7bfc2692f11c6c3640a3318f59b05e7c5728f5f",
   "spot_rows_not_in_cut": 134,
   "by_sound": {
    "claws_turf": 1,
-   "wingbeat": 31,
-   "wind_grass": 3,
+   "wingbeat": 34,
+   "wind_grass": 4,
    "leather": 4,
    "breath": 1,
    "hide_rub": 1,
    "weight_shift": 2,
    "step_stone": 9,
-   "wingbeat_light": 43,
-   "air_rush": 6,
-   "snort": 1
+   "wingbeat_light": 59,
+   "air_rush": 9,
+   "snort": 1,
+   "gull": 5,
+   "boat_bell": 1,
+   "walla": 5,
+   "fish_slap": 1,
+   "rope_strain": 3,
+   "net_drip": 1,
+   "dragon_call": 2,
+   "rope_creak": 2,
+   "knock": 2
   }
  },
  "runs": [
@@ -266,15 +277,15 @@
    "from_s": 36.1,
    "to_s": 37.37,
    "dialogue_M": -14.115,
-   "background_M": -26.761,
-   "margin_LU": 12.646
+   "background_M": -26.781,
+   "margin_LU": 12.666
   },
   {
    "from_s": 61,
    "to_s": 64.285,
    "dialogue_M": -15.773,
-   "background_M": -28.564,
-   "margin_LU": 12.79
+   "background_M": -28.55,
+   "margin_LU": 12.777
   }
  ]
 }

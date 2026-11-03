@@ -13,7 +13,8 @@
 //     struggle(c, o)   the newborn's weak struggle as a function of t (lie, push, slip, rest)
 //     fire(c, o)       the fire posture and tells (inhale, jaw 25-30 deg), o.t from the command
 //   air
-//     flight(c, o)     flapping at the size-based tempo (config.flapHz), o.corr = uneven beats
+//     flight(c, o)     flapping at the size-based tempo (config.flapHz), o.corr = uneven beats,
+//                      o.call 0..1 = a call in flight (neck lift, head up, jaw open; also on glide)
 //     glide(c, o)      wings spread, dihedral, corrections; o.bank rolls the body
 //     dive(c, o)       the half-folded "M" stoop (o.fold)
 //     strike(c, o)     talons forward (Starlight's strike), o.k 0..1
@@ -971,10 +972,11 @@ export function flight(c, o = {}) {
   const pitch = 0.04 * Math.cos(w.phi);
   pb.rig.position = [0, -(o.bobAmp ?? 0.01) * c.L * bob, 0];
   pb.rig.rotation = [(o.bodyPitch ?? 0) + pitch, o.yaw ?? 0, o.bank ?? 0];
-  neckCurve(pb, (o.neckBase ?? 0.12), (o.neckTop ?? 0.06), (o.headPitch ?? -0.05), -((o.bodyPitch ?? 0) + pitch));
+  const cm = callMod(o, t);
+  neckCurve(pb, (o.neckBase ?? 0.12) + (cm?.neckBase ?? 0), (o.neckTop ?? 0.06) + (cm?.neckTop ?? 0), (o.headPitch ?? -0.05) + (cm?.head ?? 0), -((o.bodyPitch ?? 0) + pitch));
   const lk = o.look || [0, 0];
   look(pb, lk[0], lk[1], -(o.bank ?? 0) * 0.5);
-  common(pb, { ...o, lidRelax: o.lidRelax ?? 0.3 }, t);
+  common(pb, { ...o, lidRelax: o.lidRelax ?? 0.3, ...(cm ? { jaw: (o.jaw ?? 0) + cm.jaw, blink: false } : {}) }, t);
   breathe(pb, t, hz * 0.5, 0.018);
   const ts = tailNames(c);
   ts.forEach((n, i) => {
@@ -982,6 +984,17 @@ export function flight(c, o = {}) {
     pb.add(n, 0.05 * Math.sin(w.phi - 1.2 - i * 0.25) * f * 8 / ts.length - 0.03 / ts.length, (o.bank ?? 0) * 0.6 * f * 2 / ts.length, 0);
   });
   return pb.out({ ground: false });
+}
+
+/**
+ * (r2 s8) The flight CALL channel (o.call 0..1, flight + glide; director X4-08 "Leaf gives a quick bright
+ * call"): the neck lifts and the head tips up (a calling goose / gull throws the bill up), the jaw opens
+ * wide with a fast tremolo (the sound's pulses) and the tongue-floor drops; the eyes stay open.
+ */
+function callMod(o, t) {
+  const k = clamp(o.call ?? 0, 0, 1);
+  if (k <= 0) return null;
+  return { k, neckBase: 0.1 * k, neckTop: 0.16 * k, head: 0.3 * k, jaw: k * (0.5 + 0.06 * Math.sin(t * 2 * Math.PI * 7.5)) };
 }
 
 /** Glide: wings held out with dihedral at the arm and a droop at the hand, small corrections; bank rolls the body. */
@@ -1001,10 +1014,11 @@ export function glide(c, o = {}) {
   pb.u.billowL = 0.35; pb.u.billowR = 0.35;
   flightLegs(pb, { tuck: o.legTuck, together: o.legsTogether });
   pb.rig.rotation = [o.bodyPitch ?? 0, o.yaw ?? 0, bank];
-  neckCurve(pb, (o.neckBase ?? 0.1), (o.neckTop ?? 0.05), (o.headPitch ?? -0.05), -(o.bodyPitch ?? 0));
+  const cm = callMod(o, t);
+  neckCurve(pb, (o.neckBase ?? 0.1) + (cm?.neckBase ?? 0), (o.neckTop ?? 0.05) + (cm?.neckTop ?? 0), (o.headPitch ?? -0.05) + (cm?.head ?? 0), -(o.bodyPitch ?? 0));
   const lk = o.look || [0, 0];
   look(pb, lk[0] + 0.02 * wob(t * 0.4, 7), lk[1], -bank * 0.55);
-  common(pb, { ...o, lidRelax: o.lidRelax ?? 0.3 }, t);
+  common(pb, { ...o, lidRelax: o.lidRelax ?? 0.3, ...(cm ? { jaw: (o.jaw ?? 0) + cm.jaw, blink: false } : {}) }, t);
   breathe(pb, t, 0.25, 0.015);
   const ts = tailNames(c);
   ts.forEach((n, i) => { const f = i / (ts.length - 1); pb.add(n, 0.01 * Math.sin(t * 0.9 - i * 0.2) * f, bank * 0.7 * f * 2 / ts.length, 0); });

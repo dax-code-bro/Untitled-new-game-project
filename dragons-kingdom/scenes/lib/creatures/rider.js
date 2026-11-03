@@ -646,7 +646,7 @@ export function mountRider(c, tack, rider, opts = {}) {
   void restWorld;
   c.root.updateMatrixWorld(true);
   if (opts.straddle !== false) fitStraddle(c, bone, restWorld, rider, holder, opts);
-  if (opts.grip !== false) addGrip(tack, rider, holder);
+  if (opts.grip !== false) addGrip(tack, rider, holder, opts);
   if (tack.kind === 'saddle' && opts.stirrups !== false) addStirrups(tack, rider, holder);
   c.root.updateMatrixWorld(true);
   return holder;
@@ -774,7 +774,9 @@ function fitStraddle(c, seatBone, restWorld, rider, holder, opts = {}) {
  * from the pommel (riders hold on; hands floating in the air read wrong). Built in the mount
  * holder's frame, so it rides with the seat like the rider does.
  */
-function addGrip(tack, rider, holder) {
+/** Rider builds that hold one arm in (the bar is placed for the free RIGHT hand alone). */
+const ONE_HAND = /_injured$/;
+export function addGrip(tack, rider, holder, opts = {}) {
   const find = (n) => (rider.character?.bone ? rider.character.bone(n) : null) || (rider.bones || []).find((b) => b.name === n);
   rider.update?.(0);
   holder.updateMatrixWorld(true);
@@ -785,8 +787,16 @@ function addGrip(tack, rider, holder) {
     const a = w.getWorldPosition(new THREE.Vector3()), b = f.getWorldPosition(new THREE.Vector3());
     return rider.root.worldToLocal(a.lerp(b, 0.85));
   };
-  const pl = palm('L'), pr = palm('R');
-  if (!pl || !pr) return;
+  let pl = palm('L'), pr = palm('R');
+  if (!pr || (!pl && opts.gripHands !== 'R')) return;
+  // an injured rider (abby_ride_injured: her LEFT arm is held in against her body) grips one-handed:
+  // the held-in left hand would slant the bar across her lap, so the bar is LEVEL at the usual place -
+  // the free right palm mirrored across the rider's midline (the pelvis), same height and reach
+  if (opts.gripHands === 'R' || ONE_HAND.test(rider.id || '')) {
+    const rb = find('root');
+    const cx = rb ? rider.root.worldToLocal(rb.getWorldPosition(new THREE.Vector3())).x : 0;
+    pl = new THREE.Vector3(2 * cx - pr.x, pr.y, pr.z);
+  }
   // the pommel's front edge in the rider root's frame (the holder sits at the seat point); the
   // grip is the rider's child, so it shows and hides with the rider
   const pom = new THREE.Vector3(0, 0.1, (tack.seatLen ?? 0.62) * 0.5).sub(rider.root.position);

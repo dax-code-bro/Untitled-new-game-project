@@ -260,15 +260,18 @@ export const SOUNDS = {
     mix(x, SOUNDS.cloth(r, { dur: 0.5, heavy: 1 }), 0.12, 0.4);
     return x;
   },
-  wingbeat_light(r, p) { // Leaf in flight: a quick, lighter stroke (smaller wing): soft whoosh 150-1400 Hz + a dry membrane snap
-    // (s6) the buffer holds the whole decay (peak + 4 tau) and ends on a fade: at dur 0.62 the old d + 0.1 buffer cut
-    // the whoosh off at -19 dB (a hard edge, seen on the 1C fx waveform)
-    const d = p.dur ?? 0.45, up = p.up ?? 0.35, len = d * up + 4 * d * 0.3, x = buf(len + 0.05);
-    const w = chain(white(len, r), ['hp', 120], ['lp', 1400], ['bp', 420, 0.6]);
-    mix(x, envelope(w, (t) => Math.min(1, (t / (d * up)) ** 2) * Math.exp(-Math.max(0, t - d * up) / (d * 0.3))), 0, 4);
-    mix(x, thump(0.3, 110, 60, 0.07, r), d * up * 0.9, 0.35);
-    mix(x, bq(SOUNDS.cloth(r, { dur: 0.22 }), 'hp', 500), d * up * 0.8, 0.5);
-    return fadeEdges(x, 0.002, 0.08);
+  wingbeat_light(r, p) { // Leaf in flight: one quick stroke, a "fwup" (not wind): faint pre-swell, a fast push that peaks at
+    // dur*up (the spot rows' `at` assume the peak there), a quick decay, and a membrane flutter on top.
+    // (s7) measured vs the s6 version (sound/PROGRESS.md): rise 10-90 % 185 -> ~45 ms, width above -12 dB 350 -> ~150 ms,
+    // energy no longer parked at 250-500 Hz where flight_wind lives (that version read as a gust, not a wing)
+    const d = p.dur ?? 0.45, up = p.up ?? 0.35, pk = d * up, a = 0.045, len = pk + 0.45, x = buf(len);
+    const push = chain(white(len, r), ['hp', 110], ['hp', 110], ['lp', 900], ['lp', 1300]);
+    mix(x, envelope(push, (t) => (t < pk - a ? 0.1 * (t / (pk - a)) ** 2 : t < pk ? 0.1 + 0.9 * ((t - pk + a) / a) ** 1.5 : Math.exp(-(t - pk) / 0.07))), 0, 4);
+    const fh = rr(r, 20, 27), fl = chain(white(len, r), ['hp', 1000], ['lp', 4200]);
+    mix(x, envelope(fl, (t) => (t < pk - 0.035 ? 0 : Math.min(1, (t - pk + 0.035) / 0.03) * Math.exp(-Math.max(0, t - pk) / 0.06)) * Math.abs(Math.sin(Math.PI * fh * t)) ** 3), 0, 3.2);
+    mix(x, thump(0.3, 150, 85, 0.045, r), pk - 0.025, 0.3);
+    mix(x, bq(SOUNDS.cloth(r, { dur: 0.16 }), 'hp', 700), pk - 0.012, 0.45);
+    return fadeEdges(x, 0.002, 0.06);
   },
   air_rush(r, p) { // flight air: a gust past the riders / camera (dur; `dark` 0..1 lowers it; `whistle` adds a thin tone)
     const d = p.dur ?? 3, dk = p.dark ?? 0.3, x = chain(white(d, r), ['hp', 60], ['lp', lerp(5000, 1200, dk)], ['bp', lerp(1100, 380, dk), 0.35]);
@@ -280,6 +283,114 @@ export const SOUNDS = {
       mix(x, wv, 0, 0.02 * p.whistle);
     }
     return x;
+  },
+  // harbour (s7, X4): all synthesised
+  gull(r, p) { // a herring-gull-like yelp series "kyow kyow": 2:1 FM voice (nasal harmonics) with a rasp, two formants
+    // (2.1 / 3.3 kHz), rise-then-fall pitch per call, the last call longer; n calls; `far` 0..1 dulls it
+    const n = p.n ?? 2, far = p.far ?? 0.5, x = buf(n * 0.62 + 0.4);
+    let t0 = 0;
+    for (let k = 0; k < n; k++) {
+      const d = rr(r, 0.22, 0.34) * (k === n - 1 ? 1.45 : 1), fp = rr(r, 720, 960) * (1 - 0.04 * k), y = buf(d);
+      let ph = 0;
+      for (let i = 0; i < y.length; i++) {
+        const t = i / SR, u = t / d, f = fp * (u < 0.22 ? 0.7 + 0.3 * Math.sin(Math.PI / 2 * u / 0.22) : 1 - 0.32 * (u - 0.22) / 0.78);
+        ph += f / SR;
+        const m = Math.sin(6.283185307 * ph) * (2.4 - 0.9 * u);
+        y[i] = Math.sin(6.283185307 * 2 * ph + m) * (1 + 0.4 * (2 * r() - 1)) * Math.min(1, t / 0.01) * Math.pow(1 - u, 0.5);
+      }
+      const z = buf(d); mix(z, bq(Float32Array.from(y), 'bp', 2100, 2.2), 0, 1); mix(z, bq(Float32Array.from(y), 'bp', 3300, 3), 0, 0.6); mix(z, y, 0, 0.2);
+      mix(x, z, t0, 1 - 0.12 * k); t0 += d + rr(r, 0.06, 0.16);
+    }
+    return chain(x, ['hp', 450], ['lp', lerp(9000, 2600, far)]);
+  },
+  boat_bell(r, p) { // a small bronze ship's bell struck n times `every` s apart: hum + inharmonic strike partials (beating), clapper tick
+    const n = p.n ?? 2, ev = p.every ?? 0.42, f = p.f ?? 880, far = p.far ?? 0.5, x = buf((n - 1) * ev + 3.2);
+    const P = [[0.5, 2.6, 0.45], [1, 1.6, 1], [1.19, 1.2, 0.6], [1.5, 0.9, 0.45], [2, 0.7, 0.5], [2.66, 0.45, 0.3], [3.18, 0.3, 0.22], [4.1, 0.18, 0.12]];
+    for (let k = 0; k < n; k++) {
+      const y = buf(3);
+      for (const [q, tau, am] of P) {
+        const fq = f * q * (1 + 0.003 * (r() - 0.5)), ph = r() * 6.283, bt = 0.6 + 1.5 * r();
+        for (let i = 0; i < y.length; i++) { const t = i / SR; y[i] += am * Math.exp(-t / tau) * Math.sin(6.283185307 * fq * t + ph) * (1 + 0.08 * Math.sin(6.283185307 * bt * t)); }
+      }
+      mix(y, tick(r, 4200, 3, 0.004), 0, 0.6);
+      mix(x, envelope(y, (t) => Math.min(1, t / 0.0015)), k * ev, k ? 0.8 : 1);
+    }
+    return bq(x, 'lp', lerp(10000, 3000, far));
+  },
+  fish_slap(r, p) { // wet fish dropped into a wicker basket: soft wet thud + splat + a few squelch clicks + wicker crunch; n over `dur`
+    const n = p.n ?? 1, d = p.dur ?? 0, x = buf(d + 0.5);
+    for (let k = 0; k < n; k++) {
+      const t0 = n > 1 ? Math.min(d, d * k / (n - 1) + rr(r, -0.12, 0.12) * d / n) : 0, w = rr(r, 0.6, 1), y = buf(0.4);
+      mix(y, thump(0.25, rr(r, 170, 220), rr(r, 80, 100), 0.03, r), 0, 0.45 * w);
+      mix(y, chain(envelope(white(0.12, r), decay(0.018, 0.001)), ['bp', rr(r, 900, 1400), 0.9], ['hp', 400]), 0.002, 3.0 * w);
+      for (let j = 0; j < 3; j++) mix(y, chain(envelope(white(0.02, r), decay(0.003, 0.0005)), ['bp', rr(r, 1800, 3200), 3]), 0.01 + j * rr(r, 0.012, 0.03), 0.4 * w);
+      mix(y, SOUNDS.step_straw(r, { dur: 0.12, weight: 0 }), 0.01, 0.3);
+      mix(x, y, Math.max(0, t0), 1);
+    }
+    return x;
+  },
+  rope_strain(r, p) { // a heavy wet hawser taking load: slow groaning stick-slip that tightens (rate rises), fibre crackle; `dur`
+    const d = p.dur ?? 3, x = buf(d);
+    const g = stickSlip(d, r, (t) => lerp(18, 55, Math.pow(t / d, 1.3)) * (1 + 0.25 * Math.sin(6.283 * 0.45 * t)), (t) => Math.min(1, t / 0.4, (d - t) / 0.3) * (0.6 + 0.4 * Math.sin(6.283 * 0.31 * t + 1)), 0.35);
+    mix(x, body(g, [[rr(r, 140, 170), 5, 1], [rr(r, 330, 380), 5, 0.7], [rr(r, 720, 800), 4, 0.35]]), 0, 1);
+    const fib = stickSlip(d, r, () => 140 + 60 * r(), (t) => 0.3 * Math.min(1, t / 0.4, (d - t) / 0.3) * Math.pow(t / d, 0.7), 0.9);
+    return mix(x, bq(fib, 'bp', 2600, 2), 0, 0.5);
+  },
+  net_drip(r, p) { // water streaming off a hauled net into the sea: thin trickle + droplets (rising-chirp bubble blips); `dur`, `rate`/s
+    const d = p.dur ?? 4, dens = p.rate ?? 14, x = buf(d + 0.2), edge = (t) => Math.min(1, t / 0.5, Math.max(0, d - t) / 0.5);
+    mix(x, envelope(chain(white(d, r), ['hp', 1500], ['lp', 6000]), (t) => 0.12 * edge(t) * (0.7 + 0.3 * Math.sin(6.283 * 0.7 * t))), 0, 1);
+    let t = 0;
+    while ((t += -Math.log(1 - r()) / dens) < d) {
+      const f0 = rr(r, 700, 1800), td = rr(r, 0.012, 0.03), y = buf(td * 4); let ph = 0;
+      for (let i = 0; i < y.length; i++) { const s = i / SR; ph += f0 * (1 + s / td) / SR; y[i] = Math.sin(6.283185307 * ph) * Math.exp(-s / td); }
+      mix(x, y, t, rr(r, 0.15, 0.6) * edge(t));
+    }
+    return x;
+  },
+  dragon_call(r, p) { // a creature call. size 1 = Leaf: quick, bright two-part "kree-ip" (rise, a tiny break, a higher falling
+    // tail); size > 1 = a bigger animal (the quay dragon's answer): lower, longer, rougher, with chest rumble.
+    // 2:1-free FM voice (index ~2.5: rich harmonics) through two formants + breath noise; `far` 0..1 dulls
+    const sz = p.size ?? 1, d = (p.dur ?? 0.55) * sz, f0 = (p.f ?? 560) / sz, F1 = 1500 / Math.sqrt(sz), F2 = 3000 / Math.sqrt(sz);
+    const x = buf(d + 0.1), v = buf(d), rough = sz > 1.2 ? 0.45 : 0.2; let ph = 0;
+    for (let i = 0; i < v.length; i++) {
+      const t = i / SR, u = t / d, two = u >= 0.62, sg = two ? (u - 0.62) / 0.38 : u / 0.62;
+      const f = two ? f0 * (1.35 - 0.3 * sg) : f0 * (0.82 + 0.38 * Math.sin(Math.PI / 2 * sg));
+      ph += f * (1 + 0.03 * Math.sin(6.283185307 * 11 * t)) / SR;
+      const env = Math.min(1, t / 0.02) * (1 - 0.85 * Math.exp(-(((u - 0.62) / 0.03) ** 2))) * (two ? Math.pow(1 - sg, 0.7) : 0.75 + 0.25 * sg);
+      v[i] = Math.sin(6.283185307 * ph + Math.sin(6.283185307 * ph) * (2.5 + 0.8 * Math.sin(Math.PI * u))) * env * (1 + rough * (2 * r() - 1));
+    }
+    mix(x, bq(Float32Array.from(v), 'bp', F1, 2), 0, 1); mix(x, bq(Float32Array.from(v), 'bp', F2, 2.5), 0, 0.6); mix(x, v, 0, 0.2);
+    mix(x, envelope(chain(white(d, r), ['bp', F1 * 1.4, 1.2]), (t) => 0.25 * Math.sin(Math.PI * t / d)), 0, 1);
+    if (sz > 1.2) mix(x, envelope(chain(white(d, r), ['lp', 300]), (t) => 0.5 * Math.sin(Math.PI * t / d)), 0, 1);
+    return bq(x, 'lp', lerp(9000, 2500, p.far ?? 0));
+  },
+  walla(r, p) { // distant wordless crowd talk (a PLACEHOLDER for recorded walla): `voices` speakers, each phrases of syllables:
+    // a glottal sawtooth (f0 95-140 / 170-235 Hz, falling over the phrase) through three vowel formants that change per
+    // syllable, consonant noise ticks, pauses between phrases. Deep 3-6 Hz syllable modulation is what makes it read as
+    // talk rather than hiss. `far` 0..1 dulls; `pause` [t0, t1, depth] dips everyone (people glance up and carry on)
+    const d = p.dur ?? 5, nv = p.voices ?? 6, far = p.far ?? 0.5, x = buf(d);
+    const V = [[730, 1090, 2440], [530, 1840, 2480], [300, 2200, 3000], [570, 840, 2410], [440, 1020, 2240], [660, 1720, 2410], [490, 1350, 2500]];
+    for (let k = 0; k < nv; k++) {
+      const hi = r() < 0.5, fb = hi ? rr(r, 170, 235) : rr(r, 95, 140), lvl = rr(r, 0.35, 1);
+      let t = rr(r, 0, 1.2);
+      while (t < d - 0.2) {
+        const ns = 3 + Math.floor(r() * 9);
+        for (let s = 0; s < ns && t < d - 0.2; s++) {
+          const sd = rr(r, 0.12, 0.26), v = V[Math.floor(r() * V.length)], f = fb * (1.15 - 0.3 * s / ns) * rr(r, 0.95, 1.08), y = buf(sd);
+          let ph = 0;
+          for (let i = 0; i < y.length; i++) { ph += f / SR; if (ph >= 1) ph -= 1; y[i] = 2 * ph - 1; }
+          bq(y, 'lp', 3500);
+          const z = buf(sd);
+          for (let j = 0; j < 3; j++) mix(z, bq(Float32Array.from(y), 'bp', v[j] * (hi ? 1.15 : 1), 5 + 2 * j), 0, [1, 0.6, 0.3][j]);
+          envelope(z, (tt) => Math.pow(Math.sin(Math.PI * tt / sd), 1.5));
+          if (r() < 0.55) mix(z, envelope(chain(white(0.05, r), ['bp', rr(r, 2500, 5500), 2]), decay(0.012, 0.002)), 0, 0.25);
+          mix(x, z, t, lvl); t += sd + rr(r, 0, 0.05);
+        }
+        t += rr(r, 0.25, 1.4);
+      }
+    }
+    if (p.pause) { const [a, b, dp] = p.pause; envelope(x, (t) => 1 - dp * Math.max(0, Math.min(1, (t - a) / 0.25, (b - t) / 0.4))); }
+    return chain(x, ['hp', 120], ['lp', lerp(5000, 1800, far)]);
   },
   // doors and wood
   knock(r, p) { // a knuckle on a heavy wooden door; short: the second knock cut off
