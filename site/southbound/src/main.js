@@ -282,6 +282,18 @@ async function createGame(progress) {
 
   // ---- career (save game), interaction points and the gameplay systems ----
   const profile = loadProfile() || newProfile();
+  // "Start with nothing": older saves got a free 9mm, Rico's pickup, a waistband holster and
+  // two bandages from the old opening. Take back exactly those freebies once; anything you
+  // bought or earned stays. (The 9mm couldn't be bought before, so any in an old save was free.)
+  if (!profile.nothingMig) {
+    profile.nothingMig = 1;
+    const W = profile.weapons || (profile.weapons = {});
+    if (Array.isArray(W.owned) && W.owned.includes('pistol')) { W.owned = W.owned.filter((id) => id !== 'pistol'); if (W.ammo) delete W.ammo.pistol; if (W.count) delete W.count.pistol; }
+    if (Array.isArray(profile.garage)) profile.garage = profile.garage.filter((g) => g.type !== 'rusty-pickup');
+    if (profile.gearMig && Array.isArray(profile.gearOwned)) { profile.gearOwned = profile.gearOwned.filter((k) => k !== 'holster:iwb'); if (profile.gear?.holster === 'iwb') profile.gear.holster = 'owb'; }
+    if (profile.med && profile.med.bandage === 2 && Object.keys(profile.med).length === 1) profile.med = {};
+    profile.ricoTruck = false;
+  }
   S.money = profile.money;
   if (profile.weapons.owned) { for (const id of profile.weapons.owned) combat.give(id); Object.assign(combat.ammo, profile.weapons.ammo || {}); }
   const career = new Career(profile, {
