@@ -24,6 +24,12 @@ import { makeSilhouetter } from './ui/silhouette.js';
 import { installLaw } from './systems/law.js';
 import { installRoadside } from './systems/roadside.js';
 import { installGang } from './systems/gang.js';
+import { installGunStores } from './systems/gunstores.js';
+import { installCarCombat } from './systems/carcombat.js';
+import { installStreetLife } from './systems/streetlife.js';
+import { installWorldEvents } from './systems/world-events.js';
+import { installDetails } from './systems/details.js';
+import { buildWeaponModel, applyFinish } from './entities/arsenal.js';
 import { vehiclesOverlap } from './world/collision.js';
 import { LAND } from './assets/catalog.js';
 import { BOATS, AIRCRAFT } from './entities/craft.js';
@@ -130,7 +136,7 @@ async function createGame(progress) {
   const roads = createRoads(graph, hm, q, scene, collision, surf);
   progress(0.74, 'Building Port Calvera and Mill Creek');
   await nextFrame();
-  const city = createBuildings(hm, q, scene, collision, surf);
+  const city = createBuildings(hm, q, scene, collision, surf, graph);
   progress(0.84, 'Growing Pinewood Hollow');
   await nextFrame();
   const veg = await createVegetation(hm, q, scene, collision, city.cityBlocks, (p) => progress(0.84 + p * 0.07, 'Growing forests'), surf, settings.grass === false ? 0 : 1);
@@ -371,6 +377,47 @@ async function createGame(progress) {
   });
   const gang = installGang(game);
   game.gang = gang;
+  // gunsmiths: silhouettes for the store list, finishes on your guns, attachments per gun
+  const silCache = {};
+  combat.finishOf = (id) => career.p.weapons.finish?.[id];
+  Object.assign(game, {
+    silhouetteOf: (id) => silCache[id] || (silCache[id] = silhouette('store:' + id, buildWeaponModel(WEAPONS[id]))),
+    applyFinishTo: (id) => { for (const [k, m] of Object.entries(combat.models)) if (k === id || k.startsWith(id + '#')) applyFinish(m, combat.finishOf(id)); },
+    fitAttachment: (id, attId) => {
+      const a = ATTACHMENTS.find((x) => x.id === attId), w = WEAPONS[id];
+      if (!a || !w || w.melee) return;
+      const mods = combat.mods || (combat.mods = {}), slots = mods[id] || (mods[id] = {});
+      if (slots[a.slot] === a.id) return;
+      if (!career.spend(a.price)) return;
+      slots[a.slot] = a.id;
+      const base = combat.base || (combat.base = {});
+      if (!base[id]) base[id] = { ...w };
+      Object.assign(w, base[id]);
+      for (const pid of Object.values(slots)) {
+        const m = ATTACHMENTS.find((x) => x.id === pid).mods;
+        if (m.damage) w.damage = Math.round(w.damage * m.damage);
+        if (m.spread) w.spread *= m.spread;
+        if (m.range) w.range = Math.round(w.range * m.range);
+        if (m.rate) w.rate *= m.rate;
+        if (m.clip) w.clip = Math.round(w.clip * m.clip);
+        if (m.recoil) w.recoil *= m.recoil;
+        if (m.silent) w.silent = true;
+        if (m.zoom) w.scope = m.zoom;
+      }
+      hud.toast(`${a.name} fitted to your ${w.name}`, 2.2);
+    },
+  });
+  const gunStores = installGunStores(game);
+  combat.ammoType = { ...(career.p.weapons.ammoType || {}) };
+  Object.assign(game, { hurtPlayer });
+  const carCombat = installCarCombat(game, { explodeAt });
+  game.onDriverKilled = (v) => { if (witnesses(v.pos, 40) || police.nearPolice(60)) police.crime(v.type === 'police' ? 'copKill' : 'kill'); peds.panic(v.pos, 30); };
+  game.refreshHitStatics = () => { hitStatics.length = 0; scene.traverse((o) => { if (o.userData.hitStatic) hitStatics.push(o); }); };
+  installStreetLife(game);
+  const worldEvents = installWorldEvents(game);
+  game.audio = audio;
+  const details = installDetails(game);
+  game.onCarExploded = (v) => { peds.panic(v.pos, 50); if (witnesses(v.pos, 60) || police.nearPolice(80)) police.crime(v.type === 'police' ? 'copKill' : 'kill'); };
   const reportHit = (hit) => {
     if (!hit || hit.kind !== 'ped') return;
     if (hit.ped.role === 'hunter' || hit.ped.role === 'brawler') { S.hitMarker = true; return; } // self-defence
@@ -554,13 +601,15 @@ async function createGame(progress) {
         headBone.quaternion.copy(pq.multiply(tq));
       }
       const targets = { peds, vehicles: [...traffic.cars.map((c) => c.v), ...police.cars.map((c) => c.v), ...parked, ...(law.heli() ? [law.heli()] : [])], animals: game.hunting ? game.hunting.list : [], statics: S.indoors ? indoorMeshes() : hitStatics };
-      if (armed && a.fire && player.aiming && combat.cooldown <= 0 && S.dead <= 0) {
+      if (armed && a.firePressed && game.safetyOn?.()) { audio.thud?.(0.05); hud.toast('Safety is on (K)', 1); }
+      else if (armed && a.fire && player.aiming && combat.cooldown <= 0 && S.dead <= 0) {
         combat.muzzleWorld(muzzle);
         const hit = combat.attack(camera.position.clone(), aimDir.clone(), muzzle.clone(), targets, player.pos);
+        if (hit) game.onShotEffects?.(combat.gun, combat.def);
         if (hit) {
           player.h.play('Pistol_Shoot', 0.04, 1.6, true);
           reportHit(hit);
-          if (witnesses(player.pos, 45)) police.crime('shots');
+          if (witnesses(player.pos, 45)) police.crime('shots'); else game.onShotFired?.(player.pos);
           peds.panic(player.pos, 45);
           if (hit.kind === 'vehicle' && hit.vehicle.type === 'police') police.crime('copShot');
         }
@@ -628,6 +677,10 @@ async function createGame(progress) {
     if (rp && !prompt) prompt = rp;
     const gp = gang.update(dt, a);
     if (gp && !prompt) prompt = gp;
+    gunStores.update(dt);
+    carCombat.update(dt);
+    worldEvents.update(dt);
+    details.update(dt);
     career.update(dt);
     if (S.vehicle && S.vehicle.health <= 0 && !S.vehicle.wrecked) { S.vehicle.wrecked = true; hud.toast('The engine is wrecked — get out (F)', 4); }
     if (S.vehicle?.wrecked) { S.vehicle.vel.multiplyScalar(Math.exp(-3 * dt)); }
@@ -644,7 +697,12 @@ async function createGame(progress) {
       [...peds.list.filter((p) => p.mode !== 'dead' && p.pos.distanceTo(focus) < 120), ...police.cars.map((c) => c.v)]);
     weather.update(dt, (dt * settings.timeScale) / 120, camera, !S.weatherLocked);
     sky.update(dt, settings.timeScale, focus);
-    rig.update(dt, a, focus, { vehicle: S.vehicle, heading: S.vehicle?.heading, speed: S.vehicle?.speed || 0, lastLook: input.lastLookTime, aiming: S.mode === 'foot' && player.aiming && armed, eye: S.mode === 'foot' && player.char.root.visible ? getEye() : null }, collision);
+    // looking through a scope: first-person, magnified, the body hidden
+    const scoped = S.mode === 'foot' && player.aiming && armed && (combat.def.scope || 0) >= 2 && S.dead <= 0;
+    if (scoped && a.sprint && (S.breath ?? 4) > 0) { S.breath = (S.breath ?? 4) - dt; S.steady = Math.min(1, (S.steady || 0) + dt * 4); } else { S.breath = Math.min(4, (S.breath ?? 4) + dt * 0.8); S.steady = Math.max(0, (S.steady || 0) - dt * 2); }
+    if (scoped !== !!S.scoped) { S.scoped = scoped; document.body.classList.toggle('scoped', scoped); player.h.model.visible = !scoped; if (scoped) hud.toast('Hold Shift to hold your breath', 1.6); }
+    if (scoped) for (const m of Object.values(combat.models)) m.visible = false;
+    rig.update(dt, a, focus, { vehicle: S.vehicle, heading: S.vehicle?.heading, speed: S.vehicle?.speed || 0, lastLook: input.lastLookTime, aiming: S.mode === 'foot' && player.aiming && armed, eye: S.mode === 'foot' && player.char.root.visible ? getEye() : null, scope: scoped ? combat.def.scope : 0, steady: S.steady || 0 }, collision);
 
     law.camera(camera);
     gang.camera(camera);

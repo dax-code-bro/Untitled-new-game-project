@@ -260,7 +260,7 @@ export class Police {
       const h = new Human(this.lib, 'mh_cop');
       if (c.swat) h.model.traverse((o) => { if (o.isMesh && o.material?.color) { o.material = o.material.clone(); o.material.color.multiplyScalar(0.35); } });
       const x = v.pos.x + sx * side * (v.spec.width / 2 + 0.8), z = v.pos.z + sz * side * (v.spec.width / 2 + 0.8);
-      const p = { h, role: 'cop', swat: !!c.swat, mode: 'walk', hp: c.swat ? 220 : 120, pos: new THREE.Vector3(x, this.collision.surface(x, z, v.pos.y + 1), z),
+      const p = { h, role: 'cop', swat: !!c.swat, armor: c.swat ? 3 : 1, mode: 'walk', hp: c.swat ? 220 : 120, pos: new THREE.Vector3(x, this.collision.surface(x, z, v.pos.y + 1), z),
         heading: v.heading, speed: 0, radius: 0.35, acc: 0, timer: 0, G: null };
       h.root.position.copy(p.pos);
       this.scene.add(h.root);

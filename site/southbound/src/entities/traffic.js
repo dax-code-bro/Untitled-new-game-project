@@ -123,6 +123,7 @@ export class Traffic {
         if (ahead > 0 && ahead < 18 && lat < 2.2) target = Math.min(target, Math.max(0, (ahead - 4) * 0.8));
       }
       if (c.stun > 0) { c.stun -= dt; target = 0; }
+      if (v.driverDead || v.exploded || v.onFire) target = 0; // nobody driving any more
       const dv = target - c.speed;
       c.speed += clamp(dv, -9 * dt, 3 * dt);
       v.braking = dv < -0.5;

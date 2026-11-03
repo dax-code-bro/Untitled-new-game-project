@@ -115,7 +115,7 @@ export function installHunting(game) {
     act: (it, t) => { if (t === 'sell') { career.earn(SPECIES[it.k].pelt * it.n, 'pelts'); P.pelts[it.k] = 0; career.saveSoon(); } },
   });
   for (const [x, z, name] of [[PLAINS.x - 120, PLAINS.z + 60, 'Redgrass Trading Post'], [BAYOU.x + 200, BAYOU.z - 220, 'Bayou Fur & Hide'], [FOREST.x + 300, FOREST.z + 260, 'Pinewood Game Warden']]) {
-    interact.add({ x, z, label: () => `${keyHint(game)} trade at ${name}`, color: 0xc08040, blip: { color: '#c08040', size: 5, global: true, icon: '🏕️' }, use: () => post.show('sell', name) });
+    interact.add({ x, z, label: () => `${keyHint(game)} trade at ${name}`, color: 0xc08040, blip: { color: '#c08040', size: 5, global: true, icon: '🏕️', badge: 'S' }, use: () => post.show('sell', name) });
   }
 
   return {

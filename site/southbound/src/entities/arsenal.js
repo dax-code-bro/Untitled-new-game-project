@@ -137,6 +137,68 @@ for (const [cat, [count, , plats]] of Object.entries(CATS)) {
     catEntry.ids.push(id);
   }
 }
+// how each platform fires, what it's chambered in, how well it penetrates (1-5), and a line about it
+const PLAT_INFO = {
+  service: ['Semi-auto', '9mm', 1, 'Polymer-frame duty pistol. Reliable, light, holds a lot of rounds.'],
+  compact: ['Semi-auto', '9mm', 1, 'Short slide and grip for concealed carry. Snappier to shoot.'],
+  magnum: ['Double-action revolver', '.357 Magnum', 2, 'Six rounds that hit hard. Slow to reload, impossible to jam.'],
+  machine: ['Full-auto', '9mm', 1, 'Pistol with a full-auto switch. Empties the magazine in a second.'],
+  target: ['Semi-auto', '.22 LR / .38', 1, 'Long sight radius and a crisp trigger. Accurate at range.'],
+  carbine: ['Semi / full-auto', '5.56 NATO', 3, 'The standard modern rifle. Light recoil, goes through car doors.'],
+  battle: ['Semi-auto', '7.62 NATO', 4, 'Full-power rifle cartridge. Heavy, loud, punches through cover.'],
+  bullpup: ['Full-auto', '5.56 NATO', 3, 'Rifle-length barrel in a compact body. Great in close quarters.'],
+  pdw: ['Full-auto', '9mm / 4.6mm', 2, 'Submachine gun. Fast, controllable, short range.'],
+  pump: ['Pump-action', '12 gauge', 1, 'Buckshot at close range ends arguments. Load slugs for reach.'],
+  auto: ['Semi-auto', '12 gauge', 1, 'Gas-operated shotgun. Fast follow-up shots.'],
+  double: ['Break-action', '12 gauge', 1, 'Two barrels, two shots, a lot of noise.'],
+  tube: ['Single shot', '84mm rocket', 5, 'Disposable launcher. Turns vehicles into scrap.'],
+  grenade: ['Revolver cylinder', '40mm grenade', 5, 'Six-shot grenade launcher. Lobbed explosive rounds.'],
+  recurve: ['Draw', 'Arrow', 1, 'Silent. Hunters use it to keep the meat clean.'],
+  compound: ['Draw', 'Arrow', 2, 'Cams and cables let you hold a heavy draw. Fast, flat arrows.'],
+  longbow: ['Draw', 'Arrow', 1, 'Traditional bow. Long draw, quiet, satisfying.'],
+  bolt: ['Bolt-action', '.308 Winchester', 4, 'Scoped bolt rifle. One shot, one kill, at long range.'],
+  heavy: ['Bolt-action', '.338 Lapua', 5, 'Long-range rifle that goes through engine blocks.'],
+  dmr: ['Semi-auto', '7.62 NATO', 4, 'Designated marksman rifle. Accurate and quick to follow up.'],
+  lever: ['Lever-action', '.30-30', 3, 'Classic ranch rifle. Smooth, fast, and still deadly.'],
+  semi: ['Semi-auto', '.308 Winchester', 4, 'Scoped semi-auto hunting rifle.'],
+};
+for (const w of Object.values(WEAPONS)) {
+  const pi = PLAT_INFO[w.platform];
+  if (pi) { w.fireMode = pi[0]; w.caliber = pi[1]; w.pen = pi[2]; w.desc = pi[3]; }
+  // better guns unlock as the story goes on (missions completed)
+  w.unlock = w.price < 1500 ? 0 : w.price < 4000 ? 2 : w.price < 8000 ? 5 : w.price < 14000 ? 10 : 18;
+}
+if (WEAPONS.fists) { WEAPONS.fists.unlock = 0; }
+
+// Finishes: skins (named looks) and paint; custom colour on top
+export const SKINS = [
+  ['Factory', null], ['Blued steel', [0.06, 0.07, 0.1, 0.9, 0.3]], ['Stainless', [0.55, 0.56, 0.58, 1, 0.28]], ['Black nitride', [0.03, 0.03, 0.035, 0.7, 0.45]],
+  ['Flat dark earth', [0.42, 0.34, 0.24, 0.1, 0.7]], ['OD green', [0.2, 0.24, 0.15, 0.1, 0.7]], ['Tungsten', [0.24, 0.24, 0.25, 0.6, 0.45]], ['Gunmetal', [0.14, 0.15, 0.16, 0.85, 0.35]],
+  ['Bronze', [0.45, 0.3, 0.15, 1, 0.32]], ['Gold', [0.83, 0.65, 0.28, 1, 0.22]], ['Chrome', [0.8, 0.8, 0.82, 1, 0.08]], ['Rose gold', [0.75, 0.5, 0.45, 1, 0.25]],
+  ['Arctic white', [0.85, 0.86, 0.85, 0.05, 0.6]], ['Crimson', [0.45, 0.04, 0.04, 0.3, 0.45]], ['Cobalt', [0.07, 0.15, 0.45, 0.5, 0.4]], ['Burnt bronze', [0.3, 0.17, 0.08, 0.9, 0.4]],
+];
+// apply a finish {skin, paint:[r,g,b], metal, rough} to a gun model
+export function applyFinish(g, f) {
+  if (!g) return;
+  g.traverse((o) => {
+    if (!o.isMesh) return;
+    if (!o.userData.baseMat) o.userData.baseMat = o.material;
+    o.material = o.userData.baseMat;
+    if (!f || (!f.skin && !f.paint)) return;
+    const m = o.material.clone();
+    const sk = SKINS.find((x) => x[0] === f.skin)?.[1];
+    const col = f.paint || (sk && sk.slice(0, 3));
+    if (col) {
+      // textured models keep their detail: tint instead of replacing
+      if (m.map) m.color.setRGB(Math.min(1.6, col[0] * 2.2), Math.min(1.6, col[1] * 2.2), Math.min(1.6, col[2] * 2.2));
+      else m.color.setRGB(col[0], col[1], col[2]);
+    }
+    if (f.metal !== undefined) m.metalness = f.metal; else if (sk) m.metalness = sk[3];
+    if (f.rough !== undefined) m.roughness = f.rough; else if (sk) m.roughness = sk[4];
+    o.material = m;
+  });
+}
+
 // the classic starter pistol keeps its old id for saves/scripts
 WEAPONS.pistol = { ...WEAPONS.pistol_01, id: 'pistol', name: 'Standard 9mm', damage: 34, clip: 17, price: 0, modelKey: 'glock17' };
 

@@ -282,7 +282,7 @@ export function installLaw(g) {
       const id = lib.peopleIds[(Math.random() * lib.peopleIds.length) | 0];
       const h = new Human(lib, id);
       const x = at.x + (Math.random() - 0.5) * 8, z = at.z + (Math.random() - 0.5) * 8;
-      const p = { h, role: 'hunter', mode: 'walk', hp: T.hp, pos: new THREE.Vector3(x, collision.surface(x, z, 300), z), heading: 0, speed: 0, radius: 0.35, acc: 0, timer: 0,
+      const p = { h, role: 'hunter', armor: party.tier >= 4 ? 3 : party.tier >= 3 ? 2 : 0, mode: 'walk', hp: T.hp, pos: new THREE.Vector3(x, collision.surface(x, z, 300), z), heading: 0, speed: 0, radius: 0.35, acc: 0, timer: 0,
         T, gunT: 1 + Math.random(), gun: buildWeaponModel(WEAPONS[T.weapon] || WEAPONS.pistol), strafe: Math.random() < 0.5 ? 1 : -1 };
       p.pose = new GunPose(h);
       scene.add(h.root, p.gun);

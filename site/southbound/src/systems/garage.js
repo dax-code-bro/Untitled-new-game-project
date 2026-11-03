@@ -84,16 +84,16 @@ export function installGarage(game) {
   const place = (x, z) => nearestRoad(game.graph, x, z) || { x, z, tx: 1, tz: 0 };
   const cityDealer = { x: CITY.x0 - 34, z: CITY.z0 + 4 * CITY.pitch - 8 };
   lot = (() => { const r = place(cityDealer.x + 8, cityDealer.z); return { x: r.x, z: r.z, h: Math.atan2(r.tx, r.tz) }; })();
-  interact.add({ x: cityDealer.x, z: cityDealer.z, label: () => `${keyHint(game)} browse Gulfstar Autos (93 cars)`, color: 0x40c0ff, blip: { color: '#40c0ff', size: 5, global: true, icon: '🚗' }, use: () => dealer.show(null, 'Gulfstar Autos') });
+  interact.add({ x: cityDealer.x, z: cityDealer.z, label: () => `${keyHint(game)} browse Gulfstar Autos (93 cars)`, color: 0x40c0ff, blip: { color: '#40c0ff', size: 5, global: true, icon: '🚗', badge: 'S' }, use: () => dealer.show(null, 'Gulfstar Autos') });
   const townDealer = { x: TOWN.x0 - 22, z: TOWN.z0 + TOWN.pitch };
-  interact.add({ x: townDealer.x, z: townDealer.z, label: () => `${keyHint(game)} browse Mill Creek Motors`, color: 0x40c0ff, blip: { color: '#40c0ff', size: 5, global: true, icon: '🚗' },
+  interact.add({ x: townDealer.x, z: townDealer.z, label: () => `${keyHint(game)} browse Mill Creek Motors`, color: 0x40c0ff, blip: { color: '#40c0ff', size: 5, global: true, icon: '🚗', badge: 'S' },
     use: () => { const r = place(townDealer.x + 6, townDealer.z); lot = { x: r.x, z: r.z, h: Math.atan2(r.tx, r.tz) }; dealer.show(null, 'Mill Creek Motors'); } });
   for (const [x, z, name] of [[CITY.x0 + 2 * CITY.pitch, CITY.z0 + CITY.nz * CITY.pitch - 8, 'Calvera Customs'], [TOWN.x0 + 2 * TOWN.pitch, TOWN.z0 - 6, 'Calvera Customs · Mill Creek']]) {
     const r = place(x, z);
     // a real workshop beside the road: you drive in through the open bay
     const bay = buildWorkshop(game, r, name);
     const at = bay || r;
-    interact.add({ x: at.x, z: at.z, r: bay ? 3.6 : 4.5, drive: true, marker: false, label: name, color: 0xff60c0, blip: { color: '#ff60c0', size: 5, global: true, icon: '🔧' },
+    interact.add({ x: at.x, z: at.z, r: bay ? 3.6 : 4.5, drive: true, marker: false, label: name, color: 0xff60c0, blip: { color: '#ff60c0', size: 5, global: true, icon: '🔧', badge: 'S' },
       use: () => { shopCar = game.vehicle(); if (shopCar) customs.show('perf', name); } });
   }
 

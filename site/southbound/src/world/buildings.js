@@ -2,7 +2,8 @@
 // town houses, lake houses, farms and cabins. One facade shader draws the
 // windows (lit at night) so thousands of buildings cost only a few draw calls.
 import * as THREE from 'three';
-import { CITY, TOWN, LAKE, PLAINS, FOREST, lakeRadius, coastZ } from './layout.js';
+import { CITY, TOWN, LAKE, PLAINS, FOREST, lakeRadius, coastZ, REGIONS } from './layout.js';
+import { distToSeg } from '../util.js';
 import { mulberry32, GLSL_NOISE } from '../util.js';
 import { worldUniforms } from './terrain.js';
 
@@ -145,7 +146,7 @@ float sbRough; float sbMetal; vec3 sbEmit; vec3 sbNt; vec3 sbT;
   return mat;
 }
 
-export function createBuildings(hm, quality, scene, collision, surf) {
+export function createBuildings(hm, quality, scene, collision, surf, graph = null) {
   const rnd = mulberry32(2026);
   const pick = (a) => a[(rnd() * a.length) | 0];
   const B = []; // {x,z,w,d,h,y,style,color}
@@ -291,6 +292,86 @@ export function createBuildings(hm, quality, scene, collision, surf) {
   }
 
   // ---- Build the instanced meshes
+  // ---- the city thins out: poorer, emptier and grassier the further you go
+  const junk = []; // spots for street junk (filled with open models later)
+  const roadDist = (x, z, r) => {
+    let best = 1e9;
+    collision.query(x, z, r, (it) => { if (it.t === 3) { const d = distToSeg(x, z, it.ax, it.az, it.bx, it.bz).d - it.hw; if (d < best) best = d; } });
+    return best;
+  };
+  const freeLot = (x, z, w, d) => {
+    let ok = true;
+    collision.query(x, z, Math.max(w, d) + 4, (it) => {
+      if (!ok) return;
+      if (it.t === 0 && x + w / 2 + 2.5 > it.minX && x - w / 2 - 2.5 < it.maxX && z + d / 2 + 2.5 > it.minZ && z - d / 2 - 2.5 < it.maxZ) ok = false;
+      else if (it.t === 3 && distToSeg(x, z, it.ax, it.az, it.bx, it.bz).d < it.hw + Math.max(w, d) / 2 + 2.5) ok = false;
+    });
+    return ok;
+  };
+  const flatAt = (x, z, w, d) => { const ys = [[-1, -1], [1, -1], [-1, 1], [1, 1]].map(([a, b]) => hm.height(x + a * w / 2, z + b * d / 2)); return { y: Math.min(...ys), dy: Math.max(...ys) - Math.min(...ys) }; };
+  const POOR = { 2: [0x6e4a3c, 0x5e463a, 0x7a5444], 3: [0x7d7f78, 0x6a6e66, 0x8a7c66, 0x5f6a5a], 4: [0xb8ab92, 0xa49a86, 0x9aa6a0, 0xc2b49a, 0x8f8a7e, 0xa8968a], 5: [0xa89272, 0x9a8a78, 0x8e9a90] };
+  const placeLot = (x, z, e) => {
+    // e: 0 at the city edge .. 1 far out
+    const kind = e < 0.3 ? pick(['shop', 'brick', 'ware', 'house']) : e < 0.65 ? pick(['house', 'house', 'garage', 'ware']) : pick(['house', 'shed', 'trailer']);
+    const dims = { shop: [12, 10, 4.5 + rnd() * 4, 5], brick: [14, 12, 7 + rnd() * 6, 2], ware: [20, 14, 6 + rnd() * 3, 3], house: [9, 9, rnd() < 0.3 ? 6.2 : 3.6, 4], garage: [7, 7, 3.4, 3], shed: [5, 4, 3, 3], trailer: [12, 4, 3, 4] }[kind];
+    let [w, d, h, style] = dims;
+    if (rnd() < 0.5) [w, d] = [d, w];
+    const f = flatAt(x, z, w, d);
+    if (f.dy > 1.6 || f.y < hm.waterLevel(x, z) + 0.6 || !freeLot(x, z, w, d)) return false;
+    add(x, z, w, d, h, f.y + 0.05, style, pick(POOR[style] || PALETTES[style]));
+    // the lot around it: junk, an old car spot, sometimes a chain-link fence
+    for (let k = 0; k < 2 + ((rnd() * 4) | 0); k++) junk.push({ x: x + (rnd() - 0.5) * (w + 8), z: z + (rnd() - 0.5) * (d + 8), kind: rnd() < 0.5 ? 'trash' : rnd() < 0.5 ? 'pile' : 'tyre' });
+    if (rnd() < 0.35) {
+      const fw = w + 10, fd = d + 10;
+      for (const [fx, fz, sw, sd] of [[x, z - fd / 2, fw, 0.06], [x, z + fd / 2, fw * 0.4, 0.06], [x - fw / 2, z, 0.06, fd], [x + fw / 2, z, 0.06, fd]]) {
+        props.push({ x: fx, y: hm.height(fx, fz), z: fz, w: sw, h: 1.8, d: sd, color: 0x8b8f92 });
+      }
+    }
+    return true;
+  };
+  {
+    const x0 = CITY.x0 - CITY.street, x1 = CITY.x0 + CITY.nx * CITY.pitch + CITY.street, z0 = CITY.z0 - CITY.street, z1 = CITY.z0 + CITY.nz * CITY.pitch;
+    let placed = 0;
+    const want = quality.label === 'Phone' ? 70 : 120;
+    for (let k = 0; k < 2600 && placed < want; k++) {
+      const e = Math.pow(rnd(), 1.5); // more lots close to the city
+      const out = 18 + e * 380, side = (rnd() * 3) | 0, t = rnd();
+      let x, z;
+      if (side === 0) { x = x0 - out; z = z0 + t * (z1 - z0 + 120) - 60; } else if (side === 1) { x = x1 + out; z = z0 + t * (z1 - z0 + 120) - 60; } else { z = z0 - out; x = x0 - 60 + t * (x1 - x0 + 120); }
+      if (z > coastZ(x) - 40) continue;
+      const rd = roadDist(x, z, 50);
+      if (rd > 38 || rd < 6) continue; // lots face a road
+      if (rnd() > 1 - e * 0.75) continue; // thinner the further out
+      if (placeLot(x, z, e)) placed++;
+    }
+  }
+  // ---- two small settlements out in the country, each at a road junction
+  if (graph) {
+    const nodes = [...graph.nodes.values()].filter((n) => n.edges && n.edges.length >= 3 && n.id[0] !== 'c' && n.id[0] !== 't');
+    const far = (n) => Math.min(Math.hypot(n.x - (CITY.x0 + 400), n.z - (CITY.z0 + 300)), Math.hypot(n.x - (TOWN.x0 + 140), n.z - (TOWN.z0 + 100)));
+    const cand = nodes.filter((n) => far(n) > 700).sort((a, b) => far(b) - far(a));
+    const names = [['Sabine Crossing', 'Crossroads village'], ['Cypress Bend', 'Roadside hamlet']];
+    const used = [];
+    for (const n of cand) {
+      if (used.length >= names.length) break;
+      if (used.some((u) => Math.hypot(u.x - n.x, u.z - n.z) < 900)) continue;
+      let built = 0;
+      for (let k = 0; k < 220 && built < 16; k++) {
+        const a = rnd() * Math.PI * 2, r = 22 + rnd() * 110;
+        const x = n.x + Math.cos(a) * r, z = n.z + Math.sin(a) * r;
+        const rd = roadDist(x, z, 40);
+        if (rd > 30 || rd < 6) continue;
+        if (placeLot(x, z, 0.25 + (r / 130) * 0.5)) built++;
+      }
+      if (built >= 6) {
+        const [name, sub] = names[used.length];
+        used.push({ x: n.x, z: n.z, name });
+        REGIONS.splice(2, 0, { name, sub, test: (px, pz) => Math.hypot(px - n.x, pz - n.z) < 170 });
+      }
+    }
+    for (const u of used) junk.push({ x: u.x + 8, z: u.z + 8, kind: 'sign', name: u.name });
+  }
+
   const box = new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0);
   const facade = makeFacadeMaterial(surf);
   const bbox = box.clone();
@@ -346,5 +427,5 @@ export function createBuildings(hm, quality, scene, collision, surf) {
   propMesh.receiveShadow = true;
   scene.add(propMesh);
 
-  return { buildings: B, cityBlocks, lakeHouses, count: B.length };
+  return { buildings: B, cityBlocks, lakeHouses, junk, count: B.length };
 }
