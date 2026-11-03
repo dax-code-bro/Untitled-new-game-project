@@ -1037,13 +1037,13 @@
    "measured_at": "2026-11-02T16:37"
   },
   "1C-09": {
-   "draft_s_per_frame": 7.852,
+   "draft_s_per_frame": 10.483,
    "frames_drawn": 96,
    "cinematic": "velocity",
    "twos": false,
-   "load": 8.34,
-   "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.10GHz, SwiftShader",
-   "measured_at": "2026-11-02T16:45"
+   "load": 8.81,
+   "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.80GHz, SwiftShader",
+   "measured_at": "2026-11-03T09:53"
   },
   "1C-10": {
    "draft_s_per_frame": 9.168,
@@ -1082,22 +1082,22 @@
    "measured_at": "2026-11-03T04:20"
   },
   "1C-14": {
-   "draft_s_per_frame": 9.567,
+   "draft_s_per_frame": 11.273,
    "frames_drawn": 120,
    "cinematic": "velocity",
    "twos": false,
-   "load": 8.8,
+   "load": 8.77,
    "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.80GHz, SwiftShader",
-   "measured_at": "2026-11-03T04:38"
+   "measured_at": "2026-11-03T09:59"
   },
   "1C-16": {
-   "draft_s_per_frame": 9.361,
+   "draft_s_per_frame": 13.464,
    "frames_drawn": 72,
    "cinematic": "velocity",
    "twos": false,
-   "load": 9.15,
+   "load": 6.69,
    "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.80GHz, SwiftShader",
-   "measured_at": "2026-11-03T04:31"
+   "measured_at": "2026-11-03T10:10"
   },
   "1C-17": {
    "draft_s_per_frame": 9.785,
@@ -1118,13 +1118,13 @@
    "measured_at": "2026-11-02T17:51"
   },
   "1C-18": {
-   "draft_s_per_frame": 5.449,
+   "draft_s_per_frame": 8.108,
    "frames_drawn": 72,
    "cinematic": "velocity",
    "twos": false,
-   "load": 8.73,
-   "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.10GHz, SwiftShader",
-   "measured_at": "2026-11-02T17:54"
+   "load": 8.05,
+   "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.80GHz, SwiftShader",
+   "measured_at": "2026-11-03T10:09"
   },
   "1C-19": {
    "draft_s_per_frame": 5.515,
@@ -1168,9 +1168,9 @@
    "measured_at": "2026-11-02T04:42"
   },
   "SKY_OFF_VERDOR": {
-   "setup_s": 53.7,
+   "setup_s": 70.4,
    "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.80GHz, SwiftShader",
-   "measured_at": "2026-11-03T03:57"
+   "measured_at": "2026-11-03T09:36"
   }
  }
 }
