@@ -178,6 +178,7 @@ export function buildShop(game, r, st) {
     const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
     const sign = new THREE.Mesh(new THREE.PlaneGeometry(7, 1.17), new THREE.MeshStandardMaterial({ map: tex, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 0.35 }));
     sign.position.set(0, st.style === 'block' ? H - 0.15 : H - 0.5, D / 2 + (st.style === 'block' ? 0.37 : 0.26)); g.add(sign); // corner stores: on the fascia band
+    if (st.style === 'civic') { sign.scale.set(0.6, 0.6, 1); sign.position.set(0, H + 0.92, D / 2 + 2.43); } // civic: on the pediment, above the columns
     const lamp = new THREE.PointLight(0xfff0d8, 10, 12, 2); lamp.position.set(0, H - 0.5, -0.5); g.add(lamp);
     scene.add(g);
     g.updateMatrixWorld(true);
