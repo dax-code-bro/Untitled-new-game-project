@@ -95,7 +95,7 @@ export class Combat {
   // weapon model (built on first use; rebuilt once its open-source model has loaded)
   model(id = this.weapon, tag = '') {
     const w = WEAPONS[id];
-    if (!w || w.melee) return null;
+    if (!w || id === 'fists') return null; // knives and other hand weapons have models too
     const key = id + tag;
     let m = this.models[key];
     const G = gunModelFor(w);

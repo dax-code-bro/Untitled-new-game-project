@@ -99,6 +99,17 @@ async (opts) => {
     report.notes.push(`${n} weapons fired`);
     c.weapon = 'fists';
   });
+  await run('weapons: hold every knife and hand weapon', async () => {
+    const c = G.combat;
+    const melee = opts.weapons.filter((id) => id !== 'fists' && c.constructor.slotOf(id) === 'melee');
+    for (const id of melee) {
+      c.give(id); c.slots.melee = id; c.equip('melee');
+      ok(c.weapon === id && !c.holstered, `${id} equips from the melee slot`);
+      ok(!!c.model(id), `${id} has a model to hold`);
+      window.SB.step(3, 1 / 30);
+    }
+    c.weapon = 'fists'; c.holstered = true;
+  });
   await run('attachments: fit every attachment', async () => {
     const ui = opts.arsenalAct;
     G.combat.give('rifle_01'); G.combat.weapon = 'rifle_01';

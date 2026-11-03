@@ -60,7 +60,7 @@ export class ArmorStore {
     this.canvas.addEventListener('pointerdown', (e) => { drag = e.clientX; this.canvas.setPointerCapture(e.pointerId); });
     this.canvas.addEventListener('pointermove', (e) => { if (drag == null) return; this.yaw += (e.clientX - drag) * 0.012; drag = e.clientX; });
     this.canvas.addEventListener('pointerup', () => { drag = null; });
-    this.yaw = 2.6; this.tab = 'armor'; this.open = false;
+    this.yaw = 0.45; this.tab = 'armor'; this.open = false;
   }
   get P() { return this.g.career.p; }
   show(store) {
