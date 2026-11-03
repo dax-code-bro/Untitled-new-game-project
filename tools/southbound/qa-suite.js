@@ -7,7 +7,7 @@ async (opts) => {
   const report = { pass: 0, fail: 0, errors: [], notes: [] };
   const t0 = performance.now();
   const ok = (cond, name) => { if (cond) report.pass++; else { report.fail++; report.errors.push('FAIL ' + name); } };
-  const run = async (name, fn) => { try { await fn(); } catch (e) { report.fail++; report.errors.push(`EXC ${name}: ${e && e.message}\n${(e && e.stack || '').split('\n').slice(1, 3).join(' | ')}`); } };
+  const run = async (name, fn) => { console.log('QA> ' + name); try { await fn(); } catch (e) { report.fail++; report.errors.push(`EXC ${name}: ${e && e.message}\n${(e && e.stack || '').split('\n').slice(1, 3).join(' | ')}`); } };
   const finite = (v) => Number.isFinite(v.x) && Number.isFinite(v.y) && Number.isFinite(v.z);
   const yieldUI = () => new Promise((r) => setTimeout(r, 0));
   const ctl = { throttle: 1, brake: 0, steer: 0.3, handbrake: false, nitro: true };
