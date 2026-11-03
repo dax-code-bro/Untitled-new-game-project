@@ -265,3 +265,15 @@ body.cinematic #hud, body.cinematic #touch { opacity: 0; pointer-events: none; t
 .sbdialog button { text-align: left; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); color: #eee6da; border-radius: 9px; padding: 10px 12px; font: 500 14px Inter, sans-serif; cursor: pointer; }
 .sbdialog button:hover { background: rgba(255,255,255,.12); }
 .sbdialog kbd { display: inline-block; min-width: 18px; margin-right: 10px; padding: 1px 5px; border-radius: 4px; background: rgba(255,255,255,.12); font: 600 11px Inter, sans-serif; text-align: center; }
+
+/* ---- scope view */
+#scope { position: fixed; inset: 0; display: none; pointer-events: none; z-index: 12;
+  background: radial-gradient(circle at 50% 50%, transparent 0, transparent min(38vh, 38vw), rgba(0,0,0,.55) calc(min(38vh, 38vw) + 2px), #000 calc(min(38vh, 38vw) + 14px)); }
+body.scoped #scope { display: block; }
+body.scoped #crosshair { display: none !important; }
+#scope .h, #scope .v { position: absolute; left: 50%; top: 50%; background: rgba(0,0,0,.85); }
+#scope .h { width: min(76vh, 76vw); height: 1.5px; transform: translate(-50%, -50%); }
+#scope .v { height: min(76vh, 76vw); width: 1.5px; transform: translate(-50%, -50%); }
+#scope .dot { position: absolute; left: 50%; top: 50%; width: 4px; height: 4px; margin: -2px; border-radius: 50%; background: #c22; }
+#scope::after { content: ''; position: absolute; left: 50%; top: 50%; width: min(76vh, 76vw); height: min(76vh, 76vw); transform: translate(-50%, -50%); border-radius: 50%;
+  background: repeating-linear-gradient(90deg, transparent 0 calc(10% - 1px), rgba(0,0,0,.7) calc(10% - 1px) 10%) center / 40% 8px no-repeat, repeating-linear-gradient(0deg, transparent 0 calc(10% - 1px), rgba(0,0,0,.7) calc(10% - 1px) 10%) center / 8px 40% no-repeat; }

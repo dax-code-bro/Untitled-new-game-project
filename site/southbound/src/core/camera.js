@@ -24,17 +24,22 @@ export class CameraRig {
     this.pitch = clamp(this.pitch, -0.6, 1.25);
     this.zoom = clamp(this.zoom + a.zoom * 0.1, 0.6, 2.2);
     if (a.camera) this.mode = (this.mode + 1) % 4;
-    this.fp = this.mode === 3 && !opts.vehicle && !!opts.eye;
+    this.fp = (this.mode === 3 || opts.scope > 0) && !opts.vehicle && !!opts.eye;
     const modeK = [1, 1.6, 0.7, 1][this.mode];
     if (this.fp) {
       // first person: from the eyes, a touch in front so the head never shows
       const cam = this.camera;
-      const fx = Math.sin(this.yaw), fz = Math.cos(this.yaw), cp = Math.cos(this.pitch), sp = Math.sin(this.pitch);
+      // through a scope: breathing sway (hold your breath to steady it)
+      this.swayT = (this.swayT || 0) + dt;
+      const sw = opts.scope > 0 ? 0.0035 * (1 - (opts.steady || 0) * 0.85) * (1 + opts.scope * 0.08) : 0;
+      const yaw = this.yaw + Math.sin(this.swayT * 1.1) * sw + Math.sin(this.swayT * 2.7) * sw * 0.3;
+      const pitch = this.pitch + Math.sin(this.swayT * 0.8 + 1.3) * sw * 0.7;
+      const fx = Math.sin(yaw), fz = Math.cos(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch);
       const d = this._dir.set(fx * cp, -sp, fz * cp);
       cam.position.copy(opts.eye).addScaledVector(d, 0.1);
       cam.position.x += fx * 0.04; cam.position.z += fz * 0.04;
       cam.lookAt(cam.position.x + d.x, cam.position.y + d.y, cam.position.z + d.z);
-      const fov = this.settings.fov + 6 - (opts.aiming ? 22 : 0);
+      const fov = opts.scope > 0 ? Math.max(3, 58 / opts.scope) : this.settings.fov + 6 - (opts.aiming ? 22 : 0);
       if (cam.near !== 0.04) { cam.near = 0.04; cam.updateProjectionMatrix(); }
       if (Math.abs(cam.fov - fov) > 0.05) { cam.fov = lerp(cam.fov, fov, Math.min(1, dt * 12)); cam.updateProjectionMatrix(); }
       this.dist = 0.1;

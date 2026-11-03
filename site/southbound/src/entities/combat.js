@@ -10,6 +10,14 @@ export { WEAPONS };
 // Starter loadout: one of each kind (the rest of the catalog is bought in the arsenal)
 const STARTER = ['fists']; // the 9mm comes from Rico in the prologue; everything else from the gunsmiths
 
+// Ammo types change damage and penetration (and a few other things)
+export const AMMO = {
+  FMJ: { dmg: 1, pen: 0 }, 'Hollow point': { dmg: 1.25, pen: -1 }, 'Armor piercing': { dmg: 0.9, pen: 2 }, Subsonic: { dmg: 0.85, pen: 0, quiet: true },
+  Buckshot: { dmg: 1, pen: 0 }, Birdshot: { dmg: 0.35, pen: -1, pellets: 2 }, Slug: { dmg: 0.85, pen: 1, slug: true }, Flechette: { dmg: 0.9, pen: 1 },
+  Broadhead: { dmg: 1.1, pen: 0 }, 'Small game': { dmg: 0.6, pen: -1 }, 'Fire arrow': { dmg: 1, pen: 0, fire: true },
+  HE: { dmg: 1, pen: 0 }, HEAT: { dmg: 1, pen: 3, vehicle: 1.6, radius: 0.7 },
+};
+
 export class Combat {
   constructor(scene, hm, collision, settings, audio) {
     this.scene = scene; this.hm = hm; this.collision = collision; this.settings = settings; this.audio = audio;
@@ -17,6 +25,7 @@ export class Combat {
     this.ammo = {};
     for (const id of STARTER) this.give(id);
     this.weapon = 'fists';
+    this.ammoType = {}; // weapon id -> AMMO key
     this.holstered = true; // RDR-style: guns stay holstered until drawn from the wheel
     this.dual = false; // two sidearms at once
     this.offhand = null; // the left-hand sidearm when dual wielding
@@ -207,14 +216,18 @@ export class Combat {
     if (a.clip <= 0) { this.reload(); return null; }
     a.clip--;
     this.cooldown = w.rate;
-    if (!w.silent) this.audio?.gunshot(w.cat === 'launcher' || w.cat === 'sniper' ? 1.4 : w.cat === 'pistol' ? 0.9 : 1.1);
+    const am = AMMO[this.ammoType[this.weapon]] || AMMO.FMJ;
+    if (!w.silent) this.audio?.gunshot((w.cat === 'launcher' || w.cat === 'sniper' ? 1.4 : w.cat === 'pistol' ? 0.9 : 1.1) * (am.quiet ? 0.5 : 1));
     this.flash.position.copy(muzzle); this.flash.intensity = w.silent ? 0 : 4; this.flashT = 0.05;
     let first = null;
-    for (let k = 0; k < w.pellets; k++) {
+    const pellets = am.slug ? 1 : Math.round(w.pellets * (am.pellets || 1));
+    const spread = am.slug ? w.spread * 0.3 : w.spread, range = am.slug ? w.range * 2 : w.range;
+    for (let k = 0; k < pellets; k++) {
       const d = dir.clone();
-      d.x += (Math.random() - 0.5) * w.spread; d.y += (Math.random() - 0.5) * w.spread; d.z += (Math.random() - 0.5) * w.spread;
+      d.x += (Math.random() - 0.5) * spread; d.y += (Math.random() - 0.5) * spread; d.z += (Math.random() - 0.5) * spread;
       d.normalize();
-      const hit = this.trace(origin, d, w.range, targets);
+      const hit = this.trace(origin, d, range, targets);
+      hit.dir = d; hit.origin = origin; hit.ammo = am; hit.slugDmg = am.slug ? w.pellets : 1;
       if (!first) first = hit;
       if (w.speed > 0) {
         // rockets and arrows fly: show the projectile, apply the hit when it lands
@@ -252,11 +265,24 @@ export class Combat {
       return;
     }
     if (hit.kind === 'ped') {
-      hit.killed = targets.peds.damage(hit.ped, w.damage * (hit.head ? 3 : 1), from);
+      // no fixed damage: spread, distance falloff, where it hit, ammo, armour vs penetration
+      const am = hit.ammo || AMMO.FMJ;
+      const fall = 1 - 0.5 * Math.min(1, Math.max(0, (hit.t - w.range * 0.4) / (w.range * 0.6)));
+      const legs = hit.point.y - hit.ped.pos.y < 0.85;
+      const zone = hit.head ? 3 : legs ? 0.65 : 1;
+      const pen = Math.max(0, (w.pen || 1) + am.pen);
+      const armor = hit.head ? 0 : (hit.ped.armor || 0);
+      const vs = pen >= armor ? 1 : 0.4;
+      const dmg = w.damage * (hit.slugDmg || 1) * am.dmg * (0.8 + Math.random() * 0.35) * fall * zone * vs;
+      hit.killed = targets.peds.damage(hit.ped, dmg, from);
       this.burst(hit.point, this.settings.gore ? this.bloodMat : this.dustMat, this.settings.gore ? 10 : 4);
     } else if (hit.kind === 'vehicle') {
-      hit.vehicle.health -= w.damage * 0.25;
+      const v = hit.vehicle;
+      v.health -= w.damage * 0.25 * ((hit.ammo && hit.ammo.vehicle) || 1);
       this.burst(hit.point, this.sparkMat, 6);
+      // through the glass (or thin doors, with enough penetration) to whoever is inside
+      this.onVehicleHit?.(hit, w);
+      if (v.health <= 0) this.onVehicleDestroyed?.(v, hit.point);
     } else if (hit.kind !== 'none') {
       this.burst(hit.point, this.dustMat, 6);
     }
@@ -270,7 +296,13 @@ export class Combat {
       if (d < R) targets.peds.damage(p, w.damage * (1 - d / R), from);
     }
     for (const an of targets.animals || []) if (!an.dead && an.pos.distanceTo(at) < R) an.hurt(w.damage, w);
-    for (const v of targets.vehicles) { if (v && v.pos.distanceTo(at) < R) { v.health -= w.damage * (1 - v.pos.distanceTo(at) / R); v.impact = Math.max(v.impact, 6); } }
+    for (const v of targets.vehicles) {
+      if (v && v.pos.distanceTo(at) < R) {
+        v.health -= w.damage * (1 - v.pos.distanceTo(at) / R) * 1.4;
+        v.impact = Math.max(v.impact, 6);
+        if (v.health <= 0) this.onVehicleDestroyed?.(v, at, true);
+      }
+    }
     this.burst(at, this.sparkMat, 26);
     this.burst(at, this.dustMat, 30);
     this.flash.position.copy(at); this.flash.intensity = 60; this.flash.distance = 40; this.flashT = 0.18;
