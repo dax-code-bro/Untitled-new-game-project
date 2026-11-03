@@ -3,6 +3,41 @@
 Owner paths: `scenes/lib/director/`, `episodes/s01e01/final/scenes/`, `episodes/s01e01/final/cut/`.
 How it works: `README.md` in this folder. Latest state first.
 
+## Session 16 (2026-11-03, short budgeted session: owner's rev15 notes on 1C - STILLS only, no video renders)
+
+All fixes in `episodes/s01e01/final/scenes/specs/sky-off-verdor.spec.js`. Shot ids, lengths, line cue times UNCHANGED.
+**Flight timing for sound: NO hz / phase / tOffset changed** (Leaf's and Charcoal's `flight` acts untouched; the only
+act change is 1C-14's Charcoal GLIDE droop 0.06 -> 0.16, a glide has no beat).
+- (1) 1C-16 FLAT GREEN frame - ROOT CAUSE: not a render bug. Sampling 12 frames of `work1B/shots/1C-16.mp4` showed
+  frame ~30 (1.25 s) entirely Leaf's wing membrane and frame ~66 half of it: the solved camera (from 240, 1.6 m,
+  rise 0.4) sat INSIDE the sweep of Leaf's right wing, so each upstroke put the membrane against the lens; the
+  st21 still (1.5 s) fell between beats. The framing also showed mostly Abby's back. Lesson: on a flying creature a
+  close camera off the side is inside the wing volume - check a still at several beat phases (0.08 / 0.42 / 0.92).
+  FIX: camera from straight AHEAD on Leaf's centre line (from 180, 1.3 m, rise 0.45 - between the wing roots, above
+  the neck) looking back at both hands. st26 at 1.25 s and 2.75 s: both hands on the grip bar, clear, no membrane
+  over the lens (her soft coat + a soft far wing behind). (st25 tried over the right shoulder, from 335: all back.)
+  Remaining: the hands rest OPEN, palms up, fingers not wrapped round the bar - the rider grip pose (humans track).
+- (2) 1C-14 Abby hidden: camera rise 0.3 -> 3.2 (17 m out, from 192) looks DOWN over Charcoal's wing, his glide
+  droop 0.16, Leaf +3 m in this shot only. st26: Leaf + Abby clear above his wing, background left; Remi right.
+  She now reads HIGHER than Remi in frame, not "lower" (solver 0.36 off its target): acceptable for the line.
+- (3) 1C-19 re-still (st25): Leaf against his tail / trailing wing - seen from behind-inland, 16 m of lead is only ~10 m
+  of screen separation. Leaf lead -10 m in this shot only. st27: FIXED - she is clear, left of his tail.
+- (4) 1C-13 wingtip: four rounds (st25 150 mm / st27 135 mm aim 66 / st28 camera 125 aim 73 - tip held but Leaf fell
+  to the frame bottom / st29). FINAL (st30): 135 mm (the shot list's lens), camera 75 m further out (x 120, y 122,
+  ~405 m), aim y 68.5-69.5, Leaf +4 m in this shot only. At 4.8 s (full upstroke) the tip clears the top edge; Leaf
+  left, only slightly lower than him; no haze band (frame top ~2.3 deg below the horizon).
+- (5) 1C-10 Leaf low: start y 41 -> 51. st25: FIXED - Leaf behind-left and level with Charcoal.
+- Stills: `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/director/st25/` (round 1), `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/director/st26/` (16 + 14 round 2), `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/director/st27/` (13 + 19), `st28`-`st30` (1C-13).
+  Contact sheet of the latest still per changed shot: `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/director/s16/sheet.jpg`.
+- NEXT (exact, in order):
+  1. Videos of the changed shots (DO NOT run in a short session - owner/background only, ~10 min/shot here):
+     `node scenes/lib/director/tools/render-shots.mjs --only 1C-10,1C-13,1C-14,1C-16,1C-19 --force --work /tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/director/work1B`
+     (and still pending from session 15: `--only 1C-07,1C-08,1C-09,1C-11,1C-12,1C-15,1C-17,1C-18` if the rev15 videos
+     predate the s15 spec, plus `--only 1C-04,1C-06,X3-10`), then re-assemble the 1C cut (edl-1C, session 11) and sample
+     EVERY 6th frame of 1C-16 / 1C-14 (a membrane against the lens only shows at some beat phases).
+  2. REQUEST performance/humans: rider hands on a grip bar should close round it (1C-16 insert: open palms).
+  3. Then 1C-20+ (VERDOR_AERIAL / OUTER_ROCKS / VERDOR_HARBOR / CLING_SQUARE have no builder yet).
+
 ## Session 15 (2026-11-02, short budgeted session: SKY_OFF_VERDOR fixes from the owner's st21 notes - STILLS only)
 
 Owner notes (`/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/director-next.md`, from st21/sheet.jpg). All fixes in

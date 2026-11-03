@@ -105,7 +105,9 @@ export default {
       set: { shadowAt: [[0, [240, 9, 250]], [6, [300, 0, 320], 'linear']], shadowExtent: 160 },
       cast: {
         // (s15: Leaf 42 m straight behind him (NW = inland + screen left), 7 m higher (st22: 1 m higher still read ~25 % of frame lower) - was 6 m lower and in front)
-        leaf: { tack: true, ...fly([220, 41, 232], 135, V, 6, 16), acts: LEAF_FLY() },
+        // (s16: s15 still read her ~20 % of frame low at 3 s: the 42 m depth gap toward a camera 11 deg above them + his
+        //  raised upstroke. +10 m more (17 m above him in the world; at ~630 m nobody measures it))
+        leaf: { tack: true, ...fly([220, 51, 232], 135, V, 6, 16), acts: LEAF_FLY() },
         charcoal: { tack: true, ...fly([250, 34, 262], 135, V, 6, 16), acts: CHAR_FLY() },
         abbyR: {}, remiR: {},
       },
@@ -135,21 +137,31 @@ export default {
     '1C-13': {
       staging: 'WIDE: 135 mm from the inland side: Charcoal draws level and closes in (out 540 -> 500, ahead 25 -> 5, a little higher); his shadow crosses the water below; Leaf works harder with quick corrective beats.',
       // (s15: 150 mm, camera ~7 deg above them (st22 at 180 mm cut his back off the top), horizon out of frame; he keeps beating (1.6 s) - the st21 glide read as a stiff sail)
-      cam: { rig: 'follow', pos: [[0, [195, 100, zF(15) + 4]], [6, [195, 100, zF(21) + 4], 'linear']], look: [[0, [525, 61, zF(15) + 14]], [6, [520, 62, zF(21) + 14], 'linear']], mm: 150, fstop: 8, focus: 'leaf.chest' },
+      // (s16: s15's 4.8 s frame clipped his upstroking wingtip at the top: aim 3.5 m higher (the pair sits ~7 % lower in
+      // frame) and the camera higher so the frame top stays ~3 deg below the horizon (haze band out); st25 at 150 mm still
+      // touched the top with a full upstroke -> 135 mm (the shot list's lens); st27 (aim 66, camera 114) still cut the
+      // upstroke tip (his raised wing is ~45 % of frame tall); st28 (aim 73, camera 125) only just held it and the steeper
+      // look dropped Leaf to the frame bottom -> camera 75 m further out (x 120, ~405 m: everything 0.8x), y 122, aim 68.5 (st29 at 66: tip 0-2 px from the top),
+      // and Leaf +4 m in this shot (she 'works harder' - climbs to hold station))
+      cam: { rig: 'follow', pos: [[0, [120, 122, zF(15) + 4]], [6, [120, 122, zF(21) + 4], 'linear']], look: [[0, [525, 68.5, zF(15) + 14]], [6, [520, 69.5, zF(21) + 14], 'linear']], mm: 135, fstop: 8, focus: 'leaf.chest' },
       set: { shadowAt: [[0, [460, 0, zF(15)]], [6, [450, 0, zF(21)], 'linear']], shadowExtent: 200 },
       cast: {
-        leaf: { tack: true, ...inForm(...FORM.leaf, T['1C-13'], 6), acts: LEAF_FLY({ hz: 1.25 }) },
+        leaf: { tack: true, ...inForm(FORM.leaf[0], FORM.leaf[1] + 4, FORM.leaf[2], T['1C-13'], 6), acts: LEAF_FLY({ hz: 1.25 }) },
         charcoal: { tack: true, ...inForm(...FORM.charcoal, T['1C-13'], 6, { dx: TALK.charcoal[0] - FORM.charcoal[0], dy: TALK.charcoal[1] - FORM.charcoal[1], dlead: TALK.charcoal[2] - FORM.charcoal[2] }), acts: CHAR_FLY() },
         abbyR: {}, remiR: {},
       },
     },
     '1C-14': {
       staging: 'MEDIUM: 50 mm off Charcoal\'s right shoulder, ahead of Remi, looking back over the neck: Remi right, Leaf and Abby lower in the background left. "Everything secure?" - "Yes." - "All right."',
-      cam: { rig: 'follow', frame: { subjects: [['remiR.head', [0.38, 0.12]], ['abbyR.head', [-0.42, -0.15]]], from: 190, dist: 14, rise: 0.3, track: true }, mm: 50, fstop: 4, focus: 'remiR.head' },
+      // (s16: st23/s15 hid Abby + Leaf behind Charcoal's right wing: at rise 0.3 the lens sat at his wing's height, so the
+      // glide membrane lay along the line to her. Camera 1.6 m above Remi's head, 17 m out, looks DOWN over the wing; the
+      // wing droops a little more (glide droop 0.06 -> 0.16, no beat: no sound timing touched).)
+      cam: { rig: 'follow', frame: { subjects: [['remiR.head', [0.36, 0.1]], ['abbyR.head', [-0.4, -0.1]]], from: 192, dist: 17, rise: 3.2, track: true }, mm: 50, fstop: 4, focus: 'remiR.head' },
       set: { shadowExtent: 70 },
       cast: {
-        leaf: { tack: true, ...inForm(TALK.leaf[0], TALK.leaf[1], TALK.leaf[2], T['1C-14'], 5), acts: LEAF_FLY() },
-        charcoal: { tack: true, ...inForm(TALK.charcoal[0], TALK.charcoal[1], TALK.charcoal[2], T['1C-14'], 5), acts: CHAR_GLIDE() },
+        // (s16: st25 at rise 1.6 still had her behind his wing -> camera 3.2 m above Remi and Leaf +3 m in this shot only)
+        leaf: { tack: true, ...inForm(TALK.leaf[0], TALK.leaf[1] + 3, TALK.leaf[2], T['1C-14'], 5), acts: LEAF_FLY() },
+        charcoal: { tack: true, ...inForm(TALK.charcoal[0], TALK.charcoal[1], TALK.charcoal[2], T['1C-14'], 5), acts: CHAR_GLIDE({ droop: 0.16 }) },
         remiR: { acts: [[0, 'look', { at: 'abbyR.head', amount: 0.5 }]] },     // calls back over his right shoulder (previs: face 147 deg at 0.8)
         abbyR: { acts: [[0, 'look', { at: 'remiR.head', amount: 0.8 }]] },
       },
@@ -168,7 +180,12 @@ export default {
     },
     '1C-16': {
       staging: 'INSERT: 100 mm on Abby\'s two hands on the grips, easy (detail 1 - both hands, before the pass).',
-      cam: { rig: 'follow', frame: { subjects: [['abbyR.hand.L', [-0.25, 0.0]], ['abbyR.hand.R', [0.25, 0.0]]], from: 240, dist: 1.6, rise: 0.4, track: true }, mm: 100, fstop: 4, focus: 'abbyR.hand.R' },
+      // (s16: the rev15 video went FLAT GREEN at ~1.25 s and again at ~2.75 s: from 240 / 1.6 m / rise 0.4 the camera sat
+      // inside the sweep of Leaf's right wing, so every upstroke put the membrane against the lens (a still at 1.5 s missed
+      // it), and the frame showed mostly Abby's back. st25 over her right shoulder (from 335) was all back too. Now from
+      // straight AHEAD on Leaf's centre line (between the wing roots, above his neck), a little above the grips, looking
+      // back at both hands; her face is above the frame top / far out of focus at f/4.)
+      cam: { rig: 'follow', frame: { subjects: [['abbyR.hand.R', [-0.22, -0.05]], ['abbyR.hand.L', [0.22, -0.05]]], from: 180, dist: 1.3, rise: 0.45, track: true }, mm: 100, fstop: 4, focus: 'abbyR.hand.R' },
       set: { shadowExtent: 30 },
       cast: {
         leaf: { tack: true, ...inForm(TALK.leaf[0], TALK.leaf[1], TALK.leaf[2], T['1C-16'], 3), acts: LEAF_FLY() },
@@ -201,7 +218,9 @@ export default {
       cam: { rig: 'drone', pos: [[0, [-250, 155, zF(44) - 150]], [8, [-235, 156, zF(52) - 150], 'linear']], look: [[0, [520, 62, zF(44) + 10]], [8, [535, 62, zF(52) + 10], 'linear']], mm: 160, fstop: 8, focus: 'charcoal.chest' },
       set: { shadowAt: [[0, [460, 0, zF(44)]], [8, [470, 0, zF(52)], 'linear']], shadowExtent: 200 },
       cast: {
-        leaf: { tack: true, ...inForm(...TALK.leaf, T['1C-19'], 8), acts: LEAF_FLY() },
+        // (s16: st25 had her against his tail / trailing wing: seen from behind-inland, 16 m of lead is only ~10 m of screen
+        //  separation. 10 m further back in this shot only -> ~17 m, clear of his tail)
+        leaf: { tack: true, ...inForm(TALK.leaf[0], TALK.leaf[1], TALK.leaf[2] - 10, T['1C-19'], 8), acts: LEAF_FLY() },
         charcoal: { tack: true, ...inForm(...TALK.charcoal, T['1C-19'], 8), acts: CHAR_FLY() },
         abbyR: {}, remiR: {},
       },
