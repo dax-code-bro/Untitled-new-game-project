@@ -26,6 +26,8 @@ import { installRoadside } from './systems/roadside.js';
 import { installGang } from './systems/gang.js';
 import { installGunStores } from './systems/gunstores.js';
 import { installCarCombat } from './systems/carcombat.js';
+import { installStreetLife } from './systems/streetlife.js';
+import { installWorldEvents } from './systems/world-events.js';
 import { buildWeaponModel, applyFinish } from './entities/arsenal.js';
 import { vehiclesOverlap } from './world/collision.js';
 import { LAND } from './assets/catalog.js';
@@ -133,7 +135,7 @@ async function createGame(progress) {
   const roads = createRoads(graph, hm, q, scene, collision, surf);
   progress(0.74, 'Building Port Calvera and Mill Creek');
   await nextFrame();
-  const city = createBuildings(hm, q, scene, collision, surf);
+  const city = createBuildings(hm, q, scene, collision, surf, graph);
   progress(0.84, 'Growing Pinewood Hollow');
   await nextFrame();
   const veg = await createVegetation(hm, q, scene, collision, city.cityBlocks, (p) => progress(0.84 + p * 0.07, 'Growing forests'), surf, settings.grass === false ? 0 : 1);
@@ -406,8 +408,12 @@ async function createGame(progress) {
   });
   const gunStores = installGunStores(game);
   combat.ammoType = { ...(career.p.weapons.ammoType || {}) };
-  const carCombat = installCarCombat({ ...game, camera, hurtPlayer, exitVehicle: () => { if (S.mode === 'car') exitVehicle(); } }, { explodeAt });
+  Object.assign(game, { hurtPlayer });
+  const carCombat = installCarCombat(game, { explodeAt });
   game.onDriverKilled = (v) => { if (witnesses(v.pos, 40) || police.nearPolice(60)) police.crime(v.type === 'police' ? 'copKill' : 'kill'); peds.panic(v.pos, 30); };
+  game.refreshHitStatics = () => { hitStatics.length = 0; scene.traverse((o) => { if (o.userData.hitStatic) hitStatics.push(o); }); };
+  installStreetLife(game);
+  const worldEvents = installWorldEvents(game);
   game.onCarExploded = (v) => { peds.panic(v.pos, 50); if (witnesses(v.pos, 60) || police.nearPolice(80)) police.crime(v.type === 'police' ? 'copKill' : 'kill'); };
   const reportHit = (hit) => {
     if (!hit || hit.kind !== 'ped') return;
@@ -598,7 +604,7 @@ async function createGame(progress) {
         if (hit) {
           player.h.play('Pistol_Shoot', 0.04, 1.6, true);
           reportHit(hit);
-          if (witnesses(player.pos, 45)) police.crime('shots');
+          if (witnesses(player.pos, 45)) police.crime('shots'); else game.onShotFired?.(player.pos);
           peds.panic(player.pos, 45);
           if (hit.kind === 'vehicle' && hit.vehicle.type === 'police') police.crime('copShot');
         }
@@ -668,6 +674,7 @@ async function createGame(progress) {
     if (gp && !prompt) prompt = gp;
     gunStores.update(dt);
     carCombat.update(dt);
+    worldEvents.update(dt);
     career.update(dt);
     if (S.vehicle && S.vehicle.health <= 0 && !S.vehicle.wrecked) { S.vehicle.wrecked = true; hud.toast('The engine is wrecked — get out (F)', 4); }
     if (S.vehicle?.wrecked) { S.vehicle.vel.multiplyScalar(Math.exp(-3 * dt)); }
