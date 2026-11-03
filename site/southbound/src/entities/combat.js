@@ -285,6 +285,7 @@ export class Combat {
       if (v.health <= 0) this.onVehicleDestroyed?.(v, hit.point);
     } else if (hit.kind !== 'none') {
       this.burst(hit.point, this.dustMat, 6);
+      if (hit.kind === 'building') this.onStaticHit?.(hit);
     }
   }
 

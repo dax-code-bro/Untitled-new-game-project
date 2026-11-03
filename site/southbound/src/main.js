@@ -28,6 +28,7 @@ import { installGunStores } from './systems/gunstores.js';
 import { installCarCombat } from './systems/carcombat.js';
 import { installStreetLife } from './systems/streetlife.js';
 import { installWorldEvents } from './systems/world-events.js';
+import { installDetails } from './systems/details.js';
 import { buildWeaponModel, applyFinish } from './entities/arsenal.js';
 import { vehiclesOverlap } from './world/collision.js';
 import { LAND } from './assets/catalog.js';
@@ -414,6 +415,8 @@ async function createGame(progress) {
   game.refreshHitStatics = () => { hitStatics.length = 0; scene.traverse((o) => { if (o.userData.hitStatic) hitStatics.push(o); }); };
   installStreetLife(game);
   const worldEvents = installWorldEvents(game);
+  game.audio = audio;
+  const details = installDetails(game);
   game.onCarExploded = (v) => { peds.panic(v.pos, 50); if (witnesses(v.pos, 60) || police.nearPolice(80)) police.crime(v.type === 'police' ? 'copKill' : 'kill'); };
   const reportHit = (hit) => {
     if (!hit || hit.kind !== 'ped') return;
@@ -598,9 +601,11 @@ async function createGame(progress) {
         headBone.quaternion.copy(pq.multiply(tq));
       }
       const targets = { peds, vehicles: [...traffic.cars.map((c) => c.v), ...police.cars.map((c) => c.v), ...parked, ...(law.heli() ? [law.heli()] : [])], animals: game.hunting ? game.hunting.list : [], statics: S.indoors ? indoorMeshes() : hitStatics };
-      if (armed && a.fire && player.aiming && combat.cooldown <= 0 && S.dead <= 0) {
+      if (armed && a.firePressed && game.safetyOn?.()) { audio.thud?.(0.05); hud.toast('Safety is on (K)', 1); }
+      else if (armed && a.fire && player.aiming && combat.cooldown <= 0 && S.dead <= 0) {
         combat.muzzleWorld(muzzle);
         const hit = combat.attack(camera.position.clone(), aimDir.clone(), muzzle.clone(), targets, player.pos);
+        if (hit) game.onShotEffects?.(combat.gun, combat.def);
         if (hit) {
           player.h.play('Pistol_Shoot', 0.04, 1.6, true);
           reportHit(hit);
@@ -675,6 +680,7 @@ async function createGame(progress) {
     gunStores.update(dt);
     carCombat.update(dt);
     worldEvents.update(dt);
+    details.update(dt);
     career.update(dt);
     if (S.vehicle && S.vehicle.health <= 0 && !S.vehicle.wrecked) { S.vehicle.wrecked = true; hud.toast('The engine is wrecked — get out (F)', 4); }
     if (S.vehicle?.wrecked) { S.vehicle.vel.multiplyScalar(Math.exp(-3 * dt)); }
