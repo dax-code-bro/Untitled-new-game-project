@@ -129,7 +129,7 @@ export function installLaw(g) {
     } else if ((p.punchT -= dt) <= 0) {
       p.punchT = 0.9 + Math.random() * 0.6;
       p.h.play(Math.random() < 0.5 ? 'Punch_Jab' : 'Punch_Cross', 0.06, 1.2, true);
-      setTimeout(() => { if (p.mode !== 'dead' && p.pos.distanceTo(player.pos) < 1.7) g.hurtPlayer(5 + Math.random() * 4, p.pos); }, 250);
+      setTimeout(() => { if (p.mode !== 'dead' && p.pos.distanceTo(player.pos) < 1.7) g.hurtPlayer(5 + Math.random() * 4, p.pos, 0); }, 250);
     }
     p.h.root.position.copy(p.pos); p.h.root.rotation.y = p.heading;
   };
@@ -213,6 +213,7 @@ export function installLaw(g) {
       cut = null;
       setTimeout(() => fade.classList.remove('show'), 600);
       hud.toast(`Released from ${at.name}. Fine paid: $${c.fine.toLocaleString('en-US')}`, 5);
+      g.onArrested?.();
       career.saveSoon();
       return;
     }
@@ -322,7 +323,7 @@ export function installLaw(g) {
         p.gunT = T.rate * (0.7 + Math.random() * 0.6);
         g.audio?.gunshot(T.weapon === 'pistol' ? 0.6 : 0.8);
         const chance = clamp(0.6 - d / (T.range * 1.6), 0.08, 0.55) * (S.mode === 'car' ? 0.6 : 1) * (player.speed > 4 ? 0.6 : 1);
-        if (Math.random() < chance) g.hurtPlayer(T.dmg[0] + Math.random() * (T.dmg[1] - T.dmg[0]), p.pos);
+        if (Math.random() < chance) g.hurtPlayer(T.dmg[0] + Math.random() * (T.dmg[1] - T.dmg[0]), p.pos, /rifle|sniper/.test(T.weapon) ? 3 : /shotgun/.test(T.weapon) ? 1.5 : 2);
       }
     }
     const r = collision.resolve(p.pos.x, p.pos.z, 0.35, p.pos.y, 1.8); p.pos.x = r.x; p.pos.z = r.z;
@@ -357,7 +358,7 @@ export function installLaw(g) {
       if ((h.fireT -= dt) <= 0) { h.fireT = 4 + Math.random() * 2; h.burst = 1.6; }
       if (h.burst > 0) {
         h.burst -= dt;
-        if (Math.random() < dt * 14) { g.audio?.gunshot(0.35); if (Math.random() < 0.18) g.hurtPlayer(4 + Math.random() * 4, h.pos); g.tracer?.(h.pos, player.pos); }
+        if (Math.random() < dt * 14) { g.audio?.gunshot(0.35); if (Math.random() < 0.18) g.hurtPlayer(4 + Math.random() * 4, h.pos, 3); g.tracer?.(h.pos, player.pos); }
       }
       h.sync(dt);
       alive++;

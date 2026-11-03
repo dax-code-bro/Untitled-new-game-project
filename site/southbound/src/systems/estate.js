@@ -86,7 +86,7 @@ export function installEstate(game) {
     const kind = { 4: 'home', 2: r() < 0.5 ? 'home' : 'apartment', 5: r() < 0.35 ? 'bar' : 'store', 3: 'warehouse', 1: 'office', 0: 'office' }[b.style] || 'home';
     const W = Math.max(9, Math.min(b.w - 1, kind === 'warehouse' ? 26 : 18)), D = Math.max(8, Math.min(b.d - 1, kind === 'warehouse' ? 22 : 14)), H = kind === 'warehouse' ? 7 : 3.2;
     const g = new THREE.Group(); g.position.copy(o);
-    const wallC = [0xd8d0c0, 0xc9d3d8, 0xe6dccb, 0xb9c4b0, 0xd9c2b0, 0xf0ece4][Math.floor(r() * 6)];
+    const wallC = [0xeeebe6, 0xd6dce0, 0xe6e2da, 0xc6d1c4, 0xdcd6d0, 0xf4f3f0][Math.floor(r() * 6)]; // neutral paints (warm beige + amber bulbs read as yellow-brown)
     const floorC = kind === 'warehouse' ? 0x6d6d68 : kind === 'office' ? 0x4a4f55 : [0x7a5434, 0x8c6a46, 0x5c3f28, 0xb8b2a4][Math.floor(r() * 4)];
     const wallM = texMat('plaster', wallC, 0.9) || M(wallC, 0.9), floorM = (kind === 'warehouse' || kind === 'store' || kind === 'office' ? texMat('concrete', floorC === 0x4a4f55 ? 0x8a8f95 : 0xb0aca4, 0.8) : null) || M(floorC, kind === 'home' || kind === 'apartment' ? 0.45 : 0.8);
     wallM.userData.texSize = 3.0; floorM.userData.texSize = 2.5;
@@ -189,9 +189,19 @@ export function installEstate(game) {
     }
     for (const lx of [-W / 4, W / 4]) put(QH(pick(['Light_Ceiling1', 'Light_Ceiling2', 'Light_Ceiling4'])), 0.6, lx, 0, 0, 'y', false, H - 0.62);
     // lights
-    const lc = kind === 'office' || kind === 'store' || kind === 'warehouse' ? 0xf4f6ff : 0xffd9a8;
+    const lc = kind === 'office' || kind === 'store' || kind === 'warehouse' ? 0xf4f6ff : 0xffeedd;
     for (const lx of [-W / 4, W / 4]) { const L = new THREE.PointLight(lc, kind === 'warehouse' ? 60 : 22, Math.max(W, D), 1.6); L.position.set(lx, H - 0.4, 0); g.add(L); const fx = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.06, 0.8), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: lc, emissiveIntensity: 2 })); fx.position.set(lx, H - 0.05, 0); g.add(fx); }
-    return { g, o, W, D, H, kind };
+    // fire safety: a pull station and a horn/strobe by the door, a smoke detector on the ceiling
+    const fireM = new THREE.MeshStandardMaterial({ color: 0xc81e1e, roughness: 0.45 });
+    const pull = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.18, 0.06), fireM); pull.position.set(o.x + 1.4, o.y + 1.25, o.z + D / 2 - 0.2); g.add(pull);
+    const handle = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.03, 0.03), new THREE.MeshStandardMaterial({ color: 0xf2f2f2, roughness: 0.4 })); handle.position.set(0, -0.02, -0.04); pull.add(handle);
+    const horn = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.2, 0.08), fireM); horn.position.set(o.x + 1.4, o.y + H - 0.6, o.z + D / 2 - 0.2); g.add(horn);
+    const strobeM = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0, transparent: true, opacity: 0.85, roughness: 0.1 });
+    const strobe = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.06, 0.04), strobeM); strobe.position.set(0, -0.05, -0.05); horn.add(strobe);
+    const flash = new THREE.PointLight(0xffffff, 0, 14, 2); flash.position.set(o.x + 1.4, o.y + H - 0.8, o.z + D / 2 - 0.8); g.add(flash);
+    const det = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.035, 18), new THREE.MeshStandardMaterial({ color: 0xf0eee8, roughness: 0.5 })); det.position.set(o.x, o.y + H - 0.04, o.z); g.add(det);
+    const led = new THREE.Mesh(new THREE.SphereGeometry(0.008, 6, 4), new THREE.MeshBasicMaterial({ color: 0x30ff40 })); led.position.set(0.03, -0.02, 0); det.add(led);
+    return { g, o, W, D, H, kind, alarm: { strobe, flash, pull, led } };
   }
 
   const INTERIOR_MODELS = [
@@ -226,6 +236,8 @@ export function installEstate(game) {
         P.properties.push(p.id); P.home = P.home || p.id; career.save();
         hud.bigMessage('PROPERTY PURCHASED', p.name, 3);
       } }));
+    if (p && owned(p)) insidePoints.push(interact.add({ x: it.o.x + 2, z: it.o.z, y: it.o.y, r: 1.3, label: () => `${keyHint(game)} change clothes`, color: 0x9fc4c0, use: () => game.openWardrobe?.() }));
+    insidePoints.push(interact.add({ x: it.o.x + 1.4, z: it.o.z + it.D / 2 - 0.7, y: it.o.y, r: 0.9, label: () => `${keyHint(game)} pull the fire alarm`, color: 0xff4040, use: () => game.fireAlarm?.(inside) }));
     hud.toast(`${p ? p.name : ['Home', 'Apartment', 'Office', 'Store', 'Bar', 'Warehouse'][['home', 'apartment', 'office', 'store', 'bar', 'warehouse'].indexOf(it.kind)]}`, 2);
   }
   function leave() {

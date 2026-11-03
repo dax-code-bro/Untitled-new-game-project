@@ -225,7 +225,13 @@ export class HUD {
     }
     if (this.regionTimer > 0 && (this.regionTimer -= dt) <= 0) this.regionEl.classList.remove('show');
     if (this.toastTimer > 0 && (this.toastTimer -= dt) <= 0) this.toastEl.classList.remove('show');
-    this.promptEl.textContent = st.prompt || '';
+    if (st.prompt !== this._lastPrompt) {
+      this._lastPrompt = st.prompt;
+      // "Press F to talk to Walt" -> [F] Talk to Walt
+      const esc = (t) => String(t).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
+      const m = /^(?:Press|Tap|Hold) (\S+) (?:to )?(.*)$/.exec(st.prompt || '');
+      this.promptEl.innerHTML = m ? `<kbd>${esc(m[1])}</kbd><span>${esc(m[2].charAt(0).toUpperCase() + m[2].slice(1))}</span>` : `<span>${esc(st.prompt || '')}</span>`;
+    }
     this.promptEl.classList.toggle('show', !!st.prompt);
     // action HUD
     if (st.health !== undefined) {

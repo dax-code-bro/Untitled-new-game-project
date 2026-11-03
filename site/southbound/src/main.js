@@ -25,6 +25,14 @@ import { installLaw } from './systems/law.js';
 import { installRoadside } from './systems/roadside.js';
 import { installGang } from './systems/gang.js';
 import { installGunStores } from './systems/gunstores.js';
+import { installShops } from './systems/shops.js';
+import { createBillboards } from './world/billboards.js';
+import { installProps } from './systems/props.js';
+import { installArmory } from './systems/armory.js';
+import { installWounds } from './systems/wounds.js';
+import { installStreetCrime } from './systems/streetcrime.js';
+import { installAuction } from './systems/auction.js';
+import { createWayfinding } from './world/wayfinding.js';
 import { installCarCombat } from './systems/carcombat.js';
 import { installStreetLife } from './systems/streetlife.js';
 import { installWorldEvents } from './systems/world-events.js';
@@ -98,10 +106,10 @@ async function createGame(progress) {
   THREE.ShaderChunk.tonemapping_pars_fragment = THREE.ShaderChunk.tonemapping_pars_fragment.replace(
     'vec3 CustomToneMapping( vec3 color ) { return color; }',
     `vec3 CustomToneMapping( vec3 color ) {
-  vec3 c = ACESFilmicToneMapping( color );
+  vec3 c = AgXToneMapping( color );
   float l = dot( c, vec3( 0.2126, 0.7152, 0.0722 ) );
-  c = mix( vec3( l ), c, 1.1 );
-  c = 0.18 * pow( max( c, 0.0 ) / 0.18, vec3( 1.05 ) );
+  c = mix( vec3( l ), c, 1.14 );
+  c = 0.18 * pow( max( c, 0.0 ) / 0.18, vec3( 1.08 ) );
   return clamp( c, 0.0, 1.0 );
 }`);
   renderer.toneMapping = THREE.CustomToneMapping;
@@ -137,6 +145,7 @@ async function createGame(progress) {
   progress(0.74, 'Building Port Calvera and Mill Creek');
   await nextFrame();
   const city = createBuildings(hm, q, scene, collision, surf, graph);
+  const billboards = createBillboards(scene, graph, hm, collision, q);
   progress(0.84, 'Growing Pinewood Hollow');
   await nextFrame();
   const veg = await createVegetation(hm, q, scene, collision, city.cityBlocks, (p) => progress(0.84 + p * 0.07, 'Growing forests'), surf, settings.grass === false ? 0 : 1);
@@ -201,13 +210,13 @@ async function createGame(progress) {
     if (S.mode !== 'foot' || !player.char.root.visible || rig.fp) return;
     const h = player.heading, fw = new THREE.Vector3(Math.sin(h), 0, Math.cos(h)), right = new THREE.Vector3(-Math.cos(h), 0, Math.sin(h)), up = new THREE.Vector3(0, 1, 0);
     const side = combat.slotWeapon('sidearm');
-    if (side && hipBone && !(combat.drawn && Combat.slotOf(combat.weapon) === 'sidearm')) {
+    if (side && hipBone && !game.isConcealed?.(side) && !(combat.drawn && Combat.slotOf(combat.weapon) === 'sidearm')) {
       const m = combat.model(side, '#hip');
       const p = hipBone.getWorldPosition(new THREE.Vector3()).addScaledVector(right, 0.21).addScaledVector(up, -0.12).addScaledVector(fw, -0.02);
       stow(m, p, _hu.copy(up).multiplyScalar(-1).addScaledVector(fw, 0.18).normalize(), fw.clone().negate());
       shown.push(m);
     }
-    const longId = combat.drawn && combat.def.cat !== 'pistol' ? null : ['long', 'shotgun', 'sniper'].map((k) => combat.slotWeapon(k)).find(Boolean);
+    const longId = combat.drawn && combat.def.cat !== 'pistol' ? null : ['long', 'shotgun', 'sniper'].map((k) => combat.slotWeapon(k)).find((id) => id && !game.isConcealed?.(id));
     if (longId && backBone) {
       const m = combat.model(longId, '#back');
       const p = backBone.getWorldPosition(new THREE.Vector3()).addScaledVector(fw, -0.15).addScaledVector(up, 0.08);
@@ -280,7 +289,7 @@ async function createGame(progress) {
     snapshot: (p) => {
       p.money = S.money; p.hour = sky.hour; p.day = sky.day; p.weather = weather.kind;
       p.pos = [+player.pos.x.toFixed(1), +player.pos.z.toFixed(1)];
-      p.weapons = { owned: combat.owned.slice(), ammo: combat.ammo };
+      p.weapons = { ...p.weapons, owned: combat.owned.slice(), ammo: combat.ammo }; // keep counts and finishes
     },
   });
   sky.hour = profile.hour; sky.day = profile.day;
@@ -321,6 +330,7 @@ async function createGame(progress) {
   // ---- combat, wanted level, death & arrest
   const HOSPITAL = { x: CITY.x0 + CITY.nx * CITY.pitch + 24, z: CITY.z0 + 2 * CITY.pitch, name: 'Port Calvera Medical Center' };
   const PRECINCT = { x: CITY.x0 - 24, z: CITY.z0 + 1 * CITY.pitch, name: 'Calvera PD · Central Precinct' };
+  game.PRECINCT = PRECINCT;
   // damage a vehicle on the side facing (fx, fz); the HUD silhouette shows each side
   const damageVehicle = (v, amount, fx, fz) => {
     if (!v) return;
@@ -332,13 +342,14 @@ async function createGame(progress) {
     v.dmg[zone] = Math.min(1, v.dmg[zone] + (amount / (v.maxHealth || 100)) * 2.2);
   };
   game_damageVehicle = damageVehicle;
-  const hurtPlayer = (amount, from) => {
+  const hurtPlayer = (amount, from, pen) => {
     if (S.dead) return;
+    if (game.armorHit && S.mode !== 'car') amount = game.armorHit(amount, from, pen ?? 2);
     if (S.mode === 'car') { damageVehicle(S.vehicle, amount * 0.6, from ? from.x : S.vehicle.pos.x, from ? from.z : S.vehicle.pos.z + 1); player.damage(amount * 0.35); }
     else player.damage(amount);
     S.dmgFlash = Math.min(1, S.dmgFlash + 0.35);
   };
-  police.onPlayerHit = (amount, from) => hurtPlayer(amount, from);
+  police.onPlayerHit = (amount, from, pen) => hurtPlayer(amount, from, pen);
   const respawn = (at, title, sub, fee) => {
     if (S.indoors && game.estate) game.estate.leave();
     S.dead = 4.5;
@@ -408,14 +419,35 @@ async function createGame(progress) {
     },
   });
   const gunStores = installGunStores(game);
+  const shops = installShops(game);
+  game.billboards = billboards;
+  const armory = installArmory(game);
+  game.tracer = game.tracer || ((a, b) => combat.tracer(a, b));
+  const streetCrime = installStreetCrime(game);
+  const wounds = installWounds(game);
+  const auction = installAuction(game);
+  // every place worth finding: road signs point to them, the phone lists them
+  game.places = [
+    ...(game.gunShops || []).map((s) => ({ name: s.name, kind: 'Gunsmith', icon: '🔫', x: s.x, z: s.z })),
+    ...(game.armorShops || []).map((s) => ({ name: s.name, kind: 'Armour & medical', icon: '🦺', x: s.x, z: s.z })),
+    ...(game.shopSpots || []).map((s) => ({ name: s.name, kind: s.kind === 'mart' ? 'Food & drink' : 'Clothing', icon: s.kind === 'mart' ? '🥪' : '👕', x: s.x, z: s.z })),
+    ...(game.hardwareShops || []).map(([x, z, name]) => ({ name, kind: 'Hardware', icon: '🔨', x, z })),
+    ...(game.barbers || []).map(([x, z, name]) => ({ name, kind: 'Barber', icon: '✂️', x, z })),
+    ...(game.auctionHouse ? [{ name: game.auctionHouse.name, kind: 'Property & vehicle auction', icon: '🔨', x: game.auctionHouse.x, z: game.auctionHouse.z }] : []),
+  ];
+  const wayfinding = createWayfinding(game, game.places.filter((p) => p.kind !== 'Barber'));
+  game.wayfinding = wayfinding;
   combat.ammoType = { ...(career.p.weapons.ammoType || {}) };
   Object.assign(game, { hurtPlayer });
   const carCombat = installCarCombat(game, { explodeAt });
+  const props = installProps(game);
+  game.props = props;
   game.onDriverKilled = (v) => { if (witnesses(v.pos, 40) || police.nearPolice(60)) police.crime(v.type === 'police' ? 'copKill' : 'kill'); peds.panic(v.pos, 30); };
   game.refreshHitStatics = () => { hitStatics.length = 0; scene.traverse((o) => { if (o.userData.hitStatic) hitStatics.push(o); }); };
   installStreetLife(game);
   const worldEvents = installWorldEvents(game);
   game.audio = audio;
+  game.nearestRoadPoint = (x, z) => { const r = nearestRoad(x, z); if (!r) return null; const p = {}; traffic.sampleEdge(r.e, r.s, p); return p; };
   const details = installDetails(game);
   game.onCarExploded = (v) => { peds.panic(v.pos, 50); if (witnesses(v.pos, 60) || police.nearPolice(80)) police.crime(v.type === 'police' ? 'copKill' : 'kill'); };
   const reportHit = (hit) => {
@@ -423,8 +455,8 @@ async function createGame(progress) {
     if (hit.ped.role === 'hunter' || hit.ped.role === 'brawler') { S.hitMarker = true; return; } // self-defence
     const cop = hit.ped.role === 'cop';
     if (cop) hit.ped.provoked = true;
-    if (hit.killed) police.crime(cop ? 'copKill' : 'kill');
-    else police.crime(cop ? 'copShot' : 'assault');
+    const kind = hit.killed ? (cop ? 'copKill' : 'kill') : cop ? 'copShot' : 'assault';
+    if (game.reportCrime) game.reportCrime(kind, hit.ped.pos, hit.ped); else police.crime(kind);
     S.hitMarker = true;
   };
   const witnesses = (pos, r) => peds.list.some((p) => p.mode !== 'dead' && p.pos.distanceTo(pos) < r);
@@ -568,6 +600,7 @@ async function createGame(progress) {
       updateEnter(dt);
       focus.copy(player.pos);
     } else if (S.mode === 'foot') {
+      if (S.limp) { a.sprint = false; if (a.moveX) a.moveX *= 0.5; if (a.moveY) a.moveY *= 0.5; }
       player.update(dt, a, rig.yaw, hm, collision, armed && combat.def.cat === 'pistol');
       camera.getWorldDirection(aimDir);
       // ---- weapon in the hands: pose the arms around it
@@ -589,6 +622,11 @@ async function createGame(progress) {
         // draw: the gun comes up from the holster
         if (S.drawT > 0) { const k = S.drawT / 0.35; m.position.y -= k * 0.35; m.updateMatrixWorld(true); }
       }
+      // a knife, bat or other hand weapon: in the right hand
+      if (!armed && !combat.holstered && combat.def.melee && combat.weapon !== 'fists' && S.dead <= 0 && player.char.root.visible) {
+        const m = combat.model(); m.visible = true; shown.push(m);
+        player.h.root.updateMatrixWorld(true); gunPose.attachToHand(m, gunPose.R);
+      }
       showHolstered(shown);
       combat.hideAll(shown);
       // look at whoever you're talking to
@@ -609,14 +647,14 @@ async function createGame(progress) {
         if (hit) {
           player.h.play('Pistol_Shoot', 0.04, 1.6, true);
           reportHit(hit);
-          if (witnesses(player.pos, 45)) police.crime('shots'); else game.onShotFired?.(player.pos);
+          if (witnesses(player.pos, 45)) { if (game.reportCrime) game.reportCrime('shots', player.pos, hit.ped); else police.crime('shots'); } else game.onShotFired?.(player.pos);
           peds.panic(player.pos, 45);
           if (hit.kind === 'vehicle' && hit.vehicle.type === 'police') police.crime('copShot');
         }
       } else if (!armed && a.firePressed && S.dead <= 0) {
         const fwd = new THREE.Vector3(Math.sin(player.heading), 0, Math.cos(player.heading));
         const hit = combat.attack(player.pos, fwd, null, targets, player.pos);
-        if (hit) { player.h.play(Math.random() < 0.5 ? 'Punch_Jab' : 'Punch_Cross', 0.06, 1.3, true); reportHit(hit); if (hit.ped) peds.panic(hit.ped.pos, 15); }
+        if (hit) { const k = combat.def.kind; player.h.play(k === 'blade' ? (Math.random() < 0.75 ? 'Punch_Jab' : 'Punch_Cross') : k === 'blunt' ? 'Punch_Cross' : Math.random() < 0.5 ? 'Punch_Jab' : 'Punch_Cross', 0.06, k === 'blunt' ? 1.05 : 1.3, true); reportHit(hit); if (hit.ped) peds.panic(hit.ped.pos, 15); }
       }
       // vehicles are solid: push the player out of their exact footprints
       for (const v of [...parked, ...traffic.cars.map((c) => c.v), ...police.cars.map((c) => c.v)]) {
@@ -678,7 +716,15 @@ async function createGame(progress) {
     const gp = gang.update(dt, a);
     if (gp && !prompt) prompt = gp;
     gunStores.update(dt);
+    shops.update(dt);
+    billboards.update(sky.hour);
     carCombat.update(dt);
+    props.update(dt);
+    armory.update(dt);
+    wounds.update(dt);
+    streetCrime.update(dt);
+    auction.update(dt);
+    wayfinding.update(dt);
     worldEvents.update(dt);
     details.update(dt);
     career.update(dt);
@@ -702,7 +748,7 @@ async function createGame(progress) {
     if (scoped && a.sprint && (S.breath ?? 4) > 0) { S.breath = (S.breath ?? 4) - dt; S.steady = Math.min(1, (S.steady || 0) + dt * 4); } else { S.breath = Math.min(4, (S.breath ?? 4) + dt * 0.8); S.steady = Math.max(0, (S.steady || 0) - dt * 2); }
     if (scoped !== !!S.scoped) { S.scoped = scoped; document.body.classList.toggle('scoped', scoped); player.h.model.visible = !scoped; if (scoped) hud.toast('Hold Shift to hold your breath', 1.6); }
     if (scoped) for (const m of Object.values(combat.models)) m.visible = false;
-    rig.update(dt, a, focus, { vehicle: S.vehicle, heading: S.vehicle?.heading, speed: S.vehicle?.speed || 0, lastLook: input.lastLookTime, aiming: S.mode === 'foot' && player.aiming && armed, eye: S.mode === 'foot' && player.char.root.visible ? getEye() : null, scope: scoped ? combat.def.scope : 0, steady: S.steady || 0 }, collision);
+    rig.update(dt, a, focus, { vehicle: S.vehicle, heading: S.vehicle?.heading, speed: S.vehicle?.speed || 0, lastLook: input.lastLookTime, aiming: S.mode === 'foot' && player.aiming && armed, eye: S.mode === 'foot' && player.char.root.visible ? getEye() : null, scope: scoped ? combat.def.scope : 0, steady: Math.max(S.steady || 0, game.buffs?.steady > 0 ? 0.55 : 0) }, collision);
 
     law.camera(camera);
     gang.camera(camera);
@@ -713,6 +759,7 @@ async function createGame(progress) {
       applySize();
       player.h.model.traverse((o) => { if (o.isSkinnedMesh) o.castShadow = true; });
       hud.toast(fpState.boost ? 'First person' : 'Third person', 1.2);
+      game.setHeadwearVisible?.(!fpState.boost);
     }
     const dd = basePreset.drawDistance * settings.drawDistance;
     terrain.update(camera.position, dd);
@@ -748,7 +795,7 @@ async function createGame(progress) {
       rain: weather.rain, thunder: weather.thunder,
     });
     if (post) {
-      post.grade.uniforms.uWarm.value = 0.012 + (sky.hour > 16 && sky.hour < 20 ? 0.018 : 0);
+      post.grade.uniforms.uWarm.value = sky.hour > 16.5 && sky.hour < 19.5 ? 0.05 * Math.sin((sky.hour - 16.5) / 3 * Math.PI) : 0;
       post.grade.uniforms.uNight.value = sky.night;
       // clear daylight gets the punchier, more saturated grade; storms and night stay muted
       const dayK = (1 - sky.night) * (1 - weather.dark * 0.8);

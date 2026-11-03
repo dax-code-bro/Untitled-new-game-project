@@ -81,18 +81,25 @@ export function installTools(game) {
   };
   game.useTool = useTool;
 
+  const SUPPLIES = [
+    { supply: 'metal', n: 1, name: 'Scrap steel bar', price: 35, desc: 'Machinable steel stock' },
+    { supply: 'metal', n: 5, name: 'Box of scrap steel (5)', price: 150, desc: 'Bulk, a little rusty' },
+    { supply: 'glass', n: 1, name: 'Optical lens', price: 80, desc: 'Ground glass for a scope' },
+    { supply: 'springs', n: 1, name: 'Spring assortment', price: 25, desc: 'Coil and leaf springs' },
+  ];
   const store = new ShopUI({
     title: 'Calvera Hardware', getMoney: () => career.money, pause: game.pause,
-    tabs: TRADES.map((k) => ({ k, label: `${k} (${TOOLS.filter((t) => t.trade === k).length})` })),
-    note: () => `${TOOLS.length} tools. Consumables stack; everything is kept in your phone's inventory (I).`,
-    items: (tr) => TOOLS.filter((t) => t.trade === tr),
+    tabs: [...TRADES.map((k) => ({ k, label: `${k} (${TOOLS.filter((t) => t.trade === k).length})` })), { k: 'supplies', label: 'Crafting supplies' }],
+    note: (tr) => tr === 'supplies' ? `For Tina at the hideout: she builds scopes and suppressors from these. You have ${P.supplies?.metal || 0} metal, ${P.supplies?.glass || 0} lenses, ${P.supplies?.springs || 0} spring sets.` : `${TOOLS.length} tools. Consumables stack; everything is kept in your phone's inventory (I).`,
+    items: (tr) => tr === 'supplies' ? SUPPLIES : TOOLS.filter((t) => t.trade === tr),
     row: (t) => {
+      if (t.supply) return { name: t.name, sub: `${t.desc} · you have ${P.supplies?.[t.supply] || 0}`, stats: [], btn: money(t.price) };
       const n = P.tools[t.id] || 0, fx = Object.entries(t.fx).map(([k, v]) => `${k}${v !== 1 && typeof v !== 'string' ? ' ' + v : typeof v === 'string' ? ': ' + v : ''}`).join(', ');
       return { name: t.name, sub: `${t.trade}${fx ? ' · ' + fx : ''}${n ? ` · you have ${n}` : ''}`, stats: [], btn: money(t.price), cls: n ? 'own' : '' };
     },
-    act: (t) => { if (career.spend(t.price)) { career.addTool(t.id, t.fx.bait || t.fx.arrows ? 1 : 1); if (t.fx.bait) P.baitCount = (P.baitCount || 0) + t.fx.bait; hud.toast(`Bought ${t.name}`, 1.2); } },
+    act: (t) => { if (t.supply) { if (career.spend(t.price)) { P.supplies = P.supplies || { metal: 0, glass: 0, springs: 0 }; P.supplies[t.supply] += t.n; hud.toast(`Bought ${t.name}`, 1.2); } return; } if (career.spend(t.price)) { career.addTool(t.id, t.fx.bait || t.fx.arrows ? 1 : 1); if (t.fx.bait) P.baitCount = (P.baitCount || 0) + t.fx.bait; hud.toast(`Bought ${t.name}`, 1.2); } },
   });
-  const shops = [
+  const shops = game.hardwareShops = [
     [CITY.x0 + 5 * CITY.pitch - 30, CITY.z0 - 26, 'Calvera Hardware', 'Construction'],
     [TOWN.x0 + TOWN.pitch * 2 + 10, TOWN.z0 + TOWN.nz * TOWN.pitch + 18, 'Mill Creek Feed & Hardware', 'Farm'],
     [TOWN.x0 - 26, TOWN.z0 + 2 * TOWN.pitch, 'Bayou Outfitters (hunting)', 'Hunting'],

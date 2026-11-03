@@ -194,7 +194,10 @@ export class GunStore {
     if (a === 'back') { this.el.querySelector('.side').classList.remove('show'); return; }
     if (a === 'buy') {
       const n = this.countOf(id);
-      if (n >= 3 || (w.unlock || 0) > g.storyDone() || !g.spend(this.price(w))) return;
+      if (n >= 3 || (w.unlock || 0) > g.storyDone()) return;
+      // ordered remotely: the store's own hook takes the money and sends a courier
+      if (this.store.deliver) { if (this.store.deliver(id, this.price(w)) === false) return; this.P.weapons.count[id] = n + 1; g.career.saveSoon(); return; }
+      if (!g.spend(this.price(w))) return;
       c.give(id);
       this.P.weapons.count[id] = n + 1;
       this.mode = 'cust';
@@ -208,6 +211,7 @@ export class GunStore {
 
   renderCustom() {
     const box = this.el.querySelector('.cust'), id = this.sel, w = WEAPONS[id], g = this.g;
+    if (w.melee) { box.innerHTML = `<h4>About</h4><p style="color:#cfc2b0;line-height:1.5;margin:0">${w.desc || ''} ${w.kind === 'blade' ? 'Cuts bleed.' : 'Blunt: knocks people down.'} Equip it from the weapon wheel (knife slot).</p>`; return; }
     if (this.mode !== 'cust' || !this.countOf(id)) { box.innerHTML = this.mode === 'cust' ? '' : `<h4>About</h4><p style="color:#cfc2b0;line-height:1.5;margin:0">${w.desc || ''}</p>`; return; }
     const f = this.finishOf(id);
     const fitted = g.combat.mods?.[id] || {};

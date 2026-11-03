@@ -41,8 +41,8 @@ const context = await browser.newContext({
 });
 const page = await context.newPage();
 const errors = [];
-page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') errors.push(`[${m.type()}] ${m.text()}`); });
-page.on('pageerror', (e) => errors.push(`[pageerror] ${e.message}`));
+page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') { errors.push(`[${m.type()}] ${m.text()}`); if (process.env.LIVE) console.log(`[${m.type()}] ${m.text().slice(0, 400)}`); } });
+page.on('pageerror', (e) => { errors.push(`[pageerror] ${e.message}`); if (process.env.LIVE) console.log(`[pageerror] ${e.message}`); });
 
 await page.addInitScript(() => { window.SB_SKIP_INTRO = true; });
 await page.addInitScript((pr) => {

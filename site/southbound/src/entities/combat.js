@@ -56,7 +56,8 @@ export class Combat {
   // wheel slot a weapon belongs to
   static slotOf(id) {
     const w = WEAPONS[id];
-    if (!w || w.melee) return 'unarmed';
+    if (!w || id === 'fists') return 'unarmed';
+    if (w.melee) return 'melee';
     return { pistol: 'sidearm', rifle: 'long', shotgun: 'shotgun', sniper: 'sniper', marksman: 'sniper', bow: 'bow', launcher: 'heavy' }[w.cat] || 'long';
   }
   ownedIn(slot) { return this.owned.filter((id) => Combat.slotOf(id) === slot); }
@@ -94,7 +95,7 @@ export class Combat {
   // weapon model (built on first use; rebuilt once its open-source model has loaded)
   model(id = this.weapon, tag = '') {
     const w = WEAPONS[id];
-    if (!w || w.melee) return null;
+    if (!w || id === 'fists') return null; // knives and other hand weapons have models too
     const key = id + tag;
     let m = this.models[key];
     const G = gunModelFor(w);
@@ -183,6 +184,8 @@ export class Combat {
         break;
       }
     }
+    const ph = this.rayProps?.(origin, dir, best.t);
+    if (ph) best = { t: ph.t, kind: 'prop', prop: ph.p };
     best.point = origin.clone().addScaledVector(dir, best.t);
     return best;
   }
@@ -201,7 +204,7 @@ export class Combat {
         if (d < bd && (dx * dir.x + dz * dir.z) / (d || 1) > 0.5) { bd = d; best = p; }
       }
       if (best) {
-        const killed = targets.peds.damage(best, w.damage, from);
+        const killed = targets.peds.damage(best, w.damage * (0.85 + Math.random() * 0.3), from, w.id === 'fists' ? null : { part: w.kind === 'blade' ? 'torso' : 'torso', melee: true, blade: w.kind === 'blade' });
         this.audio?.thud(0.4);
         return { kind: 'ped', ped: best, killed, melee: true };
       }
@@ -221,7 +224,7 @@ export class Combat {
     this.flash.position.copy(muzzle); this.flash.intensity = w.silent ? 0 : 4; this.flashT = 0.05;
     let first = null;
     const pellets = am.slug ? 1 : Math.round(w.pellets * (am.pellets || 1));
-    const spread = am.slug ? w.spread * 0.3 : w.spread, range = am.slug ? w.range * 2 : w.range;
+    const spread = (am.slug ? w.spread * 0.3 : w.spread) * (this.spreadMul || 1), range = am.slug ? w.range * 2 : w.range;
     for (let k = 0; k < pellets; k++) {
       const d = dir.clone();
       d.x += (Math.random() - 0.5) * spread; d.y += (Math.random() - 0.5) * spread; d.z += (Math.random() - 0.5) * spread;
@@ -268,14 +271,20 @@ export class Combat {
       // no fixed damage: spread, distance falloff, where it hit, ammo, armour vs penetration
       const am = hit.ammo || AMMO.FMJ;
       const fall = 1 - 0.5 * Math.min(1, Math.max(0, (hit.t - w.range * 0.4) / (w.range * 0.6)));
-      const legs = hit.point.y - hit.ped.pos.y < 0.85;
-      const zone = hit.head ? 3 : legs ? 0.65 : 1;
+      // where it hit: head, torso, an arm (out to the side at chest height) or a leg
+      const pd = hit.ped, dy = hit.point.y - pd.pos.y;
+      const lat = (hit.point.x - pd.pos.x) * Math.cos(pd.heading || 0) - (hit.point.z - pd.pos.z) * Math.sin(pd.heading || 0);
+      const part = hit.head ? 'head' : dy < 0.85 ? 'leg' : Math.abs(lat) > 0.2 && dy > 0.95 && dy < 1.5 ? 'arm' : 'torso';
       const pen = Math.max(0, (w.pen || 1) + am.pen);
-      const armor = hit.head ? 0 : (hit.ped.armor || 0);
-      const vs = pen >= armor ? 1 : 0.4;
-      const dmg = w.damage * (hit.slugDmg || 1) * am.dmg * (0.8 + Math.random() * 0.35) * fall * zone * vs;
-      hit.killed = targets.peds.damage(hit.ped, dmg, from);
-      this.burst(hit.point, this.settings.gore ? this.bloodMat : this.dustMat, this.settings.gore ? 10 : 4);
+      // armour by NIJ level: a plate stops what it's rated for; helmets cover the head only
+      const level = part === 'torso' ? (pd.armor || 0) : part === 'head' ? (pd.helmet || 0) : 0;
+      const stopped = level > 0 && (pen <= Math.floor(level) || (level % 1 > 0 && pen <= level + 0.5 && Math.random() < 0.6));
+      const zone = { head: stopped ? 0.25 : 3, torso: stopped ? 0.1 : 1, arm: 0.55, leg: 0.6 }[part];
+      const dmg = w.damage * (hit.slugDmg || 1) * am.dmg * (0.8 + Math.random() * 0.35) * fall * zone;
+      hit.part = part; hit.stopped = stopped;
+      hit.killed = targets.peds.damage(pd, dmg, from, { part, stopped, side: lat > 0 ? 'R' : 'L', pen });
+      if (stopped) this.burst(hit.point, this.sparkMat, 5);
+      else this.burst(hit.point, this.settings.gore ? this.bloodMat : this.dustMat, this.settings.gore ? 10 : 4);
     } else if (hit.kind === 'vehicle') {
       const v = hit.vehicle;
       v.health -= w.damage * 0.25 * ((hit.ammo && hit.ammo.vehicle) || 1);
@@ -286,10 +295,12 @@ export class Combat {
     } else if (hit.kind !== 'none') {
       this.burst(hit.point, this.dustMat, 6);
       if (hit.kind === 'building') this.onStaticHit?.(hit);
+      if (hit.kind === 'prop') this.onPropHit?.(hit, w);
     }
   }
 
   explode(at, w, targets, from) {
+    this.onExplosion?.(at, w.explosive || 5);
     const R = w.explosive;
     for (const p of targets.peds.list) {
       if (p.mode === 'dead') continue;

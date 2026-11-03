@@ -73,6 +73,7 @@ export class Player {
   }
 
   damage(amount) {
+    if (this.gearArmor) { this.health = Math.max(0, this.health - amount); return; } // the armory system handles plates
     const toArmor = Math.min(this.armor, amount * 0.7);
     this.armor -= toArmor;
     this.health = Math.max(0, this.health - (amount - toArmor));

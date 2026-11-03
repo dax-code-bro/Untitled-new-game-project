@@ -195,6 +195,70 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 
 ## Session log
 
+- **Armour, wounds and the street (after the detail pass):**
+  - Armour stores (Gulf Coast Tactical downtown, Sabine Army Surplus in Mill
+    Creek): NIJ-rated vests and plate carriers (IIIA soft armour to Level IV
+    ceramic, with plate wear), helmets, bags that hide long guns (daypack to
+    guitar case), holsters, and medical supplies, all shown on John in 3D.
+  - Police stop you for a gun they can see in town; bystanders call 911.
+    Sidearms hide under an untucked shirt or jacket with the right holster,
+    long guns in a big enough bag. On arrest your weapons go to the evidence
+    room at the Central Precinct (pay a release fee to get them back).
+  - Damage depends on the round's penetration, the armour, and where it hit:
+    plates and helmets stop what they're rated for, leg hits make people
+    limp, arm hits make them drop their gun, the badly hurt go down; a downed
+    officer's partner drags them out of the fire and an ambulance comes. You
+    can bandage a downed stranger. Player wounds (leg, arm, bleeding) are
+    treated with bandages, tourniquets, splints, IFAKs and trauma bags (H).
+  - Eleven knives and hand weapons. Some pedestrians carry pistols or knives
+    and fight back; muggers may carry knives; armed people drop their weapon
+    when they fall.
+  - Witnesses: unless a cop saw it, someone has to call 911. Reach them first
+    and you can try to pay them off. Some refuse; some take it and call.
+  - Every shop has its own building style, a door that opens as you walk up,
+    an OPEN sign and real opening hours. Blue road signs point the way to
+    every shop, and the phone's Places tab lists them all with GPS.
+  - The Calvera Property Auction sells foreclosed houses and seized cars
+    every day with live bidding.
+  - Colour: AgX tone mapping and neutral grading (removed a yellow cast).
+
+- **Real-world detail pass (John Cortes and the Gulf Line crew):**
+  - Story opening: you play John Cortes. A cutscene introduces Rico's crew of
+    14 (each with their own look, name, job and lines); Rico hands you a
+    standard 9mm and a rusty pickup you can sell. The crew live at a scrapyard
+    hideout and sell services: repairs, towing, hauling cars out of the water,
+    patching you up, wiping bounties, and building scopes and suppressors from
+    supplies you bring.
+  - Guns: real CC-BY firearm models (Glock 17/19, Colt Python, 1851 Navy,
+    M4A1, M24, Remington 870) with per-gun holds. Three gunsmiths with a
+    shopkeeper dialog, a catalog (silhouettes, fire mode, calibre,
+    descriptions), story unlocks, a three-of-a-kind limit, a spinning 3D
+    preview, and customisation (attachments, skins, paint, your own colour,
+    ammo type).
+  - Combat: no fixed damage, only fixed penetration. Ammo types; scopes that
+    actually zoom, with breathing sway and hold-breath; you can shoot drivers
+    through the glass; cars burn and explode.
+  - World: the city thins out into run-down lots and grass at its edges; two
+    new hamlets; cluttered alleys; muggings, robberies, fights and
+    breakdowns; three rival gangs with turf. Gunfire in town brings the
+    police, but gunfire out in the country doesn't.
+  - Small details: gun safety on/off (K), brass casings and muzzle smoke,
+    hair and stubble that grow day by day, barbershops, cracked windows that
+    a repairman fixes within a day, fire crews at wrecks, and fire alarms in
+    every building (pull station, horn, strobe, smoke detector, a fire truck
+    that responds, police if someone saw you).
+  - Shops: clothing (three stores, 13,500 pieces across tops, jackets, pants,
+    shoes, hats, eyewear, neckwear and gloves, worn on John via a shader, with
+    a live 3D fitting room and a wardrobe), Gulf Mart corner stores (food to eat
+    or carry; coffee steadies your aim), and crafting supplies at the hardware
+    store.
+  - Phone: the Runr app delivers guns (with their attachments), food and
+    supplies by courier, tows your car back to the road (by boat if it's in
+    the sea), and gives you a ride to the hideout. Everything costs money.
+  - Billboards with local ads along the highways (lit at night). Map badges:
+    J for jobs, S for shops. Cleaner interaction prompts.
+  - Strictly real-world: no sci-fi weapons or props anywhere.
+
 - **Graphics push (clouds, weather, cars, arsenal):** volumetric clouds, weather
   with wet roads, water reflections, procedural realistic cars replacing the
   Kenney kit, 221 weapons + 195 attachments with a store, installable web app.
