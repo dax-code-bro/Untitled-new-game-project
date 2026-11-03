@@ -109,6 +109,7 @@ export function buildCharacter(data, opts = {}) {
       if (!g.attributes.aux2) g.setAttribute('aux2', new THREE.BufferAttribute(new Float32Array(n * 4), 4));
       if (!g.attributes.aux3) g.setAttribute('aux3', new THREE.BufferAttribute(new Float32Array(n * 4), 4));
       if (!g.attributes.albg) g.setAttribute('albg', new THREE.BufferAttribute(new Float32Array(n * 3).fill(1), 3));
+      if (!g.attributes.hcr) g.setAttribute('hcr', new THREE.BufferAttribute(handCreases(g, worldP, index), 2));
     }
     if (m.kind === 'lash' || m.kind === 'brow' || m.kind === 'haircard') {
       // lw = 1 on the lower lash row (below the eye centre, drape pose = bind pose)
@@ -469,4 +470,49 @@ export function hashStr(s) {
   let h = 2166136261 >>> 0;
   for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
   return h;
+}
+
+/** LOOK r2g: per skin vertex (bind pose) the signed distance along the finger from the nearest finger
+ * joint (metres; + = distal of it) and the joint's kind (0 none, 1 MCP knuckle, 2 PIP, 3 DIP / thumb IP).
+ * The skin shader draws the dorsal knuckle creases from it (bands across the finger, not noise), so a
+ * finger reads as jointed segments - draft renders showed fingers as smooth pale cones. Bone heads are
+ * the joint centres (MakeHuman fingerK-1 head = MCP, -2 = PIP, -3 = DIP; the thumb's -2 = MCP, -3 = IP);
+ * the fingertip is the -3 head + 0.75 x the middle segment. */
+function handCreases(g, worldP, index) {
+  const pos = g.attributes.position, n = pos.count, out = new Float32Array(n * 2);
+  const segs = [];
+  for (const s of ['L', 'R']) {
+    for (let k = 1; k <= 5; k++) {
+      const H = [1, 2, 3].map((j) => index[`finger${k}-${j}.${s}`]).map((i) => (i === undefined ? null : worldP[i]));
+      if (H.some((h) => !h)) continue;
+      const tip = H[2].clone().add(H[2].clone().sub(H[1]).multiplyScalar(0.75));
+      const J = [H[0], H[1], H[2], tip];
+      // joint kinds at the heads of J[0..2]; the thumb's first head is the CMC (inside the palm: none)
+      const kind = k === 1 ? [0, 1, 3] : [1, 2, 3];
+      for (let j = 0; j < 3; j++) segs.push({ a: J[j], b: J[j + 1], ka: kind[j], kb: j < 2 ? kind[j + 1] : 0, first: j === 0 });
+    }
+  }
+  if (!segs.length) return out;
+  const P = new THREE.Vector3(), d = new THREE.Vector3(), q = new THREE.Vector3();
+  for (const sg of segs) { sg.ab = sg.b.clone().sub(sg.a); sg.L = sg.ab.length(); }
+  const lo = new THREE.Vector3(Infinity, Infinity, Infinity), hi = lo.clone().negate();
+  for (const sg of segs) { lo.min(sg.a).min(sg.b); hi.max(sg.a).max(sg.b); }
+  lo.subScalar(0.05); hi.addScalar(0.05);
+  for (let i = 0; i < n; i++) {
+    P.fromBufferAttribute(pos, i);
+    if (P.x < lo.x || P.y < lo.y || P.z < lo.z || P.x > hi.x || P.y > hi.y || P.z > hi.z) continue;
+    let best = null, bd = 0.03, bt = 0;
+    for (const sg of segs) {
+      const t = d.copy(P).sub(sg.a).dot(sg.ab) / (sg.L * sg.L);
+      q.copy(sg.a).addScaledVector(sg.ab, Math.min(1, Math.max(0, t)));
+      const dist = q.distanceTo(P);
+      if (dist < bd) { bd = dist; best = sg; bt = t; }
+    }
+    if (!best) continue;
+    // nearer joint of the segment; the back of the hand (proximal of the MCP) keeps its true distance
+    const sa = bt * best.L, sb = (bt - 1) * best.L;
+    if ((Math.abs(sa) <= Math.abs(sb) || !best.kb) && best.ka) { out[i * 2] = sa; out[i * 2 + 1] = best.ka; }
+    else if (best.kb) { out[i * 2] = sb; out[i * 2 + 1] = best.kb; }
+  }
+  return out;
 }

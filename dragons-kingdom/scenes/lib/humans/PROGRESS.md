@@ -832,3 +832,44 @@ NEXT (in order):
 2. Close the fingers ONTO the bar (per-joint curl solved from the bar radius and phalanx lengths) instead
    of the fixed BAR_GRIP preset - Remi's bigger hand leaves 2 cm between tip and axis.
 3. Check the grip at 4K in humans-riders.js (Remi on Charcoal, Abby on Leaf) and in 1C-14 (Remi wide).
+
+## LOOK round 2g (2026-11-03, short session) - jointed fingers (knuckle creases), hand tone, nails, sclera tint
+
+Trigger: director rev17 1C-16 (rider-grip insert, sun) - hands read as pale cones (no knuckle / joint read).
+FIXED (runtime only, no rebuild, API unchanged):
+1. loader.js `handCreases()`: new skin attribute `hcr` (vec2) per bind-pose vertex = signed distance along the
+   finger from the nearest finger joint (m, + = distal) and the joint kind (1 MCP, 2 PIP, 3 DIP / thumb IP),
+   from the header's bone heads (fingerK-1/-2/-3 heads; tip = -3 head + 0.75 x middle segment); back-of-hand
+   vertices keep their true (negative) distance from the MCP so the band stays on the knuckles.
+   Debug-painted and verified (|s| / kind / dorsal mask) on abby at preview.
+2. materials.js skinMaterial `knuckleCrease()`: dorsal knuckle wrinkles as bands ACROSS the finger (~1.3 mm
+   apart, wavy, broken; PIP 1.0, DIP 0.7, MCP 0.4; dorsal via aux3.b) in colour (x0.52/0.45/0.45 in the
+   lines) and as bump grooves (0.18 mm); when the lines get below ~3 px they average into a darker, redder
+   knuckle patch, so at draft a finger still reads as jointed segments.
+3. Hand tone: hands (aux3.g) x(0.93, 0.83, 0.79) at 0.85 - redder / a touch darker than the face (the face
+   tone on the hands read bloodless in sun). Nails: glossy plate (roughness -> 0.3), plate a little pinker,
+   free edge paler (nail mask x fingertip mask > 0.82).
+4. Eye: default uScleraTint (1.0, 0.93, 0.87) -> (1.0, 0.92, 0.88). Daylight eye macros (humans-dev t 5.5,
+   focusEye) alexandria sclera 168/160/152 (cheek 189/154/141), crowd05 (brown skin) sclera mean 150/146/140,
+   brightest sclera pixel 168 - no clipping with the x1.3 gain.
+Checked: selftest-perf all passed; npm test 48 pass / 0 fail / 1 skipped.
+Images (scratch): /tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/look8/
+ba_crop.png (abby hands view preview, fingers 2x: top before, bottom after), ba_small.png (whole view),
+before/1C-16_036.png + after/1C-16_036.png (director still 1C-16@0.5 draft), 1C-16_hands_before_after.png
+(2x crop), hands_dbg_crop.png (attribute debug paint), eyes_alex_crowd05.png.
+RESULT at 1C-16 draft: modest - hands a little warmer, faint joint bands; the cone read there is mostly the
+POSE + LIGHT: fingertips taper to points hanging below the bar, no thumb visible, top-down sun blows the
+back of the hand out (REQUEST performance / director, below).
+
+NEXT (in order):
+1. 1C-16: REQUEST performance (ridergrip.js): thumb wrapped round the bar's near side (visible from above),
+   fingers less splayed / tips tucked under the bar (they hang below it as points). REQUEST director: a
+   lower 3/4 angle instead of straight top-down; check the hand exposure in sun (backs at ~240).
+2. Fingertip shape: MakeHuman fingertips taper to a point at draft - a pad bulge (slight normal / shading
+   roundness at the tip mask) or a build-time tip fattening in postfix.py on the next rebuild.
+3. Back-of-hand veins + extensor tendons for adults (needs a dorsal-hand mask: add to skin_zones on rebuild
+   or derive in loader from bone frames like handCreases); palm flexion creases (same hcr, palm side).
+4. crowd05 (brown skin, darkskinned texture) has a bright blue iris - pick a brown iris in characters.py on
+   the next rebuild (check other darkskinned ids too).
+5. Older list from 2f: upper-lash tip dither, buried caruncle mesh, tear line on remi/alexandria, stubble,
+   hair root-to-tip + flyaways, cloth weave / hem dirt, Abby's child face.

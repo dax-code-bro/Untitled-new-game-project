@@ -146,10 +146,10 @@ export function skinMaterial(o = {}) {
     Object.assign(sh.uniforms, U);
     sh.vertexShader = sh.vertexShader
       .replace('#include <common>', `#include <common>
-attribute float ao; attribute float thick; attribute vec4 aux; attribute vec4 aux2; attribute vec4 aux3; attribute vec3 albg; attribute float mdepth;
+attribute float ao; attribute float thick; attribute vec4 aux; attribute vec4 aux2; attribute vec4 aux3; attribute vec3 albg; attribute float mdepth; attribute vec2 hcr; varying vec2 vHcr;
 varying vec3 vObjP; varying float vAO; varying float vThick; varying vec4 vAux; varying vec4 vAux2; varying vec4 vAux3; varying vec3 vAlbG; varying float vMouth;`)
       .replace('#include <begin_vertex>', `#include <begin_vertex>
-vObjP = position; vAO = ao; vThick = thick; vAux = aux; vAux2 = aux2; vAux3 = aux3; vAlbG = albg; vMouth = mdepth;`);
+vObjP = position; vAO = ao; vThick = thick; vAux = aux; vAux2 = aux2; vAux3 = aux3; vAlbG = albg; vMouth = mdepth; vHcr = hcr;`);
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', `#include <common>
 ${NOISE_GLSL}
@@ -178,8 +178,25 @@ float caruncleM(vec3 p) { vec3 e = distance(p, uEyeL) < distance(p, uEyeR) ? uEy
   return band * smoothstep(0.0085, 0.0115, mx) * smoothstep(-0.0055, -0.0035, dy) * (1.0 - smoothstep(0.0005, 0.0022, dy))
     * step(0.002, p.z - e.z); }
 uniform vec3 uTone, uScalp, uBeard; uniform float uBeardFull; uniform float uSat, uRed, uPores, uAge, uSSS, uSeed, uDirt, uFlush, uLid, uMouthOpen; uniform vec3 uHeadFwd, uLipM, uLipUp;
-varying vec3 vObjP; varying float vAO; varying float vThick; varying vec4 vAux; varying vec4 vAux2; varying vec4 vAux3; varying vec3 vAlbG; varying float vMouth;
-vec3 skinSmoothN; float skinThin; vec3 skinTransCol;`)
+varying vec3 vObjP; varying float vAO; varying float vThick; varying vec4 vAux; varying vec4 vAux2; varying vec4 vAux3; varying vec3 vAlbG; varying float vMouth; varying vec2 vHcr;
+vec3 skinSmoothN; float skinThin; vec3 skinTransCol;
+// LOOK r2g: dorsal knuckle creases from vHcr (loader.js handCreases: signed distance along the finger from
+// the nearest joint, joint kind). Returns (crease line 0..1 filtered to the pixel, envelope 0..1).
+// Lines ~1.1 mm apart across the finger, wavy and broken; MCP knuckles fewer and fainter, PIP the deepest.
+// Below ~3 lines per pixel the lines become their average (a darker band over each joint), so at draft a
+// finger still reads as jointed segments instead of a smooth cone.
+vec2 knuckleCrease(vec3 p, vec2 hc, float kn) {
+  if (hc.y < 0.5) return vec2(0.0);
+  float w = hc.y < 1.5 ? 0.4 : (hc.y < 2.5 ? 1.0 : 0.7);
+  float half_ = hc.y < 1.5 ? 0.0045 : (hc.y < 2.5 ? 0.0042 : 0.003);
+  float env = (1.0 - smoothstep(half_ * 0.45, half_, abs(hc.x + 0.0006))) * w * smoothstep(0.08, 0.45, kn);
+  if (env <= 0.0) return vec2(0.0);
+  float ph = hc.x / 0.0013 + 0.8 * (hN3(p * 420.0 + 7.0) - 0.5) + 0.35 * (hN3(p * 1500.0) - 0.5);
+  float dl = abs(fract(ph) - 0.5) * 2.0;
+  float line = (1.0 - smoothstep(0.05, 0.55, dl)) * smoothstep(0.2, 0.5, hN3(p * vec3(700.0, 700.0, 700.0) + 11.0));
+  float vis = 1.0 - smoothstep(0.3, 0.9, length(fwidth(p)) / 0.0013);
+  return vec2(mix(0.33, line, vis), env);
+}`)
       .replace('#include <map_fragment>', `#include <map_fragment>
 {
   // character tone on the photographic albedo (keeps its lips, cheeks, knuckles, freckles);
@@ -270,6 +287,18 @@ vec3 skinSmoothN; float skinThin; vec3 skinTransCol;`)
     float fold = hN3(vObjP * vec3(1400.0, 1400.0, 1400.0) + 3.0);
     c *= mix(vec3(1.0), vec3(1.07, 0.9, 0.88), clamp(kn * 0.9 + tip * 0.8, 0.0, 1.0));
     c *= 1.0 - 0.12 * kn * smoothstep(0.55, 0.9, fold); }
+  // LOOK r2g: hands are redder and a touch darker than the face (more sun, blood close under thin
+  // skin) - the same tone as the face read as pale bloodless rubber in sun; knuckle creases darker
+  // and browner in their folds; the nail's free edge paler (no blood under it), the plate itself a
+  // little pinker than the finger
+  { c *= mix(vec3(1.0), vec3(0.93, 0.83, 0.79), vAux3.g * 0.85);
+    vec2 kc = knuckleCrease(vObjP, vHcr, vAux3.b);
+    c *= mix(vec3(1.0), vec3(0.9, 0.83, 0.82), smoothstep(0.0, 0.6, kc.y));   // the knuckle patch: redder, a touch darker
+    c *= mix(vec3(1.0), vec3(0.52, 0.45, 0.45), kc.x * kc.y);
+    float nail = smoothstep(0.2, 0.7, vAux.g);
+    float fe = nail * smoothstep(0.82, 0.97, vAux3.a);
+    c = mix(c, vec3(dot(c, vec3(0.2126, 0.7152, 0.0722))) * vec3(1.32, 1.24, 1.16), fe * 0.65);
+    c = mix(c, c * vec3(0.92, 0.82, 0.8), nail * (1.0 - fe) * 0.25); }
   c *= mix(1.0, 0.82, uDirt * hN3(vObjP * 90.0));
   // scalp under the hair takes the hair colour (roots, density), aux.a
   // (a darkened, hair-tinted skin at partial coverage - a straight mix with the hair colour
@@ -295,6 +324,7 @@ vec3 skinSmoothN; float skinThin; vec3 skinTransCol;`)
   roughnessFactor = clamp(roughnessFactor * (0.8 + 0.35 * tz) - vAux.r * 0.2 - vAux.g * 0.05 + vAux.b * 0.15 + vAux.a * 0.35 - vAux2.g * 0.3 - vAux2.r * 0.04
                           - vAux3.r * 0.04 + (1.0 - vAux3.r) * 0.09 + vAux3.g * 0.05, 0.12, 0.95);
   roughnessFactor = mix(roughnessFactor, 0.22, smoothstep(0.0008, 0.005, vMouth));   // wet inside the lips
+  roughnessFactor = mix(roughnessFactor, 0.3, smoothstep(0.2, 0.7, vAux.g) * 0.85);     // LOOK r2g: the nail plate is glossy
   // the lower lip is wetter (and catches a narrow highlight): the moist band along its middle
   { float lo = smoothstep(0.001, -0.0025, dot(vObjP - uLipM, uLipUp)) * smoothstep(0.35, 0.8, vAux.r);
     roughnessFactor = mix(roughnessFactor, 0.26, lo * 0.85); }
@@ -338,6 +368,8 @@ skinSmoothN = normal;
     float k1 = hN3(vObjP * vec3(2200.0, 600.0, 2200.0) + 1.0), k2 = hN3(vObjP * vec3(600.0, 2200.0, 600.0) + 4.0);
     h -= (pow(1.0 - abs(k1 - 0.5) * 2.0, 5.0) + pow(1.0 - abs(k2 - 0.5) * 2.0, 5.0)) * 0.00012 * vAux3.b * fadeL;
   }
+  // LOOK r2g: the dorsal knuckle creases as grooves (with the colour above)
+  { vec2 kc = knuckleCrease(vObjP, vHcr, vAux3.b); h -= kc.x * kc.y * 0.00018; }
   h *= uPores * (1.0 - vAux.g);                  // nails stay smooth
   normal = hBump(normal, -vViewPosition, h, faceDirection);
   float thin = exp(-vThick / 0.006);   // ears, nostrils, eyelid rims - not the forehead
@@ -457,7 +489,7 @@ export function eyeMaterial(o = {}) {
     clearcoat: 1.0, clearcoatRoughness: 0.02,
   });
   if (o.map) mat.map = libTexture(o.map);
-  const U = { uIrisTint: { value: new THREE.Vector3(...(o.irisTint || [1, 1, 1])) }, uScleraTint: { value: new THREE.Vector3(...(o.scleraTint || [1.0, 0.93, 0.87])) }, uHeadFwd: headUniform(o),
+  const U = { uIrisTint: { value: new THREE.Vector3(...(o.irisTint || [1, 1, 1])) }, uScleraTint: { value: new THREE.Vector3(...(o.scleraTint || [1.0, 0.92, 0.88])) }, uHeadFwd: headUniform(o),
     // LOOK r2d: the MakeHuman eye texture's iris ends at UV radius ~0.12 (all mh_eyes maps share the layout),
     // i.e. at vIris ~0.87 on the cache meshes (0.1387 UV per unit vIris, measured on abby / remi); the shader's
     // limbus sat at vIris 1.0, so a pale texture-sclera ring was tinted as iris between two dark rings: at 4K
