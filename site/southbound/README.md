@@ -28,6 +28,8 @@ frame rate. Dynamic resolution keeps the frame rate at that target.
 | Sprint | Shift | L3 | » button (or push the stick fully) |
 | Jump / handbrake / climb | Space (walk into a ledge to mantle it) | A / RB | ⤒ button |
 | Get in / out of a vehicle, use doors and shops | F | Y | ◎ (tap) |
+| Treat wounds (best medical item) | H | — | Phone → Inventory |
+| Gun safety on / off | K | — | Tap the gun panel |
 | Interact with people (hold): greet / antagonize / surrender | hold F, then G / T | hold B, then D-pad up / down | hold ◎, then Greet / Antagonize |
 | Weapon wheel (hold, point, release) | hold Tab or Q, mouse to pick, wheel / Z X to switch | hold LB, right stick | hold 🔫 and drag |
 | Holster / draw | H (or tap Q) | | tap 🔫 |

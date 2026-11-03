@@ -8,6 +8,7 @@ import { CITY, TOWN, BAYOU } from '../world/layout.js';
 import { nearestRoad, keyHint } from './world-util.js';
 import { dressMember, placeAccessories } from './gang.js';
 import { buildShop } from './gunstores.js';
+import { shopOpen, closedText } from '../world/storefronts.js';
 import { ClothingStore } from '../ui/clothes.js';
 import { ShopUI } from '../ui/shop.js';
 import { DEFAULT_OUTFIT, makeOutfitter, COLORS } from '../entities/clothing.js';
@@ -151,7 +152,7 @@ export function installShops(game) {
       blip: { color: '#9fc4c0', size: 5, global: true, icon: '👕', badge: 'S' },
       show: () => S.mode === 'foot',
       label: () => `${keyHint(game)} talk to ${st.keeper}`,
-      use: () => game.openDialog(st.keeper, st.look.lines[(Math.random() * st.look.lines.length) | 0], [
+      use: () => !shopOpen(st.id, game.sky.hour) ? hud.toast(closedText(st.name, st.id), 3) : game.openDialog(st.keeper, st.look.lines[(Math.random() * st.look.lines.length) | 0], [
         ['I\'d like to look at some clothes.', () => ui.show(st)],
         ['I just need the fitting room.', () => { ui.slot = 'ward'; ui.show(st); }],
         ['Just looking. Bye.', () => {}],
@@ -207,7 +208,7 @@ export function installShops(game) {
       if (game.buffs.steady > 0) game.buffs.steady -= dt;
       for (const k of keepers) {
         const d = k.h.root.position.distanceTo(player.pos);
-        k.h.root.visible = d < 90;
+        k.h.root.visible = d < 90 && shopOpen(k.st.id, game.sky.hour);
         if (!k.h.root.visible) continue;
         if (d < 8) { const want = Math.atan2(player.pos.x - k.h.root.position.x, player.pos.z - k.h.root.position.z); k.h.root.rotation.y += Math.atan2(Math.sin(want - k.h.root.rotation.y), Math.cos(want - k.h.root.rotation.y)) * Math.min(1, dt * 3); }
         k.h.update(dt);

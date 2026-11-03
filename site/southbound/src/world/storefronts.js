@@ -1,3 +1,9 @@
+// Opening hours (24h clock). Gulf Marts never close.
+export const SHOP_HOURS = { city: [9, 19], town: [6, 18], bayou: [5, 19], 'c-city': [10, 21], 'c-town': [8, 18], 'c-bayou': [6, 19], 'a-city': [9, 19], 'a-town': [9, 17], auction: [9, 19] };
+export const shopOpen = (id, hour) => { const h = SHOP_HOURS[id]; return !h || (hour >= h[0] && hour < h[1]); };
+const ampm = (h) => (h === 12 ? '12 PM' : h > 12 ? `${h - 12} PM` : `${h} AM`);
+export const closedText = (name, id) => { const h = SHOP_HOURS[id] || [9, 19]; return `${name} is closed. Open ${ampm(h[0])} – ${ampm(h[1])}.`; };
+
 // What a shop looks like from the street. Every store picks a style, so no
 // two read the same: brick with a parapet and barred windows, clapboard with a
 // tin roof and a porch, stucco with a striped awning, a corrugated metal
@@ -154,5 +160,5 @@ export function dressStorefront(g, st, { W, D, H, t, box, M, hide }) {
   }
   const sign = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 0.26), new THREE.MeshStandardMaterial({ map: openSign(), emissive: 0xffffff, emissiveMap: openSign(), emissiveIntensity: 1.4 }));
   sign.position.set(-(0.9 + (W - 1.8) / 4), 2.15, D / 2 - 0.06); sign.userData.noHit = true; g.add(sign);
-  return { leaves };
+  return { leaves, sign };
 }

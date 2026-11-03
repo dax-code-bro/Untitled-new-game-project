@@ -69,7 +69,15 @@ export function installWounds(game) {
   const prevDamage = peds.damage.bind(peds);
   peds.damage = (p, amount, from, info) => {
     const killed = prevDamage(p, amount, from);
-    if (killed || p.mode === 'dead') { if (p.wound?.help) interact.remove(p.wound.help); return killed; }
+    if (killed || p.mode === 'dead') {
+      if (p.wound?.help) interact.remove(p.wound.help);
+      // whatever they were carrying falls where they drop
+      if (killed && !p.dropped && near(p, 80) && (p.gun || ['cop', 'foe', 'hunter', 'mugger', 'armedciv'].includes(p.role))) {
+        p.dropped = true; if (p.gun) { scene.remove(p.gun); p.gun = null; }
+        dropGun(p, p.weaponId && WEAPONS[p.weaponId] ? p.weaponId : 'pistol');
+      }
+      return killed;
+    }
     if (!info) return killed;
     const W = (p.wound = p.wound || { leg: 0, arm: 0 });
     if (info.stopped) { p.h.play('Hit_Chest', 0.05, 1.5, true); return false; }

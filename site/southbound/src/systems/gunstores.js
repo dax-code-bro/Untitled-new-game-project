@@ -9,7 +9,7 @@ import { nearestRoad, keyHint } from './world-util.js';
 import { dressMember, placeAccessories } from './gang.js';
 import { GunStore } from '../ui/gunstore.js';
 import { ATTACHMENTS } from '../entities/arsenal.js';
-import { wallMaterial, dressStorefront } from '../world/storefronts.js';
+import { wallMaterial, dressStorefront, shopOpen, SHOP_HOURS as SHOP_H } from '../world/storefronts.js';
 
 const ALL = Object.keys(WEAPONS).filter((id) => id !== 'fists' && id !== 'pistol');
 const pickIds = (cats, every) => ALL.filter((id, i) => cats.includes(WEAPONS[id].cat) && i % every === 0);
@@ -76,7 +76,7 @@ export function installGunStores(game) {
       blip: { color: '#d8b46a', size: 5, global: true, icon: '🔫', badge: 'S' },
       show: () => S.mode === 'foot',
       label: () => `${keyHint(game)} talk to ${st.keeper}`,
-      use: () => openDialog(st.keeper, st.look.lines[(Math.random() * st.look.lines.length) | 0], [
+      use: () => !shopOpen(st.id, game.sky.hour) ? hud.toast(`${st.name} is closed. Open ${(SHOP_H[st.id] || [9, 19]).map((h) => (h > 12 ? h - 12 + ' PM' : h + ' AM')).join(' – ')}.`, 3) : openDialog(st.keeper, st.look.lines[(Math.random() * st.look.lines.length) | 0], [
         ['I\'m interested in buying something.', () => ui.show(st)],
         ['Got any ammo deals?', () => { const w = combat.def; if (w.melee) { hud.toast('Draw a gun first and I\'ll find the right box.', 3); return; } if (career.spend(60)) { const a = combat.ammo[combat.weapon]; if (a) a.reserve += w.clip * 4; hud.toast(`Bulk ammo for your ${w.name}`, 2.5); } }],
         ['Just looking. Bye.', () => {}],
@@ -88,7 +88,9 @@ export function installGunStores(game) {
     update(dt) {
       // shop doors swing open as you walk up
       for (const d of game.shopDoors || []) {
-        const near = Math.hypot(game.player.pos.x - d.x, game.player.pos.z - d.z) < 3.4 && S.mode === 'foot';
+        const open = shopOpen(d.id, game.sky.hour);
+        if (d.sign) d.sign.visible = open;
+        const near = open && Math.hypot(game.player.pos.x - d.x, game.player.pos.z - d.z) < 3.4 && S.mode === 'foot';
         const want = near ? 1.25 : 0;
         if (Math.abs(d.a - want) < 0.001) continue;
         d.a += Math.sign(want - d.a) * Math.min(Math.abs(want - d.a), dt * 2.8);
@@ -96,7 +98,7 @@ export function installGunStores(game) {
       }
       for (const k of keepers) {
         const d = k.h.root.position.distanceTo(game.player.pos);
-        k.h.root.visible = d < 90;
+        k.h.root.visible = d < 90 && shopOpen(k.st.id, game.sky.hour);
         if (!k.h.root.visible) continue;
         // watch the customer
         if (d < 8) k.h.root.rotation.y += Math.atan2(Math.sin(Math.atan2(game.player.pos.x - k.h.root.position.x, game.player.pos.z - k.h.root.position.z) - k.h.root.rotation.y), Math.cos(Math.atan2(game.player.pos.x - k.h.root.position.x, game.player.pos.z - k.h.root.position.z) - k.h.root.rotation.y)) * Math.min(1, dt * 3);
@@ -191,7 +193,7 @@ export function buildShop(game, r, st) {
     const keeper = L(0, -D / 2 + 1.7); keeper.y = y;
     const counter = L(0, -D / 2 + 3.6);
     const doorAt = L(0, D / 2 + 0.5);
-    (game.shopDoors = game.shopDoors || []).push({ leaves: front.leaves, x: doorAt.x, z: doorAt.z, a: 0 });
+    (game.shopDoors = game.shopDoors || []).push({ leaves: front.leaves, sign: front.sign, id: st.id, x: doorAt.x, z: doorAt.z, a: 0 });
     return { g, y, keeper, keeperFace: g.rotation.y, counter: { x: counter.x, z: counter.z } };
   }
   return null;

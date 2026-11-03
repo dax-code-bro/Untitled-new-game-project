@@ -195,6 +195,33 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 
 ## Session log
 
+- **Armour, wounds and the street (after the detail pass):**
+  - Armour stores (Gulf Coast Tactical downtown, Sabine Army Surplus in Mill
+    Creek): NIJ-rated vests and plate carriers (IIIA soft armour to Level IV
+    ceramic, with plate wear), helmets, bags that hide long guns (daypack to
+    guitar case), holsters, and medical supplies, all shown on John in 3D.
+  - Police stop you for a gun they can see in town; bystanders call 911.
+    Sidearms hide under an untucked shirt or jacket with the right holster,
+    long guns in a big enough bag. On arrest your weapons go to the evidence
+    room at the Central Precinct (pay a release fee to get them back).
+  - Damage depends on the round's penetration, the armour, and where it hit:
+    plates and helmets stop what they're rated for, leg hits make people
+    limp, arm hits make them drop their gun, the badly hurt go down; a downed
+    officer's partner drags them out of the fire and an ambulance comes. You
+    can bandage a downed stranger. Player wounds (leg, arm, bleeding) are
+    treated with bandages, tourniquets, splints, IFAKs and trauma bags (H).
+  - Eleven knives and hand weapons. Some pedestrians carry pistols or knives
+    and fight back; muggers may carry knives; armed people drop their weapon
+    when they fall.
+  - Witnesses: unless a cop saw it, someone has to call 911. Reach them first
+    and you can try to pay them off. Some refuse; some take it and call.
+  - Every shop has its own building style, a door that opens as you walk up,
+    an OPEN sign and real opening hours. Blue road signs point the way to
+    every shop, and the phone's Places tab lists them all with GPS.
+  - The Calvera Property Auction sells foreclosed houses and seized cars
+    every day with live bidding.
+  - Colour: AgX tone mapping and neutral grading (removed a yellow cast).
+
 - **Real-world detail pass (John Cortes and the Gulf Line crew):**
   - Story opening: you play John Cortes. A cutscene introduces Rico's crew of
     14 (each with their own look, name, job and lines); Rico hands you a

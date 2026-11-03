@@ -289,7 +289,7 @@ async function createGame(progress) {
     snapshot: (p) => {
       p.money = S.money; p.hour = sky.hour; p.day = sky.day; p.weather = weather.kind;
       p.pos = [+player.pos.x.toFixed(1), +player.pos.z.toFixed(1)];
-      p.weapons = { owned: combat.owned.slice(), ammo: combat.ammo };
+      p.weapons = { ...p.weapons, owned: combat.owned.slice(), ammo: combat.ammo }; // keep counts and finishes
     },
   });
   sky.hour = profile.hour; sky.day = profile.day;
@@ -330,6 +330,7 @@ async function createGame(progress) {
   // ---- combat, wanted level, death & arrest
   const HOSPITAL = { x: CITY.x0 + CITY.nx * CITY.pitch + 24, z: CITY.z0 + 2 * CITY.pitch, name: 'Port Calvera Medical Center' };
   const PRECINCT = { x: CITY.x0 - 24, z: CITY.z0 + 1 * CITY.pitch, name: 'Calvera PD · Central Precinct' };
+  game.PRECINCT = PRECINCT;
   // damage a vehicle on the side facing (fx, fz); the HUD silhouette shows each side
   const damageVehicle = (v, amount, fx, fz) => {
     if (!v) return;

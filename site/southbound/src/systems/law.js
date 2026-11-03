@@ -213,6 +213,7 @@ export function installLaw(g) {
       cut = null;
       setTimeout(() => fade.classList.remove('show'), 600);
       hud.toast(`Released from ${at.name}. Fine paid: $${c.fine.toLocaleString('en-US')}`, 5);
+      g.onArrested?.();
       career.saveSoon();
       return;
     }

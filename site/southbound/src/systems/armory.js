@@ -17,6 +17,7 @@ import { CITY, TOWN, regionAt } from '../world/layout.js';
 import { nearestRoad, keyHint } from './world-util.js';
 import { dressMember, placeAccessories } from './gang.js';
 import { buildShop } from './gunstores.js';
+import { shopOpen, closedText } from '../world/storefronts.js';
 import { ArmorStore } from '../ui/armorstore.js';
 import { WEAPONS } from '../entities/arsenal.js';
 import { Combat } from '../entities/combat.js';
@@ -193,6 +194,7 @@ export function installArmory(game) {
       blip: { color: '#c8b46a', size: 5, global: true, icon: '🦺', badge: 'S' },
       show: () => S.mode === 'foot', label: () => `${keyHint(game)} talk to ${st.keeper}`,
       use: () => {
+        if (!shopOpen(st.id, game.sky.hour)) { hud.toast(closedText(st.name, st.id), 3); return; }
         const a = gearById('armor', P.gear.armor);
         const opts = [['I need some protection.', () => ui.show(st)]];
         if (a && a.level && P.plateCond < 1) { const cost = Math.round(a.price * 0.45 * (1 - P.plateCond) / 5) * 5 + 40; opts.push([`Replace my plates · $${cost}`, () => { if (career.spend(cost)) { P.plateCond = 1; refresh(); hud.toast('New plates fitted', 2); } }]); }
@@ -208,7 +210,31 @@ export function installArmory(game) {
     if (p.swat) { wearGear(p.h, { armor: 'pc-ceramic', helmet: 'ballistic' }); p.armor = 3.5; p.helmet = 2; }
     else { wearGear(p.h, { armor: 'soft-patrol' }); p.armor = 2; }
   };
-  let seenT = 0, warnCool = 0, gearT = 0;
+  // ---------------- arrested: they keep what they find
+  P.evidence = P.evidence || [];
+  game.onArrested = () => {
+    const seized = combat.owned.filter((id) => id !== 'fists');
+    if (!seized.length) return;
+    for (const id of seized) P.evidence.push({ id, ammo: combat.ammo[id] ? { ...combat.ammo[id] } : null });
+    combat.owned.splice(0, combat.owned.length, 'fists');
+    combat.weapon = 'fists'; combat.holstered = true; combat.dual = false;
+    hud.toast(`The police kept your weapons (${seized.length}) as evidence. Collect them at the precinct's evidence room.`, 6);
+    career.save();
+  };
+  const evFee = () => Math.max(150, Math.round(P.evidence.reduce((a, e) => a + (WEAPONS[e.id]?.price || 300), 0) * 0.12 / 10) * 10);
+  if (game.PRECINCT) interact.add({ x: game.PRECINCT.x - 3, z: game.PRECINCT.z, r: 2.5, color: 0x80a0ff,
+    show: () => P.evidence.length > 0 && !S.indoors && S.mode === 'foot',
+    blip: { color: '#80a0ff', size: 5, icon: '🗄️' },
+    label: () => `${keyHint(game)} collect your property from evidence · $${evFee().toLocaleString('en-US')} release fee`,
+    use: () => {
+      if (police.wanted > 0) { hud.toast('"Come back when you\'re not wanted, genius."', 2.5); return; }
+      if (!career.spend(evFee())) return;
+      for (const e of P.evidence) { combat.give(e.id); if (e.ammo) combat.ammo[e.id] = e.ammo; }
+      hud.toast(`Signed for ${P.evidence.length} weapon${P.evidence.length > 1 ? 's' : ''}. Try to keep them out of sight.`, 3.5);
+      P.evidence = []; career.save();
+    } });
+
+  let seenT = 0, warnCool = 0, gearT = 0, civT = 0, civCool = 0;
   const _a = new THREE.Vector3(), _b = new THREE.Vector3();
 
   return {
@@ -253,7 +279,19 @@ export function installArmory(game) {
           police.crime('weapon');
         }
       } else seenT = 0;
-      for (const k of keepers) { const d = k.h.root.position.distanceTo(player.pos); k.h.root.visible = d < 90; if (k.h.root.visible) { k.h.update(dt); placeAccessories(k.h); } }
+      // bystanders who see a gun call it in
+      civCool -= dt;
+      if (town && S.mode === 'foot' && !S.indoors && exp.vis.length && police.wanted === 0 && civCool <= 0 && (civT -= dt) <= 0) {
+        civT = 2;
+        const by = peds.list.find((p) => !p.role && p.mode !== 'dead' && !p.wound?.down && p.pos.distanceTo(player.pos) < 11);
+        if (by && Math.random() < 0.3) {
+          civCool = 45;
+          hud.toast(['"Oh my God, he\'s got a gun!"', '"Is that a rifle? I\'m calling 911."', '"Hey! Somebody call the cops!"'][(Math.random() * 3) | 0], 2.5);
+          peds.panic(player.pos, 14);
+          game.reportCrime?.('weapon', player.pos);
+        }
+      }
+      for (const k of keepers) { const d = k.h.root.position.distanceTo(player.pos); k.h.root.visible = d < 90 && shopOpen(k.st.id, game.sky.hour); if (k.h.root.visible) { k.h.update(dt); placeAccessories(k.h); } }
     },
   };
 }
