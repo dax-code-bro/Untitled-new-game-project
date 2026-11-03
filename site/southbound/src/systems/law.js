@@ -267,8 +267,10 @@ export function installLaw(g) {
 
   function spawnHunters() {
     const T = HUNTER_TIERS[tier()];
-    const at = roadPointAround(graph, player.pos.x, player.pos.z, 90, 150);
-    if (!at) return;
+    let at = roadPointAround(graph, player.pos.x, player.pos.z, 90, 140);
+    // keep them in range: if the nearest road is far, they come cross-country
+    const dd = at ? Math.hypot(at.x - player.pos.x, at.z - player.pos.z) : 1e9;
+    if (!at || dd > 140) { const a = Math.random() * Math.PI * 2; at = { x: player.pos.x + Math.cos(a) * 115, z: player.pos.z + Math.sin(a) * 115 }; }
     party = { hunters: [], heli: null, t: 0, tier: tier() };
     // they pull up in a truck and come the rest of the way on foot
     const truck = new g.Vehicle(lib, Math.random() < 0.5 ? 'suv' : 'truck');
@@ -384,7 +386,7 @@ export function installLaw(g) {
     get focusing() { return focusing; },
     target: () => target,
     startArrest,
-    hunters: () => (party ? party.hunters.filter((p) => p.mode !== 'dead') : []),
+    hunters: () => (party ? party.hunters.filter((p) => p.mode !== 'dead' && peds.list.includes(p)) : []),
     heli: () => (party && party.heli && party.heli.health > 0 ? party.heli : null),
     spawnHunters,
     camera(cam) { if (cut) arrestCamera(cam); },

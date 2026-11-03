@@ -140,7 +140,7 @@ export class Peds {
     for (let k = this.list.length - 1; k >= 0; k--) {
       const p = this.list[k];
       const d = Math.hypot(p.pos.x - focus.x, p.pos.z - focus.z);
-      if (d > 150 || (p.mode === 'dead' && (p.timer -= dt) <= 0)) {
+      if (d > (p.role === 'hunter' ? 450 : 150) || (p.mode === 'dead' && (p.timer -= dt) <= 0)) {
         this.scene.remove(p.h.root); p.h.dispose(); this.list.splice(k, 1); continue;
       }
       this.think(p, dt, player);
@@ -156,7 +156,7 @@ export class Peds {
         }
       }
       // animation LOD: full rate nearby, reduced far away
-      p.h.root.visible = d < 150;
+      p.h.root.visible = d < (p.role === 'hunter' ? 450 : 150) && p.mode !== 'riding';
       p.acc += dt;
       const every = d < 50 ? 1 : d < 100 ? 3 : 6;
       if (p.h.root.visible && this.frame % every === 0) { p.h.update(p.acc); p.acc = 0; }

@@ -686,7 +686,7 @@ async function createGame(progress) {
       post.update(sky.sunDir, sky.sunDir.y > 0.02 && weather.cover < 0.75, aimingNow ? 18 : camera.position.distanceTo(focus) + 1, aimingNow);
     }
 
-    render();
+    if (!S.skipRender) render(); // tests can step the simulation without drawing
     dynamicResolution(dt);
     hud.update(dt, {
       pos: mapPos, yaw: rig.yaw, heading: S.mode === 'car' ? S.vehicle.heading : player.heading,
@@ -858,6 +858,7 @@ async function createGame(progress) {
     pause: setPaused,
     freeze(f) { S.frozen = f; },
     renderNow() { render(); },
+    skipRender(b) { S.skipRender = !!b; },
     // Advance the game by exactly n fixed steps (used to capture smooth video on slow machines)
     step(n = 1, dt = 1 / 30) { for (let i = 0; i < n; i++) tick(dt); S.fps = 1 / dt; },
     toggleMap: () => hud.toggleMap(),

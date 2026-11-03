@@ -13,7 +13,7 @@ const THANKS = ['Thanks for the ride. Here, for the gas.', 'This is me. Take thi
 export function installRoadside(game) {
   const { peds, graph, lib, scene, collision, player, hud, S } = game;
   const MAX = { Phone: 4, Low: 5, Medium: 8, High: 11, Ultra: 14 }[game.q.label] ?? 7;
-  const rural = graph.edges.filter((e) => e.len > 80 && !inGrid(e.pts[0][0], e.pts[0][1]) && !inGrid(e.pts[e.pts.length - 1][0], e.pts[e.pts.length - 1][1]));
+  const rural = graph.edges.filter((e) => e.len > 80 && e.pts.some((q) => !inGrid(q[0], q[1]))); // any stretch outside town
   const walkers = [];
   const P = {};
   const sample = (e, s, out) => game.traffic.sampleEdge(e, s, out);
@@ -21,9 +21,11 @@ export function installRoadside(game) {
 
   function spawn() {
     const f = player.pos;
+    // only roads that pass within reach of the player
+    const near = rural.filter((e) => e.pts.some((q, i) => i % 3 === 0 && Math.abs(q[0] - f.x) < 135 && Math.abs(q[1] - f.z) < 135));
+    if (!near.length) return;
     for (let tries = 0; tries < 20; tries++) {
-      const e = rural[(Math.random() * rural.length) | 0];
-      if (!e) return;
+      const e = near[(Math.random() * near.length) | 0];
       const s = Math.random() * e.len;
       sample(e, s, P);
       const d = Math.hypot(P.x - f.x, P.z - f.z);
@@ -58,6 +60,7 @@ export function installRoadside(game) {
       p.s += p.dir * p.speed * dt;
       if (p.s < 2 || p.s > p.e.len - 2) { p.dir *= -1; p.s = Math.max(2, Math.min(p.e.len - 2, p.s)); }
       sample(p.e, p.s, P);
+      if (inGrid(P.x, P.z)) { p.dir *= -1; p.s += p.dir * 2; sample(p.e, p.s, P); }
       const tx = P.x - P.tz * p.off * p.side, tz = P.z + P.tx * p.off * p.side;
       p.heading += wrapAngle(Math.atan2(tx - p.pos.x, tz - p.pos.z) - p.heading) * Math.min(1, dt * 4);
       p.pos.set(tx, collision.surface(tx, tz, P.y + 1), tz);
