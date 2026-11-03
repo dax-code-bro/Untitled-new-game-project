@@ -798,3 +798,37 @@ NEXT (in order):
 3. Delete or move the buried caruncle mesh (build.py caruncles) on the next rebuild (2e item 4).
 4. Older list (2e item 5): tear-line band on remi / alexandria, crowd gaze offsets, cheek pore stipple,
    stubble, hair root-to-tip + flyaways, cloth weave / hem dirt, hands at 4K, Abby's child face.
+
+## PERF rider grip (2026-11-03, short session) - hands closed round the saddle's grab bar
+
+Problem (director 1C-16 hands insert, SKY_OFF_VERDOR): the seated builds' drape hands rest open, palms up;
+creatures/rider.js addGrip builds the leather grab bar at those palms, so the bar ran through open fingers.
+FIXED (new ridergrip.js; index.js createRider wires it; API unchanged, opt-out added):
+- riderGrip(rider, opts) runs at the end of every createRider update(t, o) (after applyIdle + lean), finds the
+  'grip' group mountRider() added under rider.root (CylinderGeometry, axis = mesh +x toward the RIGHT hand,
+  hands at +-(length - 0.14) / 2) and per hand: two-pass arm IK (wrist = bar point - palm * (r + 4 mm +
+  0.14 palm length) - fingers * 0.8 palm length; fingers = the forearm's line square to the bar, tipped down
+  0.25), forearm pronation (twistForearm), BAR_GRIP finger shape (curl [0.62, 1.0, 1.08, 1.12, 1.16],
+  thumbIn 0.65), orientHand. No bar -> no-op (addGrip's own rider.update(0) still measures the drape palms).
+- Seated riders on BOTH dragons go through createRider -> both grip. abby_ride_injured never grips with the
+  LEFT (injured) arm (INJURED_LEFT set in ridergrip.js).
+- Opt-out: createRider(human, { grip: false }) or rider.update(t, { grip: false }); { grip: { hands: ['R'],
+  amount, shape } } per call. Director arm overlays (reach / point / ...) still pose on top.
+- selftest-perf: new "rider grip" check (bar built like addGrip; palm.y < -0.3, knuckle row < 5 cm and middle
+  fingertip < 3.5 cm from the bar axis, tip not above it; injured left hand must not move). Abby: palm.y
+  -0.78, knuckle 3.8 cm, tip 0.9 cm; Remi: -0.91, 4.3, 2.1. npm test 48 pass / 0 fail / 1 skipped.
+Renders (draft, scratch): /tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/perf/
+perf-grip-before/1C-16_029.png (before), perf-grip/1C-16_029.png + 1C-16_050.png (after, @0.4 / @0.7),
+grip_before_after.png (crops side by side). The grip reads: knuckles over the bar, fingers wrapped under.
+SIDE EFFECT: 1C-16 frames its two subjects on wrist.L / wrist.R; the wrists now sit ~6 cm behind / above
+where they were, and the re-solved camera now looks past Leaf's neck crest - a big out-of-focus green
+scaled plane covers the upper-left 40% of the frame at both @0.4 and @0.7 (director's spec: REQUESTed).
+
+NEXT (in order):
+1. abby_ride_injured: addGrip spans the bar from her held-in LEFT hand, so it slants across her lap and the
+   right hand only half reaches its end (knuckle 5.8 cm, tip 2.5 cm above the axis; selftest uses looser
+   limits for it). Ask creatures for a one-hand bar for injured riders, or move the right hand's target to a
+   fixed spot on the bar (C = mid + axis * half only when the bar is level / the left end is not the sling).
+2. Close the fingers ONTO the bar (per-joint curl solved from the bar radius and phalanx lengths) instead
+   of the fixed BAR_GRIP preset - Remi's bigger hand leaves 2 cm between tip and axis.
+3. Check the grip at 4K in humans-riders.js (Remi on Charcoal, Abby on Leaf) and in 1C-14 (Remi wide).

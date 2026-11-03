@@ -23,11 +23,13 @@ import { applyIdle } from './idle.js';
 import { registerDirectorHooks } from './director.js';
 import { loadMouthShapes, attachMouthShapes } from './mouthshapes.js';
 import { ROLE_OF } from './perform.js';
+import { riderGrip } from './ridergrip.js';
 
 export { loadCharacterData, buildCharacter, CACHE_URL } from './loader.js';
 export { applyIdle, blinkAt } from './idle.js';
 export { registerDirectorHooks, setDirectorHooks } from './director.js';
 export { loadMouthShapes, attachMouthShapes } from './mouthshapes.js';
+export { riderGrip, findGripBar, BAR_GRIP } from './ridergrip.js';
 
 /** Every built character id, with what it is for (PROVISIONAL looks; see offline/characters.py). */
 export const CAST = {
@@ -158,7 +160,9 @@ export function createRider(human, opts = {}) {
   rootBone.getWorldPosition(rp);
   const restHead = { root: [rp.x, rp.y, rp.z] };
   const rider = {
-    root: holder, character: ch, skeleton: ch.skeleton, bones: ch.bones, index: ch.index, parts: ch.meshes, restHead, outfit: name,
+    root: holder, character: ch, skeleton: ch.skeleton, bones: ch.bones, index: ch.index, parts: ch.meshes, restHead, outfit: name, id,
+    // hands closed round the saddle's grab bar once mountRider() has built it (ridergrip.js); opts.grip false = drape hands
+    grip: opts.grip ?? true,
     lean: (opts.lean ?? 0.12) - 0.12, reach: (opts.reach ?? 0.35) - 0.35,
   };
   rider.setPose = () => rider.update(0);
@@ -166,6 +170,8 @@ export function createRider(human, opts = {}) {
     applyIdle(ch, t, { amount: 0.6, ...o });
     if (rider.lean) for (const [n, w] of [['spine05', 0.3], ['spine04', 0.3], ['spine03', 0.25], ['spine02', 0.15]]) rotLocalX(ch.bone(n), rider.lean * w);
     ch.root.updateMatrixWorld(true);
+    // o.grip: false (drape hands) | { hands, amount, shape }; no bar mounted -> no-op
+    if (rider.grip !== false && o.grip !== false) riderGrip(rider, { ...(typeof rider.grip === 'object' ? rider.grip : {}), ...(typeof o.grip === 'object' ? o.grip : {}) });
   };
   rider.update(0);
   return rider;
