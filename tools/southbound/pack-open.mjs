@@ -28,11 +28,17 @@ const jobs = [
   ...['Deer', 'Stag', 'Fox', 'Wolf', 'Horse', 'Cow', 'Bull'].map((n) => Q('animals_pack', n)),
   ...['Bow_Wooden', 'Bow_Wooden2', 'Arrow'].map((n) => Q('medieval_weapons_pack', n)),
 ];
-for (const f of fs.readdirSync(path.join(dl, 'quaternius-showcase/public/glb/fish_pack')).filter((n) => /^(Fish|Shark)/.test(n))) jobs.push(Q('fish_pack', f.replace('.glb', '')));
-for (const f of fs.readdirSync(path.join(dl, 'quaternius-showcase/public/glb/house_interior_pack'))) jobs.push(Q('house_interior_pack', f.replace('.glb', '')));
+const ls = (d) => { try { return fs.readdirSync(path.join(dl, 'quaternius-showcase/public/glb', d)); } catch (e) { return []; } };
+for (const f of ls('fish_pack').filter((n) => /^(Fish|Shark)/.test(n))) jobs.push(Q('fish_pack', f.replace('.glb', '')));
+for (const f of ls('house_interior_pack')) jobs.push(Q('house_interior_pack', f.replace('.glb', '')));
+// firearms (Quaternius Survival + Modular Sci-Fi Guns packs) and armour (Tank pack)
+for (const f of ls('survival_pack')) jobs.push(Q('survival_pack', f.replace('.glb', '')));
+for (const f of ls('modular_sci_fi_guns_pack')) jobs.push(Q('modular_sci_fi_guns_pack', f.replace('.glb', '')));
+for (const f of ls('tank_pack')) jobs.push(Q('tank_pack', f.replace('.glb', '')));
 
 let total = 0;
 for (const [src, rel, size] of jobs) {
+  if (!fs.existsSync(src)) continue; // pack only what was downloaded this run
   const dst = path.join(out, rel);
   fs.mkdirSync(path.dirname(dst), { recursive: true });
   const doc = await io.read(src);

@@ -18,7 +18,7 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor)
   vec3 shadows = vec3(0.97, 1.0, 1.03), highs = vec3(1.03, 1.0, 0.96);
   c *= mix(shadows, highs, smoothstep(0.15, 0.75, l));
   c = mix(vec3(l), c, uSat);
-  c = (c - 0.5) * uContrast + 0.5;
+  c = 0.18 * pow(max(c, 0.0) / 0.18, vec3(uContrast)); // contrast around mid-grey
   c += vec3(uWarm, uWarm * 0.45, -uWarm * 0.7);
   // moonlit nights lean blue
   c = mix(c, c * vec3(0.8, 0.9, 1.2), uNight * 0.6);
@@ -82,7 +82,7 @@ export function createPost(renderer, scene, camera, quality) {
   composer.addPass(new EffectPass(camera, tone, grade, vignette, grain));
   if (quality.aa === 'smaa') composer.addPass(new EffectPass(camera, new SMAAEffect({ preset: SMAAPreset.HIGH })));
 
-  const gradeU = { uWarm: grade.uniforms.get('uWarm'), uDamage: grade.uniforms.get('uDamage'), uNight: grade.uniforms.get('uNight') };
+  const gradeU = { uWarm: grade.uniforms.get('uWarm'), uDamage: grade.uniforms.get('uDamage'), uNight: grade.uniforms.get('uNight'), uSat: grade.uniforms.get('uSat'), uContrast: grade.uniforms.get('uContrast') };
   return {
     composer,
     grade: { uniforms: gradeU },

@@ -84,7 +84,9 @@ if (scenario === 'smoke') {
       window.SB.showRegion();
       if (s.map) window.SB.toggleMap();
     }, s);
+    if (s.eval) await page.evaluate(s.eval);
     await wait(s.wait ?? 2500);
+    if (s.eval2) await page.evaluate(s.eval2);
     await shot(s.name);
     if (s.map) await sb(() => window.SB.toggleMap());
     console.log(s.name, JSON.stringify(await sb(() => window.SB.state)));

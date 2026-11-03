@@ -74,7 +74,7 @@ const SCHEMA = {
     { key: 'bloom', label: 'Bloom / glow', type: 'select', options: [[null, 'Preset'], [true, 'On'], [false, 'Off']], restart: true },
     { key: 'ao', label: 'Ambient occlusion', type: 'select', options: [[null, 'Preset'], [true, 'On'], [false, 'Off']], restart: true },
     { key: 'aa', label: 'Anti-aliasing', type: 'select', options: [[null, 'Preset'], ['smaa', 'SMAA'], ['msaa', 'MSAA'], ['off', 'Off']], restart: true },
-    { key: 'grass', label: 'Grass blades', hint: 'Experimental', type: 'select', options: [[null, 'Off'], [true, 'On']], restart: true },
+    { key: 'grass', label: 'Grass & flowers', type: 'select', options: [[null, 'On'], [false, 'Off']], restart: true },
     { key: 'treeDensity', label: 'Tree density', type: 'range', min: 0.25, max: 1.5, step: 0.05, restart: true },
     { key: 'drawDistance', label: 'Draw distance', type: 'range', min: 0.5, max: 1.5, step: 0.05 },
     { key: 'trafficDensity', label: 'Traffic density', type: 'range', min: 0, max: 2, step: 0.1 },

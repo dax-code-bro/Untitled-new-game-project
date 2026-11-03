@@ -46,7 +46,25 @@ if (view === 'glass') {
 }
 const t0 = performance.now();
 const cars = [];
-if (view !== 'sky') {
+if (view === 'guns') {
+  // every open-source gun model, laid out in a grid, with a red arrow along +X
+  const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js');
+  const { MeshoptDecoder } = await import('three/addons/libs/meshopt_decoder.module.js');
+  const ld = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
+  const names = (qs.get('list') || '').split(',');
+  let i = 0;
+  for (const n of names) {
+    const g = (await ld.loadAsync('assets/open/quaternius/' + n + '.glb')).scene;
+    const b = new THREE.Box3().setFromObject(g), sz = b.getSize(new THREE.Vector3()), k = 1.2 / Math.max(sz.x, sz.y, sz.z);
+    g.scale.setScalar(k); g.position.sub(b.getCenter(new THREE.Vector3()).multiplyScalar(k));
+    const wrap = new THREE.Group(); wrap.add(g);
+    wrap.add(new THREE.ArrowHelper(new THREE.Vector3(1, 0, 0), new THREE.Vector3(0.65, 0, 0), 0.3, 0xff2020));
+    const col = i % 4, row = Math.floor(i / 4);
+    wrap.position.set((col - 1.5) * 1.6, 2.6 - row * 0.9, 0);
+    scene.add(wrap); i++;
+  }
+}
+if (view !== 'sky' && view !== 'guns') {
   const list = view === 'one' ? [qs.get('car') || 'sedan'] : CAR_TYPES;
   let i = 0, rnd = 0.37;
   for (const t of list) {
@@ -63,8 +81,8 @@ if (view !== 'sky') {
     scene.add(car); cars.push(car); i++;
   }
 }
-console.log('built cars in', (performance.now() - t0).toFixed(0), 'ms; tris', cars.reduce((a, c) => a + c.getObjectByName('body').levels[0].object.geometry.index.count / 3, 0));
-const cam = (qs.get('cam') || (view === 'sky' ? '0,1.7,0,0,40,-200' : view === 'one' ? '4.5,1.4,5.5,0,0.7,0' : '0,6,16,0,1,-8')).split(',').map(Number);
+if (cars.length) console.log('built cars in', (performance.now() - t0).toFixed(0), 'ms');
+const cam = (qs.get('cam') || (view === 'guns' ? '0,1,6,0,1,0' : view === 'sky' ? '0,1.7,0,0,40,-200' : view === 'one' ? '4.5,1.4,5.5,0,0.7,0' : '0,6,16,0,1,-8')).split(',').map(Number);
 camera.position.set(cam[0], cam[1], cam[2]);
 camera.lookAt(cam[3], cam[4], cam[5]);
 const focus = new THREE.Vector3();

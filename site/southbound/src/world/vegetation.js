@@ -9,6 +9,7 @@ import { forestMask, plainsMask, bayouMask } from './heightmap.js';
 import { worldUniforms } from './terrain.js';
 import { mulberry32 } from '../util.js';
 import { fogParams, FOG_GLSL } from './atmosphere.js';
+import { createGroundCover } from './grass.js';
 
 const BASE = 'assets/veg/';
 
@@ -20,11 +21,11 @@ const HEIGHT = {
 const TRUNK = { pine: 0.35, oak: 0.45, ash: 0.35, bush: 0 };
 
 const QUALITY = {
-  Phone: { near: 32, cap: 50, grass: 0, grassR: 0, rocks: 300 },
-  Low: { near: 45, cap: 80, grass: 0, grassR: 0, rocks: 500 },
-  Medium: { near: 60, cap: 150, grass: 6000, grassR: 26, rocks: 900 },
-  High: { near: 85, cap: 280, grass: 16000, grassR: 38, rocks: 1500 },
-  Ultra: { near: 120, cap: 520, grass: 32000, grassR: 52, rocks: 2400 },
+  Phone: { near: 32, cap: 50, rocks: 700 },
+  Low: { near: 45, cap: 80, rocks: 1000 },
+  Medium: { near: 60, cap: 150, rocks: 1800 },
+  High: { near: 85, cap: 280, rocks: 2800 },
+  Ultra: { near: 120, cap: 520, rocks: 4200 },
 };
 
 // Quantized glTF keeps a dequantizing scale/offset on the node: bake it into the geometry.
@@ -82,7 +83,7 @@ function addWind(mat, strength) {
   mat.customProgramCacheKey = () => 'sbwind-' + strength;
 }
 
-export async function createVegetation(hm, quality, scene, collision, cityBlocks, progress = () => {}) {
+export async function createVegetation(hm, quality, scene, collision, cityBlocks, progress = () => {}, surf = null, coverDensity = 1) {
   const Q = QUALITY[quality.label] || QUALITY.Medium;
   const gltf = new GLTFLoader();
   const tl = new THREE.TextureLoader();
@@ -189,6 +190,24 @@ export async function createVegetation(hm, quality, scene, collision, cityBlocks
     }
   }
 
+  // ---- open country: bush clusters, lone trees and scrub across the plains and meadows
+  {
+    const want = Math.round(target * 0.35);
+    let added = 0, bt = 0;
+    while (added < want && bt++ < want * 12) {
+      const x = (rnd() * 2 - 1) * (WORLD.half - 20), z = (rnd() * 2 - 1) * (WORLD.half - 20);
+      if (hm.splatAt(x, z, 3) > 0.12) continue;
+      hm.normal(x, z, nrm);
+      if (nrm.y < 0.85) continue;
+      const f = forestMask(x, z), pl = plainsMask(x, z);
+      if (f > 0.6 || x > CITY.x0 - 60 && x < CITY.x0 + CITY.nx * CITY.pitch + 60 && z > CITY.z0 - 60 && z < CITY.z0 + CITY.nz * CITY.pitch + 60) continue;
+      if (rnd() > 0.2 + pl * 0.65) continue;
+      if (rnd() < 0.06) { if (place(pick(['oak_a', 'oak_b', 'ash_b']), x, z)) added++; continue; }
+      const n = 1 + ((rnd() * 4) | 0);
+      for (let k = 0; k < n; k++) if (place(pick(['bush_a', 'bush_c']), x + (rnd() - 0.5) * 7, z + (rnd() - 0.5) * 7, false)) added++;
+    }
+  }
+
   // ---- spatial grid for picking the near set quickly
   const CELL = 48;
   const grid = new Map();
@@ -201,7 +220,7 @@ export async function createVegetation(hm, quality, scene, collision, cityBlocks
   // ---- near: full 3D trees, refreshed a few times per second
   const nearBark = [], nearLeaves = [];
   for (const v of variants) {
-    const cap = v.id.startsWith('bush') ? Q.cap * 2 : Q.cap;
+    const cap = v.id.startsWith('bush') ? Q.cap * 4 : Q.cap;
     const b = new THREE.InstancedMesh(v.bark, v.barkMat, cap);
     const l = new THREE.InstancedMesh(v.leaves, v.leafMat, cap);
     for (const m of [b, l]) { m.count = 0; m.frustumCulled = false; m.castShadow = quality.shadows > 0; m.receiveShadow = true; scene.add(m); }
@@ -262,7 +281,7 @@ export async function createVegetation(hm, quality, scene, collision, cityBlocks
   });
 
   // ---- rocks (scanned, from the ez-tree demo assets)
-  const rockMeshes = [];
+  const rockMeshes = [], scatterParts = [];
   try {
     const rocks = await Promise.all(['rock1', 'rock2', 'rock3'].map((r) => gltf.loadAsync(`${BASE}${r}.glb`)));
     const spots = [[], [], []];
@@ -273,10 +292,11 @@ export async function createVegetation(hm, quality, scene, collision, cityBlocks
       hm.normal(x, z, nrm);
       const slope = 1 - nrm.y, f = forestMask(x, z);
       const nearWater = hm.height(x, z) < hm.waterLevel(x, z) + 2.5 && hm.waterLevel(x, z) > 0.5;
-      const prob = slope * 2.2 + f * 0.25 + (nearWater ? 0.4 : 0) + 0.01;
+      const open = plainsMask(x, z);
+      const prob = slope * 2.2 + f * 0.25 + (nearWater ? 0.4 : 0) + 0.04 + open * 0.12;
       if (rnd() > prob) continue;
       if (blocked(x, z, 2)) continue;
-      const k = 0.3 + Math.pow(rnd(), 2.5) * (slope > 0.25 ? 2.6 : 1.2);
+      const k = (slope > 0.12 ? 0.3 : 0.18) + Math.pow(rnd(), 2.5) * (slope > 0.25 ? 2.6 : slope > 0.12 ? 1.2 : 0.9);
       spots[(rnd() * 3) | 0].push({ x, y: hm.height(x, z) - 0.25 * k, z, k, r: rnd() * 6.28, tilt: (rnd() - 0.5) * 0.4 });
       if (k > 0.8) collision.addCircle(x, z, k * 0.8);
     }
@@ -298,12 +318,14 @@ export async function createVegetation(hm, quality, scene, collision, cityBlocks
         im.castShadow = quality.shadows >= 2; im.receiveShadow = true;
         im.computeBoundingSphere();
         im.userData.noReflect = true; im.userData.hitStatic = true; scene.add(im); rockMeshes.push(im);
+        scatterParts.push({ geo: geos[gi], mat: o.material });
       }
     });
   } catch (e) { console.warn('rocks unavailable', e); }
 
-  // ---- grass clumps (three crossed photo cards) around the camera
-  const grass = Q.grass > 0 ? await createGrassField(gltf, Q, scene).catch((e) => { console.warn('grass unavailable', e); return null; }) : null;
+  // ---- continuous grass carpet + wildflowers around the camera
+  const cover = createGroundCover(hm, quality, scene, surf, coverDensity);
+  if (cover.addRocks && scatterParts.length) cover.addRocks(scatterParts);
 
   let refreshT = 0;
   const camPrev = new THREE.Vector3(1e9, 0, 0);
@@ -334,89 +356,13 @@ export async function createVegetation(hm, quality, scene, collision, cityBlocks
 
   return {
     placed: inst.length,
+    cover,
     update(cam, drawDistance) {
       refreshT -= 1 / 60;
       if (refreshT <= 0 || cam.distanceToSquared(camPrev) > 64) { refreshNear(cam); refreshT = 0.3; camPrev.copy(cam); }
       for (const m of rockMeshes) m.visible = true;
       for (const m of impMeshes) m.material.uniforms.uNear.value = Q.near;
-      if (grass) grass.update(cam);
       void drawDistance;
     },
   };
-}
-
-async function createGrassField(gltf, Q, scene) {
-  const g = await gltf.loadAsync(BASE + 'grass.glb');
-  let src = null; g.scene.traverse((o) => { if (o.isMesh && !src) src = o; });
-  const size = Q.grassR * 2, count = Q.grass;
-  const baked = bakedGeometry(src);
-  baked.computeBoundingBox();
-  const bb = baked.boundingBox, gh = Math.max(1e-3, bb.max.y - bb.min.y);
-  baked.translate(0, -bb.min.y, 0);
-  baked.scale(1 / gh, 1 / gh, 1 / gh); // unit height: instance scale = height in metres
-  const geo = new THREE.InstancedBufferGeometry();
-  geo.index = baked.index;
-  geo.setAttribute('position', baked.attributes.position);
-  geo.setAttribute('uv', baked.attributes.uv);
-  const rnd = mulberry32(3);
-  const off = new Float32Array(count * 4);
-  for (let i = 0; i < count; i++) off.set([rnd() * size, rnd() * size, rnd() * 6.283, 0.4 + rnd() * 0.4], i * 4);
-  geo.setAttribute('aOff', new THREE.InstancedBufferAttribute(off, 4));
-  geo.instanceCount = count;
-  const map = src.material.map;
-  map.colorSpace = THREE.SRGBColorSpace;
-  const mat = new THREE.ShaderMaterial({
-    side: THREE.DoubleSide,
-    uniforms: { ...worldUniforms, ...grassUniforms, tMap: { value: map }, uCam: { value: new THREE.Vector3() }, uSize: { value: size },
-      sbFogA: { value: fogParams.a }, sbFogB: { value: fogParams.b } },
-    vertexShader: /* glsl */`
-      attribute vec4 aOff;
-      uniform vec3 uCam; uniform float uSize; uniform float uTime; uniform float uWorldHalf;
-      uniform sampler2D uHeightTex; uniform sampler2D uSplatTex;
-      varying vec2 vUv; varying vec3 vW; varying float vDry; varying float vH; varying float vTint; varying float vForest;
-      void main() {
-        vec2 wxz = uCam.xz + mod(aOff.xy - uCam.xz + uSize * 0.5, uSize) - uSize * 0.5;
-        vec2 wuv = (wxz + uWorldHalf) / (2.0 * uWorldHalf);
-        float gh = texture2D(uHeightTex, wuv).r;
-        vec4 sp = texture2D(uSplatTex, wuv);
-        float dens = (1.0 - sp.a) * (1.0 - sp.r) * (1.0 - sp.g * 0.75);
-        float keep = step(fract(aOff.z * 13.37), dens);
-        float d = length(wxz - uCam.xz);
-        float fade = 1.0 - smoothstep(uSize * 0.3, uSize * 0.5, d);
-        float sc = aOff.w * keep * fade;
-        float c = cos(aOff.z), s = sin(aOff.z);
-        vec3 p = position * sc;
-        vec3 w = vec3(wxz.x + p.x * c - p.z * s, gh - 0.05 + p.y, wxz.y + p.x * s + p.z * c);
-        float bend = position.y * position.y * sc;
-        w.x += (sin(uTime * 1.7 + wxz.x * 0.2 + wxz.y * 0.13) * 0.18 + sin(uTime * 3.3 + wxz.x) * 0.05) * bend;
-        w.z += sin(uTime * 1.3 + wxz.y * 0.17) * 0.12 * bend;
-        vUv = uv;
-        vW = w; vDry = sp.b; vH = position.y; vTint = fract(aOff.z * 7.31); vForest = sp.g;
-        gl_Position = projectionMatrix * viewMatrix * vec4(w, 1.0);
-      }`,
-    fragmentShader: /* glsl */`
-      uniform sampler2D tMap; uniform vec3 uSunDir; uniform vec3 uSunColor; uniform vec3 uAmbient; uniform vec3 uFogColor; uniform float uFogDensity;
-      uniform vec4 sbFogA; uniform vec4 sbFogB;
-      varying vec2 vUv; varying vec3 vW; varying float vDry; varying float vH; varying float vTint; varying float vForest;
-      ${FOG_GLSL}
-      void main() {
-        vec4 c = texture2D(tMap, vUv);
-        if (c.a < 0.5) discard;
-        // the clump texture is greyscale detail: tint it with natural grass colours
-        float lum = dot(c.rgb, vec3(0.333)) * 1.7;
-        vec3 green = mix(vec3(0.16, 0.27, 0.06), vec3(0.30, 0.38, 0.11), vTint);
-        vec3 straw = mix(vec3(0.46, 0.39, 0.19), vec3(0.58, 0.50, 0.27), vTint);
-        vec3 col = mix(green, straw, clamp(vDry * 1.1, 0.0, 1.0)) * lum;
-        col *= 1.0 - vForest * 0.35;
-        col *= 0.55 + 0.45 * clamp(vH * 1.2, 0.0, 1.0); // darker at the roots
-        vec3 lit = col * (uAmbient * 1.4 + uSunColor * 1.5 * (0.4 + 0.6 * max(uSunDir.y, 0.0)));
-        gl_FragColor = vec4(sbApplyFog(lit, vW, cameraPosition, uFogColor, uFogDensity, sbFogA, sbFogB), 1.0);
-        #include <colorspace_fragment>
-      }`,
-  });
-  const mesh = new THREE.Mesh(geo, mat);
-  mesh.frustumCulled = false;
-  mesh.userData.noReflect = true;
-  scene.add(mesh);
-  return { update(cam) { mat.uniforms.uCam.value.copy(cam); } };
 }

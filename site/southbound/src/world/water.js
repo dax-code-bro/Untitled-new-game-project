@@ -141,10 +141,14 @@ function makeReflection(renderer, scale) {
       scene.traverse((o) => { if (o.userData.noReflect && o.visible) { o.visible = false; hidden.push(o); } });
       const prevRT = renderer.getRenderTarget(), prevShadow = renderer.shadowMap.autoUpdate;
       renderer.shadowMap.autoUpdate = false;
+      // the mirror must not sample itself while it is being drawn (feedback loop)
+      const tex = reflUniforms.tReflect.value, on = reflUniforms.uReflectOn.value;
+      reflUniforms.tReflect.value = null; reflUniforms.uReflectOn.value = 0;
       renderer.setRenderTarget(rt);
       renderer.clear();
       renderer.render(scene, cam);
       renderer.setRenderTarget(prevRT);
+      reflUniforms.tReflect.value = tex; reflUniforms.uReflectOn.value = on;
       renderer.shadowMap.autoUpdate = prevShadow;
       waterGroup.visible = true;
       for (const o of hidden) o.visible = true;

@@ -8,7 +8,7 @@ import { fogParams } from './atmosphere.js';
 // Horizon fog colour through the day (hour -> linear RGB)
 const FOG_KEYS = [
   [0, [0.012, 0.016, 0.03]], [5, [0.03, 0.035, 0.06]], [6, [0.55, 0.42, 0.36]],
-  [7.5, [0.62, 0.70, 0.80]], [12, [0.62, 0.74, 0.88]], [17, [0.66, 0.68, 0.72]],
+  [7.5, [0.6, 0.68, 0.8]], [12, [0.56, 0.69, 0.88]], [17, [0.62, 0.66, 0.74]],
   [18.6, [0.80, 0.52, 0.34]], [19.6, [0.12, 0.10, 0.16]], [21, [0.015, 0.02, 0.035]], [24, [0.012, 0.016, 0.03]],
 ];
 function fogColorAt(hour, out) {
@@ -90,7 +90,7 @@ export function createSky(renderer, scene, quality) {
       sun.position.copy(focus).addScaledVector(dir, 600);
       sun.target.position.copy(focus);
       // Snap the shadow camera to texels to stop shimmering
-      const texel = (2 * R) / quality.shadowMap;
+      const texel = (2 * sun.shadow.camera.right) / quality.shadowMap;
       sun.target.position.x = Math.round(sun.target.position.x / texel) * texel;
       sun.target.position.z = Math.round(sun.target.position.z / texel) * texel;
       sun.position.x = sun.target.position.x + dir.x * 600;
@@ -101,10 +101,10 @@ export function createSky(renderer, scene, quality) {
         sun.intensity = 0.6 * smoothstep(-0.05, -0.3, elev);
       } else {
         sun.color.setRGB(1.0, lerp(0.55, 0.96, warm), lerp(0.3, 0.9, warm));
-        sun.intensity = 3.2 * day;
+        sun.intensity = 4.1 * day;
       }
-      hemi.intensity = lerp(0.5, 0.7, day);
-      hemi.color.setRGB(lerp(0.22, 0.75, day), lerp(0.28, 0.85, day), lerp(0.55, 1.0, day));
+      hemi.intensity = lerp(0.5, 0.58, day);
+      hemi.color.setRGB(lerp(0.22, 0.62, day), lerp(0.28, 0.76, day), lerp(0.55, 1.0, day));
       // weather: clouds swallow the sun, light goes flat and grey
       const W = state.weather || { cover: 0.52, dark: 0, flash: 0, rain: 0 };
       sun.intensity *= 1 - W.dark * 0.85;

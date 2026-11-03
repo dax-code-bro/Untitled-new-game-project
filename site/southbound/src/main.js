@@ -17,6 +17,9 @@ import { Vehicle } from './entities/vehicle.js';
 import { Traffic } from './entities/traffic.js';
 import { Peds } from './entities/peds.js';
 import { Combat, WEAPONS } from './entities/combat.js';
+import { GunPose } from './entities/gunpose.js';
+import { WeaponWheel } from './ui/wheel.js';
+import { makeSilhouetter } from './ui/silhouette.js';
 import { vehiclesOverlap } from './world/collision.js';
 import { LAND } from './assets/catalog.js';
 import { BOATS, AIRCRAFT } from './entities/craft.js';
@@ -76,7 +79,18 @@ async function createGame(progress) {
   const q = resolveQuality(settings);
   const canvas = $('#game');
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: q.aa === 'msaa', powerPreference: 'high-performance', stencil: false });
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  // presets without the post chain (phone/low) get the filmic curve plus the
+  // same saturation/contrast grade inside every material's tone mapping
+  THREE.ShaderChunk.tonemapping_pars_fragment = THREE.ShaderChunk.tonemapping_pars_fragment.replace(
+    'vec3 CustomToneMapping( vec3 color ) { return color; }',
+    `vec3 CustomToneMapping( vec3 color ) {
+  vec3 c = ACESFilmicToneMapping( color );
+  float l = dot( c, vec3( 0.2126, 0.7152, 0.0722 ) );
+  c = mix( vec3( l ), c, 1.1 );
+  c = 0.18 * pow( max( c, 0.0 ) / 0.18, vec3( 1.05 ) );
+  return clamp( c, 0.0, 1.0 );
+}`);
+  renderer.toneMapping = THREE.CustomToneMapping;
   renderer.toneMappingExposure = 1.0;
   renderer.info.autoReset = false;
   renderer.shadowMap.enabled = q.shadows > 0;
@@ -103,6 +117,7 @@ async function createGame(progress) {
   progress(0.66, 'Shaping the terrain');
   await nextFrame();
   const terrain = createTerrain(hm, q, scene, surf);
+  collision.terrainCell = terrain.cell; // feet follow the drawn terrain triangles, not the smoother heightmap
   const water = createWater(scene, renderer, q);
   const roads = createRoads(graph, hm, q, scene, collision, surf);
   progress(0.74, 'Building Port Calvera and Mill Creek');
@@ -110,7 +125,7 @@ async function createGame(progress) {
   const city = createBuildings(hm, q, scene, collision, surf);
   progress(0.84, 'Growing Pinewood Hollow');
   await nextFrame();
-  const veg = await createVegetation(hm, q, scene, collision, city.cityBlocks, (p) => progress(0.84 + p * 0.07, 'Growing forests'));
+  const veg = await createVegetation(hm, q, scene, collision, city.cityBlocks, (p) => progress(0.84 + p * 0.07, 'Growing forests'), surf, settings.grass === false ? 0 : 1);
   addSidewalkColliders(collision);
   progress(0.92, 'Lighting the sky');
   await nextFrame();
@@ -144,6 +159,48 @@ async function createGame(progress) {
   const combat = new Combat(scene, hm, collision, settings, audio);
   const police = new Police(lib, scene, hm, collision, graph, peds, audio);
   const hud = new HUD($('#hud'), hm, graph, city.buildings, settings);
+  // weapons: RDR-style wheel, holsters, per-weapon holds (IK), gun HUD silhouette
+  const gunPose = new GunPose(player.h);
+  const silhouette = makeSilhouetter(renderer);
+  const wheel = new WeaponWheel($('#hud'), combat, (slot, dual) => {
+    const was = combat.drawn ? combat.weapon + combat.dual : '';
+    combat.equip(slot, dual);
+    if (combat.drawn && combat.weapon + combat.dual !== was) { S.drawT = 0.35; audio.thud?.(0.15); }
+    S.idleArmed = 0; S.inspectT = 0;
+  });
+  const eyeL = player.h.model.getObjectByName('eyeL'), eyeR = player.h.model.getObjectByName('eyeR'), headBone = player.h.model.getObjectByName('head');
+  const eyePos = new THREE.Vector3(), _e2 = new THREE.Vector3();
+  const getEye = () => {
+    if (eyeL && eyeR) { eyeL.getWorldPosition(eyePos); eyeR.getWorldPosition(_e2); return eyePos.add(_e2).multiplyScalar(0.5); }
+    return headBone ? headBone.getWorldPosition(eyePos).add(_e2.set(0, 0.08, 0)) : eyePos.copy(player.pos).add(_e2.set(0, 1.7, 0));
+  };
+  // holstered: sidearm on the right hip, long gun slung across the back
+  const hipBone = player.h.model.getObjectByName('root'), backBone = player.h.model.getObjectByName('spine02');
+  const _hp = new THREE.Vector3(), _hd = new THREE.Vector3(), _hu = new THREE.Vector3(), _hm = new THREE.Matrix4();
+  const stow = (m, pos, dir, up) => {
+    _hm.lookAt(_hp.set(0, 0, 0), _hd.copy(dir).negate(), up);
+    m.quaternion.setFromRotationMatrix(_hm);
+    m.position.copy(pos).sub(m.userData.hold ? m.userData.hold.mid.clone().applyQuaternion(m.quaternion) : _hp.set(0, 0, 0));
+    m.visible = true; m.updateMatrixWorld(true);
+  };
+  function showHolstered(shown) {
+    if (S.mode !== 'foot' || !player.char.root.visible || rig.fp) return;
+    const h = player.heading, fw = new THREE.Vector3(Math.sin(h), 0, Math.cos(h)), right = new THREE.Vector3(-Math.cos(h), 0, Math.sin(h)), up = new THREE.Vector3(0, 1, 0);
+    const side = combat.slotWeapon('sidearm');
+    if (side && hipBone && !(combat.drawn && Combat.slotOf(combat.weapon) === 'sidearm')) {
+      const m = combat.model(side, '#hip');
+      const p = hipBone.getWorldPosition(new THREE.Vector3()).addScaledVector(right, 0.21).addScaledVector(up, -0.12).addScaledVector(fw, -0.02);
+      stow(m, p, _hu.copy(up).multiplyScalar(-1).addScaledVector(fw, 0.18).normalize(), fw.clone().negate());
+      shown.push(m);
+    }
+    const longId = combat.drawn && combat.def.cat !== 'pistol' ? null : ['long', 'shotgun', 'sniper'].map((k) => combat.slotWeapon(k)).find(Boolean);
+    if (longId && backBone) {
+      const m = combat.model(longId, '#back');
+      const p = backBone.getWorldPosition(new THREE.Vector3()).addScaledVector(fw, -0.15).addScaledVector(up, 0.08);
+      stow(m, p, _hu.copy(up).multiplyScalar(0.75).addScaledVector(right, -0.66).normalize(), fw.clone().negate());
+      shown.push(m);
+    }
+  }
 
   // headlight for the player's car at night
   const headlight = new THREE.SpotLight(0xfff1d6, 0, 70, 0.55, 0.5, 1.2);
@@ -157,8 +214,10 @@ async function createGame(progress) {
     if (settings.resolution === 'native') return Math.min(dpr, q.maxPixelRatio);
     return clamp(+settings.resolution / innerHeight, 0.5, 4);
   };
+  const fpState = { boost: false };
   const applySize = () => {
-    const pr = baseRatio() * dynScale;
+    // first person draws less of the world, so it spends the savings on sharpness
+    const pr = baseRatio() * dynScale * (fpState.boost ? 1.25 : 1);
     renderer.setPixelRatio(pr);
     renderer.setSize(innerWidth, innerHeight, false);
     camera.aspect = innerWidth / innerHeight;
@@ -291,6 +350,7 @@ async function createGame(progress) {
   const aimDir = new THREE.Vector3(), muzzle = new THREE.Vector3();
 
   const tmpV = new THREE.Vector3();
+  const _sunC = new THREE.Color();
   const focus = new THREE.Vector3();
   let last = performance.now();
 
@@ -305,7 +365,7 @@ async function createGame(progress) {
       if (witnesses(v.pos, 30) || police.nearPolice(60)) police.crime('carjack');
     } else parked.splice(parked.indexOf(v), 1);
     S.mode = 'car'; S.vehicle = v;
-    if (combat.gun) combat.gun.visible = false;
+    combat.hideAll(); combat.holstered = true; if (wheel.open) wheel.hide(false);
     v.onHitPed = (p, killed) => { if (killed) police.crime(p.role === 'cop' ? 'copKill' : 'kill'); else police.crime('assault'); peds.panic(p.pos, 25); };
     player.char.root.visible = false;
     hud.toast(`${v.spec.name}`, 2.5);
@@ -357,17 +417,61 @@ async function createGame(progress) {
       respawn(HOSPITAL, 'YOU DIED', HOSPITAL.name, Math.min(S.money, Math.round(100 + S.money * 0.1)));
       player.h.play('Death01', 0.1, 1, true);
     }
-    if (a.weapon && S.mode === 'foot') combat.cycle();
-    if (a.reload && combat.reload()) player.h.play('Pistol_Reload', 0.1, 1, true);
-    const armed = !combat.def.melee;
+    // ---- weapon wheel (time slows while it is open)
+    if (S.mode === 'foot' && a.wheel && S.dead <= 0) {
+      if (!wheel.open) { S.wheelT = 0; wheel.show(); }
+      S.wheelT += dt;
+      if (S.wheelT > 0.12) wheel.el.classList.add('show'); // a quick tap never flashes the wheel
+      if (a.wheelTouch) wheel.point(a.wheelDX, a.wheelDY, true); else wheel.point(a.lookX, a.lookY);
+      if (a.zoom) wheel.cycle(Math.sign(a.zoom));
+      if (a.wheelPrev) wheel.cycle(-1);
+      if (a.wheelNext) wheel.cycle(1);
+      a.lookX = a.lookY = 0; a.zoom = 0; a.fire = a.firePressed = false;
+    } else if (wheel.open) {
+      if (S.wheelT < 0.2) { wheel.hide(false); a.holster = true; } // quick tap: holster / draw
+      else wheel.hide(true);
+    }
+    if (wheel.open && S.wheelT > 0.12) dt *= 0.3;
+    if (a.holster && S.mode === 'foot') {
+      if (combat.drawn) combat.holstered = true;
+      else if (!combat.def.melee) { combat.holstered = false; S.drawT = 0.35; }
+      else { const id = combat.slotWeapon('sidearm'); if (id) { combat.equip('sidearm'); S.drawT = 0.35; } }
+      S.idleArmed = 0;
+    }
+    // aiming or shooting with your gun away draws it (RDR style)
+    if (S.mode === 'foot' && combat.holstered && !combat.def.melee && (a.aim || a.firePressed) && S.dead <= 0) { combat.holstered = false; S.drawT = 0.3; }
+    S.drawT = Math.max(0, (S.drawT || 0) - dt);
+    if (S.drawT > 0) a.fire = a.firePressed = false;
+    if (a.reload && combat.drawn && combat.reload() && combat.def.cat === 'pistol') player.h.play('Pistol_Reload', 0.1, (1.5 / combat.reloadDur) * 1.0, true);
+    const armed = combat.drawn;
     if (armed && (a.fire || a.firePressed)) S.aimHold = 0.7;
     S.aimHold = Math.max(0, S.aimHold - dt);
     if (S.aimHold > 0 && armed) a.aim = true;
     combat.update(dt);
     if (S.mode === 'foot') {
-      player.update(dt, a, rig.yaw, hm, collision, armed);
+      player.update(dt, a, rig.yaw, hm, collision, armed && combat.def.cat === 'pistol');
       camera.getWorldDirection(aimDir);
-      combat.holdGun(player.h, player.aiming ? aimDir : new THREE.Vector3(Math.sin(player.heading), -0.6, Math.cos(player.heading)), armed && S.dead <= 0);
+      // ---- weapon in the hands: pose the arms around it
+      const shown = [];
+      if (armed && S.dead <= 0) {
+        const m = combat.model(), mL = combat.dual ? combat.model(combat.offhand, '#L') : null;
+        m.visible = true; shown.push(m); if (mL) { mL.visible = true; shown.push(mL); }
+        const moving = player.speed > 0.2 || a.aim || a.fire || combat.reloading > 0;
+        S.idleArmed = moving ? 0 : (S.idleArmed || 0) + dt;
+        if (S.inspectT > 0) { S.inspectT += dt; if (S.inspectT > 3.2 || moving) S.inspectT = 0; }
+        else if (S.idleArmed > 7) { S.inspectT = 0.001; S.idleArmed = -6; } // idle: check the weapon over
+        const st = combat.reloading > 0 ? 'reload' : player.aiming ? 'aim' : S.inspectT > 0 ? 'inspect' : player.speed > 5.6 ? 'sprint' : 'ready';
+        const info = m.userData.hold;
+        if (info && info.kind !== 'launcher') {
+          gunPose.apply({ gun: m, gunL: mL, info, state: st, aimDir, heading: player.heading, reload: 1 - combat.reloading / combat.reloadDur,
+            inspect: S.inspectT / 3.2, fp: rig.fp, eye: getEye().clone(), dual: combat.dual });
+        }
+        combat.gun = combat.dual && combat._side && mL ? mL : m;
+        // draw: the gun comes up from the holster
+        if (S.drawT > 0) { const k = S.drawT / 0.35; m.position.y -= k * 0.35; m.updateMatrixWorld(true); }
+      }
+      showHolstered(shown);
+      combat.hideAll(shown);
       const targets = { peds, vehicles: [...traffic.cars.map((c) => c.v), ...police.cars.map((c) => c.v), ...parked], animals: game.hunting ? game.hunting.list : [], statics: S.indoors ? indoorMeshes() : hitStatics };
       if (armed && a.fire && player.aiming && combat.cooldown <= 0 && S.dead <= 0) {
         combat.muzzleWorld(muzzle);
@@ -451,14 +555,27 @@ async function createGame(progress) {
       [...peds.list.filter((p) => p.mode !== 'dead' && p.pos.distanceTo(focus) < 120), ...police.cars.map((c) => c.v)]);
     weather.update(dt, (dt * settings.timeScale) / 120, camera, !S.weatherLocked);
     sky.update(dt, settings.timeScale, focus);
-    rig.update(dt, a, focus, { vehicle: S.vehicle, heading: S.vehicle?.heading, speed: S.vehicle?.speed || 0, lastLook: input.lastLookTime, aiming: S.mode === 'foot' && player.aiming && armed }, collision);
+    rig.update(dt, a, focus, { vehicle: S.vehicle, heading: S.vehicle?.heading, speed: S.vehicle?.speed || 0, lastLook: input.lastLookTime, aiming: S.mode === 'foot' && player.aiming && armed, eye: S.mode === 'foot' && player.char.root.visible ? getEye() : null }, collision);
 
+    if (!!rig.fp !== fpState.boost) {
+      fpState.boost = !!rig.fp;
+      const R = q.shadowRange * (fpState.boost ? 0.5 : 1), sc = sky.sun.shadow.camera; // tighter shadow map = crisper shadows
+      Object.assign(sc, { left: -R, right: R, top: R, bottom: -R }); sc.updateProjectionMatrix();
+      applySize();
+      player.h.model.traverse((o) => { if (o.isSkinnedMesh) o.castShadow = true; });
+      hud.toast(fpState.boost ? 'First person' : 'Third person', 1.2);
+    }
     const dd = basePreset.drawDistance * settings.drawDistance;
     terrain.update(camera.position, dd);
     veg.update(camera.position, dd);
+    if (veg.cover.update) {
+      veg.cover.update(camera.position, sky.sunDir, _sunC.copy(sky.sun.color).multiplyScalar(sky.sun.intensity), weather);
+      const pp = S.mode === 'foot' ? player.pos : S.vehicle ? S.vehicle.pos : focus;
+      veg.cover.push(0, pp.x, pp.y, pp.z, S.mode === 'foot' ? 0.9 : 2.6);
+    }
     water.update(camera.position);
     roads.update(sky.night);
-    scene.fog.density = 1.25 / Math.max(dd, 400) * (1 + sky.night * 0.5) * weather.fog;
+    scene.fog.density = 1.25 / Math.max(dd, 400) * (1 + sky.night * 0.5) * weather.fog * (0.6 + 0.4 * Math.max(sky.night, weather.dark));
     grassUniforms.uSunDir.value.copy(sky.sunDir);
     grassUniforms.uSunColor.value.copy(sky.sun.color).multiplyScalar(sky.sun.intensity * 0.35);
     grassUniforms.uAmbient.value.copy(sky.hemi.color).multiplyScalar(0.12 + sky.hemi.intensity * 0.9);
@@ -484,6 +601,10 @@ async function createGame(progress) {
     if (post) {
       post.grade.uniforms.uWarm.value = 0.012 + (sky.hour > 16 && sky.hour < 20 ? 0.018 : 0);
       post.grade.uniforms.uNight.value = sky.night;
+      // clear daylight gets the punchier, more saturated grade; storms and night stay muted
+      const dayK = (1 - sky.night) * (1 - weather.dark * 0.8);
+      post.grade.uniforms.uSat.value = 1.02 + dayK * 0.12;
+      post.grade.uniforms.uContrast.value = 1.02 + dayK * 0.07;
       const aimingNow = S.mode === 'foot' && player.aiming && armed;
       post.update(sky.sunDir, sky.sunDir.y > 0.02 && weather.cover < 0.75, aimingNow ? 18 : camera.position.distanceTo(focus) + 1, aimingNow);
     }
@@ -498,10 +619,13 @@ async function createGame(progress) {
       animals: game.hunting ? game.hunting.list.filter((x) => !x.dead && x.pos.distanceTo(focus) < 180).map((x) => ({ x: x.pos.x, z: x.pos.z, icon: { deer: '🦌', stag: '🦌', coyote: '🐺', fox: '🦊', horse: '🐎', cow: '🐄', bull: '🐂' }[x.sp] || '🐾' })) : [],
       myVehicles: S.mode === 'foot' ? parked.filter((v) => v === S.lastVehicle || v.uid).filter((v) => v.pos.distanceTo(focus) < 600).map((v) => ({ x: v.pos.x, z: v.pos.z, heading: v.heading })) : [],
       vehKind: S.vehicle ? (S.vehicle.isBoat ? 'boat' : S.vehicle.isAir ? (S.vehicle.heli ? 'heli' : 'plane') : 'car') : null, vehDmg: S.vehicle?.dmg,
-      armed: !combat.def.melee,
+      armed: combat.drawn,
+      gunMode: S.mode === 'foot' && combat.drawn && S.dead <= 0,
+      gunSil: S.mode === 'foot' && combat.drawn ? silhouette(combat.weapon, combat.model()?.userData.open || combat.models[combat.weapon] ? combat.model() : null) : '',
+      dualSil: S.mode === 'foot' && combat.drawn && combat.dual,
       health: player.health, armor: player.armor, money: S.money, wanted: police.wanted, wantedLost: police.lost, blips: interact.blips(focus),
       weaponIcon: WEAPONS[combat.weapon].icon,
-      ammo: !combat.def.melee ? (combat.reloading > 0 ? 'RELOADING' : `${combat.ammo[combat.weapon].clip} / ${combat.ammo[combat.weapon].reserve}`) : '',
+      ammo: combat.drawn ? (combat.reloading > 0 ? 'RELOADING' : combat.dual && combat.offhand && combat.offhand !== combat.weapon ? `${combat.ammo[combat.weapon].clip} · ${combat.ammo[combat.offhand].clip} / ${combat.ammo[combat.weapon].reserve}` : `${combat.ammo[combat.weapon].clip} / ${combat.ammo[combat.weapon].reserve}`) : '',
       weaponName: combat.def.name,
       aiming: S.mode === 'foot' && player.aiming && armed, hitMarker: S.hitMarker,
       fpsText: `${Math.round(S.fps)} FPS · ${q.label} · ${renderer.domElement.width}×${renderer.domElement.height}\n${stats.drawCalls} draws · ${(stats.tris / 1e6).toFixed(2)}M tris`,
@@ -621,7 +745,8 @@ async function createGame(progress) {
     get cops() { return { cars: police.cars.length, officers: peds.list.filter((p) => p.role === 'cop' && p.mode !== 'dead').length }; },
     giveMoney(n) { S.money += n; },
     openArsenal: (tab) => { if (tab) arsenalUI.tab = tab; arsenalUI.toggle(true); },
-    weapon(w) { if (w !== 'fists') combat.give(w); combat.weapon = w; },
+    weapon(w) { if (w !== 'fists') combat.give(w); combat.weapon = w; combat.holstered = w === 'fists'; combat.dual = false; },
+    wheel: () => wheel, gunPose: () => gunPose,
     arsenal: () => ({ owned: combat.owned.slice(), total: Object.keys(WEAPONS).length - 2 }),
     get peds() { return peds.list.length; },
     hurt(n) { hurtPlayer(n); },
@@ -655,6 +780,7 @@ async function createGame(progress) {
     },
     pause: setPaused,
     freeze(f) { S.frozen = f; },
+    renderNow() { render(); },
     // Advance the game by exactly n fixed steps (used to capture smooth video on slow machines)
     step(n = 1, dt = 1 / 30) { for (let i = 0; i < n; i++) tick(dt); S.fps = 1 / dt; },
     toggleMap: () => hud.toggleMap(),

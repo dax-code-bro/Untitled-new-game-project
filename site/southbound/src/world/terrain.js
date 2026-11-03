@@ -109,7 +109,7 @@ export function createTerrain(hm, quality, scene, surf) {
 
   scene.add(group);
   return {
-    group, meshes,
+    group, meshes, cell: size / segs,
     update(camPos, drawDistance) {
       for (const m of meshes) {
         const c = m.userData.center;

@@ -234,6 +234,14 @@ export class HUD {
       this.wicon.textContent = st.weaponIcon;
       const wl = st.ammo ? `${st.weaponName || ''}  ${st.ammo}` : '';
       if (wl !== this._wl) { this._wl = wl; this.ammoEl.textContent = wl; }
+      // gun out on foot: only the minimap, health and the weapon panel stay
+      this.root.classList.toggle('gunmode', !!st.gunMode);
+      if (st.gunMode) {
+        const gp = this._gp || (this._gp = { el: this.el('#gunpanel'), img: this.el('#gunsil'), img2: this.el('#gunsil2'), ammo: this.el('#gunammo') });
+        if (st.gunSil && gp.img.getAttribute('src') !== st.gunSil) { gp.img.src = st.gunSil; gp.img2.src = st.gunSil; }
+        gp.img2.style.display = st.dualSil ? 'block' : 'none';
+        if (gp._a !== st.ammo) { gp._a = st.ammo; gp.ammo.textContent = st.ammo; }
+      }
       this.cross.classList.toggle('show', !!st.aiming);
       if (st.hitMarker) { this.cross.classList.add('hit'); clearTimeout(this._hm); this._hm = setTimeout(() => this.cross.classList.remove('hit'), 120); }
     }
