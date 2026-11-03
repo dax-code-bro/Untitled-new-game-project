@@ -11,11 +11,11 @@
 // opts: false / { hands: ['L', 'R'], amount 0..1 }. A rider built with an injured LEFT arm
 // (abby_ride_injured) never grips with it - the arm stays held in (CHARACTERS.md: Abby's LEFT arm).
 import * as THREE from 'three';
-import { twoBoneIK, twistForearm, handFrame, handShape, orientHand, wpos } from './rig.js';
+import { twoBoneIK, twistForearm, handFrame, handShape, orientHand, wpos, aimBone } from './rig.js';
 import { bodyRig } from './motion.js';
 
 /** The overhand grip round a ~3.4 cm bar: every finger joint closed (tips under the bar), thumb across. */
-export const BAR_GRIP = { curl: [0.62, 1.0, 1.08, 1.12, 1.16], spread: -0.08, thumbIn: 0.65 };
+export const BAR_GRIP = { curl: [0.62, 1.0, 1.08, 1.12, 1.16], together: 0.9, thumbIn: 0.65, tilt: 0.25, thumbWrap: 0 };
 /** Rider build ids whose LEFT arm is the injured one (held in, never on the bar). */
 export const INJURED_LEFT = new Set(['abby_ride_injured']);
 
@@ -67,31 +67,98 @@ export function riderGrip(rider, opts = {}) {
     const left = axis.clone().multiplyScalar(-1);
     const pole = S.clone().addScaledVector(up, -0.5).addScaledVector(left, -sg * 0.4).addScaledVector(fwd, -0.3);
     let fingers = null, palm = null;
+    const shape = { ...(opts.shape || BAR_GRIP) };
+    const curl0 = Array.isArray(shape.curl) ? shape.curl.slice() : [shape.curl, shape.curl, shape.curl, shape.curl, shape.curl];
+    const cs = [1, 1, 1, 1];                                      // per-finger curl scale (fitted below)
+    const poseHand = (wristT) => {
+      twoBoneIK(ch, 'arm', sd, wristT, pole, { reach: amount, soft: 0.02 });
+      const hf = handFrame(ch, sd);
+      // pronate: forearm twist first (no candy-wrapper wrist), then the wrist's own correction
+      if (hf) twistForearm(ch, sd, hf.palm, palm, amount);
+      handShape(ch, sd, { ...shape, curl: [curl0[0], ...curl0.slice(1).map((c, i) => Math.min(1.6, c * cs[i]))] }, amount);
+      orientHand(ch, sd, fingers, palm, amount);
+    };
+    let wrist = null;
     // two passes: the wrist target depends on the forearm's line (a straight wrist), which the IK sets
     for (let pass = 0; pass < 2; pass++) {
       const E = wpos(el, new THREE.Vector3()), W = wpos(wr, new THREE.Vector3());
-      // the hand continues the forearm (seen square to the bar), tipped 15 deg down over the bar
+      // the hand continues the forearm (seen square to the bar), tipped down over the bar
       fingers = W.sub(E);
       fingers.addScaledVector(axis, -fingers.dot(axis));
       if (fingers.lengthSq() < 1e-8 || fingers.dot(fwd) < 0.2 * fingers.length()) fingers.copy(fwd);
       fingers.normalize();
-      fingers.addScaledVector(up, -0.25).normalize();
+      fingers.addScaledVector(up, -(shape.tilt ?? 0.45)).normalize();
       fingers.addScaledVector(axis, -fingers.dot(axis)).normalize();
       // palm square to the fingers, facing down onto the bar
       palm = new THREE.Vector3().crossVectors(fingers, axis).normalize();
       if (palm.dot(up) > 0) palm.negate();
       // palm surface on the bar (bar radius + 4 mm leather give + half the palm's thickness), the bar
       // under the knuckle crease (0.8 of the palm length from the wrist)
-      const wrist = C.clone().addScaledVector(palm, -(bar.radius + 0.004 + 0.14 * pl)).addScaledVector(fingers, -0.8 * pl);
+      wrist = C.clone().addScaledVector(palm, -(bar.radius + 0.004 + 0.14 * pl)).addScaledVector(fingers, -0.8 * pl);
       twoBoneIK(ch, 'arm', sd, wrist, pole, { reach: amount, soft: 0.02 });
     }
-    // pronate: forearm twist first (no candy-wrapper wrist), then the wrist's own correction
-    const hf = handFrame(ch, sd);
-    if (hf) twistForearm(ch, sd, hf.palm, palm, amount);
-    handShape(ch, sd, opts.shape || BAR_GRIP, amount);
-    orientHand(ch, sd, fingers, palm, amount);
+    poseHand(wrist);
+    // fit the wrap: the middle finger's three joints (knuckle, PIP, DIP) lie on a circle round the bar's
+    // axis - the hand slides (in the bar's cross-section) until that circle is centred on the bar, and the
+    // fingers curl until its radius is the bar's plus half a finger (tips tucked under, not hanging below)
+    const Rt = bar.radius + 0.1 * pl;
+    const sec = (p) => { _v.copy(p).sub(C); return [_v.dot(fwd), _v.dot(up)]; };
+    for (let it = 0; it < 4 && amount > 0.5; it++) {
+      const a = sec(wpos(ch.bone(`finger3-1.${sd}`) || wr, new THREE.Vector3()));
+      const b = sec(wpos(ch.bone(`finger3-2.${sd}`) || wr, new THREE.Vector3()));
+      const c = sec(wpos(ch.bone(`finger3-3.${sd}`) || wr, new THREE.Vector3()));
+      const o = circumcentre(a, b, c);
+      if (!o) break;
+      // the circle's centre onto the bar's axis (at most 3 cm a step)
+      const sx = THREE.MathUtils.clamp(-o[0], -0.03, 0.03), sy = THREE.MathUtils.clamp(-o[1], -0.03, 0.03);
+      wrist.addScaledVector(fwd, sx).addScaledVector(up, sy);
+      // each finger's own curl from how far its PIP and DIP sit from the bar's axis (the little finger's
+      // knuckle sits lower in the palm's arch: curled like the middle one it would pass through the bar)
+      ['finger2', 'finger3', 'finger4', 'finger5'].forEach((f, i) => {
+        const p = sec(wpos(ch.bone(`${f}-2.${sd}`) || wr, new THREE.Vector3())), q = sec(wpos(ch.bone(`${f}-3.${sd}`) || wr, new THREE.Vector3()));
+        const r = 0.5 * (Math.hypot(p[0], p[1]) + Math.hypot(q[0], q[1]));
+        cs[i] = THREE.MathUtils.clamp(cs[i] * Math.pow(r / Rt, 0.8), 0.35, 1.45);
+      });
+      poseHand(wrist);
+    }
+    if (shape.thumbWrap !== 0) wrapThumb(ch, sd, C, axis, fwd, up, bar.radius + 0.1 * pl, sg, amount * (shape.thumbWrap ?? 1));
     wr.updateMatrixWorld(true);
     done.push(sd);
   }
   return done;
+}
+
+/** Centre of the circle through three 2-D points (null when they are in a line). */
+function circumcentre(a, b, c) {
+  const d = 2 * (a[0] * (b[1] - c[1]) + b[0] * (c[1] - a[1]) + c[0] * (a[1] - b[1]));
+  if (Math.abs(d) < 1e-10) return null;
+  const A = a[0] * a[0] + a[1] * a[1], B = b[0] * b[0] + b[1] * b[1], Cc = c[0] * c[0] + c[1] * c[1];
+  return [(A * (b[1] - c[1]) + B * (c[1] - a[1]) + Cc * (a[1] - b[1])) / d, (A * (c[0] - b[0]) + B * (a[0] - c[0]) + Cc * (b[0] - a[0])) / d];
+}
+
+/**
+ * The thumb closed round the bar's NEAR side (the rider's side, opposite the fingers): its first joint
+ * high on the near side, the next down the near face, the tip curling under - so from above (a rider's
+ * eye or an over-shoulder camera) the thumb shows along the bar beside the index finger, angled in toward
+ * the other hand. R: the thumb's centre line from the bar's axis; sg: -1 left hand, +1 right.
+ */
+function wrapThumb(ch, sd, C, axis, fwd, up, R, sg, amount) {
+  const b1 = ch.bone(`finger1-1.${sd}`), b2 = ch.bone(`finger1-2.${sd}`), b3 = ch.bone(`finger1-3.${sd}`);
+  if (!b1 || !b2 || !b3 || amount <= 0) return;
+  // a point on the bar's surface ring: phi from the top toward the front (near side = negative), a = axial
+  const ring = (phi, a) => C.clone().addScaledVector(axis, a).addScaledVector(up, R * Math.cos(phi)).addScaledVector(fwd, R * Math.sin(phi));
+  const ax = (p) => _v.copy(p).sub(C).dot(axis);
+  const deg = Math.PI / 180;
+  const h1 = wpos(b1, new THREE.Vector3()), h2 = wpos(b2, new THREE.Vector3()), h3 = wpos(b3, new THREE.Vector3());
+  const L2 = h3.distanceTo(h2);
+  // the thumb's metacarpal (finger1-1) stays as handShape set it: the built coats weight their cuff
+  // vertices to it, so swinging it drags the sleeve down over the hand (1C-16 test render) - only the
+  // phalanges wrap
+  void h1;
+  // the proximal phalanx down the near face
+  aimBone(b2, h3, ring(-100 * deg, ax(h2) - sg * 0.35 * L2).sub(h2), amount);
+  wpos(b3, h3);
+  // the distal phalanx curls under the bar (its tip along the bone's +y, MakeHuman / glTF bones)
+  const tip = new THREE.Vector3(0, L2 * 0.8 / b3.getWorldScale(new THREE.Vector3()).y, 0).applyMatrix4(b3.matrixWorld);
+  aimBone(b3, tip, ring(-150 * deg, ax(h3) - sg * 0.25 * L2).sub(h3), amount);
 }
