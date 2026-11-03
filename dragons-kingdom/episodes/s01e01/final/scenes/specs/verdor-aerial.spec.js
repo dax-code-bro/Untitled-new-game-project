@@ -1,0 +1,174 @@
+// Shot specs - VERDOR_AERIAL: scene 1C, X4-01 .. X4-20 minus the ground shots (session 17: FIRST PASS - geography,
+// staging and camera PLANS only; NOT WIRED: there is no `VERDOR_AERIAL` entry in scenes/lib/director/registry.js and
+// no builder scenes/lib/director/sets/verdor-aerial.js yet, so build-shots.mjs ignores this file. Wire both before
+// any previs (see scenes/lib/director/PROGRESS.md session 17 for the exact steps).
+//
+// The ground-level X4 shots (X4-04, X4-05, X4-07, X4-09) are set VERDOR_HARBOR (their own spec / builder later); they
+// share the SAME map below so the dragons' shadows / the harbour layout match across the cut.
+//
+// MAP (VERDOR frame: +x east = the sea, -z north, y up, metres; PROVISIONAL - first placement of the harbour town):
+//   The riding grounds are around the origin (1B); the palace lies SOUTH of the field (1A: they walk up the field
+//   from the south). The 1C flight line runs SOUTH along the coast (x ~295) from z 300; 1C-19 ends at formation
+//   time T 47 (z 1052). Continuing south the coast BENDS east into the harbour bay:
+//     COAST      x ~295 down to z ~1350, then the bay: shore curving west to x ~250 (z 1500-1750) and back out east to
+//                a low headland at [380, 0, 1880]; south of it the coast runs on SSE to the outer rocks (X6, z ~3200)
+//     HARBOUR    curved stone wall (breakwater) from the north shore [300, 0, 1480] arcing out to the mouth at
+//                [400, 0, 1640], opening SOUTH-EAST; QUAY along the inner west shore x ~262, z 1560-1700, quay face
+//                looking EAST (architecture/verdor.js harbor(): its +z sea axis rotated to +x), slipway at its south
+//                end [265, 0, 1715] running down east; net frames on the hard south of the slipway
+//     SANTA MARIA moored at the north end of the quay, bow north, [272, 0, 1585], mainmast top ~28 m
+//     TOWN       terraced hillside WEST of the quay: x 120-255, z 1480-1780, ground rising from 3 m at the quay to
+//                ~42 m at x 120 (3-4 terraces of houses: architecture houses kit, roofs readable from above);
+//                MARKET STREET running north-south along the first terrace (x ~235, y ~8)
+//     PALACE     on the high ground WNW of the town: [60, 58, 1430] (ground), keep ~24 m; the birthing chamber's
+//                high opening on its EAST face ~18 m above its ground ([84, 76, 1430]) - looks east over the sea, the
+//                same window that lights the chamber in 1A (sun az 94.7 - check BIRTHING_CHAMBER continuity)
+//     TERRACE FARM (X4-06) south-west of the town on the slope [150, 34, 1840]
+//     SCHOOL FIELD (X4-13: young riders on small dragons, instructor) on the plateau south of the town
+//                [190, 38, 1960], 120 x 70 m, NOT the 1B riding grounds
+//   SUN: same as 1C (sunDir(102, 31)); shadows fall 1.63 h west + 0.35 h north of each dragon -> at 60 m up Charcoal's
+//   shadow lands ~100 m WEST of him: over the quay when he flies ~100 m east of it (X4-03 "his shadow reaches the
+//   town before he does" works naturally with the sun behind them over the sea).
+//
+// FLIGHT CLOCK (formation T continues 1C's: zF(T) = 300 + 16 T; the edit compresses time, the map stays continuous):
+//   X4 starts at T 62 (z 1292, the bend ahead). Over the harbour the line curves: heading 180 -> 200 (SSW) across the
+//   bay mouth, then back to 165 along the south coast; altitude: Charcoal stays ~60 m (X4-03 "stays high"); Leaf drops
+//   to ~14 m along the breakwater (X4-02), passes the Santa Maria's masthead at ~30 m (X4-10), climbs back (X4-11).
+//   Screen direction: cameras stay on the INLAND (west) side while over open water (travel L -> R); over the town the
+//   aerial views look DOWN / east from the town side, travel still L -> R (shotlist flight_line_1C_to_1E).
+// Faces: X4-12 (Remi "They wave at you"), X4-18 (Abby/Remi exchange) and X4-19 are dialogue / reaction shots ->
+// lip-sync from the takes when performance supports riders in flight; otherwise three-quarter / turned.
+// CAST: as SKY_OFF_VERDOR + town crowd (scenes/lib/humans crowd kit, LOD far), quay dragon (scout-size species,
+// low crouch), net dragon, 3-4 school dragons (hatchling-grown / scout presets, small), lookout on the Santa Maria.
+//
+// Shot specs below use the SKY_OFF_VERDOR vocabulary (cam rigs, inForm, acts) so the file can be wired as-is once the
+// builder exists; every `cam` is a PLAN to be checked in previs (pv tool) before stills.
+const V = 16;
+const zF = (T) => 300 + V * T;
+const inForm = (x, y, lead, T0, dur, o = {}) => ({
+  root: [[0, [x, y, zF(T0) + lead]], [dur, [x + (o.dx || 0), y + (o.dy || 0), zF(T0 + dur) + lead + (o.dlead || 0)], 'linear']],
+  yawKeys: o.heading ?? 180,
+});
+const LEAF_FLY = (o = {}) => [[0, 'flight', { corr: 1, ...o }]];
+const CHAR_HZ = 0.625;                                   // sound spots: one beat / 1.6 s (do not change without telling sound)
+const CHAR_FLY = (o = {}) => [[0, 'flight', { hz: CHAR_HZ, amp: 0.68, ...o }]];
+const CHAR_GLIDE = (o = {}) => [[0, 'glide', { bank: 0.03, dihedral: 0.08, droop: 0.06, ...o }]];
+
+export const MAP = {
+  harbourWall: [[300, 0, 1480], [350, 0, 1500], [390, 0, 1560], [400, 0, 1640]],
+  quay: { from: [262, 0, 1560], to: [262, 0, 1700], faces: 'east', top: 2.8 },
+  slipway: { at: [265, 0, 1715], dir: 'east', len: 26 },
+  santaMaria: { at: [272, 0, 1585], heading: 0, mastTop: 28 },
+  town: { x: [120, 255], z: [1480, 1780], groundAt: (x) => 3 + (255 - x) * 0.29 },   // 3 m at the quay -> ~42 m at x 120
+  marketStreet: { x: 235, z: [1520, 1740], y: 8 },
+  palace: { ground: [60, 58, 1430], chamberOpening: [84, 76, 1430], faces: 'east' },
+  terraceFarm: [150, 34, 1840],
+  schoolField: { centre: [190, 38, 1960], size: [120, 70] },
+};
+// formation times of each X4 shot's first frame (shot list lengths, X4-04/05/07/09 are on the ground but the clock
+// runs on through them so the aerials stay continuous)
+const T = { 'X4-01': 62, 'X4-02': 69, 'X4-03': 73, 'X4-06': 87, 'X4-08': 95, 'X4-10': 103.5, 'X4-11': 110.5, 'X4-12': 114,
+  'X4-13': 118, 'X4-14': 126, 'X4-15': 131, 'X4-16': 135.5, 'X4-17': 141.5, 'X4-18': 143.5, 'X4-19': 151.5, 'X4-20': 155 };
+
+export default {
+  set: 'VERDOR_AERIAL',
+  wired: false,                                          // build-shots ignores it until the registry entry exists
+  cast: {
+    leaf: { kind: 'creature', id: 'leaf', quality: 'standard' },
+    charcoal: { kind: 'creature', id: 'charcoal' },
+    remiR: { kind: 'human', id: 'remi_ride', ride: 'charcoal', outfit: 'remi', role: 'REMI' },
+    abbyR: { kind: 'human', id: 'abby_ride', ride: 'leaf', outfit: 'abby', role: 'ABBY' },
+  },
+  map: MAP,
+  shots: {
+    'X4-01': {
+      staging: 'EXTREME WIDE: 180 mm from a camera ship high and inland over the north shore, slow travel: the coast bends, the harbour opens below - curved wall, pale quay, boats on the slipway, nets on frames; the pair enter LEFT, Leaf near/behind, Charcoal right/ahead.',
+      cam: { rig: 'follow', pos: [[0, [120, 160, 1200]], [7, [150, 160, 1300], 'linear']], look: [[0, [330, 20, 1560]], [7, [360, 30, 1600], 'linear']], mm: 180, fstop: 8, focus: 'leaf.chest' },
+      cast: { leaf: { tack: true, ...inForm(505, 62, 0, T['X4-01'], 7, { dx: -40 }), acts: LEAF_FLY() }, charcoal: { tack: true, ...inForm(535, 60, 16, T['X4-01'], 7, { dx: -40 }), acts: CHAR_FLY() }, abbyR: {}, remiR: {} },
+    },
+    'X4-02': {
+      staging: 'WIDE: 150 mm air-to-air from inland: Leaf drops to ~14 m and flies along the harbour wall (wall in the foreground, the bay beyond), wingtip shadow on the stones.',
+      cam: { rig: 'follow', frame: { subjects: [['leaf.chest', [0, 0.05]]], from: 270, dist: 140, rise: 12, track: true }, mm: 150, fstop: 5.6, focus: 'leaf.chest' },
+      cast: { leaf: { tack: true, root: [[0, [395, 40, 1500]], [4, [398, 14, 1562], 'ease']], yawKeys: 175, acts: LEAF_FLY() }, abbyR: {} },
+    },
+    'X4-03': {
+      staging: 'HIGH STATIC 35 mm from above the town looking east-north-east down the slope: roofs below; Charcoal stays high (top right, small) and his shadow slides over the quay and up into the town ahead of him.',
+      cam: { rig: 'static', pos: [180, 95, 1640], look: [300, 10, 1600], mm: 35, fstop: 8, focus: [300, 10, 1600] },
+      cast: { charcoal: { tack: true, root: [[0, [380, 62, 1540]], [4, [372, 62, 1604], 'linear']], yawKeys: 185, acts: CHAR_GLIDE() }, remiR: {} },
+      notes: 'the shadow lands ~100 m west of him (sun 102/31): check it crosses the quay at 0.3-0.6 of the shot',
+    },
+    'X4-06': {
+      staging: '50 mm STATIC on the terrace farm: a farmer leans on a tool (foreground left, face soft/turned), watches the riders pass high over the town (background right), unimpressed.',
+      cam: { rig: 'static', pos: [140, 35.6, 1852], look: [300, 70, 1700], mm: 50, fstop: 5.6, focus: 'farmer.head' },
+      cast: { farmer: { kind: 'human', id: 'crowd05', outfit: 'farmer', mark: [146, 34, 1846], acts: [[0, 'stand', { prop: 'hoe', lean: 0.6 }], [0.5, 'look', { at: 'leaf.chest', amount: 0.7 }]] } },
+      notes: 'REQUEST humans: lean-on-tool posture (hoe / spade) if not in the gesture set',
+    },
+    'X4-08': {
+      staging: 'MEDIUM 120 mm air-to-air off Leaf\'s right: Leaf gives a quick bright call (mouth open, head up); hold; the quay dragon\'s answer is OFF (sound). Charcoal does not call.',
+      cam: { rig: 'follow', frame: { subjects: [['leaf.head', [-0.1, 0.1]]], from: 250, dist: 26, rise: 2, track: true }, mm: 120, fstop: 4, focus: 'leaf.head' },
+      cast: { leaf: { tack: true, root: [[0, [360, 22, 1600]], [3.5, [355, 24, 1655], 'linear']], yawKeys: 185, acts: [[0, 'flight', { corr: 1 }], [0.8, 'flight', { corr: 1, call: 1 }], [1.6, 'flight', { corr: 1 }]] }, abbyR: {} },
+      notes: 'REQUEST creatures: a `call` channel (jaw open + neck lift) in flight if `bite`/`roar` cannot be layered on flight',
+    },
+    'X4-10': {
+      staging: '50 mm air-to-air past the Santa Maria\'s mainmast: Leaf passes close beside it, the LOOKOUT at the masthead ducks, then laughs and waves; Abby waves back with her LEFT hand (her right stays on the grip bar). Line X4-01 (Abby).',
+      cam: { rig: 'follow', frame: { subjects: [['abbyR.head', [-0.15, 0.05]], ['lookout.head', [0.3, 0]]], from: 225, dist: 14, rise: 1.5, track: true }, mm: 50, fstop: 5.6, focus: 'abbyR.head' },
+      cast: {
+        leaf: { tack: true, root: [[0, [282, 30, 1545]], [7, [290, 32, 1655], 'linear']], yawKeys: 182, acts: LEAF_FLY() },
+        abbyR: { acts: [[2.6, 'gesture', { name: 'wave', hand: 'L' }]] },
+        lookout: { kind: 'human', id: 'sailor1', mark: 'santaMaria.masthead', acts: [[1.2, 'duck'], [2.4, 'gesture', { name: 'wave', hand: 'R' }]] },
+      },
+      notes: 'mast clearance: Leaf\'s right wingtip must stay >= 4 m from the mast at the beat\'s full extension (check every 6th frame)',
+    },
+    'X4-11': {
+      staging: 'WIDE 160 mm from inland: Leaf climbs back to Charcoal\'s level on his usual side (inland, a little behind), near enough for talk.',
+      cam: { rig: 'follow', pos: [[0, [120, 120, 1690]], [3.5, [128, 122, 1746], 'linear']], look: [[0, [470, 55, 1720]], [3.5, [478, 58, 1776], 'linear']], mm: 160, fstop: 8, focus: 'leaf.chest' },
+      cast: { leaf: { tack: true, root: [[0, [440, 34, 1700]], [3.5, [452, 61, 1756], 'ease']], yawKeys: 172, acts: LEAF_FLY() }, charcoal: { tack: true, root: [[0, [482, 60, 1716]], [3.5, [492, 60, 1772], 'linear']], yawKeys: 172, acts: CHAR_FLY() }, abbyR: {}, remiR: {} },
+    },
+    'X4-12': {
+      staging: 'MEDIUM 50 mm on Abby (Remi\'s line X4-02 "They wave at you." OFF/over): she pretends not to hear and pats Leaf\'s neck; face three-quarter.',
+      cam: { rig: 'follow', frame: { subjects: [['abbyR.head', [-0.1, 0.15]], ['abbyR.hand.R', [0.15, -0.3]]], from: 215, dist: 4.5, rise: 0.6, track: true }, mm: 50, fstop: 4, focus: 'abbyR.head' },
+      cast: { leaf: { tack: true, ...inForm(452, 62, 0, T['X4-12'], 4, { heading: 172 }), acts: LEAF_FLY() }, abbyR: { acts: [[1.4, 'gesture', { name: 'pat', target: 'leaf.neck', hand: 'R' }]] } },
+      notes: 'wing-sweep rule (1C-16 lesson): at dist 4.5 from 215 the lens may be inside the right wing\'s sweep - previs every beat phase',
+    },
+    'X4-13': {
+      staging: 'AERIAL 35 mm looking down on the school field from ~90 m: young riders on small dragons, an INSTRUCTOR; one wobbling takeoff, one rider clinging on with both arms; the pair\'s shadows cross the field.',
+      cam: { rig: 'follow', pos: [[0, [170, 130, 1900]], [8, [180, 130, 1990], 'linear']], look: [[0, [190, 38, 1950]], [8, [195, 38, 1985], 'linear']], mm: 35, fstop: 8, focus: [190, 38, 1960] },
+      notes: 'cast: 3-4 small dragons (scout / grown-hatchling presets, low stance), 4 young riders (crowd kit, teen builds - NO child content beyond riding lessons), 1 instructor; acts: takeoff (wobble), sit, walk',
+    },
+    'X4-14': {
+      staging: 'AERIAL 35 mm: beyond the town, on its high ground, the palace - weathered pale stone, practical; the birthing chamber\'s high opening a dark shape near the top of the east face.',
+      cam: { rig: 'follow', pos: [[0, [330, 95, 1520]], [5, [325, 92, 1480], 'ease']], look: [[0, [70, 70, 1430]], [5, [70, 70, 1430], 'ease']], mm: 35, fstop: 8, focus: [70, 70, 1430] },
+      notes: 'builder: architecture/verdor.js palace() at MAP.palace.ground, lod far; chamber opening = interiors.birthingChamber window aligned east',
+    },
+    'X4-15': {
+      staging: 'POV 300 mm-equivalent from Remi\'s eyeline: Alexandria standing in the chamber opening, watching them pass (face too small to need lip-sync; still, unreadable); REVERSE 85 mm on Remi lifting a hand.',
+      cam: { rig: 'follow', pos: [[0, 'remiR.head']], look: [[0, MAP.palace.chamberOpening]], mm: 300, fstop: 5.6, focus: MAP.palace.chamberOpening },
+      notes: 'two set-ups in one shot id: split into X4-15a (POV 0-2.5 s) / X4-15b (reverse 2.5-4.5 s) via a camera cut key at 2.5 s; Alexandria: humans id alexandria, stand, hands folded',
+    },
+    'X4-16': {
+      staging: 'MEDIUM 50 mm off Charcoal\'s right: Remi looks down over the town longer than he needs to - roofs, harbour, people working; face three-quarter AWAY (down-left).',
+      cam: { rig: 'follow', frame: { subjects: [['remiR.head', [0.3, 0.1]]], from: 200, dist: 16, rise: 3, track: true }, mm: 50, fstop: 4, focus: 'remiR.head' },
+      cast: { charcoal: { tack: true, root: [[0, [300, 62, 1760]], [6, [318, 62, 1854], 'linear']], yawKeys: 170, acts: CHAR_GLIDE({ droop: 0.16 }) }, remiR: { acts: [[0, 'look', { at: [200, 10, 1700], amount: 0.9 }]] } },
+    },
+    'X4-17': {
+      staging: 'CLOSE 85 mm on Abby: she watches him doing it (looks screen RIGHT toward Remi). Silent.',
+      cam: { rig: 'follow', frame: { subjects: [['abbyR.head', [-0.15, 0.1]]], from: 215, dist: 5.5, rise: 0.4, track: true }, mm: 85, fstop: 4, focus: 'abbyR.head' },
+      cast: { leaf: { tack: true, root: [[0, [270, 62, 1800]], [2, [275, 62, 1832], 'linear']], yawKeys: 170, acts: LEAF_FLY() }, abbyR: { acts: [[0, 'look', { at: 'remiR.head', amount: 0.8 }]] } },
+    },
+    'X4-18': {
+      staging: 'TWO-SHOT 180 mm air-to-air from inland: the exchange X4-03..X4-07 ("You\'re doing it again." ... "You\'re counting something."); Leaf left/near, Charcoal right; the roofs drop away below.',
+      cam: { rig: 'follow', frame: { subjects: [['abbyR.head', [-0.35, 0]], ['remiR.head', [0.3, 0.05]]], from: 262, dist: 180, rise: 18, track: true }, mm: 180, fstop: 5.6, focus: 'abbyR.head' },
+      notes: 'formation TALK as 1C (Leaf 16 m behind Charcoal\'s centre, 30 m lateral); lines placed by build-shots from takes',
+    },
+    'X4-19': {
+      staging: 'CLOSE 85 mm on Remi: he does not answer; looks away from the town toward the sea (screen right), like someone caught.',
+      cam: { rig: 'follow', frame: { subjects: [['remiR.head', [0.2, 0.1]]], from: 205, dist: 7, rise: 0.8, track: true }, mm: 85, fstop: 4, focus: 'remiR.head' },
+      notes: 'remiR look: [0] at town (down-left) -> [1.2] at sea (east), blend 0.6',
+    },
+    'X4-20': {
+      staging: 'EXTREME WIDE 160 mm aerial travel: they leave the harbour behind and follow the coast SSE toward its far end; the outer rocks small on the horizon right.',
+      cam: { rig: 'follow', pos: [[0, [180, 150, 2050]], [5, [200, 150, 2130], 'linear']], look: [[0, [470, 55, 2200]], [5, [490, 55, 2280], 'linear']], mm: 160, fstop: 8, focus: 'leaf.chest' },
+      notes: 'outer rocks: nature/rocks kit stacks at [700, 0, 3200] (X6 continuity: two stacks leaning close, mist on the seaward side)',
+    },
+  },
+};
