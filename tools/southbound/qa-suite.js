@@ -107,7 +107,7 @@ async (opts) => {
       c.give(id); c.slots.melee = id; c.equip('melee');
       ok(c.weapon === id && !c.holstered, `${id} equips from the melee slot`);
       ok(!!c.model(id), `${id} has a model to hold`);
-      window.SB.step(3, 1 / 30);
+      window.SB.skipRender(true); window.SB.step(3, 1 / 30); window.SB.skipRender(false);
     }
     // leave the combat state exactly as we found it for the tests that follow
     c.weapon = prev.weapon; c.holstered = prev.holstered; c.dual = prev.dual; Object.assign(c.slots, prev.slots); delete c.slots.melee;
