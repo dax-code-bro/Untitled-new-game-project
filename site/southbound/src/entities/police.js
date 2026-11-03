@@ -22,7 +22,7 @@ class Tank {
     this.isTank = true;
     this.group = new THREE.Group();
     const g = loaded(TANK);
-    if (g) { const m = instance(g, 7.2); m.rotation.y = 0; this.group.add(m); this.size = m.userData.size; }
+    if (g) { const m = instance(g, 7.2); m.rotation.y = Math.PI / 2; this.group.add(m); const s0 = m.userData.size; this.size = new THREE.Vector3(s0.z, s0.y, s0.x); } // cannon is modelled along -X: turn it to +Z
     scene.add(this.group);
     this.pos = new THREE.Vector3(); this.vel = new THREE.Vector2(); this.heading = 0; this.speed = 0;
     this.health = 2600; this.maxHealth = 2600; this.impact = 0; this.fireT = 4;

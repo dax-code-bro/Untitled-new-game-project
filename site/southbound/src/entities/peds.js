@@ -174,12 +174,12 @@ export class Peds {
 
   think(p, dt, player) {
     if (p.mode === 'dead') return;
+    if (p.scripted) return; // in a cutscene
     if (p.role === 'cop') { if (this.copThink) this.copThink(p, dt); return; }
     if (p.role === 'foe') { if (this.foeThink) this.foeThink(p, dt); return; }
     if (p.role === 'hunter') { if (this.hunterThink) this.hunterThink(p, dt); return; }
     if (p.role === 'brawler') { if (this.brawlThink) this.brawlThink(p, dt); return; }
     if (p.role === 'walker') { if (this.walkerThink) this.walkerThink(p, dt); return; }
-    if (p.scripted) return;
     let want = 0;
     if (p.mode === 'flee') {
       p.timer -= dt;
