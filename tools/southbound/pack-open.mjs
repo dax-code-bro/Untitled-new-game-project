@@ -31,10 +31,11 @@ const jobs = [
 const ls = (d) => { try { return fs.readdirSync(path.join(dl, 'quaternius-showcase/public/glb', d)); } catch (e) { return []; } };
 for (const f of ls('fish_pack').filter((n) => /^(Fish|Shark)/.test(n))) jobs.push(Q('fish_pack', f.replace('.glb', '')));
 for (const f of ls('house_interior_pack')) jobs.push(Q('house_interior_pack', f.replace('.glb', '')));
-// firearms (Quaternius Survival + Modular Sci-Fi Guns packs) and armour (Tank pack)
+// firearms (Quaternius Survival pack) and armour (Tank pack)
 for (const f of ls('survival_pack')) jobs.push(Q('survival_pack', f.replace('.glb', '')));
-for (const f of ls('modular_sci_fi_guns_pack')) jobs.push(Q('modular_sci_fi_guns_pack', f.replace('.glb', '')));
 for (const f of ls('tank_pack')) jobs.push(Q('tank_pack', f.replace('.glb', '')));
+// real-world rifles, SMG, snipers and launchers (Quaternius Toon Shooter Game Kit, CC0)
+for (const f of ls('toon_guns')) jobs.push(Q('toon_guns', f.replace('.glb', '')));
 
 let total = 0;
 for (const [src, rel, size] of jobs) {

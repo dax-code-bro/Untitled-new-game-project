@@ -122,7 +122,8 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 - [x] Hands follow the animation's finger poses (no curled rest pose)
 - [x] Weapon wheel (holster, sidearm, dual sidearms, rifle, shotgun, long range, bow, heavy), slow-mo while open
 - [x] Holsters: sidearm on the hip, long gun slung on the back; aiming draws, H holsters
-- [x] 21 CC0 firearm models (Quaternius Survival + Modular Guns packs), real materials
+- [x] Real-world firearm models only, no sci-fi: Quaternius Survival pack (pistols, revolvers, shotguns) and
+      Toon Shooter Game Kit (AK rifle, SMG, bolt-action snipers, pump shotgun, revolver grenade launcher), all CC0
 - [x] Arm IK holds per weapon type (two-handed pistol, shouldered rifles/shotguns, low ready, port arms, dual wield);
       reloads per action (box mag, pump, bolt, revolver); idle inspects
 - [x] Gun HUD: only minimap + health + grey weapon silhouette and ammo while a gun is out on foot
