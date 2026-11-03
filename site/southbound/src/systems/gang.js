@@ -423,6 +423,7 @@ export function installGang(game) {
 
   game.storyBusy = () => !!pro && pro.phase === 'intro';
   if (!P.story.prologue && !skip) setTimeout(startPrologue, 50);
+  if ((P.story.prologue || skip) && !game.combat.owned.includes('pistol')) game.combat.give('pistol');
 
   const _f = new THREE.Vector3();
   return {

@@ -98,7 +98,7 @@ export function installTools(game) {
     [TOWN.x0 - 26, TOWN.z0 + 2 * TOWN.pitch, 'Bayou Outfitters (hunting)', 'Hunting'],
   ];
   for (const [x, z, name, tab] of shops) interact.add({ x, z, label: () => `${keyHint(game)} shop at ${name}`, color: 0xffa040, blip: { color: '#ffa040', size: 5, global: true, icon: tab === 'Hunting' ? '🏹' : '🔨' }, show: () => !game.S.indoors, use: () => store.show(tab, name) });
-  for (const m of game.marineAir?.marinas || []) interact.add({ x: m.land.x + 6, z: m.land.z + 4, label: () => `${keyHint(game)} shop for bait & tackle`, color: 0xffa040, blip: { color: '#ffa040', size: 4, icon: '🎣' }, use: () => store.show('Fishing', 'Bait & Tackle') });
+  for (const m of game.marineAir?.marinas || []) interact.add({ x: m.land.x + 6, z: m.land.z + 4, label: () => `${keyHint(game)} shop for bait & tackle`, color: 0xffa040, blip: { color: '#ffa040', size: 4, icon: '🎣', badge: 'S' }, use: () => store.show('Fishing', 'Bait & Tackle') });
 
   // flashlight that follows the player at night
   let lightOn = false;

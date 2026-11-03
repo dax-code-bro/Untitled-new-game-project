@@ -35,6 +35,17 @@ export class HUD {
     this.moneyT = 0; this.regionT = 0;
   }
 
+  // the little J (job) / S (shop) letter on a map icon
+  badge(c, x, y, letter) {
+    c.save();
+    c.fillStyle = letter === 'J' ? '#f2c230' : '#3fa9f5';
+    c.strokeStyle = 'rgba(0,0,0,0.85)'; c.lineWidth = 1.5;
+    c.beginPath(); c.arc(x, y, 6, 0, Math.PI * 2); c.fill(); c.stroke();
+    c.fillStyle = '#111'; c.font = 'bold 9px Inter, system-ui, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText(letter, x, y + 0.5);
+    c.restore();
+  }
+
   // top-down silhouette of the vehicle, filling red where it is damaged
   drawVehicle(kind, dmg) {
     const c = this.vehCtx, W = 140, H = 200;
@@ -150,7 +161,7 @@ export class HUD {
       mm.font = `${Math.round(size * 0.78)}px system-ui, "Apple Color Emoji", "Segoe UI Emoji", sans-serif`; mm.textAlign = 'center'; mm.textBaseline = 'middle';
       mm.fillText(glyph, p.x, p.y + 1);
     };
-    for (const b of st.blips || []) { const p = proj(b.x, b.z); if (b.icon) icon(p, b.icon, b.bg || 'rgba(20,16,12,0.85)', b.size > 6 ? 18 : 15); else { mm.fillStyle = b.color; mm.beginPath(); mm.arc(p.x, p.y, 4, 0, Math.PI * 2); mm.fill(); } }
+    for (const b of st.blips || []) { const p = proj(b.x, b.z); if (b.icon) { icon(p, b.icon, b.bg || 'rgba(20,16,12,0.85)', b.size > 6 ? 18 : 15); if (b.badge) this.badge(mm, p.x + 7, p.y - 7, b.badge); } else { mm.fillStyle = b.color; mm.beginPath(); mm.arc(p.x, p.y, 4, 0, Math.PI * 2); mm.fill(); } }
     for (const a of st.animals || []) {
       const p = proj(a.x, a.z);
       mm.save(); mm.translate(p.x, p.y); mm.rotate(Math.PI / 4); mm.fillStyle = '#f2c230'; mm.strokeStyle = '#111'; mm.lineWidth = 1.5; mm.fillRect(-6, -6, 12, 12); mm.strokeRect(-6, -6, 12, 12); mm.restore();
@@ -182,7 +193,7 @@ export class HUD {
       bc.drawImage(this.worldMap, 0, 0, B.width, B.height);
       const px = ((st.pos.x + WORLD.half) / WORLD.size) * B.width, pz = ((st.pos.z + WORLD.half) / WORLD.size) * B.height;
       bc.font = '18px system-ui, "Apple Color Emoji", "Segoe UI Emoji", sans-serif'; bc.textAlign = 'center'; bc.textBaseline = 'middle';
-      for (const b of st.blips || []) if (b.icon) { const bx = ((b.x + WORLD.half) / WORLD.size) * B.width, bz = ((b.z + WORLD.half) / WORLD.size) * B.height; bc.fillStyle = 'rgba(20,16,12,0.85)'; bc.beginPath(); bc.arc(bx, bz, 12, 0, Math.PI * 2); bc.fill(); bc.fillText(b.icon, bx, bz + 1); }
+      for (const b of st.blips || []) if (b.icon) { const bx = ((b.x + WORLD.half) / WORLD.size) * B.width, bz = ((b.z + WORLD.half) / WORLD.size) * B.height; bc.fillStyle = 'rgba(20,16,12,0.85)'; bc.beginPath(); bc.arc(bx, bz, 12, 0, Math.PI * 2); bc.fill(); bc.fillText(b.icon, bx, bz + 1); if (b.badge) this.badge(bc, bx + 9, bz - 9, b.badge); }
       bc.save(); bc.translate(px, pz); bc.rotate(-st.heading + Math.PI);
       bc.fillStyle = '#ff3b2f'; bc.strokeStyle = '#fff'; bc.lineWidth = 2;
       bc.beginPath(); bc.moveTo(0, -12); bc.lineTo(8, 9); bc.lineTo(0, 4); bc.lineTo(-8, 9); bc.closePath(); bc.fill(); bc.stroke();

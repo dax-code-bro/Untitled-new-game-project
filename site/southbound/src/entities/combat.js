@@ -2,13 +2,13 @@
 import * as THREE from 'three';
 import { clamp } from '../util.js';
 
-import { WEAPONS, buildWeaponModel, gunModelFor, gunRel } from './arsenal.js';
+import { WEAPONS, buildWeaponModel, gunModelFor, gunRel, applyFinish } from './arsenal.js';
 import { loaded, Q } from '../assets/open.js';
 import { raycastObjects, raycastStatic } from '../core/hits.js';
 export { WEAPONS };
 
 // Starter loadout: one of each kind (the rest of the catalog is bought in the arsenal)
-const STARTER = ['fists', 'pistol', 'rifle_01', 'shotgun_01', 'marksman_01', 'sniper_01', 'bow_01', 'launcher_01'];
+const STARTER = ['fists']; // the 9mm comes from Rico in the prologue; everything else from the gunsmiths
 
 export class Combat {
   constructor(scene, hm, collision, settings, audio) {
@@ -90,7 +90,7 @@ export class Combat {
     let m = this.models[key];
     const G = gunModelFor(w);
     if (m && !m.userData.open && G && loaded(gunRel(G))) { this.scene.remove(m); m = null; }
-    if (!m) { m = buildWeaponModel(w); m.visible = false; this.scene.add(m); this.models[key] = m; }
+    if (!m) { m = buildWeaponModel(w); m.visible = false; this.scene.add(m); this.models[key] = m; if (this.finishOf) applyFinish(m, this.finishOf(id)); }
     return m;
   }
   hideAll(except = []) { for (const m of Object.values(this.models)) if (!except.includes(m)) m.visible = false; }

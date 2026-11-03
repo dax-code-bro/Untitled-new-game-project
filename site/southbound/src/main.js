@@ -24,6 +24,8 @@ import { makeSilhouetter } from './ui/silhouette.js';
 import { installLaw } from './systems/law.js';
 import { installRoadside } from './systems/roadside.js';
 import { installGang } from './systems/gang.js';
+import { installGunStores } from './systems/gunstores.js';
+import { buildWeaponModel, applyFinish } from './entities/arsenal.js';
 import { vehiclesOverlap } from './world/collision.js';
 import { LAND } from './assets/catalog.js';
 import { BOATS, AIRCRAFT } from './entities/craft.js';
@@ -371,6 +373,37 @@ async function createGame(progress) {
   });
   const gang = installGang(game);
   game.gang = gang;
+  // gunsmiths: silhouettes for the store list, finishes on your guns, attachments per gun
+  const silCache = {};
+  combat.finishOf = (id) => career.p.weapons.finish?.[id];
+  Object.assign(game, {
+    silhouetteOf: (id) => silCache[id] || (silCache[id] = silhouette('store:' + id, buildWeaponModel(WEAPONS[id]))),
+    applyFinishTo: (id) => { for (const [k, m] of Object.entries(combat.models)) if (k === id || k.startsWith(id + '#')) applyFinish(m, combat.finishOf(id)); },
+    fitAttachment: (id, attId) => {
+      const a = ATTACHMENTS.find((x) => x.id === attId), w = WEAPONS[id];
+      if (!a || !w || w.melee) return;
+      const mods = combat.mods || (combat.mods = {}), slots = mods[id] || (mods[id] = {});
+      if (slots[a.slot] === a.id) return;
+      if (!career.spend(a.price)) return;
+      slots[a.slot] = a.id;
+      const base = combat.base || (combat.base = {});
+      if (!base[id]) base[id] = { ...w };
+      Object.assign(w, base[id]);
+      for (const pid of Object.values(slots)) {
+        const m = ATTACHMENTS.find((x) => x.id === pid).mods;
+        if (m.damage) w.damage = Math.round(w.damage * m.damage);
+        if (m.spread) w.spread *= m.spread;
+        if (m.range) w.range = Math.round(w.range * m.range);
+        if (m.rate) w.rate *= m.rate;
+        if (m.clip) w.clip = Math.round(w.clip * m.clip);
+        if (m.recoil) w.recoil *= m.recoil;
+        if (m.silent) w.silent = true;
+        if (m.zoom) w.scope = m.zoom;
+      }
+      hud.toast(`${a.name} fitted to your ${w.name}`, 2.2);
+    },
+  });
+  const gunStores = installGunStores(game);
   const reportHit = (hit) => {
     if (!hit || hit.kind !== 'ped') return;
     if (hit.ped.role === 'hunter' || hit.ped.role === 'brawler') { S.hitMarker = true; return; } // self-defence
@@ -628,6 +661,7 @@ async function createGame(progress) {
     if (rp && !prompt) prompt = rp;
     const gp = gang.update(dt, a);
     if (gp && !prompt) prompt = gp;
+    gunStores.update(dt);
     career.update(dt);
     if (S.vehicle && S.vehicle.health <= 0 && !S.vehicle.wrecked) { S.vehicle.wrecked = true; hud.toast('The engine is wrecked — get out (F)', 4); }
     if (S.vehicle?.wrecked) { S.vehicle.vel.multiplyScalar(Math.exp(-3 * dt)); }

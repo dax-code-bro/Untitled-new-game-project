@@ -115,7 +115,7 @@ export function installJobs(game) {
 
   for (const def of JOBS) {
     const at = where(def);
-    interact.add({ x: at[0], z: at[1], color: 0xffe040, blip: { color: '#ffe040', size: 4, icon: JOB_ICONS[def.id] || '💼' }, show: () => !game.S.indoors && (!job || job.def === def),
+    interact.add({ x: at[0], z: at[1], color: 0xffe040, blip: { color: '#ffe040', size: 4, icon: JOB_ICONS[def.id] || '💼', badge: 'J' }, show: () => !game.S.indoors && (!job || job.def === def),
       label: () => job && job.def === def ? `${keyHint(game)} quit the ${def.name} shift` : `${keyHint(game)} work as ${def.name} (level ${lvl(def.id)} · ~${money((def.pay * (1 + (lvl(def.id) - 1) * 0.15)) * (def.stops || def.need || 1))})`,
       use: () => start(def) });
   }
