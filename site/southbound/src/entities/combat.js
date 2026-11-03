@@ -183,6 +183,8 @@ export class Combat {
         break;
       }
     }
+    const ph = this.rayProps?.(origin, dir, best.t);
+    if (ph) best = { t: ph.t, kind: 'prop', prop: ph.p };
     best.point = origin.clone().addScaledVector(dir, best.t);
     return best;
   }
@@ -286,10 +288,12 @@ export class Combat {
     } else if (hit.kind !== 'none') {
       this.burst(hit.point, this.dustMat, 6);
       if (hit.kind === 'building') this.onStaticHit?.(hit);
+      if (hit.kind === 'prop') this.onPropHit?.(hit, w);
     }
   }
 
   explode(at, w, targets, from) {
+    this.onExplosion?.(at, w.explosive || 5);
     const R = w.explosive;
     for (const p of targets.peds.list) {
       if (p.mode === 'dead') continue;

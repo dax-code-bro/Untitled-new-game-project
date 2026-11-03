@@ -27,6 +27,7 @@ import { installGang } from './systems/gang.js';
 import { installGunStores } from './systems/gunstores.js';
 import { installShops } from './systems/shops.js';
 import { createBillboards } from './world/billboards.js';
+import { installProps } from './systems/props.js';
 import { installCarCombat } from './systems/carcombat.js';
 import { installStreetLife } from './systems/streetlife.js';
 import { installWorldEvents } from './systems/world-events.js';
@@ -412,9 +413,12 @@ async function createGame(progress) {
   });
   const gunStores = installGunStores(game);
   const shops = installShops(game);
+  game.billboards = billboards;
   combat.ammoType = { ...(career.p.weapons.ammoType || {}) };
   Object.assign(game, { hurtPlayer });
   const carCombat = installCarCombat(game, { explodeAt });
+  const props = installProps(game);
+  game.props = props;
   game.onDriverKilled = (v) => { if (witnesses(v.pos, 40) || police.nearPolice(60)) police.crime(v.type === 'police' ? 'copKill' : 'kill'); peds.panic(v.pos, 30); };
   game.refreshHitStatics = () => { hitStatics.length = 0; scene.traverse((o) => { if (o.userData.hitStatic) hitStatics.push(o); }); };
   installStreetLife(game);
@@ -686,6 +690,7 @@ async function createGame(progress) {
     shops.update(dt);
     billboards.update(sky.hour);
     carCombat.update(dt);
+    props.update(dt);
     worldEvents.update(dt);
     details.update(dt);
     career.update(dt);
@@ -720,6 +725,7 @@ async function createGame(progress) {
       applySize();
       player.h.model.traverse((o) => { if (o.isSkinnedMesh) o.castShadow = true; });
       hud.toast(fpState.boost ? 'First person' : 'Third person', 1.2);
+      game.setHeadwearVisible?.(!fpState.boost);
     }
     const dd = basePreset.drawDistance * settings.drawDistance;
     terrain.update(camera.position, dd);

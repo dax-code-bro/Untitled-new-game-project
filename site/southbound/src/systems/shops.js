@@ -3,6 +3,7 @@
 // Creek, the bayou and both country settlements. John's outfit is saved and
 // worn everywhere.
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { CITY, TOWN, BAYOU } from '../world/layout.js';
 import { nearestRoad, keyHint } from './world-util.js';
 import { dressMember, placeAccessories } from './gang.js';
@@ -14,7 +15,7 @@ import { DEFAULT_OUTFIT, makeOutfitter, COLORS } from '../entities/clothing.js';
 const CLOTHING = [
   { id: 'c-city', name: 'Calvera Outfitters', keeper: 'Dolores Vidrine', blurb: 'Everything, in every colour. City prices.', priceK: 1.3,
     slots: ['top', 'outer', 'bottom', 'shoes', 'hat', 'eye', 'neck', 'gloves'], wall: 0x6f7f86, signBg: '#13262a', signFg: '#9fc4c0', signText: '#e9f4f2',
-    at: () => [[CITY.x0 + 2 * CITY.pitch, CITY.z0 - 40], [CITY.x0 + 6 * CITY.pitch, CITY.z0 - 40], [CITY.x0 - 46, CITY.z0 + 1 * CITY.pitch + 30], [CITY.x0 + CITY.nx * CITY.pitch + 40, CITY.z0 + 1 * CITY.pitch], [CITY.x0 + CITY.nx * CITY.pitch + 40, CITY.z0 + 5 * CITY.pitch]],
+    at: () => [[CITY.x0 + 2.5 * CITY.pitch, CITY.z0 - 40], [CITY.x0 + 6.5 * CITY.pitch, CITY.z0 - 40], [CITY.x0 - 46, CITY.z0 + 1 * CITY.pitch + 48], [CITY.x0 + CITY.nx * CITY.pitch + 46, CITY.z0 + 1.5 * CITY.pitch], [CITY.x0 + CITY.nx * CITY.pitch + 46, CITY.z0 + 4.5 * CITY.pitch], [CITY.x0 + 1.5 * CITY.pitch, CITY.z0 + CITY.nz * CITY.pitch + 46], [CITY.x0 + 5.5 * CITY.pitch, CITY.z0 + CITY.nz * CITY.pitch + 46]],
     look: { id: 'dolores', base: 'mh_f1', skin: 'brown', suit: [0.15, 0.32, 0.33], hair: 'black', h: 0.98, w: 0.95, acc: ['glasses'], lines: ['That shirt has seen things, baby. Let\'s fix you up.', 'Fitting room\'s in the back. Mirror doesn\'t lie.'] } },
   { id: 'c-town', name: 'Mill Creek Dry Goods', keeper: 'Earl Thibodeaux', blurb: 'Workwear, boots and hats. Fair prices.', priceK: 1.0,
     slots: ['top', 'outer', 'bottom', 'shoes', 'hat', 'gloves'], wall: 0x8a6f52, signBg: '#2a1c10', signFg: '#d8b46a', signText: '#f2e3c2',
@@ -42,26 +43,50 @@ const FOOD = [
   { id: 'firstaid', name: 'First aid kit', price: 45, heal: 70, desc: 'Gauze, tape, antiseptic.' },
 ];
 
-// rails of hanging clothes, folded stacks, a mirror
+// rails of hanging clothes on hangers, folded stacks, a mirror. All the
+// garments in a store are one merged, vertex-coloured mesh.
+const tint = (g, hex) => {
+  g = g.index ? g.toNonIndexed() : g; g.deleteAttribute('uv');
+  const c = new THREE.Color(hex), n = g.attributes.position.count, a = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) { a[i * 3] = c.r; a[i * 3 + 1] = c.g; a[i * 3 + 2] = c.b; }
+  g.setAttribute('color', new THREE.BufferAttribute(a, 3)); return g;
+};
+function garment(hex, pants, x, y, z, ry) {
+  const parts = [];
+  const m = new THREE.Matrix4().makeRotationY(ry).setPosition(x, y, z);
+  const P = (geo, col = hex) => parts.push(tint(geo, col).applyMatrix4(m));
+  P(new THREE.TorusGeometry(0.05, 0.006, 4, 10, Math.PI).rotateY(Math.PI / 2).translate(0, 0.02, 0), 0x9aa0a6); // hook
+  P(new THREE.BoxGeometry(0.012, 0.012, 0.4).translate(0, -0.03, 0), 0x6a4a2a); // hanger bar
+  if (pants) {
+    for (const s of [-1, 1]) P(new THREE.BoxGeometry(0.035, 0.78, 0.15).translate(0, -0.44, s * 0.085).rotateX(s * 0.04));
+    P(new THREE.BoxGeometry(0.04, 0.12, 0.34).translate(0, -0.1, 0));
+  } else {
+    P(new THREE.BoxGeometry(0.05, 0.56, 0.38).translate(0, -0.33, 0));
+    P(new THREE.BoxGeometry(0.052, 0.06, 0.14).translate(0, -0.06, 0)); // collar
+    for (const s of [-1, 1]) P(new THREE.BoxGeometry(0.04, 0.46, 0.09).translate(0, -0.28, 0).rotateX(s * 0.32).translate(0, -0.02, s * 0.22));
+  }
+  return parts;
+}
 function decorateClothes(seed) {
-  return (g, { W, D, H, box, M, wood }) => {
+  return (g, { W, D, box, M, wood }) => {
     let s = seed; const r = () => ((s = (s * 16807) % 2147483647) / 2147483647);
     const rail = M(0x9aa0a6, 0.3, 0.9);
+    const cloth = [];
     for (const [rx, rz, len] of [[-2.6, -0.6, 3.2], [2.6, -0.6, 3.2], [-2.6, 2.0, 3.2], [2.6, 2.0, 3.2]]) {
-      box(len, 0.04, 0.04, rx, 1.55, rz, rail, false);
-      for (const e of [-1, 1]) box(0.04, 1.55, 0.04, rx + e * len / 2, 0.78, rz, rail, false);
-      for (let i = 0; i < 12; i++) {
-        const c = COLORS[(r() * COLORS.length) | 0][1];
-        const shirt = box(0.05, 0.62 + r() * 0.25, 0.48, rx - len / 2 + 0.2 + i * (len - 0.4) / 11, 1.2, rz, M(c, 0.9), false);
-        shirt.position.y = 1.52 - shirt.geometry.parameters.height / 2;
-      }
+      box(len, 0.035, 0.035, rx, 1.62, rz, rail, false);
+      for (const e of [-1, 1]) { box(0.035, 1.62, 0.035, rx + e * len / 2, 0.81, rz, rail, false); box(0.035, 0.035, 0.5, rx + e * len / 2, 0.02, rz, rail, false); }
+      const pants = r() < 0.35;
+      for (let i = 0; i < 13; i++) cloth.push(...garment(COLORS[(r() * COLORS.length) | 0][1], pants, rx - len / 2 + 0.18 + i * (len - 0.36) / 12, 1.62, rz, Math.PI / 2 + (r() - 0.5) * 0.25));
     }
     // folded stacks on the back wall shelves
-    for (let k = 0; k < 3; k++) box(8.2, 0.06, 0.45, 0, 0.7 + k * 0.7, -D / 2 + 0.3, wood, false);
+    for (let k = 0; k < 3; k++) box(8.2, 0.05, 0.45, 0, 0.7 + k * 0.7, -D / 2 + 0.3, wood, false);
     for (let k = 0; k < 3; k++) for (let i = 0; i < 12; i++) {
-      const c = COLORS[(r() * COLORS.length) | 0][1];
-      box(0.5, 0.06 + r() * 0.18, 0.36, -3.8 + i * 0.69, 0.78 + k * 0.7, -D / 2 + 0.3, M(c, 0.95), false).position.y += 0.06;
+      const c = COLORS[(r() * COLORS.length) | 0][1], n = 2 + ((r() * 4) | 0);
+      for (let j = 0; j < n; j++) cloth.push(tint(new THREE.BoxGeometry(0.42, 0.055, 0.32).translate(-3.8 + i * 0.69 + (r() - 0.5) * 0.03, 0.755 + k * 0.7 + j * 0.058, -D / 2 + 0.3), c));
     }
+    const mesh = new THREE.Mesh(mergeGeometries(cloth), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.92 }));
+    mesh.castShadow = true; mesh.receiveShadow = true; mesh.userData.noHit = true;
+    g.add(mesh);
     box(0.9, 1.9, 0.04, W / 2 - 0.25, 1.15, -D / 2 + 2.2, new THREE.MeshStandardMaterial({ color: 0xdfe6ea, roughness: 0.02, metalness: 1 }), false).rotation.y = -Math.PI / 2;
   };
 }
@@ -93,8 +118,14 @@ export function installShops(game) {
   const wear = (o) => { if (fit.ok) fit.apply(o); };
   wear(P.outfit);
   game.wearOutfit = wear;
+  game.setHeadwearVisible = (v) => { if (fit.ok) fit.headVisible(v); };
   const ui = new ClothingStore({ lib, career, getMoney: () => career.money, spend: (n) => career.spend(n), pause: game.pause, toast: (t) => hud.toast(t, 2.2), wear, skinHex });
   game.clothingStore = ui;
+  game.openWardrobe = () => { ui.slot = 'ward'; ui.show({ id: 'wardrobe', name: 'Wardrobe', keeper: 'John Cortes', blurb: 'Everything you own', priceK: 1, slots: [] }); };
+  if (game.hideout) {
+    const H = game.hideout;
+    interact.add({ x: H.x - 7, z: H.z + 3, r: 1.6, label: () => `${keyHint(game)} change clothes (locker)`, color: 0x9fc4c0, show: () => S.mode === 'foot', use: () => game.openWardrobe() });
+  }
 
   const keepers = [];
   const place = (st, kind) => {
@@ -151,7 +182,7 @@ export function installShops(game) {
   mart.k = 1;
   game.foodInventory = () => FOOD.filter((f) => P.food[f.id] > 0).map((f) => ({ food: true, name: f.name, sub: `× ${P.food[f.id]} · +${f.heal} health${f.steady ? ', steadier aim' : ''}`, eat: () => { P.food[f.id]--; eat(f); career.saveSoon(); } }));
   const MARTS = [
-    { id: 'm-city', priceK: 1.2, look: 'mh_m2', at: () => [[CITY.x0 + 4 * CITY.pitch, CITY.z0 - 40], [CITY.x0 - 46, CITY.z0 + 3 * CITY.pitch + 30], [CITY.x0 + CITY.nx * CITY.pitch + 40, CITY.z0 + 2 * CITY.pitch]] },
+    { id: 'm-city', priceK: 1.2, look: 'mh_m2', at: () => [[CITY.x0 + 4.5 * CITY.pitch, CITY.z0 - 40], [CITY.x0 - 46, CITY.z0 + 3 * CITY.pitch + 48], [CITY.x0 + CITY.nx * CITY.pitch + 46, CITY.z0 + 2.5 * CITY.pitch], [CITY.x0 + 3.5 * CITY.pitch, CITY.z0 + CITY.nz * CITY.pitch + 46], [CITY.x0 - 46, CITY.z0 + 5 * CITY.pitch + 48]] },
     { id: 'm-town', priceK: 1.0, look: 'mh_f1', at: () => [[TOWN.x0 + TOWN.pitch, TOWN.z0 + TOWN.nz * TOWN.pitch + 34], [TOWN.x0 + 3 * TOWN.pitch, TOWN.z0 - 34]] },
     { id: 'm-bayou', priceK: 0.95, look: 'mh_m1', at: () => [[BAYOU.x + 120, BAYOU.z - 260], [BAYOU.x + 330, BAYOU.z - 420]] },
     ...(game.city.junk || []).filter((j) => j.kind === 'sign').map((j, i) => ({ id: 'm-h' + i, priceK: 1.05, look: i ? 'mh_f2' : 'mh_m3', at: () => Array.from({ length: 12 }, (_, k) => [j.x + Math.cos(k * 2.1) * (30 + k * 6), j.z + Math.sin(k * 2.1) * (30 + k * 6)]) })),

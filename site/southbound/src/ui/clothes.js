@@ -80,7 +80,8 @@ export class ClothingStore {
       b.onclick = () => { this.slot = s.k; this.pick = null; this.render(); };
       tabs.appendChild(b);
     }
-    if (!slots.some((s) => s.k === this.slot)) this.slot = slots[0].k;
+    if (!slots.length) this.slot = 'ward';
+    else if (this.slot !== 'ward' && !slots.some((s) => s.k === this.slot)) this.slot = slots[0].k;
     this.pick = null;
     this.ensureViewer();
     this.render();

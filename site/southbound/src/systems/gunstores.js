@@ -112,6 +112,9 @@ export function buildShop(game, r, st) {
     let blocked = false;
     collision.query(cx, cz, Math.max(hw, hd) + 2, (it) => { if (it.t === 0 && cx + hw > it.minX && cx - hw < it.maxX && cz + hd > it.minZ && cz - hd < it.maxZ) blocked = true; });
     const ys = [[-1, -1], [1, -1], [-1, 1], [1, 1]].map(([a, b]) => hm.height(cx + a * hw, cz + b * hd));
+    // no road may run through the lot (only the one it faces, out front)
+    const nr = nearestRoad(game.graph, cx, cz);
+    if (nr && nr.dist < Math.hypot(hw, hd) + (nr.edge.width || 8) / 2 + 0.5) blocked = true;
     if (blocked || Math.max(...ys) - Math.min(...ys) > 2 || Math.min(...ys) < hm.waterLevel(cx, cz) + 0.4) continue;
     const y = Math.max(...ys) + 0.06;
     const g = new THREE.Group();

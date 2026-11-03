@@ -509,8 +509,11 @@ export function makeOutfitter(h, skinHex = 0xc68e6a) {
     const rs = new THREE.Vector3().setFromMatrixScale(h.root.matrixWorld).x || 1;
     return _s.length() / rs;
   };
+  let headShown = true;
   return {
     ok: true, U, meshes,
+    // first person: hats and glasses would sit in front of the camera
+    headVisible(v) { headShown = v; for (const e of extras) if (e.userData.head) e.visible = v; },
     apply(o) {
       const top = parseKey(o.top), out = parseKey(o.outer), bot = parseKey(o.bottom), sh = parseKey(o.shoes), gl = parseKey(o.gloves);
       if (top) {
@@ -532,8 +535,8 @@ export function makeOutfitter(h, skinHex = 0xc68e6a) {
       extras.length = 0;
       const mpu = metresPerUnit();
       const hat = parseKey(o.hat), eye = parseKey(o.eye), neck = parseKey(o.neck);
-      if (hat) { const m = buildHat(hat); if (attachToBone(meshes.suit, 'head', m, [0, 0.914, -0.078], mpu)) extras.push(m); }
-      if (eye) { const m = buildGlasses(eye); if (attachToBone(meshes.suit, 'head', m, [0, 0.862, 0.038], mpu)) extras.push(m); }
+      if (hat) { const m = buildHat(hat); m.userData.head = true; m.visible = headShown; if (attachToBone(meshes.suit, 'head', m, [0, 0.914, -0.078], mpu)) extras.push(m); }
+      if (eye) { const m = buildGlasses(eye); m.userData.head = true; m.visible = headShown; if (attachToBone(meshes.suit, 'head', m, [0, 0.862, 0.038], mpu)) extras.push(m); }
       if (neck) { const m = buildNeck(neck); if (attachToBone(meshes.suit, neck.style.id === 'tie' || neck.style.id === 'bolo' ? 'spine01' : 'neck01', m, [0, neck.style.id === 'bandana' || neck.style.id === 'scarf' ? 0.68 : 0.705, -0.005], mpu)) extras.push(m); }
       if (meshes.hair) meshes.hair.visible = !(hat && ['beanie', 'headwrap'].includes(hat.style.id));
     },
