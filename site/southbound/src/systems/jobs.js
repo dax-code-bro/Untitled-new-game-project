@@ -104,7 +104,7 @@ export function installJobs(game) {
     else {
       job.stops = stopPoints(def, from);
       // the work vehicle
-      if (def.veh) { const r = nearestRoad(graph, from[0], from[1]); job.veh = spawnParked(game, def.veh, r.x, r.z, Math.atan2(r.tx, r.tz)); game.enterVehicle(job.veh); }
+      if (def.veh) { const r = nearestRoad(graph, from[0], from[1]); job.veh = spawnParked(game, def.veh, r.x, r.z, Math.atan2(r.tx, r.tz)); job.veh.issued = true; game.enterVehicle(job.veh); }
       if (def.boat) { job.veh = game.marineAir.spawnCraft(BOATS.find((b) => b.id === def.boat), 'boat', { x: marina().water.x, z: marina().water.z, h: marina().dir }); game.enterVehicle(job.veh); }
       if (def.air) { const e = AIRCRAFT.find((a) => a.id === def.air); job.veh = game.marineAir.spawnCraft(e, 'air', { x: AIRFIELD.x1 - 90, z: AIRFIELD.z, h: -Math.PI / 2 }); game.enterVehicle(job.veh); }
       if (job.veh && def.siren) job.veh.siren = true;

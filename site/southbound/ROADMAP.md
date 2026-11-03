@@ -195,6 +195,16 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 
 ## Session log
 
+- **Start with nothing:** a new game gives you $150, the clothes you're
+  wearing and your fists. Rico no longer hands out a gun or a truck: he pays
+  you $200 for the ride downtown, tells you to buy a 9mm (Walt sells the
+  Standard 9mm, about $450 in the city, less in Mill Creek and the bayou) and
+  will sell you his rusty pickup for $400 at the yard. Bandages, holsters and
+  everything else are bought. The car parked by the spawn belongs to someone
+  else: taking a parked car that isn't yours is theft if anyone sees it. The
+  start menu has a New game button (Play becomes Continue when you have a
+  save).
+
 - **Armour, wounds and the street (after the detail pass):**
   - Armour stores (Gulf Coast Tactical downtown, Sabine Army Surplus in Mill
     Creek): NIJ-rated vests and plate carriers (IIIA soft armour to Level IV

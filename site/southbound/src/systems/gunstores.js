@@ -11,7 +11,7 @@ import { GunStore } from '../ui/gunstore.js';
 import { ATTACHMENTS } from '../entities/arsenal.js';
 import { wallMaterial, dressStorefront, shopOpen, SHOP_HOURS as SHOP_H } from '../world/storefronts.js';
 
-const ALL = Object.keys(WEAPONS).filter((id) => id !== 'fists' && id !== 'pistol');
+const ALL = ['pistol', ...Object.keys(WEAPONS).filter((id) => id !== 'fists' && id !== 'pistol')]; // the Standard 9mm first: it's where everyone starts
 const pickIds = (cats, every) => ALL.filter((id, i) => cats.includes(WEAPONS[id].cat) && i % every === 0);
 
 export const STORES = [

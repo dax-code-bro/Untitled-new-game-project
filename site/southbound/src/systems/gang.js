@@ -253,10 +253,17 @@ export function installGang(game) {
     if (M.service === 'hacker') out.push({ name: 'Wipe my bounty', sub: `Bounty $${(P.law?.bounty || 0).toLocaleString('en-US')}`, price: Math.max(500, Math.round((P.law?.bounty || 0) * 0.6)), dis: !(P.law?.bounty > 0), run: () => { P.law.bounty = 0; P.law.nextHunt = 0; say('Nina', 'Done. You never existed. Well, the warrant didn\'t.'); } });
     if (M.service === 'cook') out.push({ name: 'Bowl of gumbo', sub: 'Restores health', price: 15, run: () => { player.health = Math.min(100, player.health + 40); say('Hector', 'Careful, it\'s hot.'); } });
     if (M.service === 'lookout') out.push({ name: 'Anything on the scanner?', sub: '', btn: 'Ask', run: () => say('Jayden', P.law?.bounty > 0 ? `There's $${P.law.bounty.toLocaleString('en-US')} on your head. Hunters come round every few days.` : 'You\'re clean. For now.', 4) });
+    if (M.id === 'rico' && !P.ricoTruck) out.push({ name: 'Buy Rico\'s rusty pickup', sub: 'Rusty \'89 pickup · runs, mostly', price: 400, run: () => {
+      P.ricoTruck = true;
+      const p = local(0, 11), v = new game.Vehicle(lib, 'rusty-pickup');
+      v.pos.set(p.x, groundY(p.x, p.z), p.z); v.heading = HQ.face + Math.PI / 2; v.sync(0); scene.add(v.group); game.parked.push(v);
+      const g = { uid: `v${Date.now() % 100000}`, cat: 'car', type: 'rusty-pickup', up: {} }; v.uid = g.uid; P.garage.push(g); career.save();
+      say('Rico', 'Pleasure. She pulls left. Everything pulls left in this town.');
+    } });
     if (M.service === 'fence') {
       const mine = game.parkedNear?.(HQ, 40) || [];
       for (const v of mine.slice(0, 4)) {
-        const val = Math.round((v.type === 'rusty-pickup' ? 900 : 2500) * (v.health / (v.maxHealth || 100)));
+        const val = Math.round((v.type === 'rusty-pickup' ? 250 : 2500) * (v.health / (v.maxHealth || 100)));
         out.push({ name: `Sell the ${v.spec.name}`, sub: 'parked at the hideout', btn: `+$${val}`, run: () => { game.sellVehicle?.(v); S.money += val; say('Lalo', 'Pleasure doing business.'); } });
       }
       if (!mine.length) out.push({ name: 'Sell a vehicle', sub: 'park it at the hideout first', btn: '—', dis: true, run: () => {} });
@@ -315,8 +322,8 @@ export function installGang(game) {
     { who: [4, 5, 6], t: 5, line: ['Rico', 'Cap hauls stuff out of the water. Nina hacks things. Lalo buys anything with wheels and no paperwork.'] },
     { who: [7, 8, 9], t: 5, line: ['Rico', 'Big O is the muscle. Sofia drives. Hector cooks, and his gumbo is the only reason anyone stays.'] },
     { who: [10, 11, 12, 13], t: 6, line: ['Rico', 'Jayden watches the roads, Vera flies, Smoke moves packages, and Mateo... Mateo is on probation. Forever.'] },
-    { who: [0], t: 6, line: ['Rico', 'Now. Business. This is a standard nine millimetre. Point the loud end away from me, I bruise easy.'], give: 'gun' },
-    { who: ['truck'], t: 6, line: ['Rico', 'And that beauty out front is yours. She\'s rusty, she\'s ugly, she\'s paid for. Drive her, sell her to Lalo, I don\'t care.'], give: 'truck' },
+    { who: [0], t: 6.5, line: ['Rico', 'Now. Business. You\'ll want a piece. Walt at Calvera Arms sells a standard nine. No, I\'m not buying it for you. This is a gang, not a charity.'] },
+    { who: ['truck'], t: 6.5, line: ['Rico', 'And that beauty out front is mine. Rusty, ugly, paid for. You want her? Four hundred, cash, whenever you have it. Family price.'] },
     { who: [0], t: 4.5, line: ['Rico', 'Come on. Drive me into the city. I\'ll show you where the money is.'] },
   ];
   let truck = null;
@@ -326,13 +333,10 @@ export function installGang(game) {
     truck = new game.Vehicle(lib, 'rusty-pickup');
     truck.pos.set(p.x, groundY(p.x, p.z), p.z);
     truck.heading = HQ.face + Math.PI / 2;
-    truck.sync(0);
+    truck.sync(0); truck.issued = true; // you drive it with Rico's say-so
     scene.add(truck.group);
     game.parked.push(truck);
-    const g = { uid: `v${Date.now() % 100000}`, cat: 'car', type: 'rusty-pickup', up: {} };
-    truck.uid = g.uid;
-    P.garage.push(g);
-    return truck;
+    return truck; // Rico's, not yours: buy it from him at the yard
   }
 
   function updatePrologue(dt, a) {
@@ -348,8 +352,7 @@ export function installGang(game) {
           say(sh.line[0], sh.line[1], sh.t);
           if (!sh.who.some((w) => typeof w === 'number')) banner.classList.remove('show');
           pro.capFor = null;
-          if (sh.give === 'gun') { game.combat.give('pistol'); game.combat.weapon = 'pistol'; game.combat.holstered = false; hud.toast('Received: Standard 9mm (Glock 17)', 3); }
-          if (sh.give === 'truck') { spawnTruck(); hud.toast('Received: Rusty \'89 Pickup', 3); }
+          if (sh.who[0] === 'truck') spawnTruck();
         }
       }
       if (idx >= SHOTS.length) {
@@ -360,8 +363,8 @@ export function installGang(game) {
         document.body.classList.remove('cinematic');
         S.dead = 0; S.cutscene = false;
         pro.phase = 'truck';
-        hud.bigMessage('PROLOGUE', 'Get in the pickup', 3);
-        game.setWaypoint?.(truck.pos.x, truck.pos.z, 'Your pickup');
+        hud.bigMessage('PROLOGUE', 'Get in Rico\'s pickup', 3);
+        game.setWaypoint?.(truck.pos.x, truck.pos.z, 'Rico\'s pickup');
       }
       return '';
     }
@@ -375,7 +378,7 @@ export function installGang(game) {
         game.setWaypoint?.(r.x, r.z, 'Drop Rico downtown');
         say('Rico', 'Downtown. And mind the potholes, my back is not what it was.', 4);
       }
-      return S.mode === 'foot' ? 'Get in your pickup' : '';
+      return S.mode === 'foot' ? 'Get in Rico\'s pickup' : '';
     }
     if (pro.phase === 'drive') {
       const RIDE = ['You know what I like about you, John? You don\'t ask questions. Don\'t start now.', 'See that billboard? I\'m gonna be on one of those someday. Wanted poster, probably.',
@@ -383,10 +386,15 @@ export function installGang(game) {
       if ((pro.lineT -= dt) <= 0 && pro.said !== RIDE.length) { pro.said = (pro.said || 0); say('Rico', RIDE[pro.said], 5); pro.said++; pro.lineT = 14; }
       const v = S.vehicle;
       if (v && Math.hypot(v.pos.x - pro.dest.x, v.pos.z - pro.dest.z) < 40 && Math.abs(v.speed) < 3) {
-        say('Rico', 'This is me. Go make some money, John. Rent\'s due Friday. I\'m kidding. Mostly.', 6);
-        hud.bigMessage('PROLOGUE COMPLETE', 'Welcome to Port Calvera · +$200', 4);
+        say('Rico', 'This is me. Here\'s two hundred for the ride. Now get a gun, get a job, get a car. In that order. I\'m taking my truck.', 7);
+        hud.bigMessage('PROLOGUE COMPLETE', 'You have almost nothing. Buy what you need · +$200', 5);
         S.money += 200;
         P.story.prologue = true; career.save();
+        // Rico drives his pickup back to the yard
+        const t = truck;
+        if (S.vehicle === t) game.exitVehicle?.();
+        setTimeout(() => { scene.remove(t.group); const i = game.parked.indexOf(t); if (i >= 0) game.parked.splice(i, 1); if (truck === t) truck = null; }, 400);
+        game.setWaypoint?.(game.gunShops?.[0]?.x ?? player.pos.x, game.gunShops?.[0]?.z ?? player.pos.z, 'Calvera Arms Exchange (gunsmith)');
         rico.h.root.visible = true;
         pro = null;
       }
@@ -423,7 +431,7 @@ export function installGang(game) {
 
   game.storyBusy = () => !!pro && pro.phase === 'intro';
   if (!P.story.prologue && !skip) setTimeout(startPrologue, 50);
-  if ((P.story.prologue || skip) && !game.combat.owned.includes('pistol')) game.combat.give('pistol');
+  // no free gun: buy the Standard 9mm from a gunsmith
 
   const _f = new THREE.Vector3();
   return {

@@ -71,6 +71,7 @@ export class Police {
     if (kind === 'copKill' && ++this.copKills >= 3) this.heat = 5;
     if (kind === 'shots') this.wanted = Math.max(this.wanted, 1);
     if (kind === 'weapon') this.wanted = Math.max(this.wanted, 1);
+    if (kind === 'theft') this.wanted = Math.max(this.wanted, 1);
     if (kind === 'assault') this.wanted = Math.max(this.wanted, 1);
     if (kind === 'kill') { this.kills++; this.wanted = Math.max(this.wanted, 1 + Math.floor(this.kills / 3)); }
     if (kind === 'copShot') this.wanted = Math.max(this.wanted, 2);

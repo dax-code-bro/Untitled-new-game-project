@@ -200,7 +200,7 @@ export function applyFinish(g, f) {
 }
 
 // the classic starter pistol keeps its old id for saves/scripts
-WEAPONS.pistol = { ...WEAPONS.pistol_01, id: 'pistol', name: 'Standard 9mm', damage: 34, clip: 17, price: 0, modelKey: 'glock17' };
+WEAPONS.pistol = { ...WEAPONS.pistol_01, id: 'pistol', name: 'Standard 9mm', damage: 34, clip: 17, price: 360, unlock: 0, modelKey: 'glock17' }; // ~$450 at city prices
 
 // --- knives and other hand weapons -------------------------------------------
 // blade: cuts make people bleed; len (m) matters for hiding it

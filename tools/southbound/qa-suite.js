@@ -11,6 +11,17 @@ async (opts) => {
   const finite = (v) => Number.isFinite(v.x) && Number.isFinite(v.y) && Number.isFinite(v.z);
   const yieldUI = () => new Promise((r) => setTimeout(r, 0));
   const ctl = { throttle: 1, brake: 0, steer: 0.3, handbrake: false, nitro: true };
+  // a brand-new game: you arrive with nothing and buy everything
+  await run('new game: start with nothing', async () => {
+    const P = G.career.p;
+    ok(G.combat.owned.length === 1 && G.combat.owned[0] === 'fists', 'new game owns no weapons (fists only)');
+    ok(G.career.money <= 150, 'new game starts with $150 or less');
+    ok(P.garage.length === 0, 'new game owns no vehicles');
+    ok(!Object.values(P.med || {}).some((n) => n > 0), 'new game has no medical supplies');
+    ok(!(P.gearOwned || []).length && (P.gear?.holster || 'owb') === 'owb', 'new game owns no gear');
+    ok(!G.S.lastVehicle, 'no car is marked as yours');
+    ok(G.gunStoreDefs.some((st) => st.ids[0] === 'pistol') && C.WEAPONS.pistol.price > 0, 'the Standard 9mm is for sale');
+  });
   G.career.hooks.setMoney(1e9);
   SB.setWeather('clear'); SB.setHour(12);
 

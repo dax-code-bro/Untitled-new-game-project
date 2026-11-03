@@ -271,7 +271,7 @@ async function createGame(progress) {
     fps: 60, frameMs: 16, frames: 0, fpsTimer: 0, lowTimer: 0, highTimer: 0, resTimer: 0,
   };
   const stats = { drawCalls: 0, tris: 0 };
-  S.lastVehicle = myCar; // your starter car shows on the minimap
+  S.lastVehicle = null; // you start without a car (the one parked by the spawn belongs to someone else)
   const arsenalUI = new ArsenalUI({
     combat, getMoney: () => S.money, pause: (b) => { S.frozen = b; },
     spend: (n) => { if (S.money < n) { hud.toast('Not enough money', 1.2); return false; } S.money -= n; return true; },
@@ -476,7 +476,15 @@ async function createGame(progress) {
       const sx = Math.cos(v.heading), sz = -Math.sin(v.heading);
       peds.spawnAt(v.pos.x + sx * 2.2, v.pos.z + sz * 2.2, player.pos);
       if (witnesses(v.pos, 30) || police.nearPolice(60)) police.crime('carjack');
-    } else parked.splice(parked.indexOf(v), 1);
+    } else {
+      parked.splice(parked.indexOf(v), 1);
+      // a parked car that isn't yours: that's car theft if anyone sees it
+      if (!v.uid && !v.issued && !v.taken && !v.isAir && !v.isBoat) {
+        v.taken = true;
+        if (police.nearPolice(60)) police.crime('carjack');
+        else if (witnesses(v.pos, 30)) { if (game.reportCrime) game.reportCrime('theft', v.pos); else police.crime('theft'); }
+      }
+    }
     S.mode = 'car'; S.vehicle = v;
     combat.hideAll(); combat.holstered = true; if (wheel.open) wheel.hide(false);
     v.onHitPed = (p, killed) => { if (killed) police.crime(p.role === 'cop' ? 'copKill' : 'kill'); else police.crime('assault'); peds.panic(p.pos, 25); };

@@ -27,6 +27,7 @@ export function setupMenu(settings, onPlay) {
     $('#step-platform').classList.toggle('show', !settings.platform);
     $('#back').style.display = settings.platform ? '' : 'none';
     $('#play').disabled = !settings.platform;
+    $('#newgame').disabled = !settings.platform;
   };
   sel.value = settings.gpuChoice;
   sel.onchange = () => {
@@ -54,6 +55,18 @@ export function setupMenu(settings, onPlay) {
   });
   $('#back').onclick = () => { settings.platform = null; refresh(); };
   $('#play').onclick = () => { saveSettings(settings); onPlay(); };
+  // start over: arrive in Calvera with nothing again
+  let hasSave = false;
+  try { hasSave = !!localStorage.getItem('southbound.save.v1'); } catch (e) { /* storage blocked */ }
+  if (hasSave) {
+    $('#play').textContent = 'Continue';
+    const ng = $('#newgame'); ng.style.display = '';
+    ng.onclick = () => {
+      if (!confirm('Start a new game? Your saved progress, money, guns, cars and houses will be erased. You start with nothing.')) return;
+      try { localStorage.removeItem('southbound.save.v1'); } catch (e) { /* */ }
+      saveSettings(settings); onPlay();
+    };
+  }
   if (!settings.platform) {
     // first launch: pre-pick a sensible default from the detection
     if (gpu.mobile) settings.preset = 'phone';

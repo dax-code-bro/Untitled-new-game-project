@@ -8,7 +8,7 @@ import { raycastObjects, raycastStatic } from '../core/hits.js';
 export { WEAPONS };
 
 // Starter loadout: one of each kind (the rest of the catalog is bought in the arsenal)
-const STARTER = ['fists']; // the 9mm comes from Rico in the prologue; everything else from the gunsmiths
+const STARTER = ['fists']; // you start with nothing: every gun comes from a gunsmith (or Runr)
 
 // Ammo types change damage and penetration (and a few other things)
 export const AMMO = {

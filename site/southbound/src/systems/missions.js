@@ -176,7 +176,7 @@ export function installMissions(game) {
     else if (kind === 'fly') { const [x, z] = at(a1); mark(x, z, 60, { height: 80 }); }
     else if (kind === 'steal') {
       const [x, z] = at(a2); const r = nearestRoad(graph, x + 20, z + 10);
-      run.veh = spawnParked(game, a1, r.x + r.tz * 3, r.z - r.tx * 3, Math.atan2(r.tx, r.tz));
+      run.veh = spawnParked(game, a1, r.x + r.tz * 3, r.z - r.tx * 3, Math.atan2(r.tx, r.tz)); run.veh.issued = true;
       mark(run.veh.pos.x, run.veh.pos.z, 3);
     } else if (kind === 'kill') {
       const [x, z] = at(a2); run.foes = [];
