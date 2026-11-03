@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { clamp } from '../util.js';
 
-import { WEAPONS, buildWeaponModel, gunModelFor } from './arsenal.js';
+import { WEAPONS, buildWeaponModel, gunModelFor, gunRel } from './arsenal.js';
 import { loaded, Q } from '../assets/open.js';
 import { raycastObjects, raycastStatic } from '../core/hits.js';
 export { WEAPONS };
@@ -89,7 +89,7 @@ export class Combat {
     const key = id + tag;
     let m = this.models[key];
     const G = gunModelFor(w);
-    if (m && !m.userData.open && G && loaded(Q(...G.m.split('/')))) { this.scene.remove(m); m = null; }
+    if (m && !m.userData.open && G && loaded(gunRel(G))) { this.scene.remove(m); m = null; }
     if (!m) { m = buildWeaponModel(w); m.visible = false; this.scene.add(m); this.models[key] = m; }
     return m;
   }
