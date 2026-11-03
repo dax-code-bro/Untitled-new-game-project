@@ -154,7 +154,7 @@ export function itemPrice(key, k = 1) {
 }
 
 export const DEFAULT_OUTFIT = {
-  top: itemKey('top', 'work', 0, COLORS.findIndex((c) => c[0] === 'Denim blue')),
+  top: itemKey('top', 'flannel', 2, COLORS.findIndex((c) => c[0] === 'Brick red')), // untucked: hides a waistband holster
   outer: null,
   bottom: itemKey('bottom', 'jeans', 1, COLORS.findIndex((c) => c[0] === 'Indigo')),
   shoes: itemKey('shoes', 'workboots', 0, COLORS.findIndex((c) => c[0] === 'Brown')),

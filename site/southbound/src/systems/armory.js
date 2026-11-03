@@ -53,8 +53,15 @@ function decorateArmory(g, { W, D, box, M, wood }) {
 export function installArmory(game) {
   const { scene, graph, lib, interact, hud, career, player, S, combat, peds, police, collision } = game;
   const P = career.p;
-  P.gear = P.gear || { armor: null, helmet: null, bag: null, holster: 'owb' };
+  P.gear = P.gear || { armor: null, helmet: null, bag: null, holster: 'iwb' };
   P.gearOwned = P.gearOwned || [];
+  // Rico's advice: carry the 9mm inside the waistband, under the shirt
+  if (!P.gearMig) {
+    P.gearMig = 1;
+    if (!P.gearOwned.includes('holster:iwb')) P.gearOwned.push('holster:iwb');
+    if (!P.gear.holster || P.gear.holster === 'owb') P.gear.holster = 'iwb';
+    if (P.outfit?.top && /^top:(work|western|dress):/.test(P.outfit.top)) setTimeout(() => hud.toast('Tip: cops stop anyone carrying a gun in plain sight in town. Untuck your shirt or wear a jacket to hide your 9mm (inside-the-waistband holster).', 7), 9000);
+  }
   P.med = P.med || { bandage: 2 };
   P.plateCond = P.plateCond ?? 1;
   S.wounds = S.wounds || { leg: 0, arm: 0, bleed: 0, numb: 0 };
