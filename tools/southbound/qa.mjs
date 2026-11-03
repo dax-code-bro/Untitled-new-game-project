@@ -21,7 +21,7 @@ await new Promise((r) => server.listen(0, r));
 const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
 const page = await browser.newPage({ viewport: { width: 960, height: 540 } });
 const consoleErrors = [];
-page.on('console', (m) => { if (process.env.QA_LIVE && m.text().startsWith('QA> ')) console.log(m.text());
+page.on('console', (m) => { if (process.env.QA_LIVE && /^QA[<>] /.test(m.text())) console.log(m.text());
   if (m.type() === 'error' || (m.type() === 'warning' && /open model failed|NaN/.test(m.text()))) consoleErrors.push(`[${m.type()}] ${m.text().slice(0, 300)}`); });
 page.on('pageerror', (e) => consoleErrors.push('[pageerror] ' + e.message));
 await page.addInitScript(() => { window.SB_SKIP_INTRO = true; });
