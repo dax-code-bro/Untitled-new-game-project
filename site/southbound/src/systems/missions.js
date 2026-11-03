@@ -143,7 +143,7 @@ export function installMissions(game) {
   let run = null; // { m, step, marker, target, t, count0, veh, foes[] }
   const nextMission = () => MISSIONS.find((m) => !P.missions.done.includes(m.id));
   const giverPoint = interact.add({ x: 0, z: 0, r: 2.4, color: 0xff3040, height: 3, blip: { color: '#ff3040', size: 7, global: true, icon: '★', bg: 'rgba(190,20,30,0.95)' },
-    show: () => !run && !!nextMission() && !game.S.indoors,
+    show: () => !run && !!nextMission() && !game.S.indoors && game.career.p.story?.prologue !== false,
     label: () => { const m = nextMission(); return m ? `${keyHint(game)} start "${m.title}" — ${m.who} (${MISSIONS.indexOf(m) + 1}/63)` : ''; },
     use: () => begin(nextMission()) });
   const placeGiver = () => {

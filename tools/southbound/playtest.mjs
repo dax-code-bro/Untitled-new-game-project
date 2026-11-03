@@ -44,6 +44,7 @@ const errors = [];
 page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') errors.push(`[${m.type()}] ${m.text()}`); });
 page.on('pageerror', (e) => errors.push(`[pageerror] ${e.message}`));
 
+await page.addInitScript(() => { window.SB_SKIP_INTRO = true; });
 await page.addInitScript((pr) => {
   try {
     localStorage.setItem('southbound.settings.v1', JSON.stringify({ platform: pr === 'phone' ? 'phone' : 'pc', preset: pr, dynamicRes: false, showFps: true, timeScale: 0 }));
@@ -86,8 +87,7 @@ if (scenario === 'smoke') {
       window.SB.setHour(s.hour ?? 10);
       if (s.weather) window.SB.setWeather(s.weather);
       if (s.drive) window.SB.enterNearest();
-      window.SB.teleport(s.x, s.z, s.yaw ?? 0);
-      window.SB.lookAt(s.yaw ?? 0, s.pitch ?? 0.15);
+      if (s.x || s.z) { window.SB.teleport(s.x, s.z, s.yaw ?? 0); window.SB.lookAt(s.yaw ?? 0, s.pitch ?? 0.15); }
       window.SB.showRegion();
       if (s.map) window.SB.toggleMap();
     }, s);

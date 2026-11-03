@@ -23,6 +23,7 @@ import { WeaponWheel } from './ui/wheel.js';
 import { makeSilhouetter } from './ui/silhouette.js';
 import { installLaw } from './systems/law.js';
 import { installRoadside } from './systems/roadside.js';
+import { installGang } from './systems/gang.js';
 import { vehiclesOverlap } from './world/collision.js';
 import { LAND } from './assets/catalog.js';
 import { BOATS, AIRCRAFT } from './entities/craft.js';
@@ -360,6 +361,16 @@ async function createGame(progress) {
   game.law = law;
   const roadside = installRoadside({ ...game, setWaypoint: game.setWaypoint });
   game.roadside = roadside;
+  // John Cortes, the Gulf Line crew, the hideout and the prologue
+  Object.assign(game, {
+    Vehicle,
+    lastVehicle: () => S.vehicle || S.lastVehicle || null,
+    parkedNear: (p, r) => parked.filter((v) => v.uid && Math.hypot(v.pos.x - p.x, v.pos.z - p.z) < r),
+    sellVehicle: (v) => { const i = parked.indexOf(v); if (i >= 0) parked.splice(i, 1); scene.remove(v.group); const gi = career.p.garage.findIndex((g) => g.uid === v.uid); if (gi >= 0) career.p.garage.splice(gi, 1); if (S.lastVehicle === v) S.lastVehicle = null; },
+    giveAttachment: (id) => { const W = career.p.weapons; W.mods = W.mods || {}; W.mods.owned = W.mods.owned || []; if (!W.mods.owned.includes(id)) W.mods.owned.push(id); hud.toast('New attachment in your arsenal', 2.5); },
+  });
+  const gang = installGang(game);
+  game.gang = gang;
   const reportHit = (hit) => {
     if (!hit || hit.kind !== 'ped') return;
     if (hit.ped.role === 'hunter' || hit.ped.role === 'brawler') { S.hitMarker = true; return; } // self-defence
@@ -615,6 +626,8 @@ async function createGame(progress) {
     if (lp && (law.focusing || !prompt)) prompt = lp;
     const rp = roadside.update(dt, a);
     if (rp && !prompt) prompt = rp;
+    const gp = gang.update(dt, a);
+    if (gp && !prompt) prompt = gp;
     career.update(dt);
     if (S.vehicle && S.vehicle.health <= 0 && !S.vehicle.wrecked) { S.vehicle.wrecked = true; hud.toast('The engine is wrecked — get out (F)', 4); }
     if (S.vehicle?.wrecked) { S.vehicle.vel.multiplyScalar(Math.exp(-3 * dt)); }
@@ -634,6 +647,7 @@ async function createGame(progress) {
     rig.update(dt, a, focus, { vehicle: S.vehicle, heading: S.vehicle?.heading, speed: S.vehicle?.speed || 0, lastLook: input.lastLookTime, aiming: S.mode === 'foot' && player.aiming && armed, eye: S.mode === 'foot' && player.char.root.visible ? getEye() : null }, collision);
 
     law.camera(camera);
+    gang.camera(camera);
     if (!!rig.fp !== fpState.boost) {
       fpState.boost = !!rig.fp;
       const R = q.shadowRange * (fpState.boost ? 0.5 : 1), sc = sky.sun.shadow.camera; // tighter shadow map = crisper shadows
