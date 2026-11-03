@@ -92,11 +92,14 @@
 
 <!-- Loading -->
 <section id="loading" class="screen">
+  <div class="load-art"></div>
+  <div class="load-shade"></div>
   <div class="load-inner">
-    <h1 class="logo small">SOUTHBOUND</h1>
-    <div class="bar"><i id="loadbar"></i></div>
-    <p id="loadtext">Loading…</p>
+    <h1 class="logo">SOUTHBOUND</h1>
+    <p class="load-sub">The State of Calvera</p>
     <p class="tip" id="tip"></p>
+    <div class="load-foot"><span id="loadtext">Loading…</span><span class="load-spin"></span></div>
+    <div class="bar"><i id="loadbar"></i></div>
   </div>
 </section>
 
@@ -128,16 +131,19 @@
   <div id="stick"><div id="knob"></div></div>
   <div class="tbtns combat">
     <button data-btn="fire">💥</button>
-    <button data-btn="aim">🎯</button>
-    <button data-btn="weapon">🔫</button>
+    <button data-btn="aim" title="L2: aim / focus">L2</button>
+    <button data-btn="weapon" title="hold for the weapon wheel">🔫</button>
   </div>
   <div class="tbtns">
-    <button data-btn="enter">🚗</button>
+    <button data-btn="interact" title="hold to interact">◎</button>
     <button data-btn="jump">⤒</button>
     <button data-btn="sprint">»</button>
   </div>
+  <div class="tbtns focusbtns">
+    <button data-btn="greet">Greet</button>
+    <button data-btn="antag">Antagonize</button>
+  </div>
   <div class="tbtns top">
-    <button data-btn="map">🗺️</button>
     <button data-btn="pause">❚❚</button>
   </div>
 </section>
@@ -149,6 +155,9 @@
     <button id="resume" class="primary">Resume</button>
     <button id="pause-settings">Settings</button>
     <button id="pause-map">Map</button>
+    <button id="pause-phone">Phone</button>
+    <button id="pause-arsenal">Arsenal</button>
+    <button id="pause-cam">Free camera</button>
     <button id="quit">Quit to title</button>
     <div class="controls-help">
       <h3>Controls</h3>

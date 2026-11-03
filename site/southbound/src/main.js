@@ -14,12 +14,16 @@ import { createVegetation, grassUniforms } from './world/vegetation.js';
 import { CollisionWorld } from './world/collision.js';
 import { Player } from './entities/player.js';
 import { Vehicle } from './entities/vehicle.js';
+import { locomotion } from './entities/human.js';
 import { Traffic } from './entities/traffic.js';
 import { Peds } from './entities/peds.js';
 import { Combat, WEAPONS } from './entities/combat.js';
 import { GunPose } from './entities/gunpose.js';
 import { WeaponWheel } from './ui/wheel.js';
 import { makeSilhouetter } from './ui/silhouette.js';
+import { installLaw } from './systems/law.js';
+import { installRoadside } from './systems/roadside.js';
+import { installGang } from './systems/gang.js';
 import { vehiclesOverlap } from './world/collision.js';
 import { LAND } from './assets/catalog.js';
 import { BOATS, AIRCRAFT } from './entities/craft.js';
@@ -45,12 +49,16 @@ settings.isTouch = matchMedia('(pointer: coarse)').matches;
 document.documentElement.style.setProperty('--hud', settings.hudScale);
 
 const TIPS = [
-  'Port Calvera never sleeps — the downtown towers light up after sunset.',
-  'Redgrass Plains is open hunting land. Hunting arrives in a later update.',
-  'Lake Arden\'s lake houses will be buyable properties.',
-  'Hold Space while driving to pull the handbrake and drift.',
-  'Press V to change the camera distance, M for the map.',
-  'Settings → Content lets you turn blood and strong language off.',
+  'Hold Tab (or the gun button on phone) for the weapon wheel. Guns stay holstered until you draw them.',
+  'Holster your weapon and focus on an officer to surrender. Cops open fire if you have a gun out.',
+  'Lose the police outside the city and you get a bounty. Bounty hunters come every three days.',
+  'Hold F (◎ on phone) near someone to greet or antagonize them. Push someone four times and see what happens.',
+  'Stop beside someone walking along a country road and offer them a ride.',
+  'Press V to cycle the camera, including first person.',
+  'Walk into a ledge to climb it. Anything up to about eight feet with a clear top can be mantled.',
+  'Redgrass Plains is open hunting land. Sell what you hunt at the trading posts.',
+  'Drive into a Calvera Customs workshop to fit parts, paint and repairs.',
+  'Pay off your bounty at the Central Precinct to stop the hunters.',
 ];
 
 let game = null;
@@ -256,7 +264,6 @@ async function createGame(progress) {
   arsenalUI.enable();
   const toggleFreeCam = () => { rig.free = !rig.free; hud.toast(rig.free ? 'Free camera: look around freely (C to turn off)' : 'Camera follows the vehicle', 1.8); };
   addEventListener('keydown', (e) => { if (e.code === 'KeyC' && !e.repeat) toggleFreeCam(); });
-  { const b = document.createElement('button'); b.textContent = '🎥'; b.className = 'sbPhoneBtn'; b.style.cssText = 'position:fixed;right:16px;top:222px;z-index:20;background:rgba(20,14,10,.7);color:#fff;border:1px solid #4a382b;border-radius:10px;padding:6px 10px;font:600 13px Inter,sans-serif'; b.onclick = toggleFreeCam; document.body.appendChild(b); }
 
   // ---- career (save game), interaction points and the gameplay systems ----
   const profile = loadProfile() || newProfile();
@@ -296,6 +303,10 @@ async function createGame(progress) {
   $('#pause-settings').onclick = () => settingsPanel.open();
   $('#pause-map').onclick = () => { setPaused(false); hud.toggleMap(); };
   $('#quit').onclick = () => location.reload();
+  // fewer on-screen buttons: phone, arsenal and the free camera live in the pause menu
+  $('#pause-phone').onclick = () => { setPaused(false); systems.phoneSys?.phone?.show('inv'); };
+  $('#pause-arsenal').onclick = () => { setPaused(false); api.openArsenal?.(); };
+  $('#pause-cam').onclick = () => { setPaused(false); toggleFreeCam(); };
 
   hud.toast(settings.isTouch
     ? 'Welcome to Calvera. Tap 🚗 near a car to drive · 🔫 switch weapon · 🎯 aim · 💥 fire'
@@ -338,10 +349,33 @@ async function createGame(progress) {
       hud.toast(`${sub}. You paid $${fee}.`, 4);
     }, 3000);
   };
-  police.onBusted = () => { if (!S.dead) { player.h.play('Idle_Loop', 0.2, 1, true); respawn(PRECINCT, 'ARRESTED', PRECINCT.name, Math.round(100 + S.money * 0.1)); } };
+  // talking to people, the police, arrests and bounty hunters
+  const explodeAt = (pt, dmg = 140) => {
+    combat.explode(pt, { explosive: 6, damage: dmg }, { peds, vehicles: [...traffic.cars.map((c) => c.v), ...police.cars.map((c) => c.v), ...parked], animals: [] }, pt);
+    if (S.mode === 'foot' && player.pos.distanceTo(pt) < 6) hurtPlayer(dmg * (1 - player.pos.distanceTo(pt) / 6) * 0.5, pt);
+    else if (S.mode === 'car' && S.vehicle.pos.distanceTo(pt) < 7) hurtPlayer(dmg * 0.4, pt);
+  };
+  police.onShell = (pt) => explodeAt(pt, 180);
+  const law = installLaw({ ...game, hurtPlayer, PRECINCT, Vehicle: game.Vehicle || Vehicle, gunPose, audio, wheelOpen: () => wheel.open, explodeAt,
+    tracer: (a, b) => combat.tracer(a, b), get rig() { return rig; } });
+  game.law = law;
+  const roadside = installRoadside({ ...game, setWaypoint: game.setWaypoint });
+  game.roadside = roadside;
+  // John Cortes, the Gulf Line crew, the hideout and the prologue
+  Object.assign(game, {
+    Vehicle,
+    lastVehicle: () => S.vehicle || S.lastVehicle || null,
+    parkedNear: (p, r) => parked.filter((v) => v.uid && Math.hypot(v.pos.x - p.x, v.pos.z - p.z) < r),
+    sellVehicle: (v) => { const i = parked.indexOf(v); if (i >= 0) parked.splice(i, 1); scene.remove(v.group); const gi = career.p.garage.findIndex((g) => g.uid === v.uid); if (gi >= 0) career.p.garage.splice(gi, 1); if (S.lastVehicle === v) S.lastVehicle = null; },
+    giveAttachment: (id) => { const W = career.p.weapons; W.mods = W.mods || {}; W.mods.owned = W.mods.owned || []; if (!W.mods.owned.includes(id)) W.mods.owned.push(id); hud.toast('New attachment in your arsenal', 2.5); },
+  });
+  const gang = installGang(game);
+  game.gang = gang;
   const reportHit = (hit) => {
     if (!hit || hit.kind !== 'ped') return;
+    if (hit.ped.role === 'hunter' || hit.ped.role === 'brawler') { S.hitMarker = true; return; } // self-defence
     const cop = hit.ped.role === 'cop';
+    if (cop) hit.ped.provoked = true;
     if (hit.killed) police.crime(cop ? 'copKill' : 'kill');
     else police.crime(cop ? 'copShot' : 'assault');
     S.hitMarker = true;
@@ -370,6 +404,35 @@ async function createGame(progress) {
     player.char.root.visible = false;
     hud.toast(`${v.spec.name}`, 2.5);
   }
+  // walk round to the driver's door, open it, climb in (parked cars)
+  function beginEnter(v, fromTraffic) {
+    if (fromTraffic || v.isBoat || v.isAir) return enterVehicle(v, fromTraffic);
+    const left = new THREE.Vector3(Math.cos(v.heading), 0, -Math.sin(v.heading)), fwd = new THREE.Vector3(Math.sin(v.heading), 0, Math.cos(v.heading));
+    const at = v.pos.clone().addScaledVector(left, v.spec.width / 2 + 0.55).addScaledVector(fwd, (v.spec.wf || 1.3) * 0.2);
+    combat.holstered = true;
+    S.entering = { v, t: 0, phase: 0, at, door: v.group.getObjectByName('door-drv') };
+  }
+  function updateEnter(dt) {
+    const e = S.entering, v = e.v;
+    e.t += dt;
+    if (e.phase === 0) {
+      const d = new THREE.Vector3().subVectors(e.at, player.pos); d.y = 0;
+      const L = d.length();
+      if (L > 0.25 && e.t < 2.2) {
+        player.heading += wrapAngle(Math.atan2(d.x, d.z) - player.heading) * Math.min(1, dt * 8);
+        const sp = Math.min(3.4, L * 3);
+        player.pos.addScaledVector(d.normalize(), sp * dt);
+        player.pos.y = collision.surface(player.pos.x, player.pos.z, player.pos.y + 0.5);
+        const [clip, k] = locomotion(sp); player.h.play(clip, 0.2, k);
+      } else { e.phase = 1; e.t = 0; player.h.play('Interact', 0.1, 1.5, true); }
+    } else if (e.phase === 1) {
+      player.heading += wrapAngle(v.heading - Math.PI / 2 - player.heading) * Math.min(1, dt * 10); // face the door
+      if (e.door) e.door.rotation.y = e.door.userData.open * Math.min(1, e.t / 0.45);
+      if (e.t > 0.6) { e.phase = 2; S.entering = null; if (e.door) S.doorClose = { door: e.door, t: 0 }; enterVehicle(v, null); return; }
+    }
+    player.h.update(dt);
+    player.h.root.position.copy(player.pos); player.h.root.rotation.y = player.heading;
+  }
   function exitVehicle() {
     const v = S.vehicle;
     const sx = Math.cos(v.heading), sz = -Math.sin(v.heading);
@@ -381,6 +444,7 @@ async function createGame(progress) {
     player.heading = v.heading;
     player.char.root.visible = true;
     v.vel.set(0, 0); v.speed = 0;
+    { const door = v.group.getObjectByName('door-drv'); if (door) { door.rotation.y = door.userData.open; S.doorClose = { door, t: -0.35 }; } }
     parked.push(v);
     S.lastVehicle = v;
     S.mode = 'foot'; S.vehicle = null;
@@ -438,8 +502,11 @@ async function createGame(progress) {
       else { const id = combat.slotWeapon('sidearm'); if (id) { combat.equip('sidearm'); S.drawT = 0.35; } }
       S.idleArmed = 0;
     }
+    // focusing on someone (hold F / ◎, or hold aim with your gun away) talks instead of drawing
+    const focusOn = S.mode === 'foot' && !combat.drawn && (a.interact || a.aim) && law.target();
+    if (focusOn) a.aim = false;
     // aiming or shooting with your gun away draws it (RDR style)
-    if (S.mode === 'foot' && combat.holstered && !combat.def.melee && (a.aim || a.firePressed) && S.dead <= 0) { combat.holstered = false; S.drawT = 0.3; }
+    else if (S.mode === 'foot' && combat.holstered && !combat.def.melee && (a.aim || a.firePressed) && S.dead <= 0) { combat.holstered = false; S.drawT = 0.3; }
     S.drawT = Math.max(0, (S.drawT || 0) - dt);
     if (S.drawT > 0) a.fire = a.firePressed = false;
     if (a.reload && combat.drawn && combat.reload() && combat.def.cat === 'pistol') player.h.play('Pistol_Reload', 0.1, (1.5 / combat.reloadDur) * 1.0, true);
@@ -448,7 +515,12 @@ async function createGame(progress) {
     S.aimHold = Math.max(0, S.aimHold - dt);
     if (S.aimHold > 0 && armed) a.aim = true;
     combat.update(dt);
-    if (S.mode === 'foot') {
+    if (law.cutscene) {
+      focus.copy(player.pos);
+    } else if (S.entering) {
+      updateEnter(dt);
+      focus.copy(player.pos);
+    } else if (S.mode === 'foot') {
       player.update(dt, a, rig.yaw, hm, collision, armed && combat.def.cat === 'pistol');
       camera.getWorldDirection(aimDir);
       // ---- weapon in the hands: pose the arms around it
@@ -472,7 +544,16 @@ async function createGame(progress) {
       }
       showHolstered(shown);
       combat.hideAll(shown);
-      const targets = { peds, vehicles: [...traffic.cars.map((c) => c.v), ...police.cars.map((c) => c.v), ...parked], animals: game.hunting ? game.hunting.list : [], statics: S.indoors ? indoorMeshes() : hitStatics };
+      // look at whoever you're talking to
+      if (law.focusing && game.lookAt && headBone) {
+        const tq = new THREE.Quaternion(), d = new THREE.Vector3().subVectors(game.lookAt, player.pos);
+        const yaw = Math.max(-1, Math.min(1, wrapAngle(Math.atan2(d.x, d.z) - player.heading)));
+        headBone.getWorldQuaternion(tq);
+        tq.premultiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), yaw * 0.8));
+        const pq = headBone.parent.getWorldQuaternion(new THREE.Quaternion()).invert();
+        headBone.quaternion.copy(pq.multiply(tq));
+      }
+      const targets = { peds, vehicles: [...traffic.cars.map((c) => c.v), ...police.cars.map((c) => c.v), ...parked, ...(law.heli() ? [law.heli()] : [])], animals: game.hunting ? game.hunting.list : [], statics: S.indoors ? indoorMeshes() : hitStatics };
       if (armed && a.fire && player.aiming && combat.cooldown <= 0 && S.dead <= 0) {
         combat.muzzleWorld(muzzle);
         const hit = combat.attack(camera.position.clone(), aimDir.clone(), muzzle.clone(), targets, player.pos);
@@ -507,9 +588,9 @@ async function createGame(progress) {
       for (const v of parked) { const d = v.pos.distanceTo(player.pos) - (v.isBoat || v.isAir ? v.radius * 0.8 : 0); if (d < bd) { bd = d; best = v; } }
       const tc = traffic.nearest(player.pos, bd);
       if (tc) { best = tc.v; fromTraffic = tc; }
-      if (best) {
-        prompt = settings.isTouch ? `Tap 🚗 to drive the ${best.spec.name}` : `Press F to drive the ${best.spec.name}`;
-        if (a.enter) enterVehicle(best, fromTraffic);
+      if (best && !S.entering) {
+        prompt = settings.isTouch ? `Tap ◎ to get in the ${best.spec.name}` : `Press F to get in the ${best.spec.name}`;
+        if (a.enter) beginEnter(best, fromTraffic);
       }
       focus.copy(player.pos);
     } else {
@@ -527,25 +608,33 @@ async function createGame(progress) {
       if (v.impact > 4) rig.shake = Math.min(1, v.impact / 15);
       if (v.impact > 4 && !v._hitLatch) { v._hitLatch = true; const f = v.forward ? v.forward() : { x: 0, z: 1 }, dir = (v.speed || 0) >= 0 ? 1 : -1; damageVehicle(v, (v.impact - 3) * 2.2, v.pos.x + f.x * 3 * dir, v.pos.z + f.z * 3 * dir); }
       if (v.impact < 1) v._hitLatch = false;
+      if (a.enter && roadside.canOffer()) { roadside.offer(); a.enter = false; }
       if (a.enter && (Math.abs(v.speed) < 6 || v.isAir)) exitVehicle();
       else if (a.enter) prompt = 'Slow down to get out';
       if (v.drowned) prompt = 'The engine is flooded — press F to get out';
       focus.copy(v.pos);
     }
     for (const p of parked) { p.night = sky.night; p.sync(dt); }
+    if (S.doorClose) { const dc = S.doorClose; dc.t += dt; dc.door.rotation.y = dc.door.userData.open * Math.max(0, 1 - dc.t / 0.5) * (dc.t < 0.15 ? 1 : 1); if (dc.t > 0.5) S.doorClose = null; }
     if (!S.dead) {
       const ip = interact.update(dt, focus, S.mode === 'car', S.mode === 'foot' && a.enter && !prompt, S.vehicle ? S.vehicle.speed : 0);
       if (!prompt) prompt = ip;
     }
     const sp = systems.update(dt, a, !prompt && !interact.consumed && S.mode === 'foot' && !S.dead);
     if (!prompt && sp) prompt = sp;
+    const lp = law.update(dt, a);
+    if (lp && (law.focusing || !prompt)) prompt = lp;
+    const rp = roadside.update(dt, a);
+    if (rp && !prompt) prompt = rp;
+    const gp = gang.update(dt, a);
+    if (gp && !prompt) prompt = gp;
     career.update(dt);
     if (S.vehicle && S.vehicle.health <= 0 && !S.vehicle.wrecked) { S.vehicle.wrecked = true; hud.toast('The engine is wrecked — get out (F)', 4); }
     if (S.vehicle?.wrecked) { S.vehicle.vel.multiplyScalar(Math.exp(-3 * dt)); }
 
     const onFoot = S.mode === 'foot' ? player.pos : null;
     peds.update(dt, focus, onFoot, [S.vehicle, ...police.cars.map((c) => c.v), ...traffic.cars.map((c) => c.v)], (amt) => { S.money += amt; hud.toast(`+$${amt}`, 1.2); });
-    police.update(dt, { pos: S.indoors ? new THREE.Vector3(S.indoors.d.x, focus.y, S.indoors.d.z) : focus, inCar: S.mode === 'car', speed: S.mode === 'car' ? S.vehicle.speed : player.speed, vehicle: S.vehicle });
+    police.update(dt, { pos: S.indoors ? new THREE.Vector3(S.indoors.d.x, focus.y, S.indoors.d.z) : focus, inCar: S.mode === 'car', speed: S.mode === 'car' ? S.vehicle.speed : player.speed, vehicle: S.vehicle, drawn: combat.drawn && S.mode === 'foot' });
     if (player.health > 0 && player.health < 100 && S.dead <= 0) player.health = Math.min(100, player.health + dt * (police.wanted ? 0 : 0.6));
     S.dmgFlash = Math.max(0, S.dmgFlash - dt * 0.8);
     if (post) post.grade.uniforms.uDamage.value = Math.max(S.dmgFlash, player.health < 25 ? 0.35 : 0);
@@ -557,6 +646,8 @@ async function createGame(progress) {
     sky.update(dt, settings.timeScale, focus);
     rig.update(dt, a, focus, { vehicle: S.vehicle, heading: S.vehicle?.heading, speed: S.vehicle?.speed || 0, lastLook: input.lastLookTime, aiming: S.mode === 'foot' && player.aiming && armed, eye: S.mode === 'foot' && player.char.root.visible ? getEye() : null }, collision);
 
+    law.camera(camera);
+    gang.camera(camera);
     if (!!rig.fp !== fpState.boost) {
       fpState.boost = !!rig.fp;
       const R = q.shadowRange * (fpState.boost ? 0.5 : 1), sc = sky.sun.shadow.camera; // tighter shadow map = crisper shadows
@@ -609,7 +700,7 @@ async function createGame(progress) {
       post.update(sky.sunDir, sky.sunDir.y > 0.02 && weather.cover < 0.75, aimingNow ? 18 : camera.position.distanceTo(focus) + 1, aimingNow);
     }
 
-    render();
+    if (!S.skipRender) render(); // tests can step the simulation without drawing
     dynamicResolution(dt);
     hud.update(dt, {
       pos: mapPos, yaw: rig.yaw, heading: S.mode === 'car' ? S.vehicle.heading : player.heading,
@@ -781,6 +872,7 @@ async function createGame(progress) {
     pause: setPaused,
     freeze(f) { S.frozen = f; },
     renderNow() { render(); },
+    skipRender(b) { S.skipRender = !!b; },
     // Advance the game by exactly n fixed steps (used to capture smooth video on slow machines)
     step(n = 1, dt = 1 / 30) { for (let i = 0; i < n; i++) tick(dt); S.fps = 1 / dt; },
     toggleMap: () => hud.toggleMap(),

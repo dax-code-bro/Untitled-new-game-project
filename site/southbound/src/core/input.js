@@ -108,7 +108,7 @@ export class Input {
       walk: k('AltLeft') || k('CapsLock'),
       jump: this.hit('Space') || this.btnHit('jump'),
       handbrake: k('Space') || this.btn('jump'),
-      enter: this.hit('KeyF') || this.hit('Enter') || this.btnHit('enter'),
+      enter: this.hit('KeyF') || this.hit('Enter') || this.btnHit('enter') || this.btnHit('interact'),
       map: this.hit('KeyM') || this.btnHit('map'),
       pause: this.hit('Escape') || this.hit('KeyP') || this.btnHit('pause'),
       camera: this.hit('KeyV'),
@@ -127,6 +127,8 @@ export class Input {
       reload: this.hit('KeyR') || this.btnHit('reload'),
       interact: k('KeyF') || this.btn('interact'),
       interactHit: this.hit('KeyF') || this.btnHit('interact'),
+      greet: this.hit('KeyG') || this.btnHit('greet'),
+      antag: this.hit('KeyT') || this.btnHit('antag'),
     };
     // gamepad
     const pads = navigator.getGamepads ? navigator.getGamepads() : [];
@@ -151,6 +153,9 @@ export class Input {
       this._padX = g.buttons[2]?.pressed;
       if (g.buttons[1]?.pressed) a.interact = true; // B: hold to interact
       if (g.buttons[1]?.pressed && !this._padB) a.interactHit = true;
+      if (g.buttons[12]?.pressed && !this._padUp) a.greet = true;
+      if (g.buttons[13]?.pressed && !this._padDn) a.antag = true;
+      this._padUp = g.buttons[12]?.pressed; this._padDn = g.buttons[13]?.pressed;
       this._padB = g.buttons[1]?.pressed;
       if (g.buttons[11]?.pressed && !this._padRS) a.camera = true; // R3: camera / first person
       this._padRS = g.buttons[11]?.pressed;

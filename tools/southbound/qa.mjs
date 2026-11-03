@@ -23,6 +23,7 @@ const page = await browser.newPage({ viewport: { width: 960, height: 540 } });
 const consoleErrors = [];
 page.on('console', (m) => { if (m.type() === 'error' || (m.type() === 'warning' && /open model failed|NaN/.test(m.text()))) consoleErrors.push(`[${m.type()}] ${m.text().slice(0, 300)}`); });
 page.on('pageerror', (e) => consoleErrors.push('[pageerror] ' + e.message));
+await page.addInitScript(() => { window.SB_SKIP_INTRO = true; });
 await page.addInitScript((pr) => { try { localStorage.setItem('southbound.settings.v1', JSON.stringify({ platform: 'pc', preset: pr, dynamicRes: false, showFps: false, timeScale: 0 })); localStorage.removeItem('southbound.save.v1'); } catch (e) { /* */ } }, preset);
 await page.goto(`http://127.0.0.1:${server.address().port}/index.html`);
 await page.waitForTimeout(500);

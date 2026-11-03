@@ -30,6 +30,32 @@ export const VEHICLES = {
 
 // The body types built at load time (catalog models are built on first use)
 export const BASE_CAR_IDS = Object.keys(VEHICLES);
+// open-model vehicles (not procedural)
+VEHICLES['rusty-pickup'] = { name: 'Rusty \'89 Pickup', len: 5.2, accel: 6.5, top: 38, grip: 6, weight: 0 };
+
+// Quaternius Zombie Apocalypse Kit pickup (CC0): wheel pivots, nose to +z, rusty paint
+function preparePickup(scene) {
+  const root = new THREE.Group();
+  root.add(scene);
+  root.updateMatrixWorld(true);
+  const box = new THREE.Box3();
+  const c = (n) => { const o = scene.getObjectByName(n); return o ? box.setFromObject(o).getCenter(new THREE.Vector3()) : null; };
+  const f = c('FrontWheel_L'), b = c('BackWheels');
+  if (f && b && f.z < b.z) { scene.rotation.y = Math.PI; root.updateMatrixWorld(true); }
+  for (const [n, name] of [['FrontWheel_L', 'wheel-front-left'], ['FrontWheel_R', 'wheel-front-right'], ['BackWheels', 'wheel-back-left']]) {
+    const o = scene.getObjectByName(n);
+    if (!o) continue;
+    const pivot = new THREE.Group(); pivot.name = name;
+    pivot.position.copy(box.setFromObject(o).getCenter(new THREE.Vector3()));
+    root.add(pivot); pivot.updateMatrixWorld(true); pivot.attach(o);
+  }
+  root.traverse((o) => {
+    if (!o.isMesh) return;
+    o.castShadow = true; o.receiveShadow = true;
+    if (o.material && o.material.name === 'Atlas') { o.material = o.material.clone(); o.material.color.setRGB(0.8, 0.66, 0.52); o.material.roughness = 0.88; o.material.metalness = 0.12; }
+  });
+  return root;
+}
 
 // Wrap the concept car: wheels under pivots named like the game expects, nose toward +z
 function prepareConcept(scene) {
@@ -48,6 +74,22 @@ function prepareConcept(scene) {
     const pivot = new THREE.Group(); pivot.name = name; pivot.position.copy(c);
     root.add(pivot); pivot.updateMatrixWorld(true);
     for (const part of ['', 'Rim', 'BrakeDisc']) { const n = model.getObjectByName('Wheel' + k + part); if (n) pivot.attach(n); }
+  }
+  // door pivots on the front hinge, so the doors can swing open when you get in
+  root.updateMatrixWorld(true);
+  for (const side of ['L', 'R']) {
+    const parts = [];
+    root.traverse((o) => { if (o.isMesh && new RegExp(`Door${side}`).test(o.name)) parts.push(o); });
+    if (!parts.length) continue;
+    const b = new THREE.Box3();
+    parts.forEach((o) => b.expandByObject(o));
+    const c = b.getCenter(new THREE.Vector3());
+    const pivot = new THREE.Group();
+    pivot.position.set(c.x > 0 ? b.max.x - 0.05 : b.min.x + 0.05, c.y, b.max.z - 0.05);
+    root.add(pivot); pivot.updateMatrixWorld(true);
+    parts.forEach((o) => pivot.attach(o));
+    pivot.name = c.x > 0 ? 'door-drv' : 'door-pass'; // the car's left (+x) is the driver's side
+    pivot.userData.open = c.x > 0 ? -1.1 : 1.1;
   }
   root.traverse((o) => {
     if (!o.isMesh) return;
@@ -89,6 +131,7 @@ export async function loadLibrary(quality, progress = () => {}) {
     const g = await loadOpen(K('CarConcept'));
     if (g) lib.cars.concept = prepareConcept(g.scene);
   }
+  { const g = await loadOpen('real/zk_vehicles/Vehicle_Pickup.glb'); if (g) lib.cars['rusty-pickup'] = preparePickup(g.scene); }
   for (const id of carIds) {
     lib.cars[id] = buildCar(id, quality);
     step('Building vehicles');

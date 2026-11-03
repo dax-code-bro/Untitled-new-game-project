@@ -44,6 +44,7 @@ const errors = [];
 page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') errors.push(`[${m.type()}] ${m.text()}`); });
 page.on('pageerror', (e) => errors.push(`[pageerror] ${e.message}`));
 
+await page.addInitScript(() => { window.SB_SKIP_INTRO = true; });
 await page.addInitScript((pr) => {
   try {
     localStorage.setItem('southbound.settings.v1', JSON.stringify({ platform: pr === 'phone' ? 'phone' : 'pc', preset: pr, dynamicRes: false, showFps: true, timeScale: 0 }));
@@ -52,13 +53,20 @@ await page.addInitScript((pr) => {
 
 const shot = async (name) => {
   const frozen = await page.evaluate(() => { if (window.SB) { window.SB.freeze(true); return true; } return false; });
-  await page.screenshot({ path: path.join(out, `${name}.png`), timeout: 600000 });
+  // raw CDP capture: Playwright's screenshot waits on document.fonts.ready, which can stall in the sandbox
+  const cdp = await page.context().newCDPSession(page);
+  const { data } = await cdp.send('Page.captureScreenshot', { format: 'png' });
+  fs.writeFileSync(path.join(out, `${name}.png`), Buffer.from(data, 'base64'));
+  await cdp.detach();
   if (frozen) await page.evaluate(() => window.SB.freeze(false));
   console.log('shot', name);
 };
 const wait = (ms) => page.waitForTimeout(ms);
 const sb = (fn, arg) => page.evaluate(fn, arg);
 
+// web fonts can't load in the sandbox and would stall screenshots: use system fonts in tests
+await page.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
+await page.addInitScript(() => { addEventListener('DOMContentLoaded', () => { const st = document.createElement('style'); st.textContent = '*{font-family:system-ui,sans-serif!important}'; document.head.appendChild(st); }); });
 await page.goto(url);
 await wait(800);
 if (scenario !== 'video') await shot('00-menu');
@@ -79,8 +87,7 @@ if (scenario === 'smoke') {
       window.SB.setHour(s.hour ?? 10);
       if (s.weather) window.SB.setWeather(s.weather);
       if (s.drive) window.SB.enterNearest();
-      window.SB.teleport(s.x, s.z, s.yaw ?? 0);
-      window.SB.lookAt(s.yaw ?? 0, s.pitch ?? 0.15);
+      if (s.x || s.z) { window.SB.teleport(s.x, s.z, s.yaw ?? 0); window.SB.lookAt(s.yaw ?? 0, s.pitch ?? 0.15); }
       window.SB.showRegion();
       if (s.map) window.SB.toggleMap();
     }, s);

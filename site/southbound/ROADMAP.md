@@ -112,6 +112,34 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 - [ ] Weather: rain, storms, fog, hurricanes
 - [ ] Real asset pass (needs network allow-list: polyhaven.com, ambientcg.com, kenney.nl, quaternius.com, freesound.org)
 
+## Phase 1.11 — RDR-style play, living world
+
+- [x] Daytime: stronger sun, less milky haze, bluer sky, punchier grade (phones too, via the tone-mapping curve)
+- [x] Ground cover: continuous grass carpet on every preset (terrain-coloured blades, tall golden grass on the plains,
+      lawns in town), wildflower patches, scattered stones, bush clusters and lone trees on the plains
+- [x] Feet on the drawn ground: road surface, sidewalks and curbs, terrain triangles; smooth curb steps
+- [x] Auto vault / mantle / climb up to 2.5 m (6'3" + arms) when there's a ledge and a clear top
+- [x] Hands follow the animation's finger poses (no curled rest pose)
+- [x] Weapon wheel (holster, sidearm, dual sidearms, rifle, shotgun, long range, bow, heavy), slow-mo while open
+- [x] Holsters: sidearm on the hip, long gun slung on the back; aiming draws, H holsters
+- [x] Real-world firearm models only, no sci-fi: Quaternius Survival pack (pistols, revolvers, shotguns) and
+      Toon Shooter Game Kit (AK rifle, SMG, bolt-action snipers, pump shotgun, revolver grenade launcher), all CC0
+- [x] Arm IK holds per weapon type (two-handed pistol, shouldered rifles/shotguns, low ready, port arms, dual wield);
+      reloads per action (box mag, pump, bolt, revolver); idle inspects
+- [x] Gun HUD: only minimap + health + grey weapon silhouette and ammo while a gun is out on foot
+- [x] First person with sharper shadows and higher resolution
+- [x] Hold-to-interact: greet / antagonize (4x: fight or call the cops; 2x on a cop: arrest)
+- [x] Police heat: holstered arrest teams for minor crimes, guns drawn for felonies, shoot on sight for killings
+      or if your gun is out, SWAT with rifles, tanks (Quaternius Tank pack) at the top
+- [x] Surrender + arrest scene (cuffed, into the cruiser, days pass, fine from your bounty)
+- [x] Bounty after escaping outside the city; hunters every 3 game days, bigger and better armed as you kill them;
+      top tier brings a minigun gunship and the police; pay it off at the Central Precinct
+- [x] Roadside walkers on country roads; stop and offer a ride for a tip
+- [x] More pedestrians and traffic on every preset
+- [x] No glowing ground markers; custom shops are drive-in workshops; car doors swing open when you get in
+- [x] Loading screen with in-game art, tips and progress
+- [x] Fewer touch buttons: ◎ interact replaces the car button; map, phone, arsenal, free cam moved to pause
+
 ## Phase 3 — Content catalogs (targets)
 
 | Item | Target | Done |

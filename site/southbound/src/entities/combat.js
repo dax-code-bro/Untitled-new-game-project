@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { clamp } from '../util.js';
 
-import { WEAPONS, buildWeaponModel, gunModelFor } from './arsenal.js';
+import { WEAPONS, buildWeaponModel, gunModelFor, gunRel } from './arsenal.js';
 import { loaded, Q } from '../assets/open.js';
 import { raycastObjects, raycastStatic } from '../core/hits.js';
 export { WEAPONS };
@@ -89,7 +89,7 @@ export class Combat {
     const key = id + tag;
     let m = this.models[key];
     const G = gunModelFor(w);
-    if (m && !m.userData.open && G && loaded(Q(...G.m.split('/')))) { this.scene.remove(m); m = null; }
+    if (m && !m.userData.open && G && loaded(gunRel(G))) { this.scene.remove(m); m = null; }
     if (!m) { m = buildWeaponModel(w); m.visible = false; this.scene.add(m); this.models[key] = m; }
     return m;
   }
@@ -235,6 +235,13 @@ export class Combat {
     const hit = first;
     if (a.clip === 0) this.reload();
     return hit;
+  }
+
+  // a tracer line (enemy fire)
+  tracer(a, b) {
+    const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints([a.clone(), b.clone().add(new THREE.Vector3((Math.random() - 0.5) * 3, Math.random() * 1.5, (Math.random() - 0.5) * 3))]), this.tracerMat.clone());
+    this.scene.add(line);
+    this.fx.push({ obj: line, t: 0.07, max: 0.07 });
   }
 
   impact(hit, w, targets, from) {

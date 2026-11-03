@@ -57,8 +57,18 @@ select { background: #1f1814; color: var(--paper); border: 1px solid var(--line)
 .rating { font-size: 11px; color: var(--muted); margin-top: 18px; letter-spacing: 0.06em; }
 
 /* ---------- loading */
-#loading { background: radial-gradient(ellipse at 50% 100%, #3b1d17, #0a0705 70%); align-items: center; justify-content: center; z-index: 30; }
-.load-inner { width: min(520px, 100% - 32px); text-align: center; }
+#loading { background: #0a0705; align-items: flex-end; justify-content: flex-start; z-index: 30; overflow: hidden; }
+#loading .load-art { position: absolute; inset: -4%; background: url('assets/ui/loading.jpg') center / cover no-repeat, radial-gradient(ellipse at 50% 100%, #3b1d17, #0a0705 70%); animation: sbKen 40s ease-in-out infinite alternate; }
+#loading .load-shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0) 35%, rgba(0,0,0,.55) 70%, rgba(0,0,0,.88)), linear-gradient(90deg, rgba(0,0,0,.55), rgba(0,0,0,0) 60%); }
+@keyframes sbKen { from { transform: scale(1.0) translate(0, 0); } to { transform: scale(1.08) translate(-1.5%, -1%); } }
+.load-inner { position: relative; width: min(620px, 100% - 40px); text-align: left; margin: 0 0 max(42px, env(safe-area-inset-bottom)) max(44px, env(safe-area-inset-left)); }
+.load-inner .logo { font-size: clamp(44px, 8vw, 92px); margin: 0; letter-spacing: .08em; text-shadow: 0 4px 24px rgba(0,0,0,.6); }
+.load-sub { margin: 4px 0 18px; color: #e8c27a; font: 600 13px/1 Inter, system-ui, sans-serif; letter-spacing: .32em; text-transform: uppercase; }
+.load-foot { display: flex; align-items: center; gap: 10px; color: #ddd; font: 500 13px Inter, system-ui, sans-serif; margin-top: 18px; }
+.load-spin { width: 14px; height: 14px; border-radius: 50%; border: 2px solid rgba(255,255,255,.25); border-top-color: #f2a33a; animation: sbSpin 0.9s linear infinite; }
+@keyframes sbSpin { to { transform: rotate(360deg); } }
+#loading .bar { margin: 10px 0 0; height: 4px; }
+#loading .tip { color: rgba(255,255,255,.82); font-size: 15px; line-height: 1.45; max-width: 520px; margin-top: 0; text-shadow: 0 1px 4px rgba(0,0,0,.8); }
 .bar { height: 6px; border-radius: 3px; background: rgba(255,255,255,0.1); overflow: hidden; margin: 26px 0 12px; }
 .bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #f2a33a, #e2572b); transition: width 0.2s; }
 #loadtext { color: var(--paper); font-size: 14px; }
@@ -186,7 +196,7 @@ body.touch #topright { top: calc(max(14px, env(safe-area-inset-top)) + 40px); }
 #vehpanel #speedo b { font-size: calc(46px * var(--hud)); }
 body.touch #vehpanel { right: calc(max(16px, env(safe-area-inset-right)) + 160px); }
 #arsenalBtn, .sbPhoneBtn { display: none; }
-body.touch #arsenalBtn, body.touch .sbPhoneBtn { display: block; }
+body.touch #arsenalBtn, body.touch .sbPhoneBtn { display: none; }
 #toast { top: calc(max(18px, env(safe-area-inset-top)) + 128px) !important; }
 
 /* ---- gun out: everything but the minimap, health and the weapon panel fades away */
@@ -220,3 +230,27 @@ body.touch #gunpanel b { font-size: 16px; }
 #wheel .cyc { position: absolute; top: 50%; transform: translateY(-50%); width: 40px; height: 40px; border-radius: 50%; border: 1px solid rgba(255,255,255,.3); background: rgba(0,0,0,.5); color: #fff; font-size: 22px; display: none; }
 #wheel .cyc.prev { left: -48px; } #wheel .cyc.next { right: -48px; }
 body.touch #wheel .cyc { display: block; }
+
+/* ---- conversation subtitles and the arrest fade */
+.sbsub { position: fixed; left: 50%; bottom: 17%; transform: translateX(-50%); max-width: min(760px, 90vw); text-align: center; color: #fff; font: 600 17px Inter, system-ui, sans-serif; text-shadow: 0 2px 6px #000, 0 0 2px #000; z-index: 15; pointer-events: none; opacity: 0; transition: opacity .25s; }
+.sbsub span { color: #ffcf6a; }
+.sbfade { position: fixed; inset: 0; background: #000; z-index: 40; opacity: 0; pointer-events: none; transition: opacity 1.2s; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; color: #fff; }
+.sbfade.show { opacity: 1; }
+.sbfade b { font: 700 54px/1 'Oswald', system-ui, sans-serif; letter-spacing: .12em; color: #d8c08a; }
+.sbfade span { font: 500 18px/1.3 Inter, system-ui, sans-serif; opacity: .8; font-style: italic; }
+/* phone: greet / antagonize appear only while you hold ◎ on someone */
+#touch .focusbtns { display: none; }
+body.focus #touch .focusbtns { display: flex; position: absolute; right: 150px; bottom: 150px; gap: 10px; }
+#touch .focusbtns button { width: auto; min-width: 92px; padding: 0 14px; border-radius: 22px; font: 600 14px Inter, system-ui, sans-serif; }
+#touch button[data-btn="aim"] { font: 700 15px Inter, system-ui, sans-serif; }
+#touch button[data-btn="interact"] { font-size: 26px; }
+
+/* ---- prologue: name captions and skip */
+.sbcaption { position: fixed; left: max(28px, env(safe-area-inset-left)); bottom: 24%; z-index: 16; color: #fff; opacity: 0; transform: translateY(8px); transition: opacity .4s, transform .4s; pointer-events: none; max-width: min(720px, 90vw); }
+.sbcaption.show { opacity: 1; transform: none; }
+.sbcaption b { display: block; font: 700 22px/1.2 'Oswald', Inter, system-ui, sans-serif; letter-spacing: .04em; text-shadow: 0 2px 10px rgba(0,0,0,.8); }
+.sbcaption span { display: block; margin-top: 4px; color: #e8c27a; font: 600 12px/1.3 Inter, system-ui, sans-serif; letter-spacing: .18em; text-transform: uppercase; text-shadow: 0 1px 6px rgba(0,0,0,.8); }
+.sbskip { position: fixed; right: max(20px, env(safe-area-inset-right)); bottom: max(20px, env(safe-area-inset-bottom)); z-index: 41; display: none; background: rgba(0,0,0,.55); color: #fff; border: 1px solid rgba(255,255,255,.3); border-radius: 18px; padding: 8px 16px; font: 600 13px Inter, system-ui, sans-serif; cursor: pointer; }
+.sbskip.show { display: block; }
+
+body.cinematic #hud, body.cinematic #touch { opacity: 0; pointer-events: none; transition: opacity .4s; }

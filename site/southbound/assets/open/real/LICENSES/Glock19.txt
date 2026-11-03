@@ -1,0 +1,11 @@
+Model Information:
+* title:	Glock-19
+* source:	https://sketchfab.com/3d-models/glock-19-0a1d52da358e4993b3847e56ada8d611
+* author:	cyberdevz (https://sketchfab.com/cyberdevz)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Glock-19" (https://sketchfab.com/3d-models/glock-19-0a1d52da358e4993b3847e56ada8d611) by cyberdevz (https://sketchfab.com/cyberdevz) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
