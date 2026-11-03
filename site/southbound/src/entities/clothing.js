@@ -467,7 +467,7 @@ function plaidTex(hex) {
 const _m = new THREE.Matrix4(), _s = new THREE.Vector3();
 // Attach `obj` (built in metres) rigidly to a bone so it moves exactly like
 // the skin there; `at` is its position in the mesh's own (bind) units.
-function attachToBone(mesh, boneName, obj, at, metres) {
+export function attachToBone(mesh, boneName, obj, at, metres) {
   const bones = mesh.skeleton.bones, i = bones.findIndex((b) => b.name === boneName);
   if (i < 0) return false;
   const bone = bones[i];
@@ -488,6 +488,15 @@ function avgColor(tex) {
     return new THREE.Color().setRGB(s[0] / 256, s[1] / 256, s[2] / 256);
   } catch { return null; }
 }
+// metres per mesh unit for a person's skinned body (bind pose)
+export function bodyMetres(h, mesh) {
+  const sk = mesh.skeleton; h.root.updateMatrixWorld(true);
+  _m.multiplyMatrices(sk.bones[0].matrixWorld, sk.boneInverses[0]).multiply(mesh.bindMatrix);
+  _s.setFromMatrixColumn(_m, 0);
+  const rs = new THREE.Vector3().setFromMatrixScale(h.root.matrixWorld).x || 1;
+  return _s.length() / rs;
+}
+export function suitMesh(h) { let m = null; h.model.traverse((o) => { if (o.isSkinnedMesh && o.material?.name === 'suit') m = o; }); return m; }
 export function makeOutfitter(h, skinHex = 0xc68e6a) {
   const meshes = {};
   h.model.traverse((o) => { if (o.isSkinnedMesh && o.material?.name) meshes[o.material.name] = o; });

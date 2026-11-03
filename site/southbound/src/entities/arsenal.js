@@ -202,6 +202,64 @@ export function applyFinish(g, f) {
 // the classic starter pistol keeps its old id for saves/scripts
 WEAPONS.pistol = { ...WEAPONS.pistol_01, id: 'pistol', name: 'Standard 9mm', damage: 34, clip: 17, price: 0, modelKey: 'glock17' };
 
+// --- knives and other hand weapons -------------------------------------------
+// blade: cuts make people bleed; len (m) matters for hiding it
+const MELEE = [
+  ['switchblade', 'Switchblade', 38, 1.45, 0.42, 0.21, 45, 'blade', 'Folds into your pocket. Opens with a click.'],
+  ['kitchen_knife', 'Kitchen knife', 40, 1.5, 0.48, 0.32, 18, 'blade', 'Eight-inch chef\'s knife. Not made for this.'],
+  ['hunting_knife', 'Hunting knife', 46, 1.55, 0.5, 0.3, 85, 'blade', 'Fixed blade for skinning game. Holds an edge.'],
+  ['combat_knife', 'Combat knife', 52, 1.6, 0.48, 0.31, 130, 'blade', 'Seven-inch fixed blade with a guard.'],
+  ['machete', 'Machete', 60, 1.95, 0.75, 0.6, 45, 'blade', 'Cane knife for clearing brush. Long reach.'],
+  ['hatchet', 'Hatchet', 58, 1.7, 0.8, 0.38, 35, 'blade', 'Camp hatchet. Heavy head, short handle.'],
+  ['bat', 'Baseball bat', 46, 2.0, 0.85, 0.84, 40, 'blunt', 'Ash wood, 34 inches.'],
+  ['crowbar', 'Crowbar', 50, 1.85, 0.85, 0.6, 22, 'blunt', 'Steel pry bar. Opens doors and arguments.'],
+  ['tire_iron', 'Tire iron', 44, 1.8, 0.75, 0.5, 15, 'blunt', 'Lug wrench from a trunk.'],
+  ['pipe_wrench', 'Pipe wrench', 48, 1.75, 0.85, 0.45, 32, 'blunt', 'Fourteen-inch cast iron wrench.'],
+  ['knuckles', 'Brass knuckles', 34, 1.4, 0.4, 0.1, 30, 'blunt', 'Makes a punch hurt a lot more.'],
+];
+CATEGORIES.push({ k: 'melee', label: 'Knives & melee', ids: [] });
+for (const [id, name, damage, range, rate, len, price, kind, desc] of MELEE) {
+  WEAPONS[id] = { id, name, cat: 'melee', icon: kind === 'blade' ? '🔪' : '🏏', damage, range, rate, melee: true, len, price, kind, pellets: 1, pen: 1, spread: 0, clip: 0,
+    fireMode: kind === 'blade' ? 'Blade' : 'Blunt', caliber: `${Math.round(len * 100)} cm`, desc, unlock: 0, platform: 'melee', model: { melee: id } };
+  CATEGORIES.find((c) => c.k === 'melee').ids.push(id);
+}
+// a melee weapon model: handle at the origin, blade/head along +z
+function buildMeleeModel(w) {
+  const g = new THREE.Group(), id = w.id;
+  const steel = mat([0.62, 0.63, 0.65], 0.25, 1), dark = mat([0.04, 0.04, 0.045], 0.6, 0.2), wood = mat([0.36, 0.22, 0.1], 0.6, 0), rub = mat([0.06, 0.06, 0.06], 0.9, 0);
+  const box = (sx, sy, sz, x, y, z, mm) => { const b = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), mm); b.position.set(x, y, z); g.add(b); return b; };
+  const cyl = (r1, r2, l, z, mm, seg = 10) => { const c = new THREE.Mesh(new THREE.CylinderGeometry(r1, r2, l, seg), mm); c.rotation.x = Math.PI / 2; c.position.set(0, 0, z); g.add(c); return c; };
+  const blade = (L, W, z0, mm = steel) => { const sh = new THREE.Shape(); sh.moveTo(0, -W / 2); sh.lineTo(L * 0.82, -W / 2); sh.lineTo(L, W * 0.25); sh.lineTo(L * 0.75, W / 2); sh.lineTo(0, W / 2); sh.closePath();
+    const geo = new THREE.ExtrudeGeometry(sh, { depth: 0.003, bevelEnabled: true, bevelThickness: 0.0015, bevelSize: 0.0015, bevelSegments: 1 }); geo.rotateY(-Math.PI / 2); geo.translate(-0.0015, 0, z0);
+    const m = new THREE.Mesh(geo, mm); g.add(m); return m; };
+  if (['switchblade', 'kitchen_knife', 'hunting_knife', 'combat_knife', 'machete'].includes(id)) {
+    const L = { switchblade: 0.09, kitchen_knife: 0.2, hunting_knife: 0.14, combat_knife: 0.17, machete: 0.45 }[id];
+    const handle = id === 'kitchen_knife' ? mat([0.08, 0.06, 0.05], 0.5, 0) : id === 'hunting_knife' ? wood : id === 'switchblade' ? mat([0.12, 0.12, 0.13], 0.4, 0.7) : rub;
+    box(0.022, 0.03, 0.11, 0, 0, 0, handle);
+    if (id === 'combat_knife' || id === 'hunting_knife') box(0.012, 0.055, 0.008, 0, 0, 0.058, dark);
+    blade(L, id === 'machete' ? 0.05 : id === 'kitchen_knife' ? 0.045 : 0.03, 0.06);
+  } else if (id === 'hatchet') {
+    cyl(0.014, 0.016, 0.34, 0.1, wood);
+    box(0.012, 0.09, 0.07, 0, 0.03, 0.26, steel);
+  } else if (id === 'bat') {
+    cyl(0.016, 0.034, 0.84, 0.36, mat([0.72, 0.56, 0.36], 0.5, 0), 14);
+    cyl(0.02, 0.02, 0.012, -0.06, wood);
+  } else if (id === 'crowbar' || id === 'tire_iron') {
+    const m = id === 'crowbar' ? mat([0.6, 0.08, 0.06], 0.45, 0.6) : dark;
+    cyl(0.011, 0.011, id === 'crowbar' ? 0.58 : 0.46, 0.22, m, 8);
+    box(0.02, 0.05, 0.016, 0, 0.02, id === 'crowbar' ? 0.52 : 0.45, m);
+  } else if (id === 'pipe_wrench') {
+    cyl(0.013, 0.016, 0.34, 0.12, mat([0.62, 0.12, 0.08], 0.5, 0.5), 8);
+    box(0.03, 0.07, 0.05, 0, 0.02, 0.3, dark); box(0.02, 0.02, 0.06, 0, 0.055, 0.33, steel);
+  } else if (id === 'knuckles') {
+    for (let i = 0; i < 4; i++) { const t = new THREE.Mesh(new THREE.TorusGeometry(0.011, 0.004, 6, 12), mat([0.75, 0.6, 0.3], 0.3, 1)); t.position.set(0, 0.02, -0.03 + i * 0.022); t.rotation.y = Math.PI / 2; g.add(t); }
+    box(0.01, 0.015, 0.09, 0, 0.0, 0.003, mat([0.75, 0.6, 0.3], 0.3, 1));
+  }
+  g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.userData.noHit = true; } });
+  g.userData.melee = true;
+  return g;
+}
+
 // --- attachments: 6 slots x families x tiers -> 200+ parts ----------------------
 const ATT = {
   optic: [['Red dot', { spread: 0.9 }], ['Holographic', { spread: 0.88 }], ['Reflex', { spread: 0.9 }], ['2x scope', { zoom: 2 }], ['3x scope', { zoom: 3 }], ['4x scope', { zoom: 4 }], ['6x scope', { zoom: 6 }], ['8x scope', { zoom: 8 }], ['12x scope', { zoom: 12 }], ['Thermal', { zoom: 4, thermal: 1 }], ['Night vision', { zoom: 3, night: 1 }]],
@@ -285,6 +343,7 @@ function buildOpenGun(w, G) {
 }
 
 export function buildWeaponModel(w) {
+  if (w.melee && w.model?.melee) return buildMeleeModel(w);
   const G = gunModelFor(w);
   if (G) { const og = buildOpenGun(w, G); if (og) return og; }
   const g = new THREE.Group();

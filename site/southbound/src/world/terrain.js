@@ -175,7 +175,7 @@ vec3 layerN(sampler2D t, vec2 p, float scale){
   float slope = 1.0 - clamp(n.y, 0.0, 1.0);
   vec2 p = vWPos.xz;
 
-  vec3 cG = layerC(t_grassC, p, ${size('grass')});
+  vec3 cG = layerC(t_grassC, p, ${size('grass')}) * vec3(0.9, 1.0, 1.03); // less yellow
   vec3 cD = layerC(t_dryC, p, ${size('dry')});
   vec3 cF = layerC(t_forestC, p, ${size('forest')});
   vec3 cS = layerC(t_sandC, p, ${size('sand')});

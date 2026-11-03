@@ -14,6 +14,7 @@ export const SLOTS = [
   { k: 'sniper', label: 'Long range', icon: '🎯' },
   { k: 'bow', label: 'Bow', icon: '🏹' },
   { k: 'heavy', label: 'Heavy', icon: '🚀' },
+  { k: 'melee', label: 'Knife / melee', icon: '🔪' },
 ];
 
 export class WeaponWheel {

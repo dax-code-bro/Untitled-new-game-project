@@ -211,6 +211,7 @@ export class GunStore {
 
   renderCustom() {
     const box = this.el.querySelector('.cust'), id = this.sel, w = WEAPONS[id], g = this.g;
+    if (w.melee) { box.innerHTML = `<h4>About</h4><p style="color:#cfc2b0;line-height:1.5;margin:0">${w.desc || ''} ${w.kind === 'blade' ? 'Cuts bleed.' : 'Blunt: knocks people down.'} Equip it from the weapon wheel (knife slot).</p>`; return; }
     if (this.mode !== 'cust' || !this.countOf(id)) { box.innerHTML = this.mode === 'cust' ? '' : `<h4>About</h4><p style="color:#cfc2b0;line-height:1.5;margin:0">${w.desc || ''}</p>`; return; }
     const f = this.finishOf(id);
     const fitted = g.combat.mods?.[id] || {};

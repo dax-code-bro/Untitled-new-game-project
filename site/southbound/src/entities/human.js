@@ -55,6 +55,16 @@ export class Human {
     if (ONCE.has(name)) this.locked = a.getClip().duration / Math.max(speed, 0.01);
   }
 
+  // Blend a second clip on top of the current one (0 = off), e.g. a hunch for a limp.
+  layer(name, w) {
+    const a = this.action(name);
+    if (!a || a === this.current) return;
+    if (w > 0.001) {
+      if (!a.isRunning()) { a.reset(); a.enabled = true; a.play(); }
+      a.setEffectiveWeight(w);
+    } else if (a.isRunning()) a.stop();
+  }
+
   update(dt) {
     if (this.locked > 0) this.locked -= dt;
     this.mixer.update(dt);

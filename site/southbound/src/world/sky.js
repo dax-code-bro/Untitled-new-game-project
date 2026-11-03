@@ -100,7 +100,7 @@ export function createSky(renderer, scene, quality) {
         sun.color.setRGB(0.55, 0.65, 1.0);
         sun.intensity = 0.6 * smoothstep(-0.05, -0.3, elev);
       } else {
-        sun.color.setRGB(1.0, lerp(0.55, 0.96, warm), lerp(0.3, 0.9, warm));
+        sun.color.setRGB(1.0, lerp(0.55, 0.985, warm), lerp(0.3, 0.955, warm));
         sun.intensity = 4.1 * day;
       }
       hemi.intensity = lerp(0.5, 0.58, day);

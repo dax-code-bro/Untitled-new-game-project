@@ -86,7 +86,8 @@ export function installWorldEvents(game) {
   const giveGun = async (p) => {
     const { WEAPONS, buildWeaponModel } = await import('../entities/arsenal.js');
     const { GunPose } = await import('../entities/gunpose.js');
-    p.gun = buildWeaponModel(WEAPONS.pistol); p.gun.visible = false; scene.add(p.gun); p.pose = new GunPose(p.h);
+    const id = p.role === 'mugger' ? (game.muggerWeapon?.() || 'pistol') : 'pistol';
+    p.weaponId = id; p.gun = buildWeaponModel(WEAPONS[id]); p.gun.visible = false; scene.add(p.gun); p.pose = new GunPose(p.h);
   };
   const cleanup = (e) => { for (const p of e.people || []) { if (p.gun) scene.remove(p.gun); if (p.mode !== 'dead') { p.role = undefined; p.mode = 'flee'; p.threat = player.pos.clone(); p.timer = 10; } } if (e.car) { e.car.group.remove(e.smoke); } };
 

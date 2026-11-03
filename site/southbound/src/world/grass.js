@@ -175,7 +175,7 @@ vFar = farK;
 vec3 cg = textureLod(tGrassC, wxz / uTexS.x, 4.0).rgb;
 vec3 cd = textureLod(tDryC, wxz / uTexS.y, 4.0).rgb;
 float dryK = smoothstep(0.15, 0.85, sp.b + (gNoise(wxz * 0.11) - 0.5) * 0.4 + (fract(aOff.w * 31.7) - 0.5) * 0.5);
-vGCol = mix(cg, cd * vec3(1.1, 1.02, 0.8), dryK) * (1.0 - sp.g * 0.25);
+vGCol = mix(cg * vec3(0.88, 1.0, 1.04), cd * vec3(1.02, 1.0, 0.86), dryK) * (1.0 - sp.g * 0.25); // pulled away from yellow
 vHue = aOff.w;
 vGT = tt;
 vHead = head;
@@ -192,7 +192,7 @@ varying vec3 vGCol; varying float vGT; varying vec3 vGW; varying float vHead; va
 {
   float var = mix(0.84 + 0.32 * fract(vHue * 7.13), 1.0, vFar);
   vec3 root = vGCol * mix(0.5, 1.0, vFar);
-  vec3 tip = mix(vGCol * vec3(1.16, 1.2, 0.94) + vec3(0.02, 0.03, 0.0), vGCol, vFar);
+  vec3 tip = mix(vGCol * vec3(1.08, 1.2, 1.02) + vec3(0.0, 0.025, 0.006), vGCol, vFar);
   vec3 col = mix(root, tip, smoothstep(0.0, 1.0, vGT)) * var;
 #ifdef SB_FLOWER
   if (vHead > 0.5) {

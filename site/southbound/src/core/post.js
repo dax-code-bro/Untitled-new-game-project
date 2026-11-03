@@ -15,11 +15,13 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor)
   vec3 c = inputColor.rgb;
   float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
   // split toning: cool teal shadows, warm highlights (the classic cinematic look)
-  vec3 shadows = vec3(0.97, 1.0, 1.03), highs = vec3(1.03, 1.0, 0.96);
+  // (kept very gentle: anything stronger reads as a yellow/brown cast)
+  vec3 shadows = vec3(0.99, 1.0, 1.015), highs = vec3(1.006, 1.0, 0.994);
   c *= mix(shadows, highs, smoothstep(0.15, 0.75, l));
   c = mix(vec3(l), c, uSat);
   c = 0.18 * pow(max(c, 0.0) / 0.18, vec3(uContrast)); // contrast around mid-grey
-  c += vec3(uWarm, uWarm * 0.45, -uWarm * 0.7);
+  // golden hour only: a multiplicative warm shift that leaves blacks and greys alone
+  c *= vec3(1.0 + uWarm, 1.0 + uWarm * 0.3, 1.0 - uWarm * 0.6);
   // moonlit nights lean blue
   c = mix(c, c * vec3(0.8, 0.9, 1.2), uNight * 0.6);
   vec2 d = uv - 0.5;
@@ -31,8 +33,8 @@ class GradeEffect extends Effect {
   constructor() {
     super('GradeEffect', GRADE_FRAG, {
       uniforms: new Map([
-        ['uWarm', new THREE.Uniform(0.015)], ['uDamage', new THREE.Uniform(0)],
-        ['uSat', new THREE.Uniform(1.03)], ['uContrast', new THREE.Uniform(1.02)], ['uNight', new THREE.Uniform(0)],
+        ['uWarm', new THREE.Uniform(0)], ['uDamage', new THREE.Uniform(0)],
+        ['uSat', new THREE.Uniform(1.12)], ['uContrast', new THREE.Uniform(1.07)], ['uNight', new THREE.Uniform(0)],
       ]),
     });
   }
@@ -75,7 +77,7 @@ export function createPost(renderer, scene, camera, quality) {
   if (bloom) composer.addPass(new EffectPass(camera, bloom));
 
   const grade = new GradeEffect();
-  const tone = new ToneMappingEffect({ mode: ToneMappingMode.ACES_FILMIC });
+  const tone = new ToneMappingEffect({ mode: ToneMappingMode.AGX }); // AgX: neutral hues (ACES pushes brights towards yellow)
   const vignette = new VignetteEffect({ offset: 0.38, darkness: 0.32 });
   const grain = new NoiseEffect({ blendFunction: BlendFunction.OVERLAY, premultiply: false });
   grain.blendMode.opacity.value = 0.025;

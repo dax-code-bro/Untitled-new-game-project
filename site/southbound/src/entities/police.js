@@ -70,6 +70,7 @@ export class Police {
     if (kind === 'disturbance' || kind === 'resist' || kind === 'brandish') this.wanted = Math.max(this.wanted, 1);
     if (kind === 'copKill' && ++this.copKills >= 3) this.heat = 5;
     if (kind === 'shots') this.wanted = Math.max(this.wanted, 1);
+    if (kind === 'weapon') this.wanted = Math.max(this.wanted, 1);
     if (kind === 'assault') this.wanted = Math.max(this.wanted, 1);
     if (kind === 'kill') { this.kills++; this.wanted = Math.max(this.wanted, 1 + Math.floor(this.kills / 3)); }
     if (kind === 'copShot') this.wanted = Math.max(this.wanted, 2);
@@ -155,12 +156,12 @@ export class Police {
     } else {
       // aim and shoot
       p.gunT = (p.gunT ?? 1) - dt;
-      if (p.gunT <= 0) {
+      if (p.gunT <= 0 && !p.disarmed) {
         p.gunT = 0.9 + this.rnd() * 0.8;
         p.h.play('Pistol_Shoot', 0.05, 1.4, true);
         this.audio?.gunshot(0.5);
         const chance = clamp(0.65 - d / 45, 0.1, 0.65) * (pl.inCar ? 0.6 : 1) * (pl.speed > 4 ? 0.6 : 1);
-        if (this.rnd() < chance && this.onPlayerHit) this.onPlayerHit(6 + this.rnd() * 7, p.pos);
+        if (this.rnd() < chance && this.onPlayerHit) this.onPlayerHit(6 + this.rnd() * 7, p.pos, p.swat ? 3 : 2);
       } else if (p.h.locked <= 0) p.h.play('Pistol_Aim_Neutral', 0.15);
     }
     this.poseGun(p, true);

@@ -10,7 +10,7 @@ import { dressMember, placeAccessories } from './gang.js';
 import { GunStore } from '../ui/gunstore.js';
 import { ATTACHMENTS } from '../entities/arsenal.js';
 
-const ALL = Object.keys(WEAPONS).filter((id) => !WEAPONS[id].melee && id !== 'pistol');
+const ALL = Object.keys(WEAPONS).filter((id) => id !== 'fists' && id !== 'pistol');
 const pickIds = (cats, every) => ALL.filter((id, i) => cats.includes(WEAPONS[id].cat) && i % every === 0);
 
 export const STORES = [
@@ -18,10 +18,10 @@ export const STORES = [
     cats: CATEGORIES.map((c) => c.k), every: 1, at: () => [[CITY.x0 - 46, CITY.z0 + 2 * CITY.pitch + 30], [CITY.x0 - 40, CITY.z0 + 4 * CITY.pitch + 40], [CITY.x0 + 3 * CITY.pitch, CITY.z0 - 40], [CITY.x0 + 5 * CITY.pitch, CITY.z0 - 40], [CITY.x0 + CITY.nx * CITY.pitch + 40, CITY.z0 + 3 * CITY.pitch]],
     look: { id: 'walt', base: 'mh_m3', skin: 'light', suit: [0.25, 0.3, 0.25], hair: 'grey', h: 1.0, w: 1.15, acc: ['glasses'], lines: ['Look all you want. Touch with your eyes.', 'Everything in here is legal. Mostly.'] } },
   { id: 'town', name: 'Mill Creek Guns & Tackle', keeper: 'June Albright', blurb: 'Hunting, home defence and fishing line.', priceK: 1.0,
-    cats: ['pistol', 'shotgun', 'rifle', 'marksman', 'bow'], every: 2, at: () => [[TOWN.x0 + TOWN.nx * TOWN.pitch + 34, TOWN.z0 + TOWN.pitch], [TOWN.x0 - 34, TOWN.z0 + TOWN.pitch], [TOWN.x0 + TOWN.pitch, TOWN.z0 - 34]],
+    cats: ['pistol', 'shotgun', 'rifle', 'marksman', 'bow', 'melee'], every: 2, at: () => [[TOWN.x0 + TOWN.nx * TOWN.pitch + 34, TOWN.z0 + TOWN.pitch], [TOWN.x0 - 34, TOWN.z0 + TOWN.pitch], [TOWN.x0 + TOWN.pitch, TOWN.z0 - 34]],
     look: { id: 'june', base: 'mh_f2', skin: 'light', suit: [0.6, 0.3, 0.25], hair: 'blond', h: 0.97, w: 1.0, acc: ['cap'], lines: ['Deer season\'s coming. You hunt?', 'Don\'t point that at my window.'] } },
   { id: 'bayou', name: 'Boudreaux Trading Post', keeper: 'Pierre Boudreaux', blurb: 'Rifles, bows and shells for the swamp. Cash only.', priceK: 0.92,
-    cats: ['pistol', 'shotgun', 'marksman', 'sniper', 'bow'], every: 3, at: () => [[BAYOU.x + 260, BAYOU.z - 220], [BAYOU.x + 380, BAYOU.z - 300], [BAYOU.x + 150, BAYOU.z - 420]],
+    cats: ['pistol', 'shotgun', 'marksman', 'sniper', 'bow', 'melee'], every: 3, at: () => [[BAYOU.x + 260, BAYOU.z - 220], [BAYOU.x + 380, BAYOU.z - 300], [BAYOU.x + 150, BAYOU.z - 420]],
     look: { id: 'pierre', base: 'mh_m1', skin: 'tan', suit: [0.45, 0.38, 0.28], hair: 'grey', h: 1.02, w: 1.2, acc: ['cap'], lines: ['Gator got my last customer. Kidding. He paid first.', 'Shells are by the box, cher.'] } },
 ];
 
