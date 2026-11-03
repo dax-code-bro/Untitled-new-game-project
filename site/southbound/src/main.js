@@ -285,15 +285,20 @@ async function createGame(progress) {
   // "Start with nothing": older saves got a free 9mm, Rico's pickup, a waistband holster and
   // two bandages from the old opening. Take back exactly those freebies once; anything you
   // bought or earned stays. (The 9mm couldn't be bought before, so any in an old save was free.)
-  if (!profile.nothingMig) {
-    profile.nothingMig = 1;
+  // Very old saves also carry the first build's free loadout: one of every weapon type.
+  const FREEBIES = ['pistol', 'rifle_01', 'shotgun_01', 'marksman_01', 'sniper_01', 'bow_01', 'launcher_01'];
+  if ((profile.nothingMig || 0) < 2) {
     const W = profile.weapons || (profile.weapons = {});
-    if (Array.isArray(W.owned) && W.owned.includes('pistol')) { W.owned = W.owned.filter((id) => id !== 'pistol'); if (W.ammo) delete W.ammo.pistol; if (W.count) delete W.count.pistol; }
+    if (Array.isArray(W.owned)) for (const id of FREEBIES) if (W.owned.includes(id)) { W.owned = W.owned.filter((x) => x !== id); if (W.ammo) delete W.ammo[id]; if (W.count) delete W.count[id]; }
+  }
+  if (!profile.nothingMig) {
+    const W = profile.weapons || (profile.weapons = {});
     if (Array.isArray(profile.garage)) profile.garage = profile.garage.filter((g) => g.type !== 'rusty-pickup');
     if (profile.gearMig && Array.isArray(profile.gearOwned)) { profile.gearOwned = profile.gearOwned.filter((k) => k !== 'holster:iwb'); if (profile.gear?.holster === 'iwb') profile.gear.holster = 'owb'; }
     if (profile.med && profile.med.bandage === 2 && Object.keys(profile.med).length === 1) profile.med = {};
     profile.ricoTruck = false;
   }
+  profile.nothingMig = 2;
   S.money = profile.money;
   if (profile.weapons.owned) { for (const id of profile.weapons.owned) combat.give(id); Object.assign(combat.ammo, profile.weapons.ammo || {}); }
   const career = new Career(profile, {
