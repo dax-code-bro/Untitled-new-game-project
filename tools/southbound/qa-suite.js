@@ -101,6 +101,7 @@ async (opts) => {
   });
   await run('weapons: hold every knife and hand weapon', async () => {
     const c = G.combat;
+    const prev = { weapon: c.weapon, holstered: c.holstered, dual: c.dual, slots: { ...c.slots } };
     const melee = opts.weapons.filter((id) => id !== 'fists' && c.constructor.slotOf(id) === 'melee');
     for (const id of melee) {
       c.give(id); c.slots.melee = id; c.equip('melee');
@@ -108,7 +109,8 @@ async (opts) => {
       ok(!!c.model(id), `${id} has a model to hold`);
       window.SB.step(3, 1 / 30);
     }
-    c.weapon = 'fists'; c.holstered = true;
+    // leave the combat state exactly as we found it for the tests that follow
+    c.weapon = prev.weapon; c.holstered = prev.holstered; c.dual = prev.dual; Object.assign(c.slots, prev.slots); delete c.slots.melee;
   });
   await run('attachments: fit every attachment', async () => {
     const ui = opts.arsenalAct;
