@@ -23,7 +23,9 @@ export function installStreetCrime(game) {
   const _a = new THREE.Vector3(), _b = new THREE.Vector3();
 
   // ---------------- arming
+  const armedList = [];
   const arm = (p, id) => {
+    armedList.push(p);
     p.armed = id; p.weaponId = id;
     p.gun = buildWeaponModel(WEAPONS[id]); p.gun.visible = false; p.gun.traverse((o) => { o.userData.noHit = true; }); scene.add(p.gun);
     p.pose = new GunPose(p.h);
@@ -152,6 +154,8 @@ export function installStreetCrime(game) {
     update(dt) {
       if ((rollT -= dt) <= 0) {
         rollT = 1;
+        // guns of people who have left the area go with them
+        for (let i = armedList.length - 1; i >= 0; i--) { const p = armedList[i]; if (!peds.list.includes(p)) { if (p.gun) scene.remove(p.gun); p.gun = null; armedList.splice(i, 1); } }
         for (const p of peds.list) {
           if (p.carryRolled || p.role === 'cop' || p.scripted) continue;
           p.carryRolled = true;
