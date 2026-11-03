@@ -167,11 +167,11 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 6.59,
-    "k4_cpu_s_per_frame": 76.87,
+    "draft_s_per_frame": 8.62,
+    "k4_cpu_s_per_frame": 100.6,
     "k4_gpu_s_per_frame": null,
-    "draft_minutes": 10.54,
-    "k4_cpu_hours": 2.05,
+    "draft_minutes": 13.8,
+    "k4_cpu_hours": 2.68,
     "k4_gpu_hours": null,
     "factors": {
      "people": 1.24,
@@ -181,7 +181,7 @@
      "move": 1.08,
      "total": 1.47
     },
-    "basis": "MEASURED draft 6.59 s/f on this machine; 4K = draft x 11.67 (the set's 4K/draft ratio: ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED))"
+    "basis": "MEASURED draft 8.62 s/f on this machine; 4K = draft x 11.67 (the set's 4K/draft ratio: ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED))"
    },
    "staging": "WIDE: the ground camera on his line 50 m ahead of the launch spot, looking back at him: he comes on low, wings opening and beating, grows over the frame and the camera tilts up with him until the wings are overhead at the cut.",
    "deviation": "Camera move: \"static, ground level\" becomes a locked-off tilt-up following him (the camera stays on the ground; the operator tilts so he stays in frame until the wings cover it).",
@@ -259,11 +259,11 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 7.25,
-    "k4_cpu_s_per_frame": 84.54,
+    "draft_s_per_frame": 6.43,
+    "k4_cpu_s_per_frame": 75.05,
     "k4_gpu_s_per_frame": null,
-    "draft_minutes": 11.59,
-    "k4_cpu_hours": 2.25,
+    "draft_minutes": 10.29,
+    "k4_cpu_hours": 2,
     "k4_gpu_hours": null,
     "factors": {
      "people": 1.24,
@@ -273,7 +273,7 @@
      "move": 1,
      "total": 1.36
     },
-    "basis": "MEASURED draft 7.25 s/f on this machine; 4K = draft x 11.67 (the set's 4K/draft ratio: ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED))"
+    "basis": "MEASURED draft 6.43 s/f on this machine; 4K = draft x 11.67 (the set's 4K/draft ratio: ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED))"
    },
    "staging": "WIDE: static behind the launch (north of the scar) looking south along his line: the torn turf in the foreground, the dust rolling toward and past camera; Charcoal small, top of frame, leaving.",
    "deviation": null,
@@ -305,11 +305,11 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 4.22,
-    "k4_cpu_s_per_frame": 56.25,
+    "draft_s_per_frame": 9.59,
+    "k4_cpu_s_per_frame": 127.91,
     "k4_gpu_s_per_frame": null,
-    "draft_minutes": 4.22,
-    "k4_cpu_hours": 0.94,
+    "draft_minutes": 9.59,
+    "k4_cpu_hours": 2.13,
     "k4_gpu_hours": null,
     "factors": {
      "people": 1.24,
@@ -319,7 +319,7 @@
      "move": 1.08,
      "total": 1.41
     },
-    "basis": "ESTIMATE: unknown set, generic; x 1.41 for the shot's content"
+    "basis": "MEASURED draft 9.59 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
    },
    "staging": "MEDIUM: 50 mm air-to-air off Leaf's right (inland) side, a little ahead: Leaf climbing out south-east over the field edge; Abby turns in the saddle and looks back through the departing dust toward the launch (face turned away, three-quarter back).",
    "deviation": null,
@@ -351,11 +351,11 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 4.63,
-    "k4_cpu_s_per_frame": 61.69,
+    "draft_s_per_frame": 6.78,
+    "k4_cpu_s_per_frame": 90.41,
     "k4_gpu_s_per_frame": null,
-    "draft_minutes": 9.25,
-    "k4_cpu_hours": 2.06,
+    "draft_minutes": 13.56,
+    "k4_cpu_hours": 3.01,
     "k4_gpu_hours": null,
     "factors": {
      "people": 1.36,
@@ -365,7 +365,7 @@
      "move": 1.08,
      "total": 1.54
     },
-    "basis": "ESTIMATE: unknown set, generic; x 1.54 for the shot's content"
+    "basis": "MEASURED draft 6.78 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
    },
    "staging": "POV (Abby's eyeline, 35 mm, flying): back over her right shoulder, Charcoal rises out of the dust above the field, Remi a small fixed point on his back; the dust cloud behind and below him.",
    "deviation": "Charcoal flies a keyed climb (flight pose) instead of continuing poses.launch: the launch formula accelerates without limit (tau 14 = 276 m) and would put him ahead of Leaf.",
@@ -446,11 +446,11 @@
    ],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 4.02,
-    "k4_cpu_s_per_frame": 53.57,
+    "draft_s_per_frame": 7.85,
+    "k4_cpu_s_per_frame": 104.69,
     "k4_gpu_s_per_frame": null,
-    "draft_minutes": 6.43,
-    "k4_cpu_hours": 1.43,
+    "draft_minutes": 12.56,
+    "k4_cpu_hours": 2.79,
     "k4_gpu_hours": null,
     "factors": {
      "people": 1.24,
@@ -460,7 +460,7 @@
      "move": 1.08,
      "total": 1.34
     },
-    "basis": "ESTIMATE: unknown set, generic; x 1.34 for the shot's content"
+    "basis": "MEASURED draft 7.85 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
    },
    "staging": "CLOSE: 85 mm air-to-air on Abby from her right front three-quarter: \"You could have warned the grass.\" - to herself and us; Remi is far off (no reply).",
    "deviation": null,
@@ -492,11 +492,11 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 4.8,
-    "k4_cpu_s_per_frame": 63.94,
+    "draft_s_per_frame": 7.97,
+    "k4_cpu_s_per_frame": 106.29,
     "k4_gpu_s_per_frame": null,
-    "draft_minutes": 11.51,
-    "k4_cpu_hours": 2.56,
+    "draft_minutes": 19.13,
+    "k4_cpu_hours": 4.25,
     "k4_gpu_hours": null,
     "factors": {
      "people": 1.48,
@@ -506,7 +506,7 @@
      "move": 1.08,
      "total": 1.6
     },
-    "basis": "ESTIMATE: unknown set, generic; x 1.6 for the shot's content"
+    "basis": "MEASURED draft 7.97 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
    },
    "staging": "EXTREME WIDE: 150 mm from a camera ship far inland and high, slow travel: they climb out over the coast south-east, the shoreline first (bottom left), Leaf behind and inland (left), Charcoal ahead (right) crossing the cliff edge.",
    "deviation": null,
@@ -538,11 +538,11 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 4.8,
-    "k4_cpu_s_per_frame": 63.94,
+    "draft_s_per_frame": 8.78,
+    "k4_cpu_s_per_frame": 117.01,
     "k4_gpu_s_per_frame": null,
-    "draft_minutes": 9.59,
-    "k4_cpu_hours": 2.13,
+    "draft_minutes": 17.55,
+    "k4_cpu_hours": 3.9,
     "k4_gpu_hours": null,
     "factors": {
      "people": 1.48,
@@ -552,7 +552,7 @@
      "move": 1.08,
      "total": 1.6
     },
-    "basis": "ESTIMATE: unknown set, generic; x 1.6 for the shot's content"
+    "basis": "MEASURED draft 8.78 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
    },
    "staging": "WIDE: 135 mm air-to-air from the inland side, abreast of Leaf (~300 m): Leaf left and nearer, Charcoal right, ahead and farther out - the flight line used through 1E.",
    "deviation": null,
@@ -584,11 +584,11 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 4.8,
-    "k4_cpu_s_per_frame": 63.94,
+    "draft_s_per_frame": 7.35,
+    "k4_cpu_s_per_frame": 98.03,
     "k4_gpu_s_per_frame": null,
-    "draft_minutes": 7.67,
-    "k4_cpu_hours": 1.7,
+    "draft_minutes": 11.76,
+    "k4_cpu_hours": 2.61,
     "k4_gpu_hours": null,
     "factors": {
      "people": 1.48,
@@ -598,7 +598,7 @@
      "move": 1.08,
      "total": 1.6
     },
-    "basis": "ESTIMATE: unknown set, generic; x 1.6 for the shot's content"
+    "basis": "MEASURED draft 7.35 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
    },
    "staging": "EXTREME WIDE: top-down from 480 m, 35 mm, travelling with them: the sea floor through the shallows and the two shadows on it, Charcoal's far larger; travel left -> right (screen top = the sea).",
    "deviation": null,
@@ -630,11 +630,11 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 4.8,
-    "k4_cpu_s_per_frame": 63.94,
+    "draft_s_per_frame": 8.42,
+    "k4_cpu_s_per_frame": 112.32,
     "k4_gpu_s_per_frame": null,
-    "draft_minutes": 11.51,
-    "k4_cpu_hours": 2.56,
+    "draft_minutes": 20.22,
+    "k4_cpu_hours": 4.49,
     "k4_gpu_hours": null,
     "factors": {
      "people": 1.48,
@@ -644,7 +644,7 @@
      "move": 1.08,
      "total": 1.6
     },
-    "basis": "ESTIMATE: unknown set, generic; x 1.6 for the shot's content"
+    "basis": "MEASURED draft 8.42 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
    },
    "staging": "WIDE: 135 mm from the inland side: Charcoal draws level and closes in (out 540 -> 500, ahead 25 -> 5, a little higher); his shadow crosses the water below; Leaf works harder with quick corrective beats.",
    "deviation": null,
@@ -756,11 +756,11 @@
    ],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 4.8,
-    "k4_cpu_s_per_frame": 63.94,
+    "draft_s_per_frame": 9.54,
+    "k4_cpu_s_per_frame": 127.13,
     "k4_gpu_s_per_frame": null,
-    "draft_minutes": 9.59,
-    "k4_cpu_hours": 2.13,
+    "draft_minutes": 19.07,
+    "k4_cpu_hours": 4.24,
     "k4_gpu_hours": null,
     "factors": {
      "people": 1.48,
@@ -770,7 +770,7 @@
      "move": 1.08,
      "total": 1.6
     },
-    "basis": "ESTIMATE: unknown set, generic; x 1.6 for the shot's content"
+    "basis": "MEASURED draft 9.54 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
    },
    "staging": "MEDIUM: 50 mm off Charcoal's right shoulder, ahead of Remi, looking back over the neck: Remi right, Leaf and Abby lower in the background left. \"Everything secure?\" - \"Yes.\" - \"All right.\"",
    "deviation": null,
@@ -802,11 +802,11 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 4.8,
-    "k4_cpu_s_per_frame": 63.94,
+    "draft_s_per_frame": 7.52,
+    "k4_cpu_s_per_frame": 100.25,
     "k4_gpu_s_per_frame": null,
-    "draft_minutes": 17.26,
-    "k4_cpu_hours": 3.84,
+    "draft_minutes": 27.07,
+    "k4_cpu_hours": 6.02,
     "k4_gpu_hours": null,
     "factors": {
      "people": 1.48,
@@ -816,7 +816,7 @@
      "move": 1.08,
      "total": 1.6
     },
-    "basis": "ESTIMATE: unknown set, generic; x 1.6 for the shot's content"
+    "basis": "MEASURED draft 7.52 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
    },
    "staging": "EXTREME WIDE: 180 mm from the inland side, tracking with them (no orbit): their path curves gently seaward with the coast; the coast in the foreground left; nobody speaks.",
    "deviation": null,
@@ -848,11 +848,11 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 4.02,
-    "k4_cpu_s_per_frame": 53.57,
+    "draft_s_per_frame": 6.79,
+    "k4_cpu_s_per_frame": 90.57,
     "k4_gpu_s_per_frame": null,
-    "draft_minutes": 4.82,
-    "k4_cpu_hours": 1.07,
+    "draft_minutes": 8.15,
+    "k4_cpu_hours": 1.81,
     "k4_gpu_hours": null,
     "factors": {
      "people": 1.24,
@@ -862,7 +862,7 @@
      "move": 1.08,
      "total": 1.34
     },
-    "basis": "ESTIMATE: unknown set, generic; x 1.34 for the shot's content"
+    "basis": "MEASURED draft 6.79 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
    },
    "staging": "INSERT: 100 mm on Abby's two hands on the grips, easy (detail 1 - both hands, before the pass).",
    "deviation": null,
@@ -894,11 +894,11 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 4.41,
-    "k4_cpu_s_per_frame": 58.75,
+    "draft_s_per_frame": 9.79,
+    "k4_cpu_s_per_frame": 130.47,
     "k4_gpu_s_per_frame": null,
-    "draft_minutes": 5.29,
-    "k4_cpu_hours": 1.18,
+    "draft_minutes": 11.74,
+    "k4_cpu_hours": 2.61,
     "k4_gpu_hours": null,
     "factors": {
      "people": 1.36,
@@ -908,7 +908,7 @@
      "move": 1.08,
      "total": 1.47
     },
-    "basis": "ESTIMATE: unknown set, generic; x 1.47 for the shot's content"
+    "basis": "MEASURED draft 9.79 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
    },
    "staging": "CLOSE: 85 mm on Leaf's head from his right front: he glances across at Charcoal (right/seaward, out of frame) without fear, then back to the line.",
    "deviation": null,
@@ -940,11 +940,11 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 4.02,
-    "k4_cpu_s_per_frame": 53.57,
+    "draft_s_per_frame": 5.45,
+    "k4_cpu_s_per_frame": 72.65,
     "k4_gpu_s_per_frame": null,
-    "draft_minutes": 4.82,
-    "k4_cpu_hours": 1.07,
+    "draft_minutes": 6.54,
+    "k4_cpu_hours": 1.45,
     "k4_gpu_hours": null,
     "factors": {
      "people": 1.24,
@@ -954,7 +954,7 @@
      "move": 1.08,
      "total": 1.34
     },
-    "basis": "ESTIMATE: unknown set, generic; x 1.34 for the shot's content"
+    "basis": "MEASURED draft 5.45 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
    },
    "staging": "MEDIUM: 50 mm off Charcoal's right side: Remi relaxed, looking back at the island (Verdor, north-west) instead of scanning the sky; face three-quarter away.",
    "deviation": null,
@@ -986,11 +986,11 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 4.8,
-    "k4_cpu_s_per_frame": 63.94,
+    "draft_s_per_frame": 4.45,
+    "k4_cpu_s_per_frame": 59.33,
     "k4_gpu_s_per_frame": null,
-    "draft_minutes": 15.34,
-    "k4_cpu_hours": 3.41,
+    "draft_minutes": 14.24,
+    "k4_cpu_hours": 3.16,
     "k4_gpu_hours": null,
     "factors": {
      "people": 1.48,
@@ -1000,7 +1000,7 @@
      "move": 1.08,
      "total": 1.6
     },
-    "basis": "ESTIMATE: unknown set, generic; x 1.6 for the shot's content"
+    "basis": "MEASURED draft 4.45 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
    },
    "staging": "EXTREME WIDE: 160 mm slow aerial travel from inland, abeam and a little behind: the pair over the bright sea, Leaf left, Charcoal right; Verdor's headland receding in the left background. Private freedom, not a procession.",
    "deviation": null,

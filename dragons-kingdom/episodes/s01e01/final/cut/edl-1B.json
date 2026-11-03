@@ -1271,11 +1271,11 @@
    ],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 10.77,
-    "k4_cpu_s_per_frame": 125.7,
+    "draft_s_per_frame": 9.99,
+    "k4_cpu_s_per_frame": 116.55,
     "k4_gpu_s_per_frame": null,
-    "draft_minutes": 10.77,
-    "k4_cpu_hours": 2.09,
+    "draft_minutes": 9.99,
+    "k4_cpu_hours": 1.94,
     "k4_gpu_hours": null,
     "factors": {
      "people": 1.36,
@@ -1285,7 +1285,7 @@
      "move": 1,
      "total": 1.36
     },
-    "basis": "MEASURED draft 10.77 s/f on this machine; 4K = draft x 11.67 (the set's 4K/draft ratio: ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED))"
+    "basis": "MEASURED draft 9.99 s/f on this machine; 4K = draft x 11.67 (the set's 4K/draft ratio: ESTIMATE: F2 meadow without the heavy dragons (F2 4K velocity 50.7 s MEASURED))"
    },
    "staging": "OTS: over the keeper's shoulder on the gangway end (his back right) to Remi in the seat in profile: \"Straps?\" - \"Checked twice.\"",
    "deviation": null,
