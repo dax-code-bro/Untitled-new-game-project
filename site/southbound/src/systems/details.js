@@ -130,6 +130,20 @@ export function installDetails(game) {
   // ---------------- fire crews for burning wrecks in town
   const fires = [];
   game.onWreckInTown = (v) => fires.push({ v, t: 0 });
+  // ---------------- fire alarms: pull one inside any building
+  let alarm = null;
+  game.fireAlarm = (inside) => {
+    if (alarm) { hud.toast('The alarm is already going', 1.5); return; }
+    const d = inside.d, a = inside.it.alarm;
+    a.pull.children[0].position.y = -0.06; // the handle stays down
+    alarm = { t: 0, d, a, pos: new THREE.Vector3(d.x, collision.surface(d.x, d.z, 300), d.z) };
+    hud.toast('FIRE ALARM — everybody out. The fire department is coming.', 3.5);
+    peds.panic?.(alarm.pos, 40);
+    // a false alarm is a crime if somebody saw you do it
+    const r = regionAt(d.x, d.z);
+    if ((r.sub === 'City' || r.sub === 'Town') && Math.random() < 0.55) setTimeout(() => { game.police?.crime('disturbance'); hud.toast('Someone saw you pull it. The police are coming.', 3); }, 6000);
+    fires.push({ v: { pos: alarm.pos.clone(), group: new THREE.Group() }, t: 0, alarm: true });
+  };
   const prevExploded = game.onCarExploded;
   game.onCarExploded = (v) => { prevExploded?.(v); const r = regionAt(v.pos.x, v.pos.z); if (r.sub === 'City' || r.sub === 'Town') fires.push({ v, t: 0 }); };
 
@@ -169,6 +183,18 @@ export function installDetails(game) {
         crew.t += dt; crew.h.update(dt);
         if (crew.h.locked <= 0) crew.h.play(crew.t % 6 < 3 ? 'Interact' : 'Idle_Loop', 0.3);
         if (crew.t > 60) { scene.remove(crew.c.m, crew.ladder, crew.h.root); cracks.splice(cracks.indexOf(crew.c), 1); crew = null; }
+      }
+      // the alarm: horn in the temporal-3 pattern, strobe flashing, for a minute and a half
+      if (alarm) {
+        alarm.t += dt;
+        const ph = alarm.t % 4, on = ph < 2.6 && (ph % 1) < 0.55 ? 1 : 0;
+        const inThere = S.indoors && S.indoors.d === alarm.d;
+        const dist = inThere ? 0 : player.pos.distanceTo(alarm.pos);
+        game.audio?.alarm?.(on * (inThere ? 1 : Math.max(0, 1 - dist / 60) * 0.5));
+        const fl = (alarm.t % 1) < 0.08 ? 1 : 0;
+        alarm.a.strobe.material.emissiveIntensity = fl * 6; alarm.a.flash.intensity = fl * 40;
+        alarm.a.led.material.color.setHex(Math.floor(alarm.t * 4) % 2 ? 0xff2020 : 0x300000);
+        if (alarm.t > 90) { game.audio?.alarm?.(0); alarm.a.strobe.material.emissiveIntensity = 0; alarm.a.flash.intensity = 0; alarm.a.pull.children[0].position.y = -0.02; alarm.a.led.material.color.setHex(0x30ff40); alarm = null; }
       }
       // fire crews
       for (let i = fires.length - 1; i >= 0; i--) {

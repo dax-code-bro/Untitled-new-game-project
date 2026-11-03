@@ -195,6 +195,43 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 
 ## Session log
 
+- **Real-world detail pass (John Cortes and the Gulf Line crew):**
+  - Story opening: you play John Cortes. A cutscene introduces Rico's crew of
+    14 (each with their own look, name, job and lines); Rico hands you a
+    standard 9mm and a rusty pickup you can sell. The crew live at a scrapyard
+    hideout and sell services: repairs, towing, hauling cars out of the water,
+    patching you up, wiping bounties, and building scopes and suppressors from
+    supplies you bring.
+  - Guns: real CC-BY firearm models (Glock 17/19, Colt Python, 1851 Navy,
+    M4A1, M24, Remington 870) with per-gun holds. Three gunsmiths with a
+    shopkeeper dialog, a catalog (silhouettes, fire mode, calibre,
+    descriptions), story unlocks, a three-of-a-kind limit, a spinning 3D
+    preview, and customisation (attachments, skins, paint, your own colour,
+    ammo type).
+  - Combat: no fixed damage, only fixed penetration. Ammo types; scopes that
+    actually zoom, with breathing sway and hold-breath; you can shoot drivers
+    through the glass; cars burn and explode.
+  - World: the city thins out into run-down lots and grass at its edges; two
+    new hamlets; cluttered alleys; muggings, robberies, fights and
+    breakdowns; three rival gangs with turf. Gunfire in town brings the
+    police, but gunfire out in the country doesn't.
+  - Small details: gun safety on/off (K), brass casings and muzzle smoke,
+    hair and stubble that grow day by day, barbershops, cracked windows that
+    a repairman fixes within a day, fire crews at wrecks, and fire alarms in
+    every building (pull station, horn, strobe, smoke detector, a fire truck
+    that responds, police if someone saw you).
+  - Shops: clothing (three stores, 13,500 pieces across tops, jackets, pants,
+    shoes, hats, eyewear, neckwear and gloves, worn on John via a shader, with
+    a live 3D fitting room and a wardrobe), Gulf Mart corner stores (food to eat
+    or carry; coffee steadies your aim), and crafting supplies at the hardware
+    store.
+  - Phone: the Runr app delivers guns (with their attachments), food and
+    supplies by courier, tows your car back to the road (by boat if it's in
+    the sea), and gives you a ride to the hideout. Everything costs money.
+  - Billboards with local ads along the highways (lit at night). Map badges:
+    J for jobs, S for shops. Cleaner interaction prompts.
+  - Strictly real-world: no sci-fi weapons or props anywhere.
+
 - **Graphics push (clouds, weather, cars, arsenal):** volumetric clouds, weather
   with wet roads, water reflections, procedural realistic cars replacing the
   Kenney kit, 221 weapons + 195 attachments with a store, installable web app.

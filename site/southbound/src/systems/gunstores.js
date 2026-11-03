@@ -100,7 +100,7 @@ export function installGunStores(game) {
 
 // A small single-storey gun shop beside the road: door, windows, counter,
 // guns on the back wall, a sign, a light. Walls are solid.
-function buildShop(game, r, st) {
+export function buildShop(game, r, st) {
   const { collision, hm, scene } = game;
   const W = 10, D = 9, H = 4.2, t = 0.3;
   const ax = Math.abs(r.tx) > Math.abs(r.tz) ? [0, 1] : [1, 0];
@@ -118,7 +118,7 @@ function buildShop(game, r, st) {
     g.position.set(cx, y, cz);
     g.rotation.y = Math.atan2(-nx, -nz); // front (+z local) faces the road
     const M = (c, r = 0.85, m = 0) => new THREE.MeshStandardMaterial({ color: c, roughness: r, metalness: m });
-    const wall = M(0x8c7f6e), trim = M(0x2b2420), wood = M(0x5a3a22, 0.6), floor = M(0x6d6458, 0.8), glass = new THREE.MeshStandardMaterial({ color: 0x223038, roughness: 0.05, metalness: 0.3, transparent: true, opacity: 0.35 });
+    const wall = M(st.wall || 0x8c7f6e), trim = M(0x2b2420), wood = M(0x5a3a22, 0.6), floor = M(0x6d6458, 0.8), glass = new THREE.MeshStandardMaterial({ color: 0x223038, roughness: 0.05, metalness: 0.3, transparent: true, opacity: 0.35 });
     const box = (w, h, d, x, yy, z, m, hit = true) => { const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); b.position.set(x, yy, z); b.castShadow = b.receiveShadow = true; if (hit) b.userData.hitStatic = true; g.add(b); return b; };
     box(W, 1, D + 2.4, 0, -0.5, 1.2, floor);
     box(W + 2 * t, H, t, 0, H / 2, -D / 2, wall); // back
@@ -136,6 +136,8 @@ function buildShop(game, r, st) {
     // counter and the wall of guns
     box(5.2, 1.0, 0.7, 0, 0.5, -D / 2 + 2.6, wood);
     box(5.2, 0.05, 0.75, 0, 1.02, -D / 2 + 2.6, glass, false);
+    if (st.decorate) st.decorate(g, { W, D, H, box, M, wood, glass });
+    else {
     const rackIds = st.ids.filter((id, i) => i % Math.max(1, Math.floor(st.ids.length / 9)) === 0).slice(0, 9);
     rackIds.forEach((id, i) => {
       const m = buildWeaponModel(WEAPONS[id]);
@@ -147,11 +149,12 @@ function buildShop(game, r, st) {
       m.traverse((o) => { if (o.isMesh) o.userData.noHit = true; });
       g.add(m);
     });
-    box(8.2, 0.08, 0.3, 0, 1.12, -D / 2 + 0.25, wood, false); box(8.2, 0.08, 0.3, 0, 1.87, -D / 2 + 0.25, wood, false); box(8.2, 0.08, 0.3, 0, 2.62, -D / 2 + 0.25, wood, false);
+        box(8.2, 0.08, 0.3, 0, 1.12, -D / 2 + 0.25, wood, false); box(8.2, 0.08, 0.3, 0, 1.87, -D / 2 + 0.25, wood, false); box(8.2, 0.08, 0.3, 0, 2.62, -D / 2 + 0.25, wood, false);
+    }
     // sign
     const c = document.createElement('canvas'); c.width = 768; c.height = 128;
-    const x2 = c.getContext('2d'); x2.fillStyle = '#16120e'; x2.fillRect(0, 0, 768, 128); x2.strokeStyle = '#c9a96a'; x2.lineWidth = 6; x2.strokeRect(8, 8, 752, 112);
-    x2.fillStyle = '#e8d3a8'; let fs = 58; do { x2.font = `bold ${fs}px Oswald, Impact, sans-serif`; fs -= 2; } while (x2.measureText(st.name.toUpperCase()).width > 700 && fs > 20); x2.textAlign = 'center'; x2.textBaseline = 'middle'; x2.fillText(st.name.toUpperCase(), 384, 66);
+    const x2 = c.getContext('2d'); x2.fillStyle = st.signBg || '#16120e'; x2.fillRect(0, 0, 768, 128); x2.strokeStyle = st.signFg || '#c9a96a'; x2.lineWidth = 6; x2.strokeRect(8, 8, 752, 112);
+    x2.fillStyle = st.signText || '#e8d3a8'; let fs = 58; do { x2.font = `bold ${fs}px Oswald, Impact, sans-serif`; fs -= 2; } while (x2.measureText(st.name.toUpperCase()).width > 700 && fs > 20); x2.textAlign = 'center'; x2.textBaseline = 'middle'; x2.fillText(st.name.toUpperCase(), 384, 66);
     const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
     const sign = new THREE.Mesh(new THREE.PlaneGeometry(7, 1.17), new THREE.MeshStandardMaterial({ map: tex, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 0.35 }));
     sign.position.set(0, H - 0.5, D / 2 + 0.17); g.add(sign);

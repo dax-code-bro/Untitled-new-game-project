@@ -194,7 +194,10 @@ export class GunStore {
     if (a === 'back') { this.el.querySelector('.side').classList.remove('show'); return; }
     if (a === 'buy') {
       const n = this.countOf(id);
-      if (n >= 3 || (w.unlock || 0) > g.storyDone() || !g.spend(this.price(w))) return;
+      if (n >= 3 || (w.unlock || 0) > g.storyDone()) return;
+      // ordered remotely: the store's own hook takes the money and sends a courier
+      if (this.store.deliver) { if (this.store.deliver(id, this.price(w)) === false) return; this.P.weapons.count[id] = n + 1; g.career.saveSoon(); return; }
+      if (!g.spend(this.price(w))) return;
       c.give(id);
       this.P.weapons.count[id] = n + 1;
       this.mode = 'cust';

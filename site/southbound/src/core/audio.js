@@ -135,6 +135,19 @@ export class GameAudio {
     }
     this.sirenGain.gain.setTargetAtTime(level * level * 0.09, this.ctx.currentTime, 0.2);
   }
+  // fire alarm horn: call every frame with 0..1 (the caller makes the temporal-3 pattern)
+  alarm(level) {
+    if (!this.ctx) return;
+    if (!this.alarmGain) {
+      const ctx = this.ctx;
+      this.alarmGain = ctx.createGain(); this.alarmGain.gain.value = 0;
+      const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 2900; bp.Q.value = 1.4;
+      for (const f of [2950, 3120]) { const o = ctx.createOscillator(); o.type = 'square'; o.frequency.value = f; o.connect(bp); o.start(); }
+      const lo = ctx.createOscillator(); lo.type = 'sawtooth'; lo.frequency.value = 520; const lg = ctx.createGain(); lg.gain.value = 0.35; lo.connect(lg); lg.connect(this.alarmGain); lo.start();
+      bp.connect(this.alarmGain); this.alarmGain.connect(this.sfx);
+    }
+    this.alarmGain.gain.setTargetAtTime(level * 0.06, this.ctx.currentTime, 0.015);
+  }
   thunder() {
     const ctx = this.ctx, t = ctx.currentTime + 0.4 + Math.random() * 2.5;
     const src = ctx.createBufferSource(); src.buffer = this.noiseBuf; src.loop = true;

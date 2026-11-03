@@ -25,6 +25,8 @@ import { installLaw } from './systems/law.js';
 import { installRoadside } from './systems/roadside.js';
 import { installGang } from './systems/gang.js';
 import { installGunStores } from './systems/gunstores.js';
+import { installShops } from './systems/shops.js';
+import { createBillboards } from './world/billboards.js';
 import { installCarCombat } from './systems/carcombat.js';
 import { installStreetLife } from './systems/streetlife.js';
 import { installWorldEvents } from './systems/world-events.js';
@@ -137,6 +139,7 @@ async function createGame(progress) {
   progress(0.74, 'Building Port Calvera and Mill Creek');
   await nextFrame();
   const city = createBuildings(hm, q, scene, collision, surf, graph);
+  const billboards = createBillboards(scene, graph, hm, collision, q);
   progress(0.84, 'Growing Pinewood Hollow');
   await nextFrame();
   const veg = await createVegetation(hm, q, scene, collision, city.cityBlocks, (p) => progress(0.84 + p * 0.07, 'Growing forests'), surf, settings.grass === false ? 0 : 1);
@@ -408,6 +411,7 @@ async function createGame(progress) {
     },
   });
   const gunStores = installGunStores(game);
+  const shops = installShops(game);
   combat.ammoType = { ...(career.p.weapons.ammoType || {}) };
   Object.assign(game, { hurtPlayer });
   const carCombat = installCarCombat(game, { explodeAt });
@@ -416,6 +420,7 @@ async function createGame(progress) {
   installStreetLife(game);
   const worldEvents = installWorldEvents(game);
   game.audio = audio;
+  game.nearestRoadPoint = (x, z) => { const r = nearestRoad(x, z); if (!r) return null; const p = {}; traffic.sampleEdge(r.e, r.s, p); return p; };
   const details = installDetails(game);
   game.onCarExploded = (v) => { peds.panic(v.pos, 50); if (witnesses(v.pos, 60) || police.nearPolice(80)) police.crime(v.type === 'police' ? 'copKill' : 'kill'); };
   const reportHit = (hit) => {
@@ -678,6 +683,8 @@ async function createGame(progress) {
     const gp = gang.update(dt, a);
     if (gp && !prompt) prompt = gp;
     gunStores.update(dt);
+    shops.update(dt);
+    billboards.update(sky.hour);
     carCombat.update(dt);
     worldEvents.update(dt);
     details.update(dt);
@@ -702,7 +709,7 @@ async function createGame(progress) {
     if (scoped && a.sprint && (S.breath ?? 4) > 0) { S.breath = (S.breath ?? 4) - dt; S.steady = Math.min(1, (S.steady || 0) + dt * 4); } else { S.breath = Math.min(4, (S.breath ?? 4) + dt * 0.8); S.steady = Math.max(0, (S.steady || 0) - dt * 2); }
     if (scoped !== !!S.scoped) { S.scoped = scoped; document.body.classList.toggle('scoped', scoped); player.h.model.visible = !scoped; if (scoped) hud.toast('Hold Shift to hold your breath', 1.6); }
     if (scoped) for (const m of Object.values(combat.models)) m.visible = false;
-    rig.update(dt, a, focus, { vehicle: S.vehicle, heading: S.vehicle?.heading, speed: S.vehicle?.speed || 0, lastLook: input.lastLookTime, aiming: S.mode === 'foot' && player.aiming && armed, eye: S.mode === 'foot' && player.char.root.visible ? getEye() : null, scope: scoped ? combat.def.scope : 0, steady: S.steady || 0 }, collision);
+    rig.update(dt, a, focus, { vehicle: S.vehicle, heading: S.vehicle?.heading, speed: S.vehicle?.speed || 0, lastLook: input.lastLookTime, aiming: S.mode === 'foot' && player.aiming && armed, eye: S.mode === 'foot' && player.char.root.visible ? getEye() : null, scope: scoped ? combat.def.scope : 0, steady: Math.max(S.steady || 0, game.buffs?.steady > 0 ? 0.55 : 0) }, collision);
 
     law.camera(camera);
     gang.camera(camera);
