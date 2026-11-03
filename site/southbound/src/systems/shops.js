@@ -163,7 +163,8 @@ export function installShops(game) {
   P.food = P.food || {};
   game.buffs = game.buffs || {};
   const eat = (f) => {
-    player.health = Math.min(100, player.health + f.heal);
+    player.health = Math.min(player.maxHealth || 100, player.health + f.heal);
+    game.feed?.(f.id === 'water' || f.id === 'tea' || f.id === 'coffee' || f.id === 'energy' ? 4 : f.id === 'firstaid' ? 0 : f.heal * 0.9);
     if (f.steady) game.buffs.steady = Math.max(game.buffs.steady || 0, f.steady);
     hud.toast(`${f.name}: +${f.heal} health${f.steady ? ' · steadier hands' : ''}`, 2.2);
     player.h.play?.('Interact', 0.2);

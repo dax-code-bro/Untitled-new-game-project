@@ -42,7 +42,9 @@ export class Traffic {
       const e = edges[(this.rnd() * edges.length) | 0];
       const d = Math.hypot(e.mid[0] - center.x, e.mid[1] - center.z);
       if (d < minR || d > maxR) continue;
-      const v = new Vehicle(this.lib, randomCarType(this.rnd));
+      const patrol = this.rnd() < (this.patrolK ?? 0.05); // marked units on patrol (more at night)
+      const v = new Vehicle(this.lib, patrol ? 'police' : randomCarType(this.rnd));
+      v.patrol = patrol;
       const car = { v, e, dir: this.rnd() < 0.5 ? 1 : -1, s: this.rnd() * e.len, speed: 0, pref: 0.85 + this.rnd() * 0.25, stun: 0, init: true };
       car.speed = e.speed * car.pref * 0.8;
       this.place(car, 1);
@@ -95,7 +97,9 @@ export class Traffic {
     if (this.cars.length < this.max) this.spawn(focus, this.cars.length < this.max * 0.6 ? 20 : 220, 480);
     for (let i = this.cars.length - 1; i >= 0; i--) {
       const c = this.cars[i];
-      if (Math.hypot(c.v.pos.x - focus.x, c.v.pos.z - focus.z) > 620) {
+      const far = Math.hypot(c.v.pos.x - focus.x, c.v.pos.z - focus.z);
+      // over the (time-of-day) limit: let cars that are well out of sight go home
+      if (far > 620 || (this.cars.length > this.max + 2 && far > 260 && !c.v.patrol)) {
         this.scene.remove(c.v.group);
         c.v.dispose();
         this.cars.splice(i, 1);

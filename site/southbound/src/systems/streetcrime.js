@@ -85,6 +85,7 @@ export function installStreetCrime(game) {
   const copSees = (pos) => {
     for (const p of peds.list) if (p.role === 'cop' && p.mode !== 'dead' && !p.wound?.down && p.pos.distanceTo(pos) < 40) return true;
     for (const c of police.cars) if (c.v.pos.distanceTo(pos) < 30) return true;
+    for (const v of police.patrols?.() || []) if (v.pos.distanceTo(pos) < 35) return true;
     return false;
   };
   // report a crime: the police know at once if one of them saw it, otherwise

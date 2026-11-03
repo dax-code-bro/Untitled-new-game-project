@@ -231,7 +231,7 @@ export function installEstate(game) {
     if (p) insidePoints.push(interact.add({ x: it.o.x - 2, z: it.o.z + it.D / 2 - 2, y: it.o.y, r: 1.4, color: owned(p) ? 0x60ff90 : 0xffd040,
       label: () => owned(p) ? `${keyHint(game)} sleep and save (${p.name})` : `${keyHint(game)} buy ${p.name} — ${money(p.price)}`,
       use: () => {
-        if (owned(p)) { P.home = p.id; game.sky.hour = 8; career.save(); hud.bigMessage('SAVED', `${p.name} is now your home`, 2.5); return; }
+        if (owned(p)) { P.home = p.id; if (game.sleep) game.sleep(8, p.name); else game.sky.hour = 8; career.save(); hud.toast(`Saved. ${p.name} is your home.`, 2.5); return; }
         if (!career.spend(p.price)) return;
         P.properties.push(p.id); P.home = P.home || p.id; career.save();
         hud.bigMessage('PROPERTY PURCHASED', p.name, 3);

@@ -258,7 +258,7 @@ export function installArmory(game) {
         if (player.health <= 0) player.health = 0;
       } else W.bleedT = 0;
       S.limp = !!W.leg && !numb;
-      combat.spreadMul = W.arm && !numb ? 1.9 : 1;
+      combat.spreadMul = (W.arm && !numb ? 1.9 : 1) * (S.tiredSpread || 1);
       if (S.dead > 0) { W.leg = W.arm = W.bleed = 0; }
       // concealment
       exp = exposure();
@@ -280,6 +280,7 @@ export function installArmory(game) {
           sees = p; break;
         }
         if (!sees) for (const c of police.cars) { if (c.v.pos.distanceTo(player.pos) < 18) { sees = c; break; } }
+        if (!sees) for (const v of police.patrols?.() || []) { if (v.pos.distanceTo(player.pos) < 20) { sees = v; break; } }
         seenT = sees ? seenT + dt : Math.max(0, seenT - dt);
         if (seenT > 1.3) {
           seenT = 0; warnCool = 40;

@@ -98,6 +98,7 @@ export class Police {
   nearPolice(r) {
     if (!this.player) return false;
     for (const c of this.cars) if (c.v.pos.distanceTo(this.player.pos) < r) return true;
+    for (const v of this.patrols?.() || []) if (v.pos.distanceTo(this.player.pos) < r) return true;
     return this.peds.list.some((p) => p.role === 'cop' && p.mode !== 'dead' && p.pos.distanceTo(this.player.pos) < r);
   }
 

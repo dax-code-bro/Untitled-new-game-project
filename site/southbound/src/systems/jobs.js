@@ -1,7 +1,7 @@
 // 27 jobs. Each job board starts a shift: get the work vehicle (or your
 // tools), follow the stops before the clock runs out, get paid per stop.
 // Pay grows with your level in that job (every 3 shifts).
-import { CITY, TOWN, LAKE, PLAINS, FOREST, AIRFIELD } from '../world/layout.js';
+import { CITY, TOWN, LAKE, PLAINS, FOREST, AIRFIELD, BAYOU } from '../world/layout.js';
 import { roadPointAround, nearestRoad, spawnParked, money, keyHint } from './world-util.js';
 import { BOATS, AIRCRAFT } from '../entities/craft.js';
 
@@ -43,6 +43,24 @@ const JOB_ICONS = { taxi: '🚕', bus: '🚌', parcel: '📦', pizza: '🍕', tr
 
 export function installJobs(game) {
   const { career, interact, hud, player, hm, graph } = game;
+  // Work isn't all in the city: move boards out to Mill Creek, the two country
+  // settlements and the bayou, each to a job that fits the place.
+  const hamlets = (game.city.junk || []).filter((j) => j.kind === 'sign');
+  const MOVE = {
+    pizza: { at: T(2, 1), area: 'town', text: 'Hot pizza for Mill Creek, tight clock' },
+    parcel: { at: T(1, 3), area: 'town', text: 'Drop parcels around Mill Creek' },
+    garbage: { at: T(3, 0), area: 'town', text: 'Empty the bins around Mill Creek' },
+    mechanic: { at: T(0, 2), area: 'near', text: 'Fix customer cars around the Mill Creek garage' },
+    plumber: { at: T(3, 2), area: 'town', text: 'Service calls around Mill Creek: leaks and clogs' },
+    fisherman: { at: [BAYOU.x + 180, BAYOU.z - 120], text: 'Land three fish from the bayou for the market' },
+    ...(hamlets[0] ? { tow: { at: [hamlets[0].x + 14, hamlets[0].z - 10], area: 'around', text: `Tow breakdowns around ${hamlets[0].name || 'the crossing'} to the yard` } } : {}),
+    ...(hamlets[1] ? { roadcrew: { at: [hamlets[1].x - 14, hamlets[1].z + 10], area: 'around', text: `Patch the country roads around ${hamlets[1].name || 'the bend'}` } } : {}),
+  };
+  // the emergency jobs start at the real hospital and fire station
+  if (game.civic?.hospital) MOVE.paramedic = { at: [game.civic.hospital.x, game.civic.hospital.z] };
+  if (game.civic?.firehouse) MOVE.fire = { at: [game.civic.firehouse.x, game.civic.firehouse.z] };
+  if (game.civic?.precinct) { MOVE.police = { at: [game.civic.precinct.x + 4, game.civic.precinct.z] }; MOVE.bounty = { at: [game.civic.precinct.x - 4, game.civic.precinct.z] }; }
+  for (const j of JOBS) if (MOVE[j.id]) Object.assign(j, MOVE[j.id]);
   const P = career.p;
   let job = null; // { def, stop, stops[], t, veh, marker, waitT, base }
   const lvl = (id) => (P.jobs[id] || { level: 1 }).level;
@@ -56,6 +74,7 @@ export function installJobs(game) {
       if (def.area === 'city') pts.push(near(CITY.x0 + CITY.nx * CITY.pitch / 2, CITY.z0 + CITY.nz * CITY.pitch / 2, 40, 330));
       else if (def.area === 'downtown') pts.push(near(CITY.downtown[0], CITY.downtown[1], 20, 160));
       else if (def.area === 'town') pts.push(near(TOWN.x0 + 144, TOWN.z0 + 108, 20, 200));
+      else if (def.area === 'around') { const a = Math.random() * 6.28, r = 60 + Math.random() * 280; pts.push([from[0] + Math.cos(a) * r, from[1] + Math.sin(a) * r]); }
       else if (def.area === 'near') { const a = Math.random() * 6.28, r = 15 + Math.random() * 45; pts.push([from[0] + Math.cos(a) * r, from[1] + Math.sin(a) * r]); }
       else if (def.area === 'forest') { const a = Math.random() * 6.28, r = 40 + Math.random() * 160; pts.push([FOREST.x + 200 + Math.cos(a) * r, FOREST.z + 180 + Math.sin(a) * r]); }
       else if (def.area === 'plains') { const a = Math.random() * 6.28, r = 80 + Math.random() * 380; pts.push([PLAINS.x + Math.cos(a) * r, PLAINS.z + Math.sin(a) * r]); }

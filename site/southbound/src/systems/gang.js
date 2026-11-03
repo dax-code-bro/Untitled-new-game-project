@@ -7,6 +7,7 @@
 // (repairs, towing, healing, scopes made from your supplies, buying your
 // cars...).
 import * as THREE from 'three';
+import { findHilltop, buildTrack } from '../world/hilltop.js';
 import { Human } from '../entities/human.js';
 import { CITY } from '../world/layout.js';
 import { nearestRoad, money, keyHint } from './world-util.js';
@@ -124,8 +125,10 @@ export function installGang(game) {
   P.story = P.story || { prologue: false };
   P.supplies = P.supplies || { metal: 0, glass: 0, springs: 0 };
 
-  // ---------------- the hideout: an old scrapyard compound east of the city
-  const spot = (() => {
+  // ---------------- the hideout: a yard on a small summit far out in the country,
+  // looking down over an open valley (a gang that doesn't want visitors)
+  const hill = findHilltop(hm, graph, collision);
+  const spot = hill ? { x: hill.x, z: hill.z, face: hill.face, road: hill.road } : (() => {
     let best = null;
     for (let i = 0; i < 40; i++) {
       const x = CITY.x0 + CITY.nx * CITY.pitch + 120 + (i % 8) * 25, z = CITY.z0 + 120 + Math.floor(i / 8) * 60;
@@ -145,6 +148,8 @@ export function installGang(game) {
   const HQ = { x: spot.x, z: spot.z, y: hm.height(spot.x, spot.z), face: spot.face };
   game.hideout = HQ;
   const local = (lx, lz) => { const c = Math.cos(HQ.face), s = Math.sin(HQ.face); return { x: HQ.x + lx * c + lz * s, z: HQ.z - lx * s + lz * c }; };
+  // a dirt track up from the road, arriving at the back of the yard
+  if (hill && spot.road) { const back = local(0, -16); HQ.track = buildTrack(scene, hm, { x: spot.road.x, z: spot.road.z }, back); HQ.gate = back; }
   const groundY = (x, z) => collision.surface(x, z, HQ.y + 20);
 
   // set dressing from the open models (containers, couch, pallets, barrels, trash...)
@@ -251,7 +256,7 @@ export function installGang(game) {
     if (M.service === 'captain') out.push({ name: 'Haul my car out of the water', sub: last ? last.spec.name : 'no car', price: 600, dis: !last, run: () => { const r = nearestRoad(graph, last.pos.x, last.pos.z); if (r) { last.pos.set(r.x, groundY(r.x, r.z), r.z); last.vel.set(0, 0); last.drowned = false; } say('Cap', 'Fished her out. She smells like catfish now.'); } });
     if (M.service === 'medic') out.push({ name: 'Patch me up', sub: `Health ${Math.round(player.health)}`, price: 60, run: () => { player.health = 100; player.armor = Math.max(player.armor, 25); say('Marisol', 'Try not to get shot for a week.'); } });
     if (M.service === 'hacker') out.push({ name: 'Wipe my bounty', sub: `Bounty $${(P.law?.bounty || 0).toLocaleString('en-US')}`, price: Math.max(500, Math.round((P.law?.bounty || 0) * 0.6)), dis: !(P.law?.bounty > 0), run: () => { P.law.bounty = 0; P.law.nextHunt = 0; say('Nina', 'Done. You never existed. Well, the warrant didn\'t.'); } });
-    if (M.service === 'cook') out.push({ name: 'Bowl of gumbo', sub: 'Restores health', price: 15, run: () => { player.health = Math.min(100, player.health + 40); say('Hector', 'Careful, it\'s hot.'); } });
+    if (M.service === 'cook') out.push({ name: 'Bowl of gumbo', sub: 'Restores health and fills you up', price: 15, run: () => { player.health = Math.min(100, player.health + 40); game.feed?.(40); say('Hector', 'Careful, it\'s hot.'); } });
     if (M.service === 'lookout') out.push({ name: 'Anything on the scanner?', sub: '', btn: 'Ask', run: () => say('Jayden', P.law?.bounty > 0 ? `There's $${P.law.bounty.toLocaleString('en-US')} on your head. Hunters come round every few days.` : 'You\'re clean. For now.', 4) });
     if (M.id === 'rico' && !P.ricoTruck) out.push({ name: 'Buy Rico\'s rusty pickup', sub: 'Rusty \'89 pickup · runs, mostly', price: 400, run: () => {
       P.ricoTruck = true;

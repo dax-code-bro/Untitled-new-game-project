@@ -70,7 +70,7 @@ export function installPhone(game) {
       } },
       { name: 'Order food', sub: () => `Po'boy and sweet tea · Health ${Math.round(player.health)}`, price: () => 30, run: () => {
         if (!career.spend(30)) return; phone.close();
-        courier('your food', () => { player.health = Math.min(100, player.health + 50); hud.toast('You eat. +50 health', 2); });
+        courier('your food', () => { player.health = Math.min(100, player.health + 50); game.feed?.(45); hud.toast('You eat. +50 health', 2); });
       } },
       { name: 'Order supplies for Tina', sub: () => { const s = P.supplies || {}; return `2 scrap metal, a glass lens, a spring set · have ${s.metal || 0}/${s.glass || 0}/${s.springs || 0}`; }, price: () => 260, run: () => {
         if (!career.spend(260)) return; phone.close();

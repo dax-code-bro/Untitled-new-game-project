@@ -29,6 +29,8 @@ import { installShops } from './systems/shops.js';
 import { createBillboards } from './world/billboards.js';
 import { installProps } from './systems/props.js';
 import { installArmory } from './systems/armory.js';
+import { placeCivic } from './systems/civic.js';
+import { installNeeds } from './systems/needs.js';
 import { installWounds } from './systems/wounds.js';
 import { installStreetCrime } from './systems/streetcrime.js';
 import { installAuction } from './systems/auction.js';
@@ -319,6 +321,12 @@ async function createGame(progress) {
     exitVehicle: () => { if (S.mode === 'car') exitVehicle(); },
     vehicle: () => S.vehicle,
   };
+  // public services first, so jobs, arrests and the hospital use the real buildings
+  const HOSPITAL = { x: CITY.x0 + CITY.nx * CITY.pitch + 24, z: CITY.z0 + 2 * CITY.pitch, name: 'Port Calvera Medical Center' };
+  const PRECINCT = { x: CITY.x0 - 24, z: CITY.z0 + 1 * CITY.pitch, name: 'Calvera PD · Central Precinct' };
+  game.PRECINCT = PRECINCT; game.HOSPITAL = HOSPITAL;
+  game.Vehicle = game.Vehicle || Vehicle;
+  const civic = placeCivic(game, { PRECINCT, HOSPITAL });
   const systems = installSystems(game);
   // scenery bullets can hit (tree trunks, rocks, street poles, piers, hangar)
   const hitStatics = [];
@@ -345,9 +353,6 @@ async function createGame(progress) {
     : 'Welcome to Calvera. F: drive · Q: switch weapon · Right mouse: aim · Left mouse: fire', 7);
 
   // ---- combat, wanted level, death & arrest
-  const HOSPITAL = { x: CITY.x0 + CITY.nx * CITY.pitch + 24, z: CITY.z0 + 2 * CITY.pitch, name: 'Port Calvera Medical Center' };
-  const PRECINCT = { x: CITY.x0 - 24, z: CITY.z0 + 1 * CITY.pitch, name: 'Calvera PD · Central Precinct' };
-  game.PRECINCT = PRECINCT;
   // damage a vehicle on the side facing (fx, fz); the HUD silhouette shows each side
   const damageVehicle = (v, amount, fx, fz) => {
     if (!v) return;
@@ -439,7 +444,9 @@ async function createGame(progress) {
   const shops = installShops(game);
   game.billboards = billboards;
   const armory = installArmory(game);
+  const needs = installNeeds(game);
   game.tracer = game.tracer || ((a, b) => combat.tracer(a, b));
+  police.patrols = () => traffic.cars.filter((c) => c.v.patrol).map((c) => c.v);
   const streetCrime = installStreetCrime(game);
   const wounds = installWounds(game);
   const auction = installAuction(game);
@@ -625,6 +632,7 @@ async function createGame(progress) {
       updateEnter(dt);
       focus.copy(player.pos);
     } else if (S.mode === 'foot') {
+      needs.update(dt, a);
       if (S.limp) { a.sprint = false; if (a.moveX) a.moveX *= 0.5; if (a.moveY) a.moveY *= 0.5; }
       player.update(dt, a, rig.yaw, hm, collision, armed && combat.def.cat === 'pistol');
       camera.getWorldDirection(aimDir);
@@ -746,6 +754,7 @@ async function createGame(progress) {
     carCombat.update(dt);
     props.update(dt);
     armory.update(dt);
+    civic.update(dt);
     wounds.update(dt);
     streetCrime.update(dt);
     auction.update(dt);
@@ -757,9 +766,26 @@ async function createGame(progress) {
     if (S.vehicle?.wrecked) { S.vehicle.vel.multiplyScalar(Math.exp(-3 * dt)); }
 
     const onFoot = S.mode === 'foot' ? player.pos : null;
+    // the city by the clock: fewer people and cars late at night, more patrols
+    {
+      const hr = sky.hour, late = hr < 5 || hr >= 23.5 ? 1 : hr < 6.5 || hr >= 21 ? 0.55 : 0;
+      peds.baseMax = peds.baseMax || peds.max; traffic.baseMax = traffic.baseMax || traffic.max;
+      peds.max = Math.max(4, Math.round(peds.baseMax * (1 - 0.72 * late)));
+      traffic.max = Math.max(3, Math.round(traffic.baseMax * (1 - 0.6 * late)));
+      traffic.patrolK = 0.05 + 0.13 * late;
+      if ((S.thinT = (S.thinT || 0) - dt) <= 0) {
+        S.thinT = 1.5;
+        const civ = peds.list.filter((p) => !p.role && p.mode !== 'dead' && !p.wound?.down);
+        if (civ.length > peds.max + 3) {
+          // someone out of sight heads home
+          const far = civ.map((p) => [p.pos.distanceTo(focus), p]).filter(([d]) => d > 55).sort((a, b) => b[0] - a[0])[0];
+          if (far) { const p = far[1]; scene.remove(p.h.root); p.h.dispose(); peds.list.splice(peds.list.indexOf(p), 1); }
+        }
+      }
+    }
     peds.update(dt, focus, onFoot, [S.vehicle, ...police.cars.map((c) => c.v), ...traffic.cars.map((c) => c.v)], (amt) => { S.money += amt; hud.toast(`+$${amt}`, 1.2); });
     police.update(dt, { pos: S.indoors ? new THREE.Vector3(S.indoors.d.x, focus.y, S.indoors.d.z) : focus, inCar: S.mode === 'car', speed: S.mode === 'car' ? S.vehicle.speed : player.speed, vehicle: S.vehicle, drawn: combat.drawn && S.mode === 'foot' });
-    if (player.health > 0 && player.health < 100 && S.dead <= 0) player.health = Math.min(100, player.health + dt * (police.wanted ? 0 : 0.6));
+    if (player.health > 0 && player.health < 100 && S.dead <= 0) player.health = Math.min(player.maxHealth || 100, player.health + dt * (police.wanted || S.noRegen ? 0 : 0.6));
     S.dmgFlash = Math.max(0, S.dmgFlash - dt * 0.8);
     if (post) post.grade.uniforms.uDamage.value = Math.max(S.dmgFlash, player.health < 25 ? 0.35 : 0);
 
