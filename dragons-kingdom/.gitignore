@@ -2,3 +2,6 @@ node_modules/
 output/
 .dk-tuning.json
 episodes/s01e01/style-frames/*.png
+
+# local Python environment for the voice tool (rebuilt per machine)
+episodes/s01e01/final/tools/preview-venv/
