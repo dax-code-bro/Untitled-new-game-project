@@ -33,7 +33,7 @@ namespace Southbound.EditorTools
             EditorGUILayout.HelpBox(
                 "The project ships 512 px copies of the 29 surfaces (what the web game streams). This downloads the originals " +
                 "from ambientCG, Poly Haven and cgbookcase (all CC0, free) and rebuilds the materials with them.\n\n" +
-                "2K: about 0.5 GB to download.  4K: about 2 GB, the right choice for an RTX-class PC.  8K: about 7 GB, close-up detail, heavy on VRAM.",
+                "2K: about 0.5 GB to download.  4K: about 2 GB, the right choice for an RTX-class PC.  8K: about 7 GB, close-up detail, heavy on VRAM.\n(The five cgbookcase sets top out at 2K; they use 2K at any setting.)",
                 MessageType.Info);
             using (new EditorGUI.DisabledScope(job != null))
                 res = GUILayout.Toolbar(res, Resolutions);
