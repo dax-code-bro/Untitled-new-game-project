@@ -155,7 +155,7 @@ export function createBuildings(hm, quality, scene, collision, surf, graph = nul
   const props = []; // small boxes {x,y,z,w,h,d,color}
   const add = (x, z, w, d, h, y, style, color) => {
     B.push({ x, z, w, d, h, y, style, color: color ?? pick(PALETTES[style]) });
-    collision.addBox(x - w / 2, z - d / 2, x + w / 2, z + d / 2, y - 2, y + h, { building: true });
+    collision.addBox(x - w / 2, z - d / 2, x + w / 2, z + d / 2, y - 2, y + h, { building: true, surf: ['masonry', 'masonry', 'brick', 'metal', 'frame', 'block'][style] || 'masonry' });
   };
 
   // ---- Port Calvera
@@ -428,12 +428,18 @@ export function createBuildings(hm, quality, scene, collision, surf, graph = nul
   propMesh.receiveShadow = true;
   scene.add(propMesh);
 
-  // gutters and downspouts on houses and low buildings (one merged mesh)
+  // gutters and downspouts on houses and low buildings (one merged mesh; each
+  // building's vertex range is kept so one house's gutters can be taken down and put back)
+  let gutterMesh = null;
+  const gutterRanges = new Map();
   {
     const parts = [];
     const pipe = (x, y0, y1, z) => parts.push(new THREE.CylinderGeometry(0.05, 0.05, y1 - y0, 6).translate(x, (y0 + y1) / 2, z));
-    for (const b of B) {
+    let vtx = 0;
+    for (let bi = 0; bi < B.length; bi++) {
+      const b = B[bi];
       if (b.h > 13) continue;
+      const p0 = parts.length;
       const top = b.y + b.h - 0.05, x0 = b.x - b.w / 2 - 0.06, x1 = b.x + b.w / 2 + 0.06, z0 = b.z - b.d / 2 - 0.06, z1 = b.z + b.d / 2 + 0.06;
       // gutters along the two long sides, a downspout at each end of them
       const alongX = b.w >= b.d;
@@ -441,13 +447,22 @@ export function createBuildings(hm, quality, scene, collision, surf, graph = nul
         if (alongX) { const z = s ? z1 : z0; parts.push(new THREE.BoxGeometry(b.w + 0.1, 0.1, 0.12).translate(b.x, top, z)); pipe(x0, b.y, top, z); pipe(x1, b.y, top, z); }
         else { const x = s ? x1 : x0; parts.push(new THREE.BoxGeometry(0.12, 0.1, b.d + 0.1).translate(x, top, b.z)); pipe(x, b.y, top, z0); pipe(x, b.y, top, z1); }
       }
+      let n = 0; for (let k = p0; k < parts.length; k++) n += parts[k].attributes.position.count;
+      gutterRanges.set(bi, [vtx, n]); vtx += n;
       if (parts.length > 9000) break;
     }
     if (parts.length) {
       const m = new THREE.Mesh(mergeGeometries(parts), new THREE.MeshStandardMaterial({ color: 0xd8d4cc, roughness: 0.5, metalness: 0.4 }));
       m.castShadow = true; m.receiveShadow = true; m.userData.noHit = true;
       scene.add(m);
+      gutterMesh = m;
     }
   }
-  return { buildings: B, cityBlocks, lakeHouses, junk, count: B.length };
+  // roofs that sit on a building (for taking one house down and rebuilding it)
+  const roofOf = new Map();
+  roofs.forEach((r, ri) => {
+    const bi = B.findIndex((b) => Math.abs(b.x - r.x) < b.w / 2 && Math.abs(b.z - r.z) < b.d / 2 && Math.abs(b.y + b.h - r.y) < 1.5);
+    if (bi >= 0) roofOf.set(bi, ri);
+  });
+  return { buildings: B, cityBlocks, lakeHouses, junk, count: B.length, mesh, roofMesh, roofs, roofOf, gutterMesh, gutterRanges };
 }

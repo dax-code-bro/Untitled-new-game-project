@@ -131,7 +131,8 @@ export async function loadLibrary(quality, progress = () => {}) {
     const g = await loadOpen(K('CarConcept'));
     if (g) lib.cars.concept = prepareConcept(g.scene);
   }
-  { const g = await loadOpen('real/zk_vehicles/Vehicle_Pickup.glb'); if (g) lib.cars['rusty-pickup'] = preparePickup(g.scene); }
+  // Rico's rusty pickup is a procedural body now (carbuilder.js), built on first use
+  void preparePickup;
   for (const id of carIds) {
     lib.cars[id] = buildCar(id, quality);
     step('Building vehicles');

@@ -320,7 +320,7 @@ float sbVN(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f)
     collision.addCircle(l.x, l.z, 0.25);
   });
   poles.castShadow = quality.shadows >= 2;
-  for (const m of [poles, heads, arms]) m.userData.hitStatic = true;
+  for (const m of [poles, heads, arms]) { m.userData.hitStatic = true; m.userData.surf = 'steel'; }
   group.add(poles, heads, arms);
 
   // Light pools on the ground under each lamp (additive, night only)

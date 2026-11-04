@@ -113,14 +113,14 @@ export function createBillboards(scene, graph, hm, collision, q) {
   const group = new THREE.Group();
   const steelM = new THREE.MeshStandardMaterial({ color: 0x6d7074, roughness: 0.6, metalness: 0.7 });
   const deckM = new THREE.MeshStandardMaterial({ color: 0x3e4246, roughness: 0.75, metalness: 0.5 });
-  const sm = new THREE.Mesh(mergeGeometries(steel), steelM); sm.castShadow = true; sm.receiveShadow = true; sm.userData.hitStatic = true; group.add(sm);
+  const sm = new THREE.Mesh(mergeGeometries(steel), steelM); sm.castShadow = true; sm.receiveShadow = true; sm.userData.hitStatic = true; sm.userData.surf = 'steel'; group.add(sm);
   const dm = new THREE.Mesh(mergeGeometries(decks), deckM); dm.castShadow = true; group.add(dm);
   const adMats = [];
   for (const [k, list] of Object.entries(boards)) {
     const ad = ADS[k % 100], tex = adTexture(ad, k >= 100);
     const m = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.75, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 0 });
     adMats.push(m);
-    const mesh = new THREE.Mesh(mergeGeometries(list), m); mesh.receiveShadow = true; mesh.userData.hitStatic = true; group.add(mesh);
+    const mesh = new THREE.Mesh(mergeGeometries(list), m); mesh.receiveShadow = true; mesh.userData.hitStatic = true; mesh.userData.surf = 'wood'; group.add(mesh);
   }
   // lamp heads glow at night
   const glow = new THREE.MeshBasicMaterial({ color: 0xfff1c8 });

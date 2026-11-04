@@ -35,7 +35,7 @@ export function installMarineAir(game) {
     pier.position.set((m.land.x + m.water.x) / 2, hm.waterLevel(m.water.x, m.water.z) + 0.6, (m.land.z + m.water.z) / 2);
     pier.rotation.y = Math.atan2(dx, dz);
     pier.castShadow = pier.receiveShadow = true;
-    pier.userData.hitStatic = true;
+    pier.userData.hitStatic = true; pier.userData.surf = 'wood';
     scene.add(pier);
     // walkable deck, as a chain of small boxes along the pier
     const top = pier.position.y + 0.15;
@@ -59,7 +59,7 @@ export function installMarineAir(game) {
     const hangar = new THREE.Mesh(new THREE.BoxGeometry(40, 12, 28), new THREE.MeshStandardMaterial({ color: 0x8a8c88, roughness: 0.6, metalness: 0.5 }));
     hangar.position.set(AIRFIELD.x1 - 60, AIRFIELD.height + 6, AIRFIELD.z - 80);
     hangar.castShadow = hangar.receiveShadow = true;
-    hangar.userData.hitStatic = true;
+    hangar.userData.hitStatic = true; hangar.userData.surf = 'metal';
     scene.add(hangar);
     game.collision.addBox?.(hangar.position.x, hangar.position.z, 20, 14);
   }

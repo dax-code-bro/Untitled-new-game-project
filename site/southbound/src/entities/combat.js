@@ -5,7 +5,28 @@ import { clamp } from '../util.js';
 import { WEAPONS, buildWeaponModel, gunModelFor, gunRel, applyFinish } from './arsenal.js';
 import { loaded, Q } from '../assets/open.js';
 import { raycastObjects, raycastStatic } from '../core/hits.js';
+import { HOLE } from '../world/holes.js';
 export { WEAPONS };
+
+// What a round has to get through. need: penetration (gun 1-5 plus ammo) to go
+// through at all; keep: share of the energy left on the far side; loss: what the
+// round loses in penetration doing it; max: the thickest piece it can get through;
+// thin: thickness to assume for one-sided panels. Studs in walls are harder.
+export const SURF = {
+  glass: { need: 0, keep: 0.9, loss: 0, max: 0.05, thin: 0.01, hole: HOLE.glass },
+  drywall: { need: 1, keep: 0.78, loss: 0, max: 0.26, thin: 0.12, hole: HOLE.drywall, stud: { need: 2, keep: 0.55, loss: 1 } },
+  door: { need: 1, keep: 0.8, loss: 0, max: 0.08, thin: 0.045, hole: HOLE.wood },
+  frame: { need: 1, keep: 0.55, loss: 1, max: 0.3, thin: 0.18, hole: HOLE.wood, inner: HOLE.frame, stud: { need: 3, keep: 0.35, loss: 2 } },
+  metal: { need: 1, keep: 0.7, loss: 0, max: 0.06, thin: 0.02, hole: HOLE.metal },
+  stucco: { need: 2, keep: 0.45, loss: 1, max: 0.3, thin: 0.2, hole: HOLE.concrete },
+  wood: { need: 2, keep: 0.6, loss: 1, max: 0.14, thin: 0.05, hole: HOLE.wood },
+  brick: { need: 4, keep: 0.3, loss: 2, max: 0.3, thin: 0.23, hole: HOLE.brick },
+  block: { need: 4, keep: 0.25, loss: 2, max: 0.3, thin: 0.2, hole: HOLE.concrete },
+  floor: { need: 99, hole: HOLE.wood }, masonry: { need: 99, hole: HOLE.concrete }, stone: { need: 99, hole: HOLE.concrete }, tree: { need: 99, hole: HOLE.wood }, steel: { need: 99, hole: HOLE.metal },
+};
+const surfOf = (o) => o ? (o.userData.surf || o.material?.userData?.surf || (o.parent && o.parent.userData.surf) || 'masonry') : 'masonry';
+const _bray = new THREE.Raycaster(); _bray.firstHitOnly = true;
+const _nm = new THREE.Matrix3(), _im = new THREE.Matrix4();
 
 // Starter loadout: one of each kind (the rest of the catalog is bought in the arsenal)
 const STARTER = ['fists']; // you start with nothing: every gun comes from a gunsmith (or Runr)
@@ -145,7 +166,7 @@ export class Combat {
   // Exact hit test: real triangles of people (animated pose), animals, vehicles,
   // trunks, rocks, poles and furniture; buildings are boxes; terrain is refined
   // to the surface.
-  trace(origin, dir, maxT, targets) {
+  trace(origin, dir, maxT, targets, depth = 0) {
     let best = { t: maxT, kind: 'none' };
     const objs = [];
     const up = (v, h) => new THREE.Vector3(v.x, v.y + h, v.z);
@@ -170,10 +191,16 @@ export class Combat {
       if (o.kind === 'ped') best.head = hit.point.y - o.ped.pos.y > 1.47;
     }
     const sh = targets.statics && targets.statics.length ? raycastStatic(origin, dir, best.t, targets.statics) : null;
-    if (sh && sh.distance < best.t) best = { t: sh.distance, kind: 'building' };
+    if (sh && sh.distance < best.t) best = { t: sh.distance, kind: 'building', obj: sh.object, face: sh.face, inst: sh.instanceId };
     const end = origin.clone().addScaledVector(dir, best.t);
-    const f = this.collision.raycast(origin.x, origin.y, origin.z, end.x, end.y, end.z);
-    if (f < 1) best = { t: best.t * f, kind: 'building' };
+    const ch = this.collision.raycastHit ? this.collision.raycastHit(origin.x, origin.y, origin.z, end.x, end.y, end.z, depth > 0) : null;
+    if (ch && ch.t < 1 && !(best.obj && best.t - best.t * ch.t < 0.08)) {
+      const n = new THREE.Vector3(); n.setComponent(ch.axis, ch.sign);
+      best = { t: best.t * ch.t, kind: 'building', box: ch.box, tExit: best.t * ch.tExit, normal: n };
+    } else if (!ch && !this.collision.raycastHit) {
+      const f = this.collision.raycast(origin.x, origin.y, origin.z, end.x, end.y, end.z);
+      if (f < 1) best = { t: best.t * f, kind: 'building' };
+    }
     // terrain: march, then bisect to the surface
     for (let s = 0.5; s < best.t; s += 1.0) {
       const y = origin.y + dir.y * s;
@@ -187,7 +214,56 @@ export class Combat {
     const ph = this.rayProps?.(origin, dir, best.t);
     if (ph) best = { t: ph.t, kind: 'prop', prop: ph.p };
     best.point = origin.clone().addScaledVector(dir, best.t);
+    if (best.kind === 'building') this.wallInfo(best, dir);
+    // through the wall: a round with the penetration for this material carries on, weaker
+    if (best.kind === 'building' && this._pen != null && depth < 3 && best.surf) {
+      const S = SURF[best.surf] || SURF.masonry;
+      const R = best.stud && S.stud ? { ...S, ...S.stud } : S;
+      if (this._pen >= R.need && best.thick <= (S.max || 0)) {
+        const exit = best.point.clone().addScaledVector(dir, best.thick + 0.012);
+        const left = maxT - best.t - best.thick;
+        if (left > 0.1) {
+          this._pen -= R.loss;
+          const rest = this.trace(exit, dir, left, targets, depth + 1);
+          rest.t += best.t + best.thick;
+          rest.through = [{ point: best.point, exit, normal: best.normal, surf: best.surf, stud: best.stud }, ...(rest.through || [])];
+          rest.keep = (rest.keep ?? 1) * R.keep;
+          rest.penLoss = (rest.penLoss || 0) + R.loss;
+          return rest;
+        }
+      }
+    }
     return best;
+  }
+
+  // what was hit (material), which way the surface faces, how thick it is along the shot,
+  // and for walls whether the round met a stud
+  wallInfo(hit, dir) {
+    if (hit.obj) {
+      hit.surf = surfOf(hit.obj);
+      const o = hit.obj;
+      if (hit.face && hit.inst === undefined) { _nm.getNormalMatrix(o.matrixWorld); hit.normal = hit.face.normal.clone().applyMatrix3(_nm).normalize(); }
+      else if (hit.face && o.isInstancedMesh) { o.getMatrixAt(hit.inst, _im); _im.premultiply(o.matrixWorld); _nm.getNormalMatrix(_im); hit.normal = hit.face.normal.clone().applyMatrix3(_nm).normalize(); }
+      const S = SURF[hit.surf] || SURF.masonry;
+      if (S.max) {
+        // cast back from beyond the wall to find its far face
+        _bray.set(hit.point.clone().addScaledVector(dir, S.max), dir.clone().negate()); _bray.near = 0; _bray.far = S.max;
+        const back = [];
+        o.raycast(_bray, back);
+        hit.thick = back.length ? Math.max(0.005, S.max - Math.min(...back.map((b) => b.distance))) : S.thin;
+      } else hit.thick = 99;
+    } else if (hit.box) {
+      const d = hit.box.data;
+      hit.surf = (d && d.surf) || (d && d.shop ? 'masonry' : d && d.building ? 'masonry' : 'masonry');
+      hit.thick = Math.max(0, hit.tExit - hit.t);
+    } else { hit.surf = 'masonry'; hit.thick = 99; }
+    if (!hit.normal) hit.normal = dir.clone().negate();
+    if (hit.normal.dot(dir) > 0) hit.normal.negate();
+    // studs every 16 inches along a wall (world-aligned, so they line up hole to hole)
+    if (hit.surf === 'drywall' || hit.surf === 'frame') {
+      const n = hit.normal, t = new THREE.Vector3(-n.z, 0, n.x);
+      if (t.lengthSq() > 1e-4) { t.normalize(); const along = hit.point.dot(t) / 0.4064; hit.stud = Math.abs(along - Math.round(along)) * 0.4064 < 0.024; }
+    }
   }
 
   // Player attack. Returns a hit (or null) so the game can react (crimes etc.)
@@ -230,7 +306,9 @@ export class Combat {
       const d = dir.clone();
       d.x += (Math.random() - 0.5) * spread; d.y += (Math.random() - 0.5) * spread; d.z += (Math.random() - 0.5) * spread;
       d.normalize();
+      this._pen = Math.max(0, (w.pen || 1) + am.pen) + (am.slug ? 1 : 0);
       const hit = this.trace(origin, d, range, targets);
+      this._pen = null;
       hit.dir = d; hit.origin = origin; hit.ammo = am; hit.slugDmg = am.slug ? w.pellets : 1;
       if (!first) first = hit;
       if (w.speed > 0) {
@@ -263,6 +341,16 @@ export class Combat {
 
   impact(hit, w, targets, from) {
     if (w.explosive) return this.explode(hit.point, w, targets, from);
+    // every wall it went through: an entry hole, an exit hole blown out the far side, dust
+    const cal = w.cat === 'shotgun' ? 0.006 : (w.pen || 1) >= 4 ? 0.011 : (w.pen || 1) >= 3 ? 0.009 : 0.012;
+    for (const th of hit.through || []) {
+      const S = SURF[th.surf] || SURF.masonry;
+      this.holes?.add(th.point, th.normal, th.surf === 'drywall' ? HOLE.drywall : S.hole, cal);
+      const back = th.normal.clone().negate();
+      this.holes?.add(th.exit.clone().addScaledVector(back, -0.004), back, th.surf === 'drywall' || th.surf === 'frame' ? HOLE.drywallExit : S.hole, cal * 1.3);
+      this.burst(th.exit, this.dustMat, 4);
+      this.onWallPierced?.(th, w);
+    }
     if (hit.kind === 'animal') {
       hit.killed = hit.animal.hurt(w.damage, w);
       this.burst(hit.point, this.settings.gore ? this.bloodMat : this.dustMat, this.settings.gore ? 8 : 3);
@@ -276,25 +364,30 @@ export class Combat {
       const pd = hit.ped, dy = hit.point.y - pd.pos.y;
       const lat = (hit.point.x - pd.pos.x) * Math.cos(pd.heading || 0) - (hit.point.z - pd.pos.z) * Math.sin(pd.heading || 0);
       const part = hit.head ? 'head' : dy < 0.85 ? 'leg' : Math.abs(lat) > 0.2 && dy > 0.95 && dy < 1.5 ? 'arm' : 'torso';
-      const pen = Math.max(0, (w.pen || 1) + am.pen);
+      const pen = Math.max(0, (w.pen || 1) + am.pen - (hit.penLoss || 0));
       // armour by NIJ level: a plate stops what it's rated for; helmets cover the head only
       const level = part === 'torso' ? (pd.armor || 0) : part === 'head' ? (pd.helmet || 0) : 0;
       const stopped = level > 0 && (pen <= Math.floor(level) || (level % 1 > 0 && pen <= level + 0.5 && Math.random() < 0.6));
       const zone = { head: stopped ? 0.25 : 3, torso: stopped ? 0.1 : 1, arm: 0.55, leg: 0.6 }[part];
-      const dmg = w.damage * (hit.slugDmg || 1) * am.dmg * (0.8 + Math.random() * 0.35) * fall * zone;
+      const dmg = w.damage * (hit.slugDmg || 1) * am.dmg * (0.8 + Math.random() * 0.35) * fall * zone * (hit.keep ?? 1);
       hit.part = part; hit.stopped = stopped;
       hit.killed = targets.peds.damage(pd, dmg, from, { part, stopped, side: lat > 0 ? 'R' : 'L', pen });
       if (stopped) this.burst(hit.point, this.sparkMat, 5);
       else this.burst(hit.point, this.settings.gore ? this.bloodMat : this.dustMat, this.settings.gore ? 10 : 4);
     } else if (hit.kind === 'vehicle') {
       const v = hit.vehicle;
-      v.health -= w.damage * 0.25 * ((hit.ammo && hit.ammo.vehicle) || 1);
+      v.health -= w.damage * 0.25 * ((hit.ammo && hit.ammo.vehicle) || 1) * (hit.keep ?? 1);
       this.burst(hit.point, this.sparkMat, 6);
       // through the glass (or thin doors, with enough penetration) to whoever is inside
       this.onVehicleHit?.(hit, w);
       if (v.health <= 0) this.onVehicleDestroyed?.(v, hit.point);
     } else if (hit.kind !== 'none') {
       this.burst(hit.point, this.dustMat, 6);
+      if (hit.kind === 'building' && hit.normal) {
+        const S = SURF[hit.surf] || SURF.masonry;
+        // stopped in the wall: the entry hole (in a wall over a stud the round sits in the wood)
+        this.holes?.add(hit.point, hit.normal, hit.surf === 'frame' ? HOLE.wood : S.hole, cal * (S.hole === HOLE.concrete || S.hole === HOLE.brick ? 1.2 : 1));
+      }
       if (hit.kind === 'building') this.onStaticHit?.(hit);
       if (hit.kind === 'prop') this.onPropHit?.(hit, w);
     }

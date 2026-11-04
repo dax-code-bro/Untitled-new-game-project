@@ -68,6 +68,7 @@ export function installCarCombat(game, { explodeAt }) {
   function blowUp(b) {
     const v = b.v;
     v.exploded = true; v.wrecked = true; v.health = -999;
+    v.setClear?.(false);
     explodeAt(v.pos.clone().add(_v.set(0, 0.8, 0)), 160);
     // thrown and charred
     v.vy = 6 + Math.random() * 3; v.airborne = true;
@@ -102,13 +103,18 @@ export function installCarCombat(game, { explodeAt }) {
           if (!free) break;
           free.car = v; free.h.root.visible = true; free.h.play('Driving_Loop', 0.1, 1, true);
         }
+        // clear glass where someone sits at the wheel (or the cops have got out); tinted where nobody does
+        for (const c of traffic.cars) c.v.setClear?.(drivers.some((d) => d.car === c.v));
+        for (const c of police.cars) c.v.setClear?.(!!c.deployed || drivers.some((d) => d.car === c.v));
       }
       for (const d of drivers) {
         const v = d.car;
         if (!v) continue;
         if (!v.group.parent || v.exploded) { d.car = null; d.h.root.visible = false; continue; }
-        d.h.root.position.copy(seat(v));
-        d.h.root.rotation.set(v.pitch ? -v.pitch : 0, v.heading, 0);
+        if (!(v.cabLayout && v.seat(d.h, 0))) {
+          d.h.root.position.copy(seat(v));
+          d.h.root.rotation.set(v.pitch ? -v.pitch : 0, v.heading, 0);
+        }
         d.h.update(dt);
       }
       // a car with a dead driver coasts to a stop

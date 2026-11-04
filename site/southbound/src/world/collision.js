@@ -205,6 +205,37 @@ export class CollisionWorld {
     }
     return best;
   }
+
+  // Segment vs boxes for bullets: which box, which face (normal), and where the
+  // ray leaves it again (so a thin wall can be shot through). Boxes the segment
+  // starts inside are skipped when skipInside is set (continuing after a wall).
+  raycastHit(ax, ay, az, bx, by, bz, skipInside = false) {
+    let best = null;
+    const dx = bx - ax, dy = by - ay, dz = bz - az;
+    const len = Math.hypot(dx, dz);
+    const steps = Math.max(1, Math.ceil(len / CELL));
+    const visited = new Set();
+    for (let s = 0; s <= steps; s++) {
+      const t = s / steps;
+      this.query(ax + dx * t, az + dz * t, 2, (it) => {
+        if (it.t !== 0 || visited.has(it) || (it.data && it.data.walkable)) return;
+        visited.add(it);
+        let t0 = -Infinity, t1 = Infinity, axis = -1, sign = 0;
+        const o = [ax, ay, az], d = [dx, dy, dz], mn = [it.minX, it.y0, it.minZ], mx = [it.maxX, it.y1, it.maxZ];
+        for (let k = 0; k < 3; k++) {
+          if (Math.abs(d[k]) < 1e-9) { if (o[k] < mn[k] || o[k] > mx[k]) return; continue; }
+          let a = (mn[k] - o[k]) / d[k], b = (mx[k] - o[k]) / d[k], sg = -1;
+          if (a > b) { [a, b] = [b, a]; sg = 1; }
+          if (a > t0) { t0 = a; axis = k; sign = sg; }
+          t1 = Math.min(t1, b);
+        }
+        if (t0 > t1 || t1 < 0 || t0 > 1) return;
+        if (t0 < 0) { if (skipInside) return; t0 = 0; }
+        if (!best || t0 < best.t) best = { t: t0, tExit: t1, box: it, axis, sign };
+      });
+    }
+    return best;
+  }
 }
 
 // Separating-axis test between two oriented rectangles A and B (2D, x/z).

@@ -106,16 +106,19 @@ export function installEstate(game) {
     const floorC = kind === 'warehouse' ? 0x6d6d68 : kind === 'office' ? 0x4a4f55 : [0x7a5434, 0x8c6a46, 0x5c3f28, 0xb8b2a4][Math.floor(r() * 4)];
     const wallM = texMat('plaster', wallC, 0.9) || M(wallC, 0.9), floorM = (kind === 'warehouse' || kind === 'store' || kind === 'office' ? texMat('concrete', floorC === 0x4a4f55 ? 0x8a8f95 : 0xb0aca4, 0.8) : null) || M(floorC, kind === 'home' || kind === 'apartment' ? 0.45 : 0.8);
     wallM.userData.texSize = 3.0; floorM.userData.texSize = 2.5;
+    // what the walls are made of: drywall on studs inside; outside walls framed in houses, block in shops, sheet steel in warehouses
+    wallM.userData.surf = kind === 'warehouse' ? 'metal' : 'drywall';
+    const outerSurf = kind === 'home' || kind === 'apartment' ? 'frame' : kind === 'warehouse' ? 'metal' : 'block';
+    floorM.userData.surf = kind === 'home' || kind === 'apartment' ? 'floor' : 'masonry';
     boxAt(g, W + 0.4, 0.2, D + 0.4, 0, -0.2, 0, floorM, 'walk', o);
     boxAt(g, W + 0.4, 0.2, D + 0.4, 0, H, 0, M(0xf2f0ea, 0.9), false, o);
-    boxAt(g, W + 0.4, H, 0.2, 0, 0, -D / 2 - 0.1, wallM, true, o);
-    boxAt(g, W + 0.4, H, 0.2, 0, 0, D / 2 + 0.1, wallM, true, o);
-    boxAt(g, 0.2, H, D, -W / 2 - 0.1, 0, 0, wallM, true, o);
-    boxAt(g, 0.2, H, D, W / 2 + 0.1, 0, 0, wallM, true, o);
+    for (const m of [boxAt(g, W + 0.4, H, 0.2, 0, 0, -D / 2 - 0.1, wallM, true, o), boxAt(g, W + 0.4, H, 0.2, 0, 0, D / 2 + 0.1, wallM, true, o),
+      boxAt(g, 0.2, H, D, -W / 2 - 0.1, 0, 0, wallM, true, o), boxAt(g, 0.2, H, D, W / 2 + 0.1, 0, 0, wallM, true, o)]) m.userData.surf = outerSurf;
     // windows (glowing with daylight) and the front door
     const winM = new THREE.MeshStandardMaterial({ color: 0x223040, emissive: 0xbfd6ee, emissiveIntensity: 0.8, roughness: 0.1 });
+    winM.userData.surf = 'glass';
     for (let x = -W / 2 + 2; x < W / 2 - 1.5; x += 3.2) { const w = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.4), winM); w.position.set(x, 1.6, -D / 2 + 0.01); g.add(w); }
-    const door = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 2.2), M(0x3a2a1c, 0.6)); door.position.set(0, 1.1, D / 2 - 0.01); door.rotation.y = Math.PI; g.add(door);
+    const door = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 2.2), M(0x3a2a1c, 0.6)); door.position.set(0, 1.1, D / 2 - 0.01); door.rotation.y = Math.PI; door.userData.surf = 'door'; g.add(door);
     // furniture: open-source models (Quaternius house interior pack + Khronos sample assets)
     const QH = (n) => Q('house_interior_pack', n);
     const put = (rel, size, x, z, rot = 0, axis = 'max', solid = true, y = 0) => {
@@ -130,7 +133,7 @@ export function installEstate(game) {
       }
       return m;
     };
-    const F = (w, h, dd, x, z, c, y = 0, solid = true, rough = 0.7) => boxAt(g, w, h, dd, x, y, z, M(c, rough), solid, o);
+    const F = (w, h, dd, x, z, c, y = 0, solid = true, rough = 0.7) => { const m = boxAt(g, w, h, dd, x, y, z, M(c, rough), solid, o); m.userData.surf = 'wood'; return m; };
     const pick = (arr) => arr[Math.floor(r() * arr.length)];
     const plant = () => QH(pick(['Houseplant_1', 'Houseplant_3', 'Houseplant_5', 'Houseplant_7']));
     if (kind === 'home' || kind === 'apartment') {
@@ -268,6 +271,7 @@ export function installEstate(game) {
   }
   // a locked door: knock, kick it in, or leave it
   function tryDoor(d, p) {
+    if (d.b.ruined) { hud.toast(d.b.ruined === 'build' ? 'Construction site. Hard hats only.' : 'Fire damage. The building is condemned.', 2.5); return; }
     const k = kindOf(d), home = k === 'home' || k === 'apartment';
     if (lockState(d, p) === 'open') {
       if (home && !(p && owned(p)) && !(p && game.sky.hour >= 9 && game.sky.hour < 17) && someoneHome(d)) { enter(d); occupy(d, 'trespass'); return; }
