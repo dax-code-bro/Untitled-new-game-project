@@ -1,6 +1,6 @@
 {
  "cut": "1C",
- "made_with": "ffmpeg version 6.1.1-3ubuntu5 Copyright (c) 2000-2023 the FFmpeg developers",
+ "made_with": "ffmpeg version n8.1.3-9-g29e619e767-20260930 Copyright (c) 2000-2026 the FFmpeg developers",
  "inputs": {
   "edl": "episodes/s01e01/final/cut/edl-1C.json",
   "cues": "episodes/s01e01/final/cut/audio-cues-1C.json",
@@ -30,11 +30,11 @@
   "I_full": -20.2,
   "TP": -1.6,
   "LRA": 9.9,
-  "sha256": "5889acc21560a7e707cab2a9d1938a57a65ef6883e7fa71dd5e361d7957dc0bf",
+  "sha256": "3aef5291e6939491618e522dc38cb7780f6653fca981edc7c515fdcf7a4e67e1",
   "master_gain_db": 2,
   "limiter_ceiling_dbfs": -1.6,
   "dialogue_gain_db": 11.4,
-  "min_dialogue_margin_lu": 12.666,
+  "min_dialogue_margin_lu": 12.507,
   "anchored": "dialogue",
   "pass": true
  },
@@ -43,8 +43,8 @@
   "duration_s": 382,
   "aac_I": -16.7,
   "aac_I_full": -20.2,
-  "aac_TP": -1.4,
-  "bytes": 48236183
+  "aac_TP": -1.6,
+  "bytes": 47886179
  },
  "beds": {
   "grounds_wind": {
@@ -85,7 +85,7 @@
    "gain_db": 0.3,
    "duck_db": 9,
    "fade_out_s": 3,
-   "render_sha256": "e8671ca02037b534864e4907520e6981c3fffd9cc5e0072a9009d0aa963894a7"
+   "render_sha256": "1706022f116be41248c316430882a9f268630e2686b4af6b3e7d7804fc34bf4d"
   },
   {
    "id": "M7 sky glimpse",
@@ -98,7 +98,7 @@
    "gain_db": 7.4,
    "duck_db": 9,
    "fade_out_s": 2.5,
-   "render_sha256": "97c4af130ff3726d51b24c0363371bb3a6b246570d5e90df13e3c690f2b2503c"
+   "render_sha256": "efb58c7553633c914016da5bca9f7579bd34489ebf4a8051fce4e081cfbe12ff"
   },
   {
    "id": "M8 light theme",
@@ -111,7 +111,7 @@
    "gain_db": 8.9,
    "duck_db": 10,
    "fade_out_s": 3.5,
-   "render_sha256": "e267dd42a1bd16b18a774c33adead9bfced908acc3764bc0b4bc899e20388097"
+   "render_sha256": "5e8083d2a2b3b85d90b40b608af1fd88f498648c53565a0546738be65036bb0a"
   }
  ],
  "music_not_in_cut": [
@@ -276,16 +276,16 @@
   {
    "from_s": 36.1,
    "to_s": 37.37,
-   "dialogue_M": -14.115,
-   "background_M": -26.781,
-   "margin_LU": 12.666
+   "dialogue_M": -14.244,
+   "background_M": -26.751,
+   "margin_LU": 12.507
   },
   {
    "from_s": 61,
    "to_s": 64.285,
-   "dialogue_M": -15.773,
-   "background_M": -28.55,
-   "margin_LU": 12.777
+   "dialogue_M": -15.892,
+   "background_M": -28.628,
+   "margin_LU": 12.736
   }
  ]
 }
