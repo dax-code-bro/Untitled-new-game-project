@@ -190,17 +190,34 @@ const ARM = /^(shoulder01|upperarm|lowerarm|wrist|metacarpal|finger|thumb)/;
 // a purse or scabbard hangs from the belt: thigh weights swung it out level with the striding leg
 const LEG = /^(upperleg|lowerleg|foot|toe)/;
 const TORSO = /^(root|spine0\d|pelvis\.|neck0\d|head|clavicle\.)/;
+// LOOK r2h: garment cuffs never follow the fingers. The offline skinning tied ~190 coat cuff vertices
+// (abby_ride) to the thumb (finger1-*) and metacarpal bones: when the rider grip pronated the forearm and
+// curled the hand round the bar, the cuffs swung out into flat flaring panels, and wrapping the thumb
+// (ridergrip BAR_GRIP.thumbWrap) dragged them 19 cm down over the hands. Every hand weight of a garment
+// goes to the forearm's twist bone of the same side (lowerarm02: it takes 0.6 of the pronation but not
+// the wrist's bend), so a sleeve stays a tube round the wrist whatever the fingers do.
+const HAND = /^(metacarpal|finger|thumb)/;
+const CUFF_TO = 'lowerarm02';
+const GLOVE = /glove|gauntlet|mitt/;
 const rebound = new WeakMap();
 function rebindWorn(g, m, header, bones, index) {
   const worn = m.kind === 'prop' && WORN.test(m.name);
   const hair = m.kind === 'hair';
-  if (!worn && !hair) return;
+  const cloth = m.kind === 'cloth' && !GLOVE.test(m.name);
+  if (!worn && !hair && !cloth) return;
   // the arrays are views into the shared (cached) data: fix them once per data set
   let done = rebound.get(header);
   if (!done) { done = new Set(); rebound.set(header, done); }
   if (done.has(m.name)) return;
   done.add(m.name);
   const names = header.bones.map((b) => b.name);
+  if (cloth) {
+    const to = names.map((n) => (HAND.test(n) ? index[`${CUFF_TO}.${n.slice(-1)}`] ?? index[`wrist.${n.slice(-1)}`] ?? -1 : -1));
+    const si = g.attributes.skinIndex.array, sw = g.attributes.skinWeight.array;
+    for (let j = 0; j < si.length; j++) if (sw[j] > 0 && to[si[j]] >= 0) si[j] = to[si[j]];
+    lapOffSleeve(g, names, bones, index);
+    return;
+  }
   const isArm = names.map((n) => ARM.test(n) || (worn && LEG.test(n)));
   if (!isArm.some(Boolean)) return;
   const si = g.attributes.skinIndex.array, sw = g.attributes.skinWeight.array, pos = g.attributes.position.array;
@@ -233,6 +250,72 @@ function rebindWorn(g, m, header, bones, index) {
       for (let k = 1; k < 4; k++) { si[v * 4 + k] = 0; sw[v * 4 + k] = 0; }
     }
   }
+}
+
+// LOOK r2h: a seated build's hands rest on the lap when the garments are skinned (garments.py transfer:
+// k nearest body vertices in the drape pose), so the coat SKIRT round the hands took forearm / wrist /
+// hand weights (abby_ride coat: ~90 triangles per side joined forearm-weighted skirt vertices to
+// thigh-weighted ones, 13-39 cm from the forearm; the standing builds have none). When the rider grip
+// lifted the hands to the bar those skirt patches went with the hands: flat stretched panels ("boards"
+// with smeared weave) rising from the lap to the cuffs. Here every garment vertex OUTSIDE the forearm
+// sleeve tube (elbow -> wrist line, the sleeve's own radius from its forearm-weighted vertices) loses its
+// forearm / wrist weights; what is left is renormalised, or (mostly-forearm vertices) takes the mean
+// weights of its already-clean mesh neighbours, ring by ring. Nothing moves at rest (drape = bind).
+const FOREARM = /^(lowerarm|wrist|metacarpal|finger|thumb)/;
+function lapOffSleeve(g, names, bones, index) {
+  const pos = g.attributes.position.array, ix = g.index?.array;
+  if (!ix) return 0;
+  const si = g.attributes.skinIndex.array, sw = g.attributes.skinWeight.array, n = pos.length / 3;
+  const isFa = names.map((nm) => FOREARM.test(nm)), isUp = names.map((nm) => /^upperarm/.test(nm));
+  const fa = new Float32Array(n), up = new Float32Array(n);
+  for (let v = 0; v < n; v++) for (let k = 0; k < 4; k++) { const b = si[v * 4 + k]; if (isFa[b]) fa[v] += sw[v * 4 + k]; else if (isUp[b]) up[v] += sw[v * 4 + k]; }
+  const inTube = new Uint8Array(n), p = new THREE.Vector3();
+  for (const sd of ['L', 'R']) {
+    const ie = index[`lowerarm01.${sd}`], iw = index[`wrist.${sd}`];
+    if (ie === undefined || iw === undefined) continue;
+    const e = bones[ie].getWorldPosition(new THREE.Vector3()), w = bones[iw].getWorldPosition(new THREE.Vector3());
+    const d = w.clone().sub(e), L = d.length(); d.normalize();
+    const q = (v) => { p.set(pos[v * 3], pos[v * 3 + 1], pos[v * 3 + 2]).sub(e); const t = p.dot(d); return [t / L, Math.sqrt(Math.max(0, p.lengthSq() - t * t))]; };
+    const radii = [];
+    for (let v = 0; v < n; v++) { if (fa[v] < 0.5) continue; const [t, r] = q(v); if (t > 0.15 && t < 1.2 && r < 0.1) radii.push(r); }
+    if (radii.length < 12) continue;
+    radii.sort((x, y) => x - y);
+    const R = Math.min(0.08, radii[Math.floor(radii.length * 0.75)] * 1.4);
+    for (let v = 0; v < n; v++) { const [t, r] = q(v); if (t > -0.25 && t < 1.3 && r < R) inTube[v] = 1; }
+  }
+  // dirty: forearm weight outside both tubes (the elbow's upper-arm sleeve keeps its blend)
+  const state = new Uint8Array(n); // 0 clean, 1 dirty (needs neighbours), 2 resolved
+  let fixed = 0;
+  for (let v = 0; v < n; v++) {
+    if (fa[v] <= 0 || inTube[v] || up[v] > 0.05) { state[v] = 0; continue; }
+    fixed++;
+    const rest = 1 - fa[v];
+    if (rest > 0.3) { for (let k = 0; k < 4; k++) { const j = v * 4 + k; if (isFa[si[j]]) sw[j] = 0; else sw[j] /= rest; } continue; }
+    state[v] = 1;
+  }
+  const adj = Array.from({ length: n }, () => []);
+  for (let f = 0; f < ix.length; f += 3) for (const [a, b] of [[ix[f], ix[f + 1]], [ix[f + 1], ix[f + 2]], [ix[f + 2], ix[f]]]) { if (state[a] === 1) adj[a].push(b); if (state[b] === 1) adj[b].push(a); }
+  for (let ring = 0; ring < 40; ring++) {
+    const next = [];
+    for (let v = 0; v < n; v++) {
+      if (state[v] !== 1) continue;
+      const acc = new Map(); let cnt = 0;
+      for (const u of adj[v]) {
+        if (state[u] === 1) continue;
+        cnt++;
+        for (let k = 0; k < 4; k++) { const b = si[u * 4 + k], wt = sw[u * 4 + k]; if (wt > 0 && !isFa[b]) acc.set(b, (acc.get(b) || 0) + wt); }
+      }
+      if (!cnt || !acc.size) continue;
+      next.push([v, [...acc].sort((x, y) => y[1] - x[1]).slice(0, 4)]);
+    }
+    if (!next.length) break;
+    for (const [v, top] of next) {
+      const tot = top.reduce((s_, x) => s_ + x[1], 0);
+      for (let k = 0; k < 4; k++) { si[v * 4 + k] = top[k] ? top[k][0] : 0; sw[v * 4 + k] = top[k] ? top[k][1] / tot : 0; }
+      state[v] = 2;
+    }
+  }
+  return fixed;
 }
 
 function materialFor(m, header, opts) {
