@@ -3,6 +3,39 @@
 Owner paths: `scenes/lib/director/`, `episodes/s01e01/final/scenes/`, `episodes/s01e01/final/cut/`.
 How it works: `README.md` in this folder. Latest state first.
 
+## Session 19 (2026-11-04, short budgeted session: 1C-16 drift fix + lower side angle after c388c00 / 85332fd - STILLS only)
+
+Shot ids, lengths, line cue times UNCHANGED (1C-16 still 3 s at T 35, no lines). No flight act touched (sound: nothing changed).
+- 1C-16 (`sky-off-verdor.spec.js`). ROOT CAUSE of the s18 drift: two frame subjects at the SAME screen height
+  (hand.R [-x, y], hand.L [+x, y]) can only be held from square-on to the bar, so a 3/4 `from` + soft `dist` fought the
+  targets and the LM landed somewhere different every frame. r1 (no dist, +-0.27) proved it: the solve went straight
+  AHEAD (from ~180), frontal, stable, thumbs hidden. Second cause: the `follow` rig's default aerial shake (amount 0.3 =
+  camera pos +-~5-9 cm) is ~0.3-0.4 screen units at 100 mm on a 1.5 m insert.
+  FIX: ONE subject, exact solve every frame: `frame: { subjects: [['abbyR.hand.R', [-0.22, 0.22]]], from: 234, dist: 1.45,
+  rise: 0.22, track: true }` (hand.R is the WRIST point: the knuckles hang ~0.25 below it on screen), the left hand
+  lands ~+0.3 by geometry; `shake: { kind: 'aerial', amount: 0.06 }`; f/5.6 with `focusOffset: 0.05` (both hands near
+  the focal plane); exposure -0.25 kept.
+  Rounds (all LOOKED AT, stills at 0.75 / 1.25 (Leaf's upstroke peak, where s16 went green) / 1.5 / 2.25 s):
+  - r1 (two subjects +-0.27, no dist, from 238): frontal, stable, belt + both hands centred; thumbs hidden; wing tops
+    at both frame edges at 1.25 s (not over the lens).
+  - r2 (one subject at [-0.28, 0.04], from 230, 1.35 m, rise 0.42): good 3/4, but the near hand's fingers + the bar
+    end cut by the frame bottom at 0.75.
+  - r3 (NOW in the spec): both hands fully in frame at all four phases, near (RIGHT) hand lower left, injured LEFT hand
+    upper right against sea / soft wing; knuckles over the bar, fingers wrapped, thumb TIPS show under the bar on
+    both hands (1:1 crop r3/crop036.png); wing membrane never on the lens (upstroke = soft scaly bg top right at
+    1.25 / 1.5 s); no neck crest; sleeves read as cloth (c388c00 works). Luma p95 164-165, p99 222-223, max 242.
+    Residual drift: ~0.05-0.1 screen units (wrist pinned; Leaf's body roll swings the far hand) - acceptable.
+  Stills: `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/director/s19/r1/`, `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/director/s19/r2/`, `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/director/s19/r3/` (1C-16_018/030/036/054.png + rN.png strips). FINAL strip: `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/director/s19/s19-final-strip.png`.
+- KNOWN: the whole thumb cannot read from in front of the bar (it wraps on her side / underneath); a view from below
+  bar level would put Leaf's neck in the way. If the owner wants the thumb, the shot needs an over-the-shoulder angle
+  (s16: mostly back) or a humans pose with the thumb ON TOP of the bar (REQUEST humans/perf only if asked).
+- VERDOR_AERIAL builder: NOT started (budget). Steps unchanged (s17 NEXT 2).
+- Verify: director selftest 20/20; build-shots --check clean.
+- NEXT (exact, in order):
+  1. Video (owner/background only, ~10 min here): `node scenes/lib/director/tools/render-shots.mjs --only 1C-16 --force --work /tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/director/work1B`
+     then sample every 6th frame (wing on the lens? drift?). The s17 queue is still pending (s18 NEXT 2).
+  2. VERDOR_AERIAL builder + registry entry (s17 NEXT 2), then VERDOR_HARBOR, OUTER_ROCKS.
+
 ## Session 18 (2026-11-04, short budgeted session: 1C-16 lower 3/4 after perf 6231555, X4-03 beats - STILLS only)
 
 Shot ids, lengths, line cue times UNCHANGED. 1C flight acts untouched (no hz / phase / tOffset change in 1C).
