@@ -276,7 +276,10 @@ def cast():
     C.append(variant(abby, 'abby_sling', pose='sling', pose_params={'weight': 'L', 'contrapposto': 0.6, 'head_yaw': 0.08},
                      outfit=_arm_across(abby['outfit']), expression=dict(pain, **{'mouth-compression': 0.2, 'eye-left-slit': 0.22, 'eye-right-slit': 0.2})))
     ride_outfit = [dict(g, overlap=0.0) if g['type'] == 'coat' else g for g in abby['outfit']]
-    C.append(variant(abby, 'abby_ride', pose='ride', pose_params={'lean': 0.14, 'reach': 0.3}, cloth_subdiv=0, outfit=ride_outfit))
+    # LOOK r2i: the grip brings the hands up and flexes the wrists - the coat sleeves ended 3 cm above the
+    # wrist joint and a 5 cm band of bare forearm showed at the bar (1C-16): longer sleeves, less stack
+    C.append(variant(abby, 'abby_ride', pose='ride', pose_params={'lean': 0.14, 'reach': 0.3}, cloth_subdiv=0,
+                     outfit=[dict(g, sleeve_frac=1.1, stack=0.02) if g['type'] == 'coat' else g for g in ride_outfit]))
     C.append(variant(abby, 'abby_ride_injured', pose='ride_injured', pose_params={}, lod='mid', outfit=ride_outfit, expression=pain))
     # ================================================================ Remi
     remi = {

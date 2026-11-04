@@ -232,20 +232,35 @@ class Dresser:
         return self._axis
 
     # ------------------------------------------------------ weight xfer --
-    def transfer(self, P, k=6, space='dress'):
-        """Skin weights for arbitrary points from the k nearest body vertices (dress pose)."""
+    def transfer(self, P, k=6, space='dress', pools=None):
+        """Skin weights for arbitrary points from the k nearest body vertices (dress pose).
+        pools: optional per-point labels ('all' | 'nofarm' | 'noarm' | 'armL' | 'armR', see garment_pools):
+        each point then only looks at the body vertices of its pool."""
         from mathutils.kdtree import KDTree
         B = self.dress if space == 'dress' else self.target
-        if not hasattr(self, '_kd') or self._kd[0] != space:
-            kd = KDTree(len(B))
-            for i, p in enumerate(B):
-                kd.insert(p, i)
-            kd.balance()
-            self._kd = (space, kd)
-        kd = self._kd[1]
+        if not hasattr(self, '_kds') or self._kds[0] != space:
+            self._kds = (space, {})
+        trees = self._kds[1]
+
+        def tree(label):
+            if label not in trees:
+                c = self.cat
+                if label in ('nofarm', 'noarm'):
+                    ids = np.where(~np.array([x.startswith(('farm', 'hand') if label == 'nofarm' else ('uarm', 'farm', 'hand')) for x in c]))[0]
+                elif label in ('armL', 'armR'):
+                    sd = label[-1]
+                    ids = np.where(np.isin(c, [f'uarm{sd}', f'farm{sd}', f'hand{sd}']))[0]
+                else:
+                    ids = np.arange(len(B))
+                kd = KDTree(len(ids))
+                for j, i in enumerate(ids):
+                    kd.insert(B[i], int(i))
+                kd.balance()
+                trees[label] = kd
+            return trees[label]
         Wd = np.zeros((len(P), self.Wd.shape[1]))
         for i, p in enumerate(P):
-            res = kd.find_n(p, k)
+            res = tree('all' if pools is None else pools[i]).find_n(p, k)
             ws = 0.0
             for co, idx, d in res:
                 w = 1.0 / (d + 0.004) ** 2
@@ -253,6 +268,38 @@ class Dresser:
                 ws += w
             Wd[i] /= max(ws, 1e-9)
         return mc.topk(Wd, 4)
+
+    def garment_pools(self, g):
+        """LOOK r2i: which body vertices may skin each garment vertex. A seated rider's hands rest on
+        the lap in the drape, so the k nearest body vertices of the coat skirt round the hands were
+        forearm / hand vertices and those of the sleeve's underside were thigh / belly vertices: under
+        the rider grip the skirt rose to the hands as flat boards and the sleeve underside stayed on the
+        lap (remi_ride: edges stretched 5.5x). Forearm sleeve vertices (an upper garment's arm region,
+        nearer the forearm than the upper arm) take only that arm's weights; every other garment vertex
+        takes no forearm / hand weights, and none at all from the arms below the armpits. The upper
+        sleeve keeps the full pool (armhole blend)."""
+        P = g.P
+        pools = np.full(len(P), 'nofarm', dtype=object)
+        # below the armpits nothing but a sleeve follows an arm: the seated rider's elbows sit at the
+        # hips, and the skirt there took upper-arm / elbow weights (abby_ride: 2.9x under the grip)
+        pit = min(self.lm('upperarm01.L')[1], self.lm('upperarm01.R')[1]) - 0.08
+        pools[P[:, 1] < pit] = 'noarm'
+        reg = getattr(g, 'region', None)
+        if reg is None or len(reg) != len(P):
+            return pools
+
+        def seg(a, b):
+            ab = b - a
+            t = np.clip((P - a) @ ab / (ab @ ab), 0, 1)
+            return np.linalg.norm(P - (a + t[:, None] * ab), axis=1)
+        d = {}
+        for sd in ('L', 'R'):
+            d[sd] = (seg(self.lm(f'upperarm01.{sd}'), self.lm(f'lowerarm01.{sd}')), seg(self.lm(f'lowerarm01.{sd}'), self.lm(f'wrist.{sd}')))
+        near = np.where(np.minimum(*d['L']) < np.minimum(*d['R']), 'L', 'R')
+        for i in np.where(reg > 0)[0]:
+            up, fa = d[near[i]][0][i], d[near[i]][1][i]
+            pools[i] = f'arm{near[i]}' if fa < up else 'all'
+        return pools
 
     def skin_dress_to(self, P, I, W, M):
         """Move dress-pose points to another pose: v' = M * M_dress^-1 * v (blended)."""
@@ -1623,7 +1670,7 @@ def simulate(D, garments, steps=6, settle0=8, trans=None, settle1=None, quality=
     prev = []                                   # simulated garments: (object for collision)
     for g in garments:
         t0 = time.time()
-        g.I, g.W = getattr(g, 'weights', None) or D.transfer(g.P)
+        g.I, g.W = getattr(g, 'weights', None) or D.transfer(g.P, pools=D.garment_pools(g))
         if g.goal is not None and np.any(g.goal):
             fr = [min(1.0, 1.6 * (k / steps)) for k in range(steps + 1)]
             frames = [D.skin_dress_to(g.P + g.goal * f, g.I, g.W, M) for f, M in zip(fr, keys)]

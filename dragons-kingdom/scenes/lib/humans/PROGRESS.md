@@ -1005,3 +1005,41 @@ NEXT (perf, in order):
    / hunch / crawl / brace). Plan: posture 'lean' with o.tool (prop in both hands, butt planted ~0.35 m in
    front of the lead foot, hands stacked at chest height, weight on the tool: hips back, spine01-03 flexed
    ~12 deg, head up), hands from rig twoBoneIK onto the shaft points; pure in t like the others.
+
+## LOOK round 2i (2026-11-04, short session) - rider sleeve / skirt weights at build time, Abby's ride cuffs
+FIXED (build code; rebuilt abby_ride and remi_ride only):
+1. garments.py `Dresser.garment_pools()` + `transfer(..., pools=)` (simulate() uses it for every garment
+   without its own weights): each garment vertex is skinned from the k nearest body vertices of its pool.
+   Forearm sleeve vertices (upper garment `region` = arm, nearer the forearm segment than the upper arm)
+   -> only that arm's uarm/farm/hand body vertices; upper sleeve -> all (armhole blend); every other vertex
+   -> no farm/hand vertices, and below the armpits (y < upperarm01 - 8 cm) no arm vertices at all (the
+   seated elbows sit at the hips: a first rebuild with only "no forearm" gave the skirt upper-arm / elbow
+   weights, 2.9x stretch). This is the lasting form of loader.js lapOffSleeve (still there; a no-op-ish
+   safety net for unrebuilt caches). A loader-only "sleeve underside -> forearm" pass was tried and dropped:
+   in remi_ride the skirt under the forearm is IN the sleeve tube and edge-connected to it, so the flood
+   pulled the skirt up (max stretch 5.5 -> 7.9x).
+2. characters.py abby_ride coat: sleeve_frac 0.97 -> 1.1, stack 0.035 -> 0.02. Cuff hem (p98 along the
+   forearm, past the wrist joint): -2.9 / -3.1 cm -> +1.5 / +1.5 cm (rest and grip identical: the sleeve is
+   rigid on the forearm; the gap was the cut, not the grip).
+Measured (probe: CPU-skinned coat, rider grip @0.7, edges >= 3 mm, posed / bind length):
+   remi_ride  coat verts with an edge > 1.5x: 136 -> 22, max 5.54x -> 2.31x (all remaining on lowerarm/wrist
+              at the cuff: wrist bend); abby_ride 40 -> 34, max 2.49x -> 2.39x.
+   remi_ride L coat cuff still ends +6.5 cm past the wrist (was +5.9; R -2.2): his left cuff hangs long.
+Checked: selftest-perf all passed; npm test 48 pass / 0 fail / 1 skipped.
+Images (scratch eng1/look10/): before/, after/ (director stills 1C-16@0.5, 1C-18@0.5 draft),
+1C-16_036_before_after.png, 1C-18_036_before_after.png, 1C-18_crop_before_after.png (left before).
+Probe: eng1/look10/probe.mjs (CUFF=1 for cuff ends; CDIR=<dir> to read another cache dir).
+RESULT: 1C-16 - Abby's coat cuffs now reach the wrist crease on both hands, no bare forearm band. 1C-18 -
+Remi's spiky dark sleeve shreds above the hands are gone; sleeves end cleanly at the wrists.
+NOTE: build-caches now reports 46 of 48 humans "made by older code" (garments.py changed); they still load
+and render as before. Rebuild them when convenient (riders first: abby_ride_injured, fall_ride, scout_ride
+have the same lap/sleeve weight problem; standing builds change little).
+
+NEXT (look, in order):
+1. Rebuild abby_ride_injured (and fall_ride, scout_ride) with the pools: `node pc/build-caches.mjs --only
+   humans --humans abby_ride_injured,fall_ride,scout_ride --force` (~7 min each for Abby), then probe + stills.
+   abby_ride_injured keeps sleeve_frac 0.97 (its R cuff is already +2.9 cm past the wrist).
+2. 1C-16 after: the coat skirt at frame left reads as one long flat panel with a vertical fold edge from the
+   lap up toward the right hand (new sim drape) - check at final quality before acting.
+3. Fingertip pad bulge (postfix.py build-time tip fattening) - not started (budget).
+4. 2h NEXT 3 (right cuff light-green fringe / jagged split hem) and older list.
