@@ -185,7 +185,7 @@ export function dressGun(g, w, G) {
   // under the handguard (or the pistol's frame rail)
   if (f.under) {
     const u = under(f.under);
-    u.position.copy(pistol ? at(0.72, 0.42) : H.fore.clone().add(new THREE.Vector3(-0.035, 0.03, f.under === 'bipod' ? 0.12 : 0.07)));
+    u.position.copy(pistol ? at(0.7, 0.76) : H.fore.clone().add(new THREE.Vector3(-0.035, 0.03, f.under === 'bipod' ? 0.12 : 0.07)));
     P.add(u);
   }
   if (f.sling && !pistol) P.add(sling(at(0.72, 0.5).add(new THREE.Vector3(0.022, 0, 0)), at(0.05, 0.45).add(new THREE.Vector3(0.022, 0, 0))));
