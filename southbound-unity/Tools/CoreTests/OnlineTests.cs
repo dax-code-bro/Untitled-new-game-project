@@ -32,6 +32,20 @@ namespace Southbound.Tests
             Assert.Greater(new FileInfo(r.Files["Color"]).Length, 200_000, "a 2K colour map is more than 200 KB");
         }
 
+        /// <summary>Prints what a cgbookcase texture page links to (for keeping the downloader current).</summary>
+        [Test]
+        public void CgBookcasePageProbe()
+        {
+            using var http = new System.Net.Http.HttpClient();
+            http.DefaultRequestHeaders.UserAgent.ParseAdd("Southbound-Unity/1.0");
+            string page = http.GetStringAsync("https://www.cgbookcase.com/textures/cobblestone-01").GetAwaiter().GetResult();
+            TestContext.Progress.WriteLine($"page length {page.Length}");
+            foreach (System.Text.RegularExpressions.Match m in System.Text.RegularExpressions.Regex.Matches(page, "(?:href|src|data-[a-z-]+|content|action)=\"([^\"]+)\""))
+                TestContext.Progress.WriteLine("  link " + m.Groups[1].Value);
+            foreach (System.Text.RegularExpressions.Match m in System.Text.RegularExpressions.Regex.Matches(page, ".{0,160}(?i:download|\\.zip|_2K|2k).{0,160}"))
+                TestContext.Progress.WriteLine("  ctx  " + m.Value.Trim());
+        }
+
         /// <summary>Every set in the library resolves (only checks the first request of each).</summary>
         [Test]
         public void EverySetIsReachable()
