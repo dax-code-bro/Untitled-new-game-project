@@ -32,6 +32,27 @@ namespace Southbound.Tests
             Assert.Greater(new FileInfo(r.Files["Color"]).Length, 200_000, "a 2K colour map is more than 200 KB");
         }
 
+        /// <summary>Prints what cgbookcase's API and download page say about one set (keeps the downloader current).</summary>
+        [Test]
+        public void CgBookcaseProbe()
+        {
+            using var http = new System.Net.Http.HttpClient();
+            http.DefaultRequestHeaders.UserAgent.ParseAdd("Southbound-Unity/1.0");
+            void Show(string url, string around)
+            {
+                string body;
+                try { body = http.GetStringAsync(url).GetAwaiter().GetResult(); }
+                catch (Exception e) { TestContext.Progress.WriteLine($"{url}: {e.Message}"); return; }
+                TestContext.Progress.WriteLine($"{url}: {body.Length} chars");
+                int n = 0;
+                foreach (System.Text.RegularExpressions.Match m in System.Text.RegularExpressions.Regex.Matches(body, ".{0,220}" + around + ".{0,220}"))
+                    if (n++ < 6) TestContext.Progress.WriteLine("   ...." + m.Value.Replace("\n", " "));
+            }
+            Show("https://www.cgbookcase.com/api/textures", "Cobblestone01");
+            Show("https://www.cgbookcase.com/api/textures/cobblestone-01", "(?i:zip|download|url)");
+            Show("https://www.cgbookcase.com/textures/thanks?t=Cobblestone01_MR_2K.zip&r=2&u=Cobblestone01", "(?i:\\.zip|download|b2|backblaze|cdn\\.)");
+        }
+
         /// <summary>Every set in the library resolves (only checks the first request of each).</summary>
         [Test]
         public void EverySetIsReachable()
