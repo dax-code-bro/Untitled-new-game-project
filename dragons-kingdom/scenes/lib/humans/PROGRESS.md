@@ -914,3 +914,47 @@ NEXT (perf, in order):
 3. Note for the director: 1C-16's camera is in FRONT of Abby looking back, so the "near side" thumb is
    behind the bar from the lens; a thumb that reads in this shot needs the thumbWrap path plus a camera a
    little higher, or a second insert from over her shoulder.
+
+## LOOK round 2h (2026-11-04, short session) - coat cuff weights, rider sleeves ("boards"), crowd irises
+
+FIXED (runtime, loader.js rebindWorn -> garments; no rebuild, API unchanged, nothing moves at rest):
+1. Garment hand weights: every finger* / metacarpal* weight of a `cloth` mesh (not gloves/gauntlets/mitts)
+   goes to lowerarm02 of the same side (twist bone: 0.6 of the pronation, not the wrist bend).
+   Probe (CPU-skinned coat, rider grip @0.7, BAR_GRIP.thumbWrap 1 vs 0): abby_ride coat max move 19.4 cm
+   -> 0.00 cm; abby_ride_injured 10.0 -> 0.00; remi_ride 0.00 (unchanged); shirts / trousers 0.00.
+2. Cause of the "stiff flat boards" in 1C-16 (abby_ride): NOT the cloth bake or normals - garments.py
+   `transfer` skins garments from the k nearest body vertices in the DRAPE pose, and the seated builds'
+   hands rest on the lap, so the coat SKIRT round the hands took forearm / wrist / hand weights (~90
+   triangles per side joined forearm-weighted skirt vertices to thigh-weighted ones, 13-39 cm from the
+   forearm; every *_ride build has them: abby_ride, abby_ride_injured, remi_ride, fall_ride doublet,
+   scout_ride; standing builds have none). The grip lifted the hands to the bar and those skirt patches
+   went with them: big flat stretched panels with smeared weave from the lap to the cuffs.
+   loader.js `lapOffSleeve()`: garment vertices OUTSIDE the forearm sleeve tube (elbow -> wrist line,
+   radius 1.4 x p75 of the sleeve's forearm-weighted vertices, max 8 cm; upper-arm-weighted elbow vertices
+   kept) lose their forearm / wrist / hand weights (renormalised, or - mostly-forearm vertices - the mean
+   of their clean mesh neighbours, ring by ring). abby_ride coat: 578 vertices fixed; edges stretched
+   > 1.5x under the grip 558 -> 42 vertices, max stretch 48.9x -> 2.5x; abby_ride_injured 267 -> 25
+   (max 25.6x -> 7.7x); remi_ride 216 -> 137 (max 5.8x unchanged, see NEXT 1); abby (standing) 7 vertices.
+3. characters.py crowd(): brown / deep skin tones get brown irises (brownlight + brown tint, or brown +
+   darkbrown tint; there is no darkbrown_eye.png). Takes effect on the next crowd rebuild (crowd05 was
+   blue, crowd14 green): `node pc/build-caches.mjs --only humans --humans crowd05,crowd14 --force`.
+Checked: selftest-perf all passed (rider grip unchanged); npm test 48 pass / 0 fail / 1 skipped.
+Images (scratch eng1/look9/): before/1C-16_036.png, after/1C-16_036.png (director still 1C-16@0.5 draft),
+1C-16_sleeves_before_after.png (left before, right after). Probe scripts: probe.mjs (thumbWrap move,
+stretch), bridge.mjs (forearm<->body bridge triangles in the cache), wts.mjs (cuff weights).
+RESULT at 1C-16 draft: the flat boards are gone - the sleeves read as soft wool tubes with folds and a
+cuff, the skirt lies on the lap, the weave is no longer smeared.
+
+FOR PERFORMANCE: the cuffs no longer follow the thumb - BAR_GRIP.thumbWrap can be set to 1 (probe: coat
+max move thumbWrap 1 vs 0 = 0.00 cm on abby_ride, abby_ride_injured, remi_ride).
+
+NEXT (look, in order):
+1. remi_ride: the opposite case remains - the LEFT forearm sleeve's UNDERSIDE took thigh / pelvis weights
+   (83 of 313 cuff-region vertices > 10 % non-arm weight); give tube vertices facing away from the forearm
+   axis (normal . radial > 0) their non-arm weight as lowerarm01/02 by t (or fix garments.py transfer for
+   seated poses: restrict sleeve vertices to arm bones, skirt vertices to non-arm bones, then rebuild riders).
+2. The sleeves end ~5 cm above the wrist in 1C-16 (the grip IK moved the wrists 4.9 cm from the drape): a
+   longer sleeve_frac for the ride builds, or a cuff that slides (lowerarm02 -> wrist blend at the hem).
+3. Right cuff shows a small light-green ragged fringe (inner side / backface of the hem) and the coat's split
+   hem at lower right reads jagged at draft; check cloth.js back-face colour and the hem's solidify.
+4. Older list (2g NEXT 2-5).

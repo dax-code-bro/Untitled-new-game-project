@@ -606,11 +606,16 @@ def crowd():
         pp = {'weight': 'L' if i % 2 else 'R', 'contrapposto': 0.5 + 0.12 * (i % 4), 'head_yaw': ((i * 7) % 5 - 2) * 0.1, 'head_pitch': -0.05 * (i % 3)}
         pp.update(x.get('pp', {}))
         eye = ['brown', 'brownlight', 'grey', 'green', 'blue'][i % 5]
+        # brown / deep skin: brown irises (crowd05 had a bright blue iris, crowd14 green); there is no
+        # darkbrown_eye.png - the brown photo with the darker tint
+        tint = None
+        if tone in ('brown', 'deep'):
+            eye, tint = ('brown', IRIS_TINT['darkbrown']) if i % 2 else ('brownlight', IRIS_TINT['brown'])
         out.append(person(cid, f'Festival villager {i + 1}', g, age, tone, muscle=mu_, weight=we, height=he,
                           details={'asym/asym-eye-%d' % (1 + i % 4): 0.3, 'asym/asym-nose-%d' % (1 + i % 3): 0.3,
                                    'nose/nose-scale-horiz': ((i * 37) % 7 - 3) * 0.08, 'head/head-oval': ((i * 13) % 5) * 0.08},
                           hair=h, outfit=out_, pose=pose, pose_params=pp, expression=EX.get(x.get('ex')),
-                          eyes=(eye, IRIS_TINT.get(eye, [0.55, 0.47, 0.4])),
+                          eyes=(eye, tint or IRIS_TINT.get(eye, [0.55, 0.47, 0.4])),
                           brows=['eyebrow001', 'eyebrow003', 'eyebrow005', 'eyebrow008', 'eyebrow010'][i % 5],
                           notes='festival crowd kit (Cling palette: warm cloth, ordinary clothing)'))
     return out
