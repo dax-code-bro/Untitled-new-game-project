@@ -30,6 +30,7 @@ import * as THREE from 'three';
 import { twoBoneIK, rotateWorld, setWorldQuat, wpos, wquat, handShape, orientHand, hash01, noise1, clamp01, smooth, smoother, lerp } from './rig.js';
 import { hashStr } from './loader.js';
 import { isCharTarget, charTargetPoint, rootQuatAt } from './targets.js';
+import { toolProp } from './tools.js';
 
 const UP = new THREE.Vector3(0, 1, 0);
 const _q = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _q3 = new THREE.Quaternion();
@@ -331,7 +332,11 @@ export function createBody(ch, opts = {}) {
      * Whole-body posture: 'crouch' | 'kneel' | 'cower' | 'hunch' | 'crawl' (hands and knees; moving
      * along the walk / trajectory the limbs step in diagonal pairs, planted on the ground - give it a
      * crawling speed, ~0.3-0.6 m/s) | 'brace' (feet staggered, the body leaning into its hands: with the
-     * 'push' gesture) (o: { hold, in, out, ... })
+     * 'push' gesture) | 'lean' (on a long-handled tool: weight on o.stance 'R' | 'L', the other foot
+     * forward, the free hip down, ~12 deg forward onto both hands stacked on the tool's top, head up,
+     * a slow breath in the lean; o.tool = GESTURES.tool options - { prop: 'hoe' | 'spade' | 'rake' |
+     * 'staff' (a tools.js stand-in hung on the root) | object, length, ahead, tilt, base, lower } -
+     * or false for the body alone) (o: { hold, in, out, ... })
      */
     posture(name, t0, o = {}) { S.postures.push({ name, t0, o }); return body; },
     /** A shove / blast knocks the body dir [x, z] (world) by dist metres: the feet step to catch it. */
@@ -808,6 +813,68 @@ export const GESTURES = {
     const p = F.sh[sd].clone().addScaledVector(F.fwd, 0.26 + 0.06 * a).addScaledVector(F.left, sg * (0.1 + 0.06 * a)).add(new THREE.Vector3(0, -0.34 + 0.07 * a, 0));
     return { [sd]: { hand: p, palm: new THREE.Vector3(0, 1, 0).addScaledVector(F.left, -sg * 0.6).normalize(), shape: 'relaxed', pole: F.sh[sd].clone().add(new THREE.Vector3(0, -0.5, 0)).addScaledVector(F.left, sg * 0.3).addScaledVector(F.fwd, -0.2) } };
   },
+  /**
+   * both hands stacked on the top of a long-handled tool planted in front (the 'lean' posture uses it;
+   * on its own in director shots: act 'gesture' { name: 'tool' }). The shaft stands on the ground
+   * o.ahead (0.6 m x height/1.75) in front of the body's root, a little to the stance side, tipped
+   * o.tilt (12 deg) back toward the body, o.length (1.2 m x height/1.75) long. The LOWER hand (o.lower,
+   * default the stance side) closes round the shaft just under its end, knuckles forward, thumb up;
+   * the other hand lies over it palm down, fingers across its knuckles. o.base: the foot of the shaft
+   * (world / fn / { object }) instead. o.object (a THREE.Object3D, local +y up the shaft, origin at the
+   * ground: tools.js toolProp) or o.prop ('hoe' | 'spade' | 'rake' | 'staff': a stand-in made once and
+   * hung on the character's root) is placed along the shaft. o.stance 'R' | 'L' (the leg it stands on).
+   */
+  tool(F, o) {
+    const ch = F.ch, R = F.rig, s = R.height / 1.75;
+    const st = o.stance === 'L' ? 'L' : 'R', ss = st === 'L' ? 1 : -1;            // +left toward the stance side
+    const lo = o.lower === 'L' || o.lower === 'R' ? o.lower : st, hi = lo === 'L' ? 'R' : 'L';
+    ch.root.updateWorldMatrix(true, false);
+    const root = new THREE.Vector3().setFromMatrixPosition(ch.root.matrixWorld);
+    const base = pointOf(o.base, F.t) || root.clone().addScaledVector(F.fwd, (o.ahead ?? 0.6) * s).addScaledVector(F.left, ss * 0.05 * s);
+    const L = o.length ?? (o.object?.userData?.length ?? 1.2 * s);
+    const tilt = ((o.tilt ?? 12) * Math.PI) / 180;
+    const dir = F.up.clone().multiplyScalar(Math.cos(tilt)).addScaledVector(F.fwd, -Math.sin(tilt)).normalize();
+    const top = base.clone().addScaledVector(dir, L);
+    // the shaft's own frame: y up it, z its front (the body's forward, square to it), x = y x z
+    const zf = F.fwd.clone().addScaledVector(dir, -F.fwd.dot(dir)).normalize();
+    const xs = new THREE.Vector3().crossVectors(dir, zf);
+    let prop = o.object || null;
+    if (!prop && o.prop) {
+      ch._tools ||= {};
+      prop = ch._tools[o.prop];
+      if (!prop) { prop = ch._tools[o.prop] = toolProp(o.prop, { length: L }); ch.root.add(prop); }
+    }
+    if (prop) {
+      const Mw = new THREE.Matrix4().makeBasis(xs, dir, zf).setPosition(base);
+      if (prop.parent) { prop.parent.updateWorldMatrix(true, false); Mw.premultiply(new THREE.Matrix4().copy(prop.parent.matrixWorld).invert()); }
+      Mw.decompose(prop.position, prop.quaternion, prop.scale);
+      prop.updateMatrixWorld(true);
+    }
+    const rr = o.radius ?? 0.017;
+    const out = {};
+    // lower hand: a handshake grip round the shaft, the fist's top level with the shaft's end
+    {
+      const sg = lo === 'L' ? 1 : -1, pl = R[`palmLen${lo}`] || 0.09;
+      const at = top.clone().addScaledVector(dir, -0.045 * s);
+      const palm = F.left.clone().multiplyScalar(-sg); palm.addScaledVector(dir, -palm.dot(dir)).normalize();   // toward the shaft
+      const fingers = zf.clone().addScaledVector(palm, 0.15).normalize();
+      const hand = at.clone().addScaledVector(palm, -(rr + 0.14 * pl)).addScaledVector(fingers, -0.42 * pl);
+      out[lo] = { hand, palm, fingers, shape: 'grip', pole: F.sh[lo].clone().addScaledVector(F.left, sg * 0.45).addScaledVector(F.up, -0.35).addScaledVector(F.fwd, -0.25) };
+    }
+    // upper hand: over the shaft's end and the lower fist, palm down, fingers across toward the lower hand's side
+    {
+      const sg = hi === 'L' ? 1 : -1, pl = R[`palmLen${hi}`] || 0.09;
+      const fingers = F.left.clone().multiplyScalar(-sg * 0.75).addScaledVector(zf, 0.6).normalize();
+      const palm = dir.clone().negate();
+      // (the palm's centre a little back toward its own side: the knuckles over the shaft, the fingers
+      // curled down over the back of the lower fist - not straight out past it)
+      const cen = top.clone().addScaledVector(dir, 0.012 + 0.14 * pl).addScaledVector(fingers, -0.2 * pl);
+      const hand = cen.addScaledVector(fingers, -0.45 * pl);
+      out[hi] = { hand, palm, fingers, shape: { curl: [0.3, 0.75, 0.8, 0.85, 0.9], spread: -0.04, thumbIn: 0.3 }, pole: F.sh[hi].clone().addScaledVector(F.left, sg * 0.45).addScaledVector(F.up, -0.3).addScaledVector(F.fwd, -0.25) };
+    }
+    out.tool = { base, top, dir, prop };
+    return out;
+  },
 };
 
 function envelopeW(dt, o) {
@@ -914,8 +981,14 @@ function applyBody(S, t, o) {
   const stepping = !o.carried && C.phi[Math.min(C.traj.n - 1, i0 + 1)] !== C.phi[Math.max(0, i0 - 1)];
   let amp = Math.max(gw, stepping ? 0.35 : 0);
   // posture weights
-  const post = { crouch: 0, kneel: 0, cower: 0, hunch: 0, crawl: 0, brace: 0 };
-  for (const p of S.postures) { const w = envelopeW(t - p.t0, { in: 0.7, out: 0.8, hold: Infinity, ...p.o }); if (w > post[p.name]) post[p.name] = w; }
+  const post = { crouch: 0, kneel: 0, cower: 0, hunch: 0, crawl: 0, brace: 0, lean: 0 };
+  let leanO = null;
+  for (const p of S.postures) {
+    const w = envelopeW(t - p.t0, { in: 0.7, out: 0.8, hold: Infinity, ...p.o });
+    if (w > post[p.name]) { post[p.name] = w; if (p.name === 'lean') leanO = p.o; }
+  }
+  // lean (on a tool): weight on the stance leg (o.stance, 'R'), the other foot forward and out
+  const leanK = smooth(post.lean), leanSg = leanO?.stance === 'L' ? 1 : -1;     // +left toward the stance side
   // crawling: no walking gait of its own (the limbs step in crawlLimbs)
   if (post.crawl > 0) { gw *= 1 - post.crawl; amp *= 1 - post.crawl; }
   const fall = fallState(S, t);
@@ -950,6 +1023,11 @@ function applyBody(S, t, o) {
       if (sd === 'R') { F.pos.addScaledVector(fwd, -0.36 * rig.height / 1.75 * k).addScaledVector(left, -0.04 * k); F.pitch = lerp(F.pitch, -0.45, k); }
       else F.pos.addScaledVector(fwd, 0.1 * k);
     }
+    if (leanK > 0 && (sd === 'L' ? 1 : -1) !== leanSg) {
+      // the free leg: foot a little forward and out, knee easy (the hip drops on that side)
+      F.pos.addScaledVector(fwd, 0.11 * rig.height / 1.75 * leanK).addScaledVector(left, -leanSg * 0.035 * leanK);
+      F.yaw += -leanSg * 0.12 * leanK;
+    }
     if (post.kneel > 0) {
       const k = post.kneel;
       if (sd === 'L') { F.pos.addScaledVector(fwd, 0.3 * smooth(k * 1.6)); }
@@ -971,21 +1049,22 @@ function applyBody(S, t, o) {
   bob = bob * gw - g.drop * gw;
   const lat = g.sway * Math.cos(ph2) * gw;
   // standing weight shift: the pelvis drifts over one foot every few seconds
-  const ws = (S.opts.weightShift ?? 1) * (1 - gw) * (1 - post.kneel) * (1 - fall.w);
+  const ws = (S.opts.weightShift ?? 1) * (1 - gw) * (1 - post.kneel) * (1 - fall.w) * (1 - 0.75 * leanK);
   const shiftU = noise1(seed + 1, t * 0.11) * 0.8 + noise1(seed + 2, t * 0.27) * 0.2;
   const latStand = 0.025 * shiftU * ws;
   const fallBuckle = fall.w > 0 ? smooth(fall.dt / fall.f.dur / 0.3) * (1 - 0.7 * clamp01((fall.dt / fall.f.dur - 0.18) / 0.82)) * (fall.f.o?.thrown ? 0.2 : 1) : 0;
   const pelvisDrop = fallBuckle * 0.24 + post.crouch * rig.legLen * 0.38 + post.cower * rig.legLen * 0.5 + post.kneel * (rig.pelvis.y - (0.06 + rig.thigh * 0.95 + 0.0)) + post.hunch * 0.03 + Math.abs(shiftU) * 0.004 * ws
-    + smooth(post.crawl) * (rig.pelvis.y - (0.11 * rig.height / 1.75 + rig.thigh * 0.93)) + post.brace * 0.05;
-  const pelvisBack = post.crouch * 0.12 + post.cower * 0.16 - post.kneel * 0.02 - post.brace * 0.06;
+    + smooth(post.crawl) * (rig.pelvis.y - (0.11 * rig.height / 1.75 + rig.thigh * 0.93)) + post.brace * 0.05 + leanK * 0.012;
+  const pelvisBack = post.crouch * 0.12 + post.cower * 0.16 - post.kneel * 0.02 - post.brace * 0.06 + leanK * 0.02;
   if (rootB) {
     const d0 = ch.drape.p[ch.index.root];
-    rootB.position.set(d0.x + lat + latStand, d0.y + bob - pelvisDrop, d0.z - pelvisBack);
+    // (lean: the pelvis over the stance foot)
+    rootB.position.set(d0.x + lat + latStand + leanSg * 0.04 * rig.height / 1.75 * leanK, d0.y + bob - pelvisDrop, d0.z - pelvisBack);
     const yawP = -g.yawA * Math.cos(2 * Math.PI * phiT) * gw;
-    const rollP = g.rollA * Math.cos(ph2) * gw + 0.035 * shiftU * ws;
+    const rollP = g.rollA * Math.cos(ph2) * gw + 0.035 * shiftU * ws + leanSg * 0.07 * leanK;      // (lean: the free hip drops)
     _q.setFromAxisAngle(_v.set(0, 1, 0), yawP);
     _q2.setFromAxisAngle(_v.set(0, 0, 1), rollP);
-    _q3.setFromAxisAngle(_v.set(1, 0, 0), 0.06 * gw + post.crouch * 0.25 + post.cower * 0.35 + post.kneel * 0.05 + smooth(post.crawl) * 0.66 + post.brace * 0.12);
+    _q3.setFromAxisAngle(_v.set(1, 0, 0), 0.06 * gw + post.crouch * 0.25 + post.cower * 0.35 + post.kneel * 0.05 + smooth(post.crawl) * 0.66 + post.brace * 0.12 + leanK * 0.05);
     rootB.quaternion.copy(ch.drape.q[ch.index.root]).premultiply(_q3).premultiply(_q2).premultiply(_q);
     ch.root.updateMatrixWorld(true);
     if (!o.carried) reachDrop(S, feet, g);
@@ -994,9 +1073,10 @@ function applyBody(S, t, o) {
   solveLegs(S, feet);
   ch.root.updateMatrixWorld(true);
   // 5. spine: lean with speed, counter-rotation, postures
-  const spineBend = g.lean * gw + post.crouch * 0.35 + post.cower * 0.75 + post.hunch * 0.28 + post.kneel * 0.08 + smooth(post.crawl) * 0.82 + post.brace * 0.22;
+  const spineBend = g.lean * gw + post.crouch * 0.35 + post.cower * 0.75 + post.hunch * 0.28 + post.kneel * 0.08 + smooth(post.crawl) * 0.82 + post.brace * 0.22
+    + leanK * (0.12 + 0.012 * Math.sin(2 * Math.PI * 0.21 * t + 1.3));      // (lean: with the pelvis tilt ~10 deg onto the hands, breathing)
   const counter = g.yawA * 0.9 * Math.cos(2 * Math.PI * phiT) * gw;
-  const latBend = -0.6 * g.rollA * Math.cos(ph2) * gw - 0.02 * shiftU * ws;
+  const latBend = -0.6 * g.rollA * Math.cos(ph2) * gw - 0.02 * shiftU * ws - leanSg * 0.05 * leanK;      // (lean: the chest back over the stance hip)
   for (const [n, w] of [['spine04', 0.25], ['spine03', 0.3], ['spine02', 0.3], ['spine01', 0.15]]) {
     const b = ch.bone(n); if (!b) continue;
     if (spineBend) rotateWorld(b, _q.setFromAxisAngle(left, spineBend * w));
@@ -1005,7 +1085,7 @@ function applyBody(S, t, o) {
   }
   // head down a little when cowering / hunched
   // (crawling: the neck extends - the face looks ahead, not at the ground under the chest)
-  const headDown = post.cower * 0.45 + post.hunch * 0.15 - smooth(post.crawl) * 0.85;
+  const headDown = post.cower * 0.45 + post.hunch * 0.15 - smooth(post.crawl) * 0.85 - leanK * 0.16;     // (lean: the head comes up)
   if (headDown) for (const [n, w] of [['neck01', 0.5], ['head', 0.5]]) { const b = ch.bone(n); if (b) rotateWorld(b, _q.setFromAxisAngle(left, headDown * w)); }
   ch.root.updateMatrixWorld(true);
   // 6. arms: base (hang + swing while moving), then gestures
@@ -1052,6 +1132,11 @@ function applyBody(S, t, o) {
       const g2 = { hand: wrist, palm: new THREE.Vector3(0, -1, 0), fingers, shape: 'open', pole: F.sh[sd].clone().addScaledVector(fwd, -0.4).addScaledVector(left, sg * 0.35).add(new THREE.Vector3(0, 0.1, 0)), w: smooth(post.crawl) };
       if (!gest[sd] || gest[sd].w < g2.w) gest[sd] = g2;
     }
+  }
+  if (post.lean > 0.01 && leanO?.tool !== false) {
+    // lean: both hands stacked on the top of the tool (o.tool: GESTURES.tool options, stance from the posture)
+    F.dt = t; const res = GESTURES.tool(F, { stance: leanO?.stance, ...(leanO?.tool || {}) });
+    for (const sd of ['L', 'R']) if (!gest[sd] || gest[sd].w < post.lean) gest[sd] = { ...res[sd], w: post.lean };
   }
   if (post.cower > 0.01) {
     F.dt = t; const res = GESTURES.protectHead(F, {});

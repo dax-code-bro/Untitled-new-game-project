@@ -20,8 +20,9 @@ import { bodyRig } from './motion.js';
  * fingertip's end from the axis = bar radius + tipPad x palm length (the last joint closes until the
  * tip lies on the bar's near underside instead of hanging below it); thumbWrap 0..1: thumb round the
  * near (rider's) side. dip (optional, number or per finger) overrides the fitted last-joint curl.
+ * jointPad: no PIP / DIP joint nearer the axis than bar radius + jointPad x palm length.
  */
-export const BAR_GRIP = { curl: [0.62, 1.0, 1.08, 1.12, 1.16], together: 0.9, thumbIn: 0.65, tilt: 0.25, thumbWrap: 1, wrap: 0.08, tipPad: 0.05 };
+export const BAR_GRIP = { curl: [0.62, 1.0, 1.08, 1.12, 1.16], together: 0.9, thumbIn: 0.65, tilt: 0.25, thumbWrap: 1, wrap: 0.08, tipPad: 0.05, jointPad: 0.06 };
 /** Rider build ids whose LEFT arm is the injured one (held in, never on the bar). */
 export const INJURED_LEFT = new Set(['abby_ride_injured']);
 
@@ -127,6 +128,16 @@ export function riderGrip(rider, opts = {}) {
       });
       poseHand(wrist);
     }
+    // no middle / last joint inside the bar: the little finger's knuckle sits low in the palm's arch (on the
+    // bar's front-top), so its PIP landed ~0.3 cm inside the leather (s10: 1.4 cm from the axis, bar r 1.7) -
+    // its proximal phalanx swings out until the PIP lies Rjoint from the axis; a finger moved so then closes
+    // its middle phalanx until the DIP is back on the wrap circle (Rt), and the tip tucks as before. The
+    // DIP of every finger is kept out of the bar the same way (no-op where the joints already clear it).
+    const Rjoint = bar.radius + (shape.jointPad ?? 0.06) * pl;
+    if (amount > 0.5) for (const f of [2, 3, 4, 5]) {
+      const moved = clearJoint(ch, f, 1, sd, C, axis, fwd, up, Rjoint, Infinity, amount);
+      clearJoint(ch, f, 2, sd, C, axis, fwd, up, Rjoint, moved ? Rjoint + 0.001 : Infinity, amount);
+    }
     // the last joints close until each fingertip's end lies on the bar's near underside (radius Rtip),
     // further round the curl than its DIP - not hanging below the bar as a point (skipped with a fixed dip)
     if (shape.dip == null && amount > 0.5) for (const f of [2, 3, 4, 5]) tuckTip(ch, f, sd, C, axis, fwd, up, Rtip, amount);
@@ -171,6 +182,33 @@ function tuckTip(ch, f, sd, C, axis, fwd, up, Rtip, amount) {
   const s1 = [a * ux + hh * uy, a * uy - hh * ux];
   const target = C.clone().addScaledVector(fwd, s1[0]).addScaledVector(up, s1[1]).addScaledVector(axis, e[2]);
   aimBone(b3, tip, target.sub(h), amount);
+}
+
+/**
+ * Swing finger f's phalanx k (1 proximal, 2 middle) about its own joint so the joint at its end (the
+ * head of phalanx k + 1) lies between Rmin and Rmax from the bar's axis: of the two points on that circle
+ * at the phalanx's length, the one nearer where the joint is now (the least change). Children ride
+ * along. -> true when it moved the joint.
+ */
+function clearJoint(ch, f, k, sd, C, axis, fwd, up, Rmin, Rmax, amount) {
+  const b = ch.bone(`finger${f}-${k}.${sd}`), c = ch.bone(`finger${f}-${k + 1}.${sd}`);
+  if (!b || !c) return;
+  const h = wpos(b, new THREE.Vector3()), e = wpos(c, new THREE.Vector3());
+  const rel = (p) => { _t.copy(p).sub(C); return [_t.dot(fwd), _t.dot(up), _t.dot(axis)]; };
+  const d = rel(h), q = rel(e);
+  const r0 = Math.hypot(q[0], q[1]);
+  if (r0 >= Rmin && r0 <= Rmax) return false;
+  const Rw = r0 < Rmin ? Rmin : Rmax;
+  // in the bar's cross-section: the joint's circle round the phalanx's head (its length, less the axial part)
+  const l = Math.sqrt(Math.max(0, h.distanceToSquared(e) - (q[2] - d[2]) ** 2)), D = Math.hypot(d[0], d[1]);
+  if (l < 1e-4 || D < 1e-4 || Math.abs(D - Rw) > l) return false;
+  const a = (D * D + Rw * Rw - l * l) / (2 * D), hh = Math.sqrt(Math.max(0, Rw * Rw - a * a));
+  const ux = d[0] / D, uy = d[1] / D;
+  const s1 = [a * ux + hh * uy, a * uy - hh * ux], s2 = [a * ux - hh * uy, a * uy + hh * ux];
+  const pick = Math.hypot(s1[0] - q[0], s1[1] - q[1]) <= Math.hypot(s2[0] - q[0], s2[1] - q[1]) ? s1 : s2;
+  const target = C.clone().addScaledVector(fwd, pick[0]).addScaledVector(up, pick[1]).addScaledVector(axis, q[2]);
+  aimBone(b, e, target.sub(h), amount);
+  return true;
 }
 
 /** Centre of the circle through three 2-D points (null when they are in a line). */

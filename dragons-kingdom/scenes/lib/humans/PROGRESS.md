@@ -1043,3 +1043,58 @@ NEXT (look, in order):
    lap up toward the right hand (new sim drape) - check at final quality before acting.
 3. Fingertip pad bulge (postfix.py build-time tip fattening) - not started (budget).
 4. 2h NEXT 3 (right cuff light-green fringe / jagged split hem) and older list.
+
+## perf s11 (lean on a tool for X4-06, little-finger PIP clear of the grab bar) - short session
+Done (motion.js, tools.js (new), director.js, ridergrip.js, selftest-perf.mjs, lookdev humans-anim-tool.js):
+1. POSTURE 'lean' (motion.js, pure in t): weight on o.stance ('R' default): pelvis 4 cm (x h/1.75) over the
+   stance foot, free hip down 0.07 rad, chest back over the stance hip; the free foot 11 cm forward and 3.5 cm
+   out, toe a little out; pelvis 2 cm back and tipped 0.05 rad; spine ~0.12 rad forward with a slow breath
+   (0.21 Hz, +-0.012 rad) on top of the idle; head up 0.16 rad; the standing weight-shift noise x0.25.
+   Arms: new GESTURES.tool - the shaft stands o.ahead 0.6 m (x h/1.75) in front of the root, 5 cm to the
+   stance side, tipped o.tilt 12 deg back toward the body, o.length 1.2 m (x h/1.75); the LOWER hand (o.lower,
+   default the stance side) in a handshake grip round the shaft just under its end, knuckles forward; the
+   other hand over the end and the lower fist, palm down, fingers curled down over its knuckles.
+   o.tool.prop 'hoe' | 'spade' | 'rake' | 'staff' -> a procedural STAND-IN (tools.js toolProp: ash shaft,
+   iron blade; made once, hung on ch.root, placed along the shaft every frame) or o.tool.object (any
+   Object3D, local +y up the shaft, origin on the ground). o.tool false = the body alone.
+   Performer / body:  P.posture('lean', t0, { stance: 'R', tool: { prop: 'hoe' }, hold, in, out })
+   Director (blocking acts; the director's own 'lean' posture gives the bend, the overlay the hands + prop):
+     acts: [[0, 'lean', { to: 0.6, dur: 0.01 }], [0, 'gesture', { name: 'tool', prop: 'hoe', stance: 'R' }],
+            [0.5, 'look', { at: 'leaf.chest', amount: 0.7 }]]
+   (humans/director.js: the 'gesture' overlay with name 'tool' runs GESTURES.tool; other names stay 'explain'.)
+   Measured (crowd05, t 4): lower palm 3.2 cm from the shaft axis (r 1.7), 3.6-3.9 cm under its end; upper
+   palm 2.4-2.6 cm over the end, 0.5 cm off the axis; pelvis 3.9 cm toward the stance foot; shaft 26 cm from
+   spine02 (chestFront 15.6). New selftest 'lean on a tool' (crowd03) checks these + purity.
+   Images (scratch eng1/perf11/): tool_v0/v2/v4.png (first pass: spine 0.2 rad - read as an old woman's
+   stoop; flat upper fingers sticking out past the shaft), tool2_v1/v2/v4.png (after: three-quarter, side,
+   hands close-up). RESULT: reads as a farmer resting on a hoe - upright, slight lean, both hands stacked on
+   the top, the lower fist round the shaft, the upper hand cupped over it. The stance is hidden by the
+   kirtle (crowd05); the hoe blade is out of frame in these views (its shadow shows it).
+2. ridergrip.js clearJoint(): the little finger's knuckle sits on the bar's front-top (1.76 cm from the
+   axis), so its PIP was 1.4 cm from the axis (bar r 1.7: inside). Now every finger's proximal phalanx
+   swings out until its PIP is >= bar r + BAR_GRIP.jointPad (0.06) x palm from the axis; a finger moved so
+   closes its middle phalanx until the DIP is back on that radius; DIPs of all fingers kept out the same way;
+   tuckTip as before. Pinky PIP 1.4 -> 2.2 cm (abby_ride, _injured.R), 2.4 (remi_ride); other fingers
+   unchanged. Trade-off: the pinky's tip now ends under the bar's FRONT half (fwd +0.8 / +0.7 / +0.2 cm,
+   2.0-2.2 cm below the axis) instead of wrapping to the rider's side through the leather - geometry: with
+   its knuckle that far forward a clear 3-joint pinky cannot reach further round. selftest: index/middle/ring
+   tips < 0.5 cm forward (now -1.6 / -2.1 / -1.9), the little finger < 1.2; NEW limit: no PIP/DIP centre
+   within bar r + 0.4 cm of the axis (min now 2.2 cm).
+3. creatures s8 (injured LEVEL bar in the selftest): already done in perf s10 (selftest builds the bar from
+   the right palm mirrored across the root bone in the rider root's frame, exactly as rider.js addGrip; the
+   free right hand is held to the same limits as the two-handed builds). Nothing to add; values above.
+Checked: selftest-perf all passed; npm test 48 pass / 0 fail / 1 skipped.
+Probe: scratch eng1/perf11/_probe_lean.mjs (copy to humans/cache/, `node scenes/lib/humans/cache/_probe_lean.mjs
+crowd05 4`; STANCE=L).
+
+NEXT (perf, in order):
+1. 1C-16 draft still (director, @0.5) to look at the pinky change: the little fingertip now under the bar's
+   front half - if it reads as a pink point under the front edge, lift the hand's ulnar side instead
+   (orientHand roll about the fingers so the pinky knuckle moves back over the bar; then jointPad can stay).
+2. X4-06 in the director: the blocking's 'lean' only bends the spine (actions.js bow); the weight-on-one-leg
+   pelvis comes only through createBody / perform.js. REQUEST director: for X4-06 either pose the farmer
+   through the performer (legs: 'planted' + the 'lean' posture) or accept the bend-only body (MS 50 mm, the
+   kirtle hides the legs). The spec's act [0, 'stand', { prop: 'hoe', lean: 0.6 }] must become the acts above.
+3. REQUEST props: a real hoe (worn ash shaft ~1.25 m, forged blade on a gooseneck) for the props library;
+   tools.js toolProp is a stand-in (local frame documented there: origin on the ground, +y up the shaft).
+4. remi_ride thumb tip 3.9 cm (limit 4) - s10 NEXT 3 still open.

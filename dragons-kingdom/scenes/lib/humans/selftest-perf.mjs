@@ -559,8 +559,13 @@ else {
         // end sticks out of the bar's surface (cm), the most forward of the bar's axis, the lowest below it
         const ends = [2, 3, 4, 5].map((f) => fingerTip(ch, f, sd, ch.bone(`wrist.${sd}`)));
         r.endOut = +Math.max(...ends.map((e) => off(e).length() * 100 - 1.7)).toFixed(1);
-        r.endFwd = +Math.max(...ends.map((e) => e.clone().sub(C).dot(fwdB) * 100)).toFixed(1);
+        r.endFwd = +Math.max(...ends.slice(0, 3).map((e) => e.clone().sub(C).dot(fwdB) * 100)).toFixed(1);
+        r.end5Fwd = +(ends[3].clone().sub(C).dot(fwdB) * 100).toFixed(1);
         r.endY = +Math.min(...ends.map((e) => (e.y - C.y) * 100)).toFixed(1);
+        // the fingers' middle and last joints (PIP / DIP: the heads of finger*-2 / -3) clear of the bar: the
+        // nearest one's distance from the axis (cm; the bar's radius is 1.7, a finger ~1.1-1.4 cm thick)
+        r.jointMin = +Math.min(...[2, 3, 4, 5].flatMap((f) => [2, 3].map((k) => off(W(`finger${f}-${k}.${sd}`)).length() * 100))).toFixed(1);
+        r.pip5 = +(off(W(`finger5-2.${sd}`)).length() * 100).toFixed(1);
         const tt = fingerTip(ch, 1, sd, ch.bone(`wrist.${sd}`));
         r.thumbTip = +(off(tt).length() * 100).toFixed(1); r.thumbTipFwd = +(tt.clone().sub(C).dot(fwdB) * 100).toFixed(1);
         rows.push(r);
@@ -571,13 +576,40 @@ else {
         // 4 cm of its axis with thumbWrap, 6 cm without). Same limits for every build (the
         // injured build's bar is level, so its free right hand grips like the others). Fingertip ends
         // tucked: within 1.2 cm of the bar's surface, none more than 0.5 cm in front of its axis (round the
-        // underside toward the rider, not hanging below the front edge as points), none 2.8 cm below it
+        // underside toward the rider, not hanging below the front edge as points; the little finger 1.2 cm:
+        // its knuckle sits on the bar's front-top, so with its joints clear of the bar its tip ends under the
+        // bar's front half - perf s11), none 2.8 cm below it. No PIP / DIP joint centre within bar r + 0.4 cm
+        // of the axis (s10: the little finger's PIP was 1.4 cm from it - 0.3 cm inside the leather)
         if (!(r.palmUp < -0.3 && r.knuckToBar < 4 && r.tipToBar < 3.5 && r.tipY < -1 && r.thumbFwd < -1 && r.thumbToBar < (thumbWrap ? 4 : 6))) good = false;
         if (thumbWrap && !(r.thumbTip < 4 && r.thumbTipFwd < 0)) good = false;
-        if (BAR_GRIP.dip == null && !(r.endOut < 1.2 && r.endFwd < 0.5 && r.endY > -2.8)) good = false;
+        if (BAR_GRIP.dip == null && !(r.endOut < 1.2 && r.endFwd < 0.5 && r.end5Fwd < 1.2 && r.endY > -2.8)) good = false;
+        if (!(r.jointMin > 1.7 + 0.4)) good = false;
       }
     }
-    if (rows.length) ok(good, `rider grip: hands closed round the grab bar (${rows.map((r) => `${r.id}.${r.sd} palm.y ${r.palmUp} knuckle ${r.knuckToBar} cm tip ${r.tipToBar} cm tipY ${r.tipY} thumb ${r.thumbToBar} cm (fwd ${r.thumbFwd}) thumb tip ${r.thumbTip} cm (fwd ${r.thumbTipFwd}) fingertip ends out ${r.endOut} cm fwd ${r.endFwd} low ${r.endY} wrist moved ${r.wristMove} cm`).join('; ')})`);
+    if (rows.length) ok(good, `rider grip: hands closed round the grab bar (${rows.map((r) => `${r.id}.${r.sd} palm.y ${r.palmUp} knuckle ${r.knuckToBar} cm tip ${r.tipToBar} cm tipY ${r.tipY} thumb ${r.thumbToBar} cm (fwd ${r.thumbFwd}) thumb tip ${r.thumbTip} cm (fwd ${r.thumbTipFwd}) fingertip ends out ${r.endOut} cm fwd ${r.endFwd} (little ${r.end5Fwd}) low ${r.endY} PIP/DIP min ${r.jointMin} cm (pinky PIP ${r.pip5}) wrist moved ${r.wristMove} cm`).join('; ')})`);
+  }
+  // 'lean' posture (X4-06 farmer on a hoe): both hands on the tool's top - the lower hand round the shaft
+  // (palm 2-4.5 cm from its axis, within 7 cm under its end), the upper palm 0-5 cm over the end; the
+  // pelvis over the stance (right) foot; the shaft clear of the chest; pure in t
+  {
+    const { createBody } = await import('./motion.js');
+    const ch = load('crowd03');
+    const body = createBody(ch); body.place(0, 0, 0);
+    body.posture('lean', -5, { in: 0.1, hold: 99, stance: 'R', tool: { prop: 'hoe' } });
+    const W = (n) => ch.bone(n).getWorldPosition(new THREE.Vector3());
+    const meas = (t) => {
+      body.apply(t); ch.root.updateMatrixWorld(true);
+      const tool = ch._tools?.hoe;
+      const base = tool.getWorldPosition(new THREE.Vector3()), dir = new THREE.Vector3(0, 1, 0).applyQuaternion(tool.getWorldQuaternion(new THREE.Quaternion()));
+      const top = base.clone().addScaledVector(dir, tool.userData.length);
+      const ax = (p) => { const d = p.clone().sub(base); return d.addScaledVector(dir, -d.dot(dir)).length() * 100; };
+      const palm = (sd) => W(`wrist.${sd}`).lerp(W(`finger3-1.${sd}`), 0.6);
+      return { lo: +ax(palm('R')).toFixed(1), loDy: +((palm('R').y - top.y) * 100).toFixed(1), hiDy: +((palm('L').y - top.y) * 100).toFixed(1), hiAx: +ax(palm('L')).toFixed(1),
+        pelvisX: +(W('root').x * 100).toFixed(1), chest: +ax(W('spine02')).toFixed(1), wr: W('wrist.R') };
+    };
+    const m = meas(4), m2 = meas(6.3), m3 = meas(4);
+    const okLean = m.lo > 2 && m.lo < 4.5 && m.loDy < 0 && m.loDy > -7 && m.hiDy > 0 && m.hiDy < 5 && m.hiAx < 5 && m.pelvisX < -1.5 && m.chest > 18 && m3.wr.distanceTo(m.wr) < 1e-6 && m2.wr.distanceTo(m.wr) < 0.02;
+    ok(okLean, `lean on a tool: lower palm ${m.lo} cm from the shaft, ${m.loDy} cm below its end; upper palm ${m.hiDy} cm over it (${m.hiAx} cm off the axis); pelvis ${m.pelvisX} cm toward the stance foot; shaft ${m.chest} cm from spine02; wrist drift over 2.3 s ${(m2.wr.distanceTo(m.wr) * 100).toFixed(2)} cm`);
   }
   // worn props never follow a hand: no belt / buckle / purse vertex keeps an arm or hand weight
   {

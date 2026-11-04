@@ -66,6 +66,7 @@ export function registerDirectorHooks(opts = {}) {
  *   support    { side, at | grip }             handsTo    { at | to, spread, palm } both hands
  *   raiseHand  { side } a small raised hand (stop / wait)
  *   gesture    { side, dur } a talking hand    shove      { side | 'both', at | to, dur } a push
+ *   gesture    { name: 'tool', prop: 'hoe' | 'spade' | 'rake' | 'staff', stance } both hands on a tool's top
  * Targets given as names ('remi.head', a mark) are resolved by the stage's env.point at t.
  */
 const pt = (env, at, t) => {
@@ -101,7 +102,9 @@ export const OVERLAYS = {
     return p ? ['L', 'R'].map((sd) => ['reach', { ...o, side: sd, at: p, lateral: o.spread ?? 0.09, palm: o.palm || [0, 1, 0], shape: o.shape || 'cup' }]) : [];
   }),
   raiseHand: overlayHook('raiseHand', (o) => sides(o).map((sd) => ['raiseHand', { ...o, side: sd }])),
-  gesture: overlayHook('gesture', (o) => sides(o).map((sd) => ['explain', { beat: o.dur ?? 1.0, ...o, side: sd }])),
+  // (o.name 'tool': both hands stacked on a long-handled tool - motion.js GESTURES.tool { prop: 'hoe', stance,
+  // length, ahead, tilt }; pair it with the 'lean' posture act for the bend)
+  gesture: overlayHook('gesture', (o) => (o.name === 'tool' ? [['tool', { ...o }]] : sides(o).map((sd) => ['explain', { beat: o.dur ?? 1.0, ...o, side: sd }]))),
   shove: overlayHook('shove', (o, t, env) => {
     const at = pt(env, o.at ?? o.to, t);
     return sides(o, 'both').map((sd) => ['shove', { ...o, side: sd, at: at ? (at.isVector3 ? at.clone() : new THREE.Vector3(...at)) : null }]);
