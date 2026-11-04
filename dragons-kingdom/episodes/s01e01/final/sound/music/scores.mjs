@@ -266,5 +266,29 @@ const lightTheme = {
   ],
 };
 
-export const SCORES = { dawn_theme: dawn, title_sting: sting, hatching, riding_grounds: grounds, ready, takeoff, sky_glimpse: skyGlimpse, light_theme: lightTheme };
+// M9 coast (light theme reprise): beat 0 = X4-20 (the dragons leave the harbour and follow the coast, 5 s), 80 bpm
+// so the whole 8-beat theme fits the shot (beat = shot time x 4/3; the closing D lands at beat 6.25 = 4.7 s). M8's
+// 1C-19 statement made lighter and moving: no basses or horn, harp in eighths, the theme once on flute with violins
+// an octave below, harmonised D - D/F# - G - A - D as in M8, the last chord a D add9 left open (the journey goes
+// on; hard cut to Cling at X5-01, the cue is faded over the cut).
+const coast = {
+  tempo_bpm: 80, length_beats: 10,
+  parts: [
+    { name: 'high pad', program: 49, channel: 0, volume: 90, reverb: 92, expression: 0,
+      notes: [[0, 2.25, N.D4, 48], [0, 2.25, N.A4, 44], [2.25, 2, N.Fs4, 48], [2.25, 2, N.A4, 44], [4.25, 1, N.G4, 50],
+        [4.25, 1, N.B4, 46], [5.25, 1, N.E4, 50], [5.25, 1, N.A4, 46], [6.25, 3.5, N.D4, 50], [6.25, 3.5, N.Fs4, 46],
+        [6.25, 3.5, N.A4, 44], [6.25, 3.5, N.E5, 36]],
+      ramps: [[0, 1.5, 11, 0, 82], [7, 9.5, 11, 82, 0]] },
+    { name: 'harp', program: 46, channel: 1, volume: 80, pan: 80, reverb: 90,
+      notes: [...ost(0, 2.25, 0.5, ['D4', 'A4', 'D5', 'A4'], 40), ...ost(2.25, 4.25, 0.5, ['Fs4', 'A4', 'D5', 'A4'], 40),
+        ...ost(4.25, 5.25, 0.5, ['G4', 'B4'], 42), ...ost(5.25, 6.25, 0.5, ['E4', 'A4'], 42),
+        ...arp(6.25, 0.2, ['D3', 'A3', 'D4', 'E4', 'Fs4', 'A4', 'D5', 'E5'], 52, 3)] },
+    { name: 'flute (light theme)', program: 73, channel: 2, volume: 94, pan: 40, reverb: 82,
+      notes: lightFig(0.25, 68, { hold: 1.5 }) },
+    { name: 'violins (light theme)', program: 48, channel: 3, volume: 88, pan: 56, reverb: 85, expression: 64,
+      notes: lightFig(0.25, 58, { shift: -12, hold: 1.5 }), ramps: [[0.25, 2.5, 11, 64, 92], [7, 9.5, 11, 92, 0]] },
+  ],
+};
+
+export const SCORES = { dawn_theme: dawn, title_sting: sting, hatching, riding_grounds: grounds, ready, takeoff, sky_glimpse: skyGlimpse, light_theme: lightTheme, coast };
 

@@ -34,6 +34,14 @@
    "target_lufs": -19.5, "duck_db": 10,
    "end_by": { "shot": "X4-01", "offset_s": 3.0 }, "fade_out_s": 3.5,
    "note": "1C-15 'lighter version of the main theme begins' (pad, harp, theme low on clarinet), 1C-17 Leaf's figure, 1C-18 'theme' (dawn head on soft horn), 1C-19 'lighter theme carries the shot' (whole, on flute + violins, resolves to D); faded early in X4-01 (the harbour, still a slate: re-spot when X4 is specced)."
+  },
+  {
+   "id": "M9 coast",
+   "score": "coast",
+   "sync": { "beat": 0, "shot": "X4-20", "offset_s": 0 },
+   "target_lufs": -21, "duck_db": 10,
+   "end_by": { "shot": "X5-01", "offset_s": 0.6 }, "fade_out_s": 1.0,
+   "note": "X4-20 'Wind; the light theme': the light theme once more, lighter and moving (80 bpm, flute + violins, harp eighths, pad), the dragons following the coast; D add9 on beat 6.25 (4.7 s), faded over the hard cut to Cling (X5-01, cart wheel on stone). Nothing in X4-19 (Remi caught, silence)."
   }
 ]
 }
