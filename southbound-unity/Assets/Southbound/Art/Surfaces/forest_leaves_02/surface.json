@@ -1,0 +1,19 @@
+{
+  "name": "forest_leaves_02",
+  "source": "polyhaven",
+  "tileMeters": 2.6,
+  "size": 512,
+  "maps": [
+    "ao",
+    "color",
+    "height",
+    "normal",
+    "rough"
+  ],
+  "files": {
+    "BaseColor": "forest_leaves_02_BaseColor.jpg",
+    "Normal": "forest_leaves_02_Normal.png",
+    "Mask": "forest_leaves_02_Mask.png",
+    "Height": "forest_leaves_02_Height.png"
+  }
+}

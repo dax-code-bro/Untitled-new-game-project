@@ -1,0 +1,18 @@
+{
+  "name": "Facade012",
+  "source": "ambientcg",
+  "tileMeters": 30,
+  "size": 512,
+  "maps": [
+    "color",
+    "emit",
+    "normal",
+    "rough"
+  ],
+  "files": {
+    "BaseColor": "Facade012_BaseColor.jpg",
+    "Normal": "Facade012_Normal.png",
+    "Mask": "Facade012_Mask.png",
+    "Emission": "Facade012_Emission.jpg"
+  }
+}

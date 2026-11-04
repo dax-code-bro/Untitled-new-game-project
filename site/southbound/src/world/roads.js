@@ -83,19 +83,21 @@ export function createRoads(graph, hm, quality, scene, collision, surf) {
     }
     wear(ctx, w, h);
   }, an);
-  const roadMat = (marks) => {
+  const roadMat = (marks, lanes = 2) => {
     const m = new THREE.MeshStandardMaterial({ map: marks, roughness: 0.9, metalness: 0, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
     if (!real) return m;
     const A = surf.asphalt, sz = A.size.toFixed(2);
     m.onBeforeCompile = (sh) => {
       sh.uniforms.tAsph = { value: A.color }; sh.uniforms.tAsphN = { value: A.normal };
       sh.uniforms.tAsphR = { value: A.rough }; sh.uniforms.tAsphAO = { value: A.ao };
+      sh.uniforms.tRoadC = { value: surf.road ? surf.road.color : A.color }; sh.uniforms.uLanes = { value: lanes };
       sh.uniforms.uWet = worldUniforms.uWet; sh.uniforms.uRain = worldUniforms.uRain; sh.uniforms.uTime = worldUniforms.uTime;
       Object.assign(sh.uniforms, reflUniforms);
       sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vRW;')
         .replace('#include <begin_vertex>', '#include <begin_vertex>\nvRW = (modelMatrix * vec4(transformed, 1.0)).xyz;');
       sh.fragmentShader = sh.fragmentShader.replace('#include <common>', `#include <common>
 varying vec3 vRW; uniform sampler2D tAsph; uniform sampler2D tAsphN; uniform sampler2D tAsphR; uniform sampler2D tAsphAO; float sbPaint;
+uniform sampler2D tRoadC; uniform float uLanes; float sbWear;
 uniform float uWet; uniform float uRain; uniform float uTime; float sbPud; vec3 sbRN = vec3(0.0, 1.0, 0.0);
 // raindrop ripples: expanding rings in a jittered grid, each with its own phase
 vec2 sbRipple(vec2 p){
@@ -120,13 +122,32 @@ float sbVN(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f)
         .replace('#include <map_fragment>', `
           vec2 auv = vRW.xz / ${sz};
           vec3 asph = texture2D(tAsph, auv).rgb * texture2D(tAsphAO, auv).r;
+          sbWear = 0.0;
+          if (uLanes > 0.5) {
+            // repair patches: rectangles of newer, darker asphalt cut into the old, cracked surface
+            vec2 pc = vec2(vMapUv.x * uLanes * 2.0, vMapUv.y * 1.3);
+            vec2 pid = floor(pc); float ph = fract(sin(dot(pid, vec2(91.3, 17.7))) * 4375.85);
+            vec2 pf = fract(pc);
+            float patchM = step(0.84, ph) * step(0.07, pf.x) * step(pf.x, 0.93) * step(0.05, pf.y) * step(pf.y, 0.95);
+            vec3 fresh = texture2D(tRoadC, vRW.xz / 3.2).rgb;
+            asph = mix(asph, fresh * 0.85, patchM);
+            // the seam around a patch: a black line of crack sealer
+            float seam = patchM > 0.5 ? 0.0 : step(0.84, ph) * (1.0 - step(0.012, min(min(abs(pf.x - 0.07), abs(pf.x - 0.93)), min(abs(pf.y - 0.05), abs(pf.y - 0.95)) * 3.0)));
+            asph *= 1.0 - seam * 0.6;
+            // tyre paths worn smooth and pale; oil dripped down the middle of every lane
+            float lane = fract(vMapUv.x * uLanes);
+            float tyre = smoothstep(0.11, 0.0, abs(lane - 0.27)) + smoothstep(0.11, 0.0, abs(lane - 0.73));
+            float oil = smoothstep(0.1, 0.0, abs(lane - 0.5)) * smoothstep(0.42, 0.78, sbVN(vRW.xz * 1.1) * 0.7 + sbVN(vRW.xz * 4.0) * 0.3);
+            asph *= (1.0 + tyre * 0.1) * (1.0 - oil * 0.5);
+            sbWear = tyre * 0.12 + oil * 0.3;
+          }
           vec4 mk = texture2D(map, vMapUv);
           sbPaint = mk.a;
           diffuseColor.rgb *= mix(asph, mk.rgb * (0.75 + 0.25 * asph.g * 2.0), mk.a);
           // rain: darker asphalt, standing water in the low spots
           sbPud = uWet * smoothstep(0.58, 0.68, sbVN(vRW.xz * 0.22) * 0.7 + sbVN(vRW.xz * 0.9) * 0.3 + (1.0 - asph.g) * 0.25);
           diffuseColor.rgb *= 1.0 - uWet * 0.45 - sbPud * 0.25;`)
-        .replace('#include <roughnessmap_fragment>', 'float roughnessFactor = mix(mix(texture2D(tAsphR, auv).g, 0.6, sbPaint), 0.16, uWet * 0.85); roughnessFactor = mix(roughnessFactor, 0.02, sbPud);')
+        .replace('#include <roughnessmap_fragment>', 'float roughnessFactor = mix(mix(texture2D(tAsphR, auv).g - sbWear, 0.6, sbPaint), 0.16, uWet * 0.85); roughnessFactor = mix(roughnessFactor, 0.02, sbPud);')
         .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
           {
             vec3 nt = texture2D(tAsphN, auv).xyz * 2.0 - 1.0;
@@ -154,8 +175,8 @@ float sbVN(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f)
     m.transparent = false;
     return m;
   };
-  const hwMat = roadMat(hwTex), stMat = roadMat(stTex);
-  const ixMat = roadMat(ixTex);
+  const hwMat = roadMat(hwTex, 4), stMat = roadMat(stTex, 2);
+  const ixMat = roadMat(ixTex, 0);
 
   const ribbon = (pts, ys, width, trimStart, trimEnd, lift) => {
     const pos = [], uv = [], idx = [];
@@ -251,26 +272,60 @@ float sbVN(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f)
   }
   const slabMat = new THREE.MeshStandardMaterial({ color: 0x9a968f, roughness: 0.9 });
   if (surf && surf.concrete.real) {
+    const PV = surf.pavers && surf.pavers.real ? surf.pavers : null;
     slabMat.onBeforeCompile = (sh) => {
       sh.uniforms.tCon = { value: surf.concrete.color };
-      sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vSW;')
-        .replace('#include <begin_vertex>', '#include <begin_vertex>\nvSW = (modelMatrix * instanceMatrix * vec4(transformed, 1.0)).xyz;');
-      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec3 vSW; uniform sampler2D tCon;')
+      sh.uniforms.tPvC = { value: PV ? PV.color : surf.concrete.color }; sh.uniforms.tPvN = { value: PV ? PV.normal : surf.concrete.normal };
+      sh.uniforms.tPvA = { value: PV ? PV.ao : surf.concrete.ao }; sh.uniforms.tPvR = { value: PV ? PV.rough : surf.concrete.rough };
+      sh.uniforms.uWet = worldUniforms.uWet;
+      sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vSW; varying vec3 vSN;')
+        .replace('#include <begin_vertex>', '#include <begin_vertex>\nvSW = (modelMatrix * instanceMatrix * vec4(transformed, 1.0)).xyz; vSN = normalize(mat3(modelMatrix * instanceMatrix) * objectNormal);');
+      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', `#include <common>
+varying vec3 vSW; varying vec3 vSN; uniform sampler2D tCon, tPvC, tPvN, tPvA, tPvR; uniform float uWet; float sbR; vec3 sbPN;
+float sbH2(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }`)
         .replace('#include <color_fragment>', `#include <color_fragment>
-          // concrete slabs with expansion joints every 2.5 m
+          sbR = 0.85; sbPN = vec3(0.0, 0.0, 1.0);
           vec2 sw = vSW.xz;
-          vec3 con = texture2D(tCon, sw / 2.5).rgb;
-          vec2 j = abs(fract(sw / 2.5) - 0.5);
-          float joint = smoothstep(0.485, 0.495, max(j.x, j.y));
-          diffuseColor.rgb *= con * 1.05 * (1.0 - joint * 0.45);`);
+          if (vSN.y > 0.5) {
+            // ${PV ? 'square concrete pavers' : 'concrete slabs'}: stained, a few dark gum spots, grime where people walk
+            vec2 uv = sw / ${PV ? PV.size.toFixed(2) : '2.5'};
+            vec3 pv = texture2D(tPvC, uv).rgb * mix(1.0, texture2D(tPvA, uv).r, 0.8);
+            float stain = smoothstep(0.55, 0.85, sbH2(floor(sw * 0.7)) * 0.6 + texture2D(tCon, sw / 9.0).r * 0.6);
+            vec2 gp = fract(sw * 1.7) - 0.5; float gum = step(0.985, sbH2(floor(sw * 1.7))) * smoothstep(0.06, 0.03, length(gp));
+            diffuseColor.rgb *= pv * 1.15 * (1.0 - stain * 0.18) * (1.0 - gum * 0.6);
+            sbR = texture2D(tPvR, uv).g; sbPN = texture2D(tPvN, uv).xyz * 2.0 - 1.0;
+          } else {
+            // the slab's edge: concrete
+            vec3 con = texture2D(tCon, vec2(sw.x + sw.y, vSW.y) / 2.5).rgb;
+            diffuseColor.rgb *= con * 0.95;
+          }`)
+        .replace('#include <roughnessmap_fragment>', 'float roughnessFactor = mix(sbR, sbR * 0.45, uWet); diffuseColor.rgb *= 1.0 - uWet * 0.25;')
+        .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
+          if (vSN.y > 0.5) { vec3 nw = normalize(vec3(sbPN.x, max(sbPN.z, 0.2), sbPN.y)); normal = normalize((viewMatrix * vec4(nw, 0.0)).xyz); }`);
     };
+    slabMat.customProgramCacheKey = () => 'sbslab';
   }
   const slab = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0), slabMat, slabs.length);
   slabs.forEach((b, i) => { m4.compose(p.set(b.x, b.y - 0.1, b.z), q.identity(), s.set(b.w, 0.32, b.w)); slab.setMatrixAt(i, m4); });
   slab.receiveShadow = true;
   group.add(slab);
   // A curb rim (darker, slightly taller ring) gives blocks a crisp edge
-  const curb = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0), new THREE.MeshStandardMaterial({ color: 0x6e6b66, roughness: 0.85 }), slabs.length);
+  const curbMat = new THREE.MeshStandardMaterial({ color: 0x8a8781, roughness: 0.85 });
+  if (surf && surf.concrete.real) {
+    curbMat.onBeforeCompile = (sh) => {
+      sh.uniforms.tCon = { value: surf.concrete.color };
+      sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vCW;')
+        .replace('#include <begin_vertex>', '#include <begin_vertex>\nvCW = (modelMatrix * instanceMatrix * vec4(transformed, 1.0)).xyz;');
+      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec3 vCW; uniform sampler2D tCon;')
+        .replace('#include <color_fragment>', `#include <color_fragment>
+          // poured concrete curb, grimy where the gutter water runs along its foot
+          vec3 con = texture2D(tCon, vec2(vCW.x + vCW.z, vCW.y * 1.0) / 1.8).rgb;
+          float foot = fract(vCW.y + 100.0);
+          diffuseColor.rgb *= con * 1.1;`);
+    };
+    curbMat.customProgramCacheKey = () => 'sbcurb';
+  }
+  const curb = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0), curbMat, slabs.length);
   slabs.forEach((b, i) => { m4.compose(p.set(b.x, b.y - 0.12, b.z), q.identity(), s.set(b.w + 0.4, 0.3, b.w + 0.4)); curb.setMatrixAt(i, m4); });
   group.add(curb);
 

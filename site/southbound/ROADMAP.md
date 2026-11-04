@@ -140,6 +140,21 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 - [x] Loading screen with in-game art, tips and progress
 - [x] Fewer touch buttons: ◎ interact replaces the car button; map, phone, arsenal, free cam moved to pause
 
+## Phase 1.12 — Carryover to Unity 6 + HDRP (`southbound-unity/`)
+
+- [x] Unity 6 HDRP project with a setup window (packages, HDRP wizard, materials, world, save)
+- [x] Game rules ported to engine-free C#: arsenal (234 weapons, 195 attachments, matched
+      number for number by a test), ballistics and penetration, armour and hit zones, needs,
+      rebuild stages, the web save (read and written back)
+- [x] Calvera exported from the web game: terrain, ground cover, water, roads, buildings,
+      roofs, 47 345 trees and bushes; built into a scene in one click
+- [x] 29 CC0 surfaces as HDRP Lit materials and terrain layers, plus a downloader for the
+      2K/4K/8K originals (ambientCG, Poly Haven, cgbookcase)
+- [x] John: controller, third-person camera, animation retargeting, gunplay with wall
+      penetration and bullet holes; a penetration range by the spawn
+- [x] Web game: Pause > Export save (imports into Unity)
+- [ ] Vehicles, people and police AI, interiors, missions and jobs, HUD, HDRP water
+
 ## Phase 3 — Content catalogs (targets)
 
 | Item | Target | Done |
@@ -194,6 +209,25 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 - Buildings are solid for now. The interior system is Phase 2.
 
 ## Session log
+
+- **Desktop app and a new look:**
+  - **Southbound for Windows** (`southbound-desktop/`). The game is now its own program instead of a browser tab:
+    - An installer and a portable .exe, built on GitHub's Windows machines (Actions > southbound-desktop > Southbound-Windows).
+    - Every build is started on Windows and has to load the whole world before it is uploaded.
+    - It always uses the fast graphics card and never slows down in the background. F11 switches fullscreen.
+  - **Cinematic preset** for RTX 4090/4080/5090/5080-class cards: supersampled, 8K shadow map, full-resolution ambient occlusion, 4.8 km draw distance, denser forests and traffic.
+  - **Rooms behind every window.** Each window is drawn as a real room box behind the glass:
+    - Walls, floor and ceiling in that room's colours, a doorway into the hall, a sofa or bed, a picture on the wall, ceiling lights at night.
+    - Blinds pulled down to different heights, or curtains.
+    - Shop windows look into stores with shelves of stock.
+    - The glass reflects the sky, more strongly edge-on.
+  - **New materials** (16 CC0 sets, most with height maps):
+    - Two kinds of real brick with depth in the mortar, stucco shops, painted lap siding on houses.
+    - Corrugated steel and rusting sheds, shingle roofs laid along the ridge.
+    - Square concrete pavers for sidewalks, with stains and gum spots, and concrete curbs.
+    - Roads: repair patches with sealed seams, polished tyre paths, oil down the middle of every lane.
+    - A photographed cliff face for rock, leaf litter on forest floors, wood floors and tiled bathrooms inside homes.
+  - Buildings are drawn in three shader groups (towers and offices, brick and shops, houses and warehouses), so each stays within the 16 textures a GPU allows per shader.
 
 - **Inside cars, through walls, houses that burn:**
   - **Car interiors.**

@@ -1,0 +1,18 @@
+{
+  "name": "Asphalt012",
+  "source": "ambientcg",
+  "tileMeters": 3.2,
+  "size": 512,
+  "maps": [
+    "color",
+    "height",
+    "normal",
+    "rough"
+  ],
+  "files": {
+    "BaseColor": "Asphalt012_BaseColor.jpg",
+    "Normal": "Asphalt012_Normal.png",
+    "Mask": "Asphalt012_Mask.png",
+    "Height": "Asphalt012_Height.png"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "name": "Grass004",
+  "source": "ambientcg",
+  "tileMeters": 2.4,
+  "size": 512,
+  "maps": [
+    "color",
+    "normal",
+    "rough"
+  ],
+  "files": {
+    "BaseColor": "Grass004_BaseColor.jpg",
+    "Normal": "Grass004_Normal.png",
+    "Mask": "Grass004_Mask.png"
+  }
+}

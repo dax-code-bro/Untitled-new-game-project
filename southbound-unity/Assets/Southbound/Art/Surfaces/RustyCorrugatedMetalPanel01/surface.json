@@ -1,0 +1,20 @@
+{
+  "name": "RustyCorrugatedMetalPanel01",
+  "source": "cgbookcase",
+  "tileMeters": 2.2,
+  "size": 512,
+  "maps": [
+    "ao",
+    "color",
+    "height",
+    "metal",
+    "normal",
+    "rough"
+  ],
+  "files": {
+    "BaseColor": "RustyCorrugatedMetalPanel01_BaseColor.jpg",
+    "Normal": "RustyCorrugatedMetalPanel01_Normal.png",
+    "Mask": "RustyCorrugatedMetalPanel01_Mask.png",
+    "Height": "RustyCorrugatedMetalPanel01_Height.png"
+  }
+}

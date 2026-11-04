@@ -1,0 +1,19 @@
+{
+  "name": "RoofingTiles013A",
+  "source": "ambientcg",
+  "tileMeters": 2.6,
+  "size": 512,
+  "maps": [
+    "ao",
+    "color",
+    "height",
+    "normal",
+    "rough"
+  ],
+  "files": {
+    "BaseColor": "RoofingTiles013A_BaseColor.jpg",
+    "Normal": "RoofingTiles013A_Normal.png",
+    "Mask": "RoofingTiles013A_Mask.png",
+    "Height": "RoofingTiles013A_Height.png"
+  }
+}

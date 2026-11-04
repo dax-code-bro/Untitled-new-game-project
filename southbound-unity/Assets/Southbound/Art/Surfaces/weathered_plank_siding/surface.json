@@ -1,0 +1,19 @@
+{
+  "name": "weathered_plank_siding",
+  "source": "polyhaven",
+  "tileMeters": 2.4,
+  "size": 512,
+  "maps": [
+    "ao",
+    "color",
+    "height",
+    "normal",
+    "rough"
+  ],
+  "files": {
+    "BaseColor": "weathered_plank_siding_BaseColor.jpg",
+    "Normal": "weathered_plank_siding_Normal.png",
+    "Mask": "weathered_plank_siding_Mask.png",
+    "Height": "weathered_plank_siding_Height.png"
+  }
+}

@@ -104,7 +104,9 @@ export function installEstate(game) {
     const g = new THREE.Group(); g.position.copy(o);
     const wallC = [0xeeebe6, 0xd6dce0, 0xe6e2da, 0xc6d1c4, 0xdcd6d0, 0xf4f3f0][Math.floor(r() * 6)]; // neutral paints (warm beige + amber bulbs read as yellow-brown)
     const floorC = kind === 'warehouse' ? 0x6d6d68 : kind === 'office' ? 0x4a4f55 : [0x7a5434, 0x8c6a46, 0x5c3f28, 0xb8b2a4][Math.floor(r() * 4)];
-    const wallM = texMat('plaster', wallC, 0.9) || M(wallC, 0.9), floorM = (kind === 'warehouse' || kind === 'store' || kind === 'office' ? texMat('concrete', floorC === 0x4a4f55 ? 0x8a8f95 : 0xb0aca4, 0.8) : null) || M(floorC, kind === 'home' || kind === 'apartment' ? 0.45 : 0.8);
+    const homeFloor = kind === 'home' || kind === 'apartment' ? texMat('woodfloor', [0xffffff, 0xd8c8b4, 0xb89a80, 0xf0e4d4][Math.floor(r() * 4)], 0.45) : null;
+    const wallM = texMat('plaster', wallC, 0.9) || M(wallC, 0.9), floorM = homeFloor || (kind === 'warehouse' || kind === 'store' || kind === 'office' ? texMat('concrete', floorC === 0x4a4f55 ? 0x8a8f95 : 0xb0aca4, 0.8) : null) || M(floorC, kind === 'home' || kind === 'apartment' ? 0.45 : 0.8);
+    if (homeFloor) homeFloor.userData.texSize = 2.0;
     wallM.userData.texSize = 3.0; floorM.userData.texSize = 2.5;
     // what the walls are made of: drywall on studs inside; outside walls framed in houses, block in shops, sheet steel in warehouses
     wallM.userData.surf = kind === 'warehouse' ? 'metal' : 'drywall';
@@ -169,6 +171,9 @@ export function installEstate(game) {
       boxAt(g, W / 2 - 0.15 - 1.4 - door, H, pw, 0.15 + (W / 2 - 0.15 - 1.4 - door) / 2, 0, -0.2, wallM, true, o); // bedroom front, door near the kitchen
       boxAt(g, 1.4, H, pw, W / 2 - 0.7, 0, -0.2, wallM, true, o);
       if (b.style === 4) {
+        // tiled bathroom floor
+        const tileM = texMat('tiles', 0xf4f4f2, 0.3);
+        if (tileM) { tileM.userData.texSize = 1.5; boxAt(g, 2.35, 0.012, 3.95, -W / 2 + 1.2, 0, D / 2 - 2.0, tileM, false, o); }
         boxAt(g, pw, H, 4 - door - 0.3, -W / 2 + 2.4, 0, D / 2 - 4 + (4 - door - 0.3) / 2, wallM, true, o);
         boxAt(g, 2.4, H, pw, -W / 2 + 1.2, 0, D / 2 - 4, wallM, true, o);
       }

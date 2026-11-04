@@ -250,7 +250,7 @@ async (opts) => {
     if (bi >= 0) {
       const b = B[bi], m = new SB.THREE.Matrix4();
       D.destroy(bi);
-      G.city.mesh.getMatrixAt(bi, m);
+      G.city.instOf[bi].mesh.getMatrixAt(G.city.instOf[bi].i, m);
       ok(b.ruined === 'fire' && D.sites.has(bi) && Math.abs(m.determinant()) < 1e-9, 'the house is burning and its model is replaced by the shell');
       ok(!!G.career.p.ruins[bi], 'the ruin is saved');
       const site = D.sites.get(bi);
@@ -262,7 +262,7 @@ async (opts) => {
       SB.skipRender(true); SB.step(2, 1 / 30); SB.skipRender(false);
       ok(site.phase === 'build' && site.studs.count > 0, 'construction underway: framing at ' + site.stage);
       D.finish(bi);
-      G.city.mesh.getMatrixAt(bi, m);
+      G.city.instOf[bi].mesh.getMatrixAt(G.city.instOf[bi].i, m);
       ok(!b.ruined && Math.abs(m.determinant()) > 1e-6 && !G.career.p.ruins[bi], 'the house is rebuilt and back on the map');
     }
   });

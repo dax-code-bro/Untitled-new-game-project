@@ -1,0 +1,37 @@
+# Unity generated
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Bb]uild/
+/[Bb]uilds/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+/[Mm]emoryCaptures/
+/[Rr]ecordings/
+*.csproj
+*.sln
+*.suo
+*.user
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+*.apk
+*.aab
+*.unitypackage
+crashlytics-buildsettings.properties
+.vs/
+.vscode/
+.idea/
+
+# full-resolution textures downloaded by Southbound > Materials (hundreds of MB to GBs)
+/Assets/Southbound/Art/Downloaded/
+/Assets/Southbound/Art/Downloaded.meta
+
+# the dotnet test/check projects in Tools/ keep their csproj
+!/Tools/**/*.csproj
+/Tools/**/bin/
+/Tools/**/obj/

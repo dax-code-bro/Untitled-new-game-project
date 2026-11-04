@@ -1,0 +1,20 @@
+{
+  "name": "CorrugatedSteel005",
+  "source": "ambientcg",
+  "tileMeters": 2.2,
+  "size": 512,
+  "maps": [
+    "ao",
+    "color",
+    "height",
+    "metal",
+    "normal",
+    "rough"
+  ],
+  "files": {
+    "BaseColor": "CorrugatedSteel005_BaseColor.jpg",
+    "Normal": "CorrugatedSteel005_Normal.png",
+    "Mask": "CorrugatedSteel005_Mask.png",
+    "Height": "CorrugatedSteel005_Height.png"
+  }
+}

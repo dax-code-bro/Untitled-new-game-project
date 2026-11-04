@@ -1,0 +1,17 @@
+{
+  "name": "coast_sand_01",
+  "source": "polyhaven",
+  "tileMeters": 3,
+  "size": 512,
+  "maps": [
+    "ao",
+    "color",
+    "normal",
+    "rough"
+  ],
+  "files": {
+    "BaseColor": "coast_sand_01_BaseColor.jpg",
+    "Normal": "coast_sand_01_Normal.png",
+    "Mask": "coast_sand_01_Mask.png"
+  }
+}

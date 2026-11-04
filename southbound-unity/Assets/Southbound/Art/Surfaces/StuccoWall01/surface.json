@@ -1,0 +1,19 @@
+{
+  "name": "StuccoWall01",
+  "source": "cgbookcase",
+  "tileMeters": 2.6,
+  "size": 512,
+  "maps": [
+    "ao",
+    "color",
+    "height",
+    "normal",
+    "rough"
+  ],
+  "files": {
+    "BaseColor": "StuccoWall01_BaseColor.jpg",
+    "Normal": "StuccoWall01_Normal.png",
+    "Mask": "StuccoWall01_Mask.png",
+    "Height": "StuccoWall01_Height.png"
+  }
+}

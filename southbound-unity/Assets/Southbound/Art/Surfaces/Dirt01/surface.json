@@ -1,0 +1,19 @@
+{
+  "name": "Dirt01",
+  "source": "cgbookcase",
+  "tileMeters": 2.2,
+  "size": 512,
+  "maps": [
+    "ao",
+    "color",
+    "height",
+    "normal",
+    "rough"
+  ],
+  "files": {
+    "BaseColor": "Dirt01_BaseColor.jpg",
+    "Normal": "Dirt01_Normal.png",
+    "Mask": "Dirt01_Mask.png",
+    "Height": "Dirt01_Height.png"
+  }
+}

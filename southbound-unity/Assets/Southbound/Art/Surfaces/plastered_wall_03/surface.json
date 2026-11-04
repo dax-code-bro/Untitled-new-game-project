@@ -1,0 +1,17 @@
+{
+  "name": "plastered_wall_03",
+  "source": "polyhaven",
+  "tileMeters": 3,
+  "size": 512,
+  "maps": [
+    "ao",
+    "color",
+    "normal",
+    "rough"
+  ],
+  "files": {
+    "BaseColor": "plastered_wall_03_BaseColor.jpg",
+    "Normal": "plastered_wall_03_Normal.png",
+    "Mask": "plastered_wall_03_Mask.png"
+  }
+}

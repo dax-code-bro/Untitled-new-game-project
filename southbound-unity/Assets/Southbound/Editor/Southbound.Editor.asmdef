@@ -1,0 +1,19 @@
+{
+    "name": "Southbound.Editor",
+    "rootNamespace": "Southbound.EditorTools",
+    "references": [
+        "Southbound.Core",
+        "Southbound.Runtime"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
