@@ -14,6 +14,9 @@ Attribution is optional for the CC0 packs, but these creators deserve the thanks
 | Clouds, weather | Ray-marched clouds and rain (`src/world/clouds.js`, `weather.js`) | Southbound | Original | Cloud noise is generated at load time |
 | Surfaces | Grass004, Ground037, Rock030, Concrete034, Facade002, Facade012, Facade014 | [ambientCG](https://ambientcg.com) (Lennart Demes) | CC0 1.0 | Grass, dry ground, cliffs, sidewalks, photographed glass-tower and office facades with night lighting (`assets/textures/`) |
 | Surfaces | asphalt_02, forest_ground_04, coast_sand_01, brick_wall_10, plastered_wall_03 | [Poly Haven](https://polyhaven.com) | CC0 1.0 | Roads, forest floor, beaches, brick and plaster walls (`assets/textures/`) |
+| Surfaces | Asphalt012, RoofingTiles013A, CorrugatedSteel005, Gravel004, WoodFloor007 | [ambientCG](https://ambientcg.com) (Lennart Demes) | CC0 1.0 | Road resurfacing patches, shingle roofs, steel sheds, gravel, interior wood floors (`assets/textures/`) |
+| Surfaces | square_concrete_pavers, red_brick, weathered_plank_siding, brown_mud, forest_leaves_02, cliff_side | [Poly Haven](https://polyhaven.com) | CC0 1.0 | Sidewalk pavers, brick walls, house siding, mud, forest leaf litter, cliffs (`assets/textures/`) |
+| Surfaces | Cobblestone01, StuccoWall01, RustyCorrugatedMetalPanel01, Dirt01, BathroomTiles02 | [cgbookcase](https://www.cgbookcase.com) | CC0 1.0 | Cobbles, stucco shops, rusting sheds, rocky dirt, bathroom floors (`assets/textures/`) |
 
 Software:
 

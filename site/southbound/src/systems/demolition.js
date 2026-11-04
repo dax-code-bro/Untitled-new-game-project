@@ -41,10 +41,11 @@ export function installDemolition(game) {
 
   // ---- taking a house off the map and putting it back
   function showHouse(bi, on) {
-    const M = city.mesh;
-    if (M) {
-      if (!saved.has(bi)) { const m = new THREE.Matrix4(); M.getMatrixAt(bi, m); saved.set(bi, m); }
-      M.setMatrixAt(bi, on ? saved.get(bi) : ZERO); M.instanceMatrix.needsUpdate = true;
+    const I = city.instOf ? city.instOf[bi] : city.mesh && { mesh: city.mesh, i: bi };
+    if (I) {
+      const M = I.mesh;
+      if (!saved.has(bi)) { const m = new THREE.Matrix4(); M.getMatrixAt(I.i, m); saved.set(bi, m); }
+      M.setMatrixAt(I.i, on ? saved.get(bi) : ZERO); M.instanceMatrix.needsUpdate = true;
     }
     const ri = city.roofOf?.get(bi);
     if (ri !== undefined && city.roofMesh) showRoof(bi, on);

@@ -195,6 +195,25 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 
 ## Session log
 
+- **Desktop app and a new look:**
+  - **Southbound for Windows** (`southbound-desktop/`). The game is now its own program instead of a browser tab:
+    - An installer and a portable .exe, built on GitHub's Windows machines (Actions > southbound-desktop > Southbound-Windows).
+    - Every build is started on Windows and has to load the whole world before it is uploaded.
+    - It always uses the fast graphics card and never slows down in the background. F11 switches fullscreen.
+  - **Cinematic preset** for RTX 4090/4080/5090/5080-class cards: supersampled, 8K shadow map, full-resolution ambient occlusion, 4.8 km draw distance, denser forests and traffic.
+  - **Rooms behind every window.** Each window is drawn as a real room box behind the glass:
+    - Walls, floor and ceiling in that room's colours, a doorway into the hall, a sofa or bed, a picture on the wall, ceiling lights at night.
+    - Blinds pulled down to different heights, or curtains.
+    - Shop windows look into stores with shelves of stock.
+    - The glass reflects the sky, more strongly edge-on.
+  - **New materials** (16 CC0 sets, most with height maps):
+    - Two kinds of real brick with depth in the mortar, stucco shops, painted lap siding on houses.
+    - Corrugated steel and rusting sheds, shingle roofs laid along the ridge.
+    - Square concrete pavers for sidewalks, with stains and gum spots, and concrete curbs.
+    - Roads: repair patches with sealed seams, polished tyre paths, oil down the middle of every lane.
+    - A photographed cliff face for rock, leaf litter on forest floors, wood floors and tiled bathrooms inside homes.
+  - Buildings are drawn in three shader groups (towers and offices, brick and shops, houses and warehouses), so each stays within the 16 textures a GPU allows per shader.
+
 - **Inside cars, through walls, houses that burn:**
   - **Car interiors.**
     - Up close, every procedural car has see-through glass with privacy glass in the back, and the glass turns to a reflection when seen edge-on.

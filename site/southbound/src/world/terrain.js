@@ -123,13 +123,17 @@ function makeTerrainMaterial(quality, surf) {
   const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.92, metalness: 0 });
   const useN = surf && surf.hasNormals ? 1 : 0;
   const L = ['grass', 'dry', 'forest', 'sand', 'rock'];
-  const size = (k) => (surf ? surf[k].size : 3).toFixed(2);
+  // the second library swaps in better sources where it has them: a photographed
+  // cliff face for rock, real leaf litter for the forest floor
+  const SRC = { rock: surf && surf.cliff && surf.cliff.real ? 'cliff' : 'rock', forest: surf && surf.leaves && surf.leaves.real ? 'leaves' : 'forest' };
+  const src = (k) => SRC[k] || k;
+  const size = (k) => (surf ? surf[src(k)].size : 3).toFixed(2);
   mat.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, worldUniforms);
     shader.fragmentShader = 'uniform float uWet;\n' + shader.fragmentShader;
     for (const k of L) {
-      shader.uniforms[`t_${k}C`] = { value: surf ? surf[k].color : null };
-      shader.uniforms[`t_${k}N`] = { value: surf ? surf[k].normal : null };
+      shader.uniforms[`t_${k}C`] = { value: surf ? surf[src(k)].color : null };
+      shader.uniforms[`t_${k}N`] = { value: surf ? surf[src(k)].normal : null };
     }
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>', '#include <common>\nvarying vec3 vWPos;\nvarying vec3 vWNrm;')
