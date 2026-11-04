@@ -12,6 +12,7 @@ Unity Personal is free, and there are no royalties.
 | | Carried over | How |
 |---|---|---|
 | **Calvera** | The whole 4 km map: terrain (1025² heights, within a few millimetres of the web game's), ground cover, the Gulf, lakes and rivers, 146 roads, 407 buildings, 74 gable roofs, 47 345 trees and bushes where the web game puts them | `Data/World/`, built into a scene by **Southbound > Build Calvera scene** |
+| **Architecture** | Every cornice, parapet, shopfront pier, awning, porch, front door, roof trim, rooftop unit and window sill from the web game, merged into static meshes | `Data/World/calvera-facades.json`, built with the scene |
 | **Surfaces** | All 29 photo-scanned CC0 sets as HDRP Lit materials with mask maps and parallax, plus terrain layers. Bundled at 512 px; the setup downloads the **2K / 4K / 8K originals** (24 sets automatically, 5 by hand) | `Assets/Southbound/Art/Surfaces/`, `Southbound > Materials` |
 | **Models** | John and the townspeople (MakeHuman), the 24-clip animation library, every gun, vehicles, animals, props and trees | `Assets/Southbound/Art/Models/` (glTFast imports them) |
 | **Arsenal** | All 234 weapons and 195 attachments, generated the same way as the web game. A test checks every name, stat and price matches | `Assets/Southbound/Core/Weapons.cs` |

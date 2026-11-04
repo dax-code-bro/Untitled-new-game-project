@@ -49,6 +49,7 @@ export function installDemolition(game) {
     }
     const ri = city.roofOf?.get(bi);
     if (ri !== undefined && city.roofMesh) showRoof(bi, on);
+    city.facades?.show(bi, on);
     const gr = city.gutterRanges?.get(bi), gm = city.gutterMesh;
     if (gr && gm) {
       const pos = gm.geometry.attributes.position, [a, n] = gr;

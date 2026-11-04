@@ -1,6 +1,7 @@
 // Procedural buildings: downtown towers, offices, brick blocks, warehouses,
 // town houses, lake houses, farms and cabins. One facade shader draws the
 // windows (lit at night) so thousands of buildings cost only a few draw calls.
+import { createFacades } from './facades.js';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { CITY, TOWN, LAKE, PLAINS, FOREST, lakeRadius, coastZ, REGIONS } from './layout.js';
@@ -38,7 +39,8 @@ vec3 sbRoom(vec3 V, vec3 n, vec3 tng, vec2 f, vec2 cell, float depth, float h, f
   wc = mix(wc, vec3(0.86, 0.84, 0.8), step(0.7, fract(h * 13.1)));
   wc = mix(wc, vec3(0.72, 0.62, 0.52), step(0.88, fract(h * 3.7)));
   vec3 fc = mix(vec3(0.36, 0.24, 0.15), vec3(0.42, 0.4, 0.38), step(0.5, fract(h * 5.9)));
-  if (shop > 0.5) { wc = mix(vec3(0.9, 0.9, 0.88), vec3(0.75, 0.82, 0.86), step(0.5, fract(h * 4.1))); fc = vec3(0.55, 0.53, 0.5); }
+  // shops: painted or panelled walls in muted colours, a dark polished floor (not white boxes)
+  if (shop > 0.5) { wc = mix(vec3(0.58, 0.55, 0.5), vec3(0.42, 0.47, 0.5), step(0.5, fract(h * 4.1))); wc = mix(wc, vec3(0.5, 0.36, 0.26), step(0.75, fract(h * 6.7))); fc = mix(vec3(0.24, 0.22, 0.2), vec3(0.36, 0.3, 0.24), step(0.5, fract(h * 2.9))); }
   vec3 c; float face;
   if (t == tb.z) {            // back wall
     c = wc; face = 0.0;
@@ -51,7 +53,7 @@ vec3 sbRoom(vec3 V, vec3 n, vec3 tng, vec2 f, vec2 cell, float depth, float h, f
       vec3 stock = 0.5 + 0.45 * cos(6.2832 * (bh + vec3(0.0, 0.33, 0.67)));
       stock *= 0.55 + 0.45 * step(fract(q.y * 4.0), 0.55 + 0.35 * bh); // boxes of different heights
       float gap = step(0.08, fract(q.x * 22.0));
-      c = q.y < 0.85 ? mix(vec3(0.18), stock, gap * (1.0 - board)) : vec3(0.85);
+      c = q.y < 0.85 ? mix(vec3(0.14), stock * 0.8, gap * (1.0 - board)) : wc * 0.9;
       c = mix(c, vec3(0.62, 0.6, 0.56), board * step(q.y, 0.85));
     } else {
       if (q.y < 0.3 && q.x > fx && q.x < fx + 0.45) c = mix(vec3(0.16, 0.13, 0.12), vec3(0.3, 0.22, 0.18), step(0.5, fract(h * 23.0))) * (q.y > 0.22 ? 1.25 : 1.0);
@@ -59,7 +61,7 @@ vec3 sbRoom(vec3 V, vec3 n, vec3 tng, vec2 f, vec2 cell, float depth, float h, f
     }
   } else if (t == tb.y) {     // floor or ceiling
     if (d.y < 0.0) { c = fc * (0.85 + 0.15 * step(0.5, fract(q.x * 9.0))); face = 1.0; }
-    else { c = vec3(0.9, 0.89, 0.86); face = 2.0;
+    else { c = shop > 0.5 ? vec3(0.5, 0.5, 0.48) : vec3(0.9, 0.89, 0.86); face = 2.0;
       float l = length((q.xz - vec2(0.5, 0.45)) * vec2(1.0, 1.4));
       c += lamp * lit * smoothstep(0.12, 0.0, l) * 1.4; }
   } else {                    // side walls, one with a doorway into the hall
@@ -128,7 +130,7 @@ vec2 sbPara(sampler2D hm, vec2 uv, vec3 vt, float depth){ float hh = texture2D(h
     float u = abs(n.x) > 0.5 ? vWPos.z : vWPos.x;
     float v = vWPos.y - baseY;
     vec2 uvm = vec2(u, v);
-    bool shop = (style < 2.5 || style > 4.5) && v < 4.4 && v > 0.25;
+    bool shop = (style < 2.5 || style > 4.5) && v < 4.4 && v > 0.25 && vInfo.w < 0.5;
     bool done = false;
 ${group === 'tower' ? `
     if (useTex && style < 0.5 && !shop) {
@@ -211,7 +213,7 @@ ${group === 'frame' ? `
       vec3 warm = mix(vec3(1.0, 0.72, 0.42), vec3(0.85, 0.9, 1.0), step(0.8, sbHash(cid + 3.3)));
       if (shop) { lit = step(0.35, h); warm = mix(vec3(1.0, 0.86, 0.66), vec3(0.88, 0.93, 1.0), step(0.6, h)); }
       // the room behind the glass
-      vec3 room = sbRoom(-Vc, n, sbT * (abs(n.x) > 0.5 ? 1.0 : 1.0), rf, rcell, rdepth, h, lit * uNight + (shop ? 0.3 * (1.0 - uNight) * lit : 0.0), warm, (1.0 - uNight) * 0.3, shop ? 1.0 : 0.0);
+      vec3 room = sbRoom(-Vc, n, sbT * (abs(n.x) > 0.5 ? 1.0 : 1.0), rf, rcell, rdepth, h, lit * uNight + (shop ? 0.14 * (1.0 - uNight) * lit : 0.0), warm, (1.0 - uNight) * (shop ? 0.2 : 0.3), shop ? 1.0 : 0.0);
       // blinds or curtains in some windows (drawn at the glass)
       vec2 wl = (f - 0.5) / winSz + 0.5;
       float blind = 0.0, curtain = 0.0;
@@ -237,9 +239,12 @@ ${group === 'frame' ? `
       vec3 roomLight = room * (1.0 - F) * (1.0 - cover) * (1.0 - frame);
       // the glass reflects the street and sky: brighter edge-on, broken into streaks by the panes
       vec3 R = reflect(-Vc, n);
-      vec3 skyR = mix(vec3(0.34, 0.36, 0.38), vec3(0.42, 0.52, 0.68), smoothstep(-0.1, 0.5, R.y)) * (1.0 - uNight * 0.93);
+      // what the glass sees: the pavement below, the buildings across the street at eye level, sky above
+      float across = 0.65 + 0.7 * sbHash(vec2(floor((u + R.x * 7.0 + R.z * 7.0) / 4.0), seed));
+      vec3 streetR = mix(vec3(0.06, 0.06, 0.065), vec3(0.15, 0.145, 0.14) * across, smoothstep(-0.25, 0.02, R.y));
+      vec3 skyR = mix(streetR, vec3(0.42, 0.52, 0.68), smoothstep(0.05, 0.45, R.y + (vWPos.y - baseY) * 0.004)) * (1.0 - uNight * 0.93);
       float streak = 0.85 + 0.15 * sin(u * 3.1 + v * 0.7 + seed);
-      roomLight += skyR * (0.06 + F * 0.8) * streak * isWin * (1.0 - cover * 0.6) * (1.0 - frame);
+      roomLight += skyR * ((shop ? 0.14 : 0.06) + F * 0.8) * streak * isWin * (1.0 - cover * 0.6) * (1.0 - frame);
       // lit blinds glow at night
       roomLight += coverC * warm * lit * uNight * cover * 0.12 * (1.0 - frame);
       // far away the window grid is too fine to draw: fall back to an average glow
@@ -316,7 +321,7 @@ export function createBuildings(hm, quality, scene, collision, surf, graph = nul
       const top = y + h;
       const nprops = 1 + ((rnd() * 3) | 0);
       for (let k = 0; k < nprops; k++) props.push({ x: lx + (rnd() - 0.5) * fw * 0.6, y: top, z: lz + (rnd() - 0.5) * fd * 0.6, w: 2 + rnd() * 3, h: 1.2 + rnd() * 2, d: 2 + rnd() * 3, color: 0x77787a });
-      if (!tall && !mid && rnd() < 0.3) props.push({ x: lx, y: top, z: lz, w: 2.6, h: 4, d: 2.6, color: 0x6b4a33 }); // water tower
+      if (!tall && !mid && rnd() < 0.3) props.push({ x: lx, y: top, z: lz, w: 2.6, h: 4, d: 2.6, color: 0x6b4a33, tower: true }); // water tower (drawn round in facades.js)
     }
   }
 
@@ -511,7 +516,8 @@ export function createBuildings(hm, quality, scene, collision, surf, graph = nul
       m4.compose(p.set(b.x, b.y, b.z), q.identity(), s.set(b.w, b.h, b.d));
       gm.setMatrixAt(i, m4);
       gm.setColorAt(i, col.setHex(b.color));
-      info.set([b.style, b.y, rnd() * 100, 0], i * 4);
+      // w: up on a lower block (a tower's setback): no shopfront up there
+      info.set([b.style, b.y, rnd() * 100, b.y - hm.height(b.x, b.z) > 1.2 ? 1 : 0], i * 4);
       instOf[bi] = { mesh: gm, i };
     });
     bbox.setAttribute('aInfo', new THREE.InstancedBufferAttribute(info, 4));
@@ -549,14 +555,17 @@ export function createBuildings(hm, quality, scene, collision, surf, graph = nul
         .replace('#include <begin_vertex>', '#include <begin_vertex>\nvRfW = (modelMatrix * instanceMatrix * vec4(transformed, 1.0)).xyz; vRidge = normalize(mat3(modelMatrix * instanceMatrix) * vec3(1.0, 0.0, 0.0));');
       sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec3 vRfW; varying vec3 vRidge; uniform sampler2D tShC, tShN, tShA, tShR; uniform float uWet; vec2 sbRuv; float sbShR;')
         .replace('#include <color_fragment>', `#include <color_fragment>
-          vec3 rg = normalize(vec3(vRidge.x, 0.0, vRidge.z));
+          vec3 rg = normalize(vec3(vRidge.x, 0.0, vRidge.z) + vec3(1e-5, 0.0, 0.0));
           sbRuv = vec2(dot(vRfW.xz, rg.xz), dot(vRfW.xz, vec2(-rg.z, rg.x)) * 1.15 - vRfW.y * 0.6) / ${SH.size.toFixed(2)};
           vec3 shc = texture2D(tShC, sbRuv).rgb * mix(1.0, texture2D(tShA, sbRuv).r, 0.85);
           diffuseColor.rgb = mix(diffuseColor.rgb, shc, 0.55) * (0.65 + 0.7 * dot(shc, vec3(0.333)));
           sbShR = texture2D(tShR, sbRuv).g;`)
         .replace('#include <roughnessmap_fragment>', 'float roughnessFactor = mix(sbShR, sbShR * 0.5, uWet); diffuseColor.rgb *= 1.0 - uWet * 0.25;')
         .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
-          { vec3 nt = texture2D(tShN, sbRuv).xyz * 2.0 - 1.0; vec3 T = (viewMatrix * vec4(normalize(vec3(vRidge.x, 0.0, vRidge.z)), 0.0)).xyz; T = normalize(T - normal * dot(normal, T)); vec3 B = cross(normal, T); normal = normalize(normal + (T * nt.x + B * nt.y) * 0.8); }`);
+          { vec3 nt = texture2D(tShN, sbRuv).xyz * 2.0 - 1.0; vec3 T = (viewMatrix * vec4(normalize(vec3(vRidge.x, 0.0, vRidge.z) + vec3(1e-5, 0.0, 0.0)), 0.0)).xyz;
+            // on the gable ends the ridge runs along the normal: no tangent there, so no bump (a NaN here blacks out the whole screen through bloom)
+            vec3 Tp = T - normal * dot(normal, T);
+            if (dot(Tp, Tp) > 1e-4) { T = normalize(Tp); vec3 B = cross(normal, T); normal = normalize(normal + (T * nt.x + B * nt.y) * 0.8); } }`);
     };
     roofMat.customProgramCacheKey = () => 'sbroof';
   }
@@ -572,6 +581,8 @@ export function createBuildings(hm, quality, scene, collision, surf, graph = nul
   roofMesh.receiveShadow = true;
   scene.add(roofMesh);
 
+  const allProps = props.slice();
+  props.splice(0, props.length, ...props.filter((pr) => !pr.tower));
   const propMesh = new THREE.InstancedMesh(box, new THREE.MeshStandardMaterial({ roughness: 0.7, metalness: 0.2 }), props.length);
   props.forEach((b, i) => {
     m4.compose(p.set(b.x, b.y, b.z), q.identity(), s.set(b.w, b.h, b.d));
@@ -654,5 +665,7 @@ export function createBuildings(hm, quality, scene, collision, surf, graph = nul
     const bi = B.findIndex((b) => Math.abs(b.x - r.x) < b.w / 2 && Math.abs(b.z - r.z) < b.d / 2 && Math.abs(b.y + b.h - r.y) < 1.5);
     if (bi >= 0) roofOf.set(bi, ri);
   });
-  return { buildings: B, cityBlocks, lakeHouses, junk, count: B.length, mesh, meshes, instOf, roofMesh, roofs, roofOf, gutterMesh, gutterRanges };
+  // real 3D architecture on the boxes: cornices, parapets, shopfronts, window sills and heads
+  const facades = createFacades(B, { scene, quality, surf, roofOf, roofs, hm, graph, props: allProps });
+  return { buildings: B, cityBlocks, lakeHouses, junk, count: B.length, mesh, meshes, instOf, roofMesh, roofs, roofOf, gutterMesh, gutterRanges, facades };
 }

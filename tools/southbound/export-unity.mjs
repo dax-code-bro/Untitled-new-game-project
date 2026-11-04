@@ -15,7 +15,8 @@
 // catalog   the weapon + attachment catalog as JSON, the fixture the C# port
 //           is tested against (Tools/CoreTests/fixtures/catalog.json).
 // world     runs the web game headless and dumps Calvera: terrain heights,
-//           ground splat, water, roads, buildings, roofs and trees
+//           ground splat, water, roads, buildings, roofs, trees and the 3D facade
+//           pieces (cornices, shopfronts, porches, window sills...)
 //           (southbound-unity/Data/World/).
 import fs from 'node:fs';
 import path from 'node:path';
@@ -251,6 +252,7 @@ async function exportWorld() {
       buildings: C.buildings.map((b) => ({ x: r2(b.x), z: r2(b.z), w: r2(b.w), d: r2(b.d), h: r2(b.h), y: r2(b.y), style: b.style, color: b.color, surf: b.surf || null })),
       roofs: (C.roofs || []).map((r) => ({ x: r2(r.x), z: r2(r.z), w: r2(r.w), d: r2(r.d), h: r2(r.h), y: r2(r.y), rot: r2(r.rot || 0), color: r.color })),
       veg,
+      facades: G.city.facades && G.city.facades.exportPieces ? G.city.facades.exportPieces() : null,
       spawn: { x: G.player.pos.x, y: G.player.pos.y, z: G.player.pos.z, heading: G.player.heading },
     };
   });
@@ -262,6 +264,7 @@ async function exportWorld() {
   fs.writeFileSync(path.join(out, 'calvera-water.r16'), Buffer.from(data.water, 'base64'));
   await sharp(Buffer.from(data.splat, 'base64'), { raw: { width: data.world.n, height: data.world.n, channels: 4 } }).png({ compressionLevel: 9 }).toFile(path.join(out, 'calvera-splat.png'));
   delete data.heights; delete data.water; delete data.splat;
+  if (data.facades) { fs.writeFileSync(path.join(out, 'calvera-facades.json'), JSON.stringify(data.facades)); delete data.facades; }
   data.splatChannels = ['sand', 'forest', 'dry', 'paved'];
   fs.writeFileSync(path.join(out, 'calvera-world.json'), JSON.stringify(data));
   console.log(`world: ${data.world.n}^2 heights ${data.world.hMin.toFixed(1)}..${data.world.hMax.toFixed(1)} m, ${data.roads.length} roads, ${data.buildings.length} buildings, ${data.roofs.length} roofs, ${data.veg.length} plants`);
