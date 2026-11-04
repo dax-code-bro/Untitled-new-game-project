@@ -153,9 +153,10 @@ export function createBuildings(hm, quality, scene, collision, surf, graph = nul
   const B = []; // {x,z,w,d,h,y,style,color}
   const roofs = []; // gable roofs {x,z,w,d,h,y,rot,color}
   const props = []; // small boxes {x,y,z,w,h,d,color}
+  const fences = []; // chain-link runs {x,y,z,w,h,d}
   const add = (x, z, w, d, h, y, style, color) => {
     B.push({ x, z, w, d, h, y, style, color: color ?? pick(PALETTES[style]) });
-    collision.addBox(x - w / 2, z - d / 2, x + w / 2, z + d / 2, y - 2, y + h, { building: true });
+    collision.addBox(x - w / 2, z - d / 2, x + w / 2, z + d / 2, y - 2, y + h, { building: true, surf: ['masonry', 'masonry', 'brick', 'metal', 'frame', 'block'][style] || 'masonry' });
   };
 
   // ---- Port Calvera
@@ -325,7 +326,7 @@ export function createBuildings(hm, quality, scene, collision, surf, graph = nul
     if (rnd() < 0.35) {
       const fw = w + 10, fd = d + 10;
       for (const [fx, fz, sw, sd] of [[x, z - fd / 2, fw, 0.06], [x, z + fd / 2, fw * 0.4, 0.06], [x - fw / 2, z, 0.06, fd], [x + fw / 2, z, 0.06, fd]]) {
-        props.push({ x: fx, y: hm.height(fx, fz), z: fz, w: sw, h: 1.8, d: sd, color: 0x8b8f92 });
+        fences.push({ x: fx, y: hm.height(fx, fz), z: fz, w: sw, h: 1.8, d: sd });
       }
     }
     return true;
@@ -428,12 +429,54 @@ export function createBuildings(hm, quality, scene, collision, surf, graph = nul
   propMesh.receiveShadow = true;
   scene.add(propMesh);
 
-  // gutters and downspouts on houses and low buildings (one merged mesh)
+  // chain-link fences: galvanised diamond mesh you can see through, a top rail and posts every 3 m
+  if (fences.length) {
+    const fm = new THREE.MeshStandardMaterial({ color: 0xb4babd, roughness: 0.5, metalness: 0.35, side: THREE.DoubleSide });
+    fm.onBeforeCompile = (sh) => {
+      sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vFW;')
+        .replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\nvFW = (modelMatrix * instanceMatrix * vec4(transformed, 1.0)).xyz;');
+      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec3 vFW; uniform float uBase;')
+        .replace('#include <clipping_planes_fragment>', `#include <clipping_planes_fragment>
+        {
+          float hgt = vFW.y; float u = (vFW.x + vFW.z) * 16.0, v = hgt * 16.0;
+          float d1 = abs(fract((u + v) * 0.5) - 0.5), d2 = abs(fract((u - v) * 0.5) - 0.5);
+          float wire = min(d1, d2);
+          float fw = fwidth(u);
+          // up close the diamonds are drawn; once they're smaller than a pixel the mesh turns
+          // into a sparse screen door, the way chain-link reads as a faint haze from across a lot
+          if (fw > 0.3) { if (fract(sin(dot(floor(gl_FragCoord.xy), vec2(12.9898, 78.233))) * 43758.5453) > 0.22) discard; }
+          else if (wire > 0.06 + fw * 0.6) discard;
+        }`);
+    };
+    const fg = new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0);
+    const fmesh = new THREE.InstancedMesh(fg, fm, fences.length);
+    const rail = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.02, 0.02, 1, 6).rotateZ(Math.PI / 2).translate(0.5, 0, 0), new THREE.MeshStandardMaterial({ color: 0x8e9498, roughness: 0.4, metalness: 0.8 }), fences.length);
+    const postsL = [];
+    fences.forEach((f, i) => {
+      const along = f.w > f.d, L = along ? f.w : f.d;
+      m4.compose(p.set(f.x, f.y, f.z), q.identity(), s.set(along ? f.w : 0.02, f.h, along ? 0.02 : f.d)); fmesh.setMatrixAt(i, m4);
+      q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), along ? 0 : -Math.PI / 2);
+      m4.compose(p.set(along ? f.x - f.w / 2 : f.x, f.y + f.h, along ? f.z : f.z - f.d / 2), q, s.set(L, 1, 1)); rail.setMatrixAt(i, m4);
+      for (let t = -L / 2; t <= L / 2 + 0.01; t += Math.max(1.5, L / Math.ceil(L / 3))) postsL.push([along ? f.x + t : f.x, f.y, along ? f.z : f.z + t, f.h]);
+    });
+    const posts = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.03, 0.03, 1, 8).translate(0, 0.5, 0), rail.material, postsL.length);
+    postsL.forEach(([x, y, z, h], i) => { m4.compose(p.set(x, y, z), q.identity(), s.set(1, h + 0.05, 1)); posts.setMatrixAt(i, m4); });
+    for (const im of [fmesh, rail, posts]) { im.castShadow = quality.shadows > 0; im.receiveShadow = true; im.computeBoundingSphere(); scene.add(im); }
+    fmesh.castShadow = false; // the wire is mostly holes; a solid shadow would give it away
+  }
+
+  // gutters and downspouts on houses and low buildings (one merged mesh; each
+  // building's vertex range is kept so one house's gutters can be taken down and put back)
+  let gutterMesh = null;
+  const gutterRanges = new Map();
   {
     const parts = [];
     const pipe = (x, y0, y1, z) => parts.push(new THREE.CylinderGeometry(0.05, 0.05, y1 - y0, 6).translate(x, (y0 + y1) / 2, z));
-    for (const b of B) {
+    let vtx = 0;
+    for (let bi = 0; bi < B.length; bi++) {
+      const b = B[bi];
       if (b.h > 13) continue;
+      const p0 = parts.length;
       const top = b.y + b.h - 0.05, x0 = b.x - b.w / 2 - 0.06, x1 = b.x + b.w / 2 + 0.06, z0 = b.z - b.d / 2 - 0.06, z1 = b.z + b.d / 2 + 0.06;
       // gutters along the two long sides, a downspout at each end of them
       const alongX = b.w >= b.d;
@@ -441,13 +484,22 @@ export function createBuildings(hm, quality, scene, collision, surf, graph = nul
         if (alongX) { const z = s ? z1 : z0; parts.push(new THREE.BoxGeometry(b.w + 0.1, 0.1, 0.12).translate(b.x, top, z)); pipe(x0, b.y, top, z); pipe(x1, b.y, top, z); }
         else { const x = s ? x1 : x0; parts.push(new THREE.BoxGeometry(0.12, 0.1, b.d + 0.1).translate(x, top, b.z)); pipe(x, b.y, top, z0); pipe(x, b.y, top, z1); }
       }
+      let n = 0; for (let k = p0; k < parts.length; k++) n += parts[k].attributes.position.count;
+      gutterRanges.set(bi, [vtx, n]); vtx += n;
       if (parts.length > 9000) break;
     }
     if (parts.length) {
       const m = new THREE.Mesh(mergeGeometries(parts), new THREE.MeshStandardMaterial({ color: 0xd8d4cc, roughness: 0.5, metalness: 0.4 }));
       m.castShadow = true; m.receiveShadow = true; m.userData.noHit = true;
       scene.add(m);
+      gutterMesh = m;
     }
   }
-  return { buildings: B, cityBlocks, lakeHouses, junk, count: B.length };
+  // roofs that sit on a building (for taking one house down and rebuilding it)
+  const roofOf = new Map();
+  roofs.forEach((r, ri) => {
+    const bi = B.findIndex((b) => Math.abs(b.x - r.x) < b.w / 2 && Math.abs(b.z - r.z) < b.d / 2 && Math.abs(b.y + b.h - r.y) < 1.5);
+    if (bi >= 0) roofOf.set(bi, ri);
+  });
+  return { buildings: B, cityBlocks, lakeHouses, junk, count: B.length, mesh, roofMesh, roofs, roofOf, gutterMesh, gutterRanges };
 }

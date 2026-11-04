@@ -87,17 +87,26 @@ export function buildCarrier(a, puff = 0) {
   const g = new THREE.Group(), cloth = fabricOf(a), dark = M(0x151515, 0.8);
   const add = (geo, m, x, y, z) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); g.add(o); return o; };
   const thick = a.plates ? 0.04 : 0.022, w = a.plates ? 0.29 : 0.34, h = a.plates ? 0.34 : 0.4;
-  add(new THREE.BoxGeometry(w, h, thick), cloth, 0, 0.0, 0.165 + P);
-  add(new THREE.BoxGeometry(w, h, thick), cloth, 0, 0.0, -0.17 - P);
+  const FZ = 0.15 + P, BZ = -0.158 - P; // plate faces: front and back, just off the clothes
+  add(new THREE.BoxGeometry(w, h, thick), cloth, 0, 0.0, FZ);
+  add(new THREE.BoxGeometry(w, h, thick), cloth, 0, 0.0, BZ);
   // cummerbund
   const band = new THREE.CylinderGeometry(1, 1, 0.13, 28, 1, true);
   const b = add(band, cloth, 0, -0.12, -0.005); b.scale.set(0.205 + P, 1, 0.18 + P); b.material = cloth.clone(); b.material.side = THREE.DoubleSide;
   // shoulder straps
-  for (const s of [-1, 1]) { const st = add(new THREE.BoxGeometry(0.055, 0.02, 0.36 + P * 2), cloth, s * 0.1, 0.205 + P * 0.5, 0); st.rotation.x = 0; }
-  if (a.plates || a.rig) for (let i = -1; i <= 1; i++) { add(new THREE.BoxGeometry(0.075, 0.12, 0.05), cloth, i * 0.085, -0.075, 0.2 + P); add(new THREE.BoxGeometry(0.06, 0.02, 0.052), dark, i * 0.085, -0.02, 0.2 + P); }
-  if (a.plates) { add(new THREE.BoxGeometry(0.16, 0.08, 0.035), cloth, 0, 0.08, 0.195 + P); add(new THREE.BoxGeometry(0.12, 0.012, 0.01), M(0xc8c8c8, 0.6), 0, 0.125, 0.214 + P); }
+  // shoulder straps: up from the top of each plate, over the shoulder, down to the other plate
+  const seg = (y1, z1, y2, z2, x) => { const L = Math.hypot(y2 - y1, z2 - z1); const st = add(new THREE.BoxGeometry(0.05, 0.014, L), cloth, x, (y1 + y2) / 2, (z1 + z2) / 2); st.rotation.x = -Math.atan2(y2 - y1, z2 - z1); return st; };
+  for (const s of [-1, 1]) {
+    const x = s * 0.105, top = 0.215 + P * 0.6;
+    seg(h / 2 - 0.01, FZ, top - 0.01, 0.07, x);
+    seg(top, 0.075, top, -0.075, x);
+    seg(top - 0.01, -0.075, h / 2 - 0.01, BZ, x);
+    add(new THREE.BoxGeometry(0.052, 0.006, 0.05), dark, x, top + 0.008, 0); // the pad over the collarbone
+  }
+  if (a.plates || a.rig) for (let i = -1; i <= 1; i++) { add(new THREE.BoxGeometry(0.075, 0.12, 0.05), cloth, i * 0.085, -0.075, FZ + 0.035); add(new THREE.BoxGeometry(0.06, 0.02, 0.052), dark, i * 0.085, -0.02, FZ + 0.035); }
+  if (a.plates) { add(new THREE.BoxGeometry(0.16, 0.08, 0.035), cloth, 0, 0.08, FZ + 0.03); add(new THREE.BoxGeometry(0.12, 0.012, 0.01), M(0xc8c8c8, 0.6), 0, 0.125, FZ + 0.049); }
   if (a.sides) for (const s of [-1, 1]) add(new THREE.BoxGeometry(0.03, 0.15, 0.16), cloth, s * (0.212 + P), -0.1, 0);
-  if (a.id === 'soft-patrol') { const badge = add(new THREE.BoxGeometry(0.06, 0.07, 0.008), M(0xc9a640, 0.3, 0.9), -0.08, 0.08, 0.18 + P); void badge; }
+  if (a.id === 'soft-patrol') { const badge = add(new THREE.BoxGeometry(0.06, 0.07, 0.008), M(0xc9a640, 0.3, 0.9), -0.08, 0.08, FZ + 0.015); void badge; }
   if (a.rig) { g.children.slice(0, 2).forEach((o) => { o.visible = false; }); }
   g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.userData.noHit = true; } });
   return g;

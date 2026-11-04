@@ -13,7 +13,7 @@ export function setupMenu(settings, onPlay) {
   }
   $('#detected').textContent = `Detected: ${gpu.name} → recommended ${PRESETS[gpu.preset].label}`;
   const presetsEl = $('#presets');
-  for (const k of ['low', 'medium', 'high', 'ultra']) {
+  for (const k of ['low', 'medium', 'high', 'ultra', 'cinematic']) {
     const b = document.createElement('button');
     b.textContent = PRESETS[k].label; b.dataset.preset = k;
     b.onclick = () => { settings.preset = k; refresh(); };
@@ -67,6 +67,8 @@ export function setupMenu(settings, onPlay) {
       saveSettings(settings); onPlay();
     };
   }
+  // the desktop app is always a PC
+  if (window.SB_DESKTOP && !settings.platform) { settings.platform = 'pc'; settings.preset = gpu.preset === 'phone' ? 'high' : gpu.preset; settings.dynamicRes = true; }
   if (!settings.platform) {
     // first launch: pre-pick a sensible default from the detection
     if (gpu.mobile) settings.preset = 'phone';

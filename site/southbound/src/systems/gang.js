@@ -163,7 +163,7 @@ export function installGang(game) {
     const p = local(lx, lz);
     o.position.set(p.x, groundY(p.x, p.z), p.z);
     o.rotation.y = HQ.face + rot;
-    o.traverse((m) => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; m.userData.hitStatic = true; } });
+    o.traverse((m) => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; m.userData.hitStatic = true; m.userData.surf = 'wood'; } });
     scene.add(o);
     props.push(o);
     const s = o.userData.size;
@@ -230,7 +230,7 @@ export function installGang(game) {
     if (h.mixer) h.mixer.setTime(Math.random() * 3);
     scene.add(h.root);
     const m = { M, h, pos, look, pose, talkT: 0 };
-    interact.add({ x: pos.x, z: pos.z, r: 2.2, marker: false, show: () => !S.indoors && S.mode === 'foot' && !game.storyBusy?.(),
+    interact.add({ x: pos.x, z: pos.z, r: 2.2, marker: false, show: () => !S.indoors && S.mode === 'foot' && !game.storyBusy?.() && !m.away,
       label: () => `${keyHint(game)} talk to ${M.name.replace(/".*"\s/, '')} · ${M.role}`, use: () => talk(m) });
     return m;
   });
@@ -333,7 +333,7 @@ export function installGang(game) {
     { who: ['truck'], t: 6.5, line: ['Rico', 'And that beauty out front is mine. Rusty, ugly, paid for. You want her? Four hundred, cash, whenever you have it. Family price.'] },
     { who: [0], t: 4.5, line: ['Rico', 'Come on. Drive me into the city. I\'ll show you where the money is.'] },
   ];
-  let truck = null;
+  let truck = null, leftTruck = null;
   function spawnTruck() {
     if (truck) return truck;
     const p = local(0, 11);
@@ -345,6 +345,96 @@ export function installGang(game) {
     game.parked.push(truck);
     return truck; // Rico's, not yours: buy it from him at the yard
   }
+
+  // ---------------- Rico rides along: he walks round to the passenger door, opens it and
+  // climbs in, rides with you (turning to you when he talks), and at the drop-off he
+  // gets out, shuts the door and walks off down the sidewalk to his meeting
+  const ride = { st: null, t: 0, v: null, to: null, talk: 0, home: null };
+  const me = () => (S.mode === 'car' && S.vehicle ? S.vehicle.pos : player.pos); // where you are (on foot or at the wheel)
+  const _q1 = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _q3 = new THREE.Quaternion(), _up = new THREE.Vector3();
+  const sideDoor = (v, side) => {
+    const left = new THREE.Vector3(Math.cos(v.heading), 0, -Math.sin(v.heading)), fwd = new THREE.Vector3(Math.sin(v.heading), 0, Math.cos(v.heading));
+    return v.pos.clone().addScaledVector(left, side * (v.spec.width / 2 + 0.55)).addScaledVector(fwd, (v.spec.wf || 1.3) * 0.2);
+  };
+  function walkTo(m, target, dt, speed = 1.4) {
+    const d = new THREE.Vector3().subVectors(target, m.pos); d.y = 0;
+    const L = d.length();
+    if (L < 0.25) return true;
+    const want = Math.atan2(d.x, d.z);
+    m.h.root.rotation.set(0, m.h.root.rotation.y + wrapAngle(want - m.h.root.rotation.y) * Math.min(1, dt * 7), 0);
+    m.pos.addScaledVector(d.normalize(), Math.min(L, speed * dt));
+    m.pos.y = collision.surface(m.pos.x, m.pos.z, m.pos.y + 1.2);
+    m.h.root.position.copy(m.pos);
+    m.h.play(speed > 2.4 ? 'Jog_Fwd_Loop' : 'Walk_Loop', 0.25);
+    return false;
+  }
+  const turnHead = (h, ang) => {
+    const b = h.model.getObjectByName('neck01'); if (!b || !b.parent) return;
+    h.root.updateMatrixWorld(true);
+    _up.set(0, 1, 0).applyQuaternion(h.root.quaternion);
+    b.getWorldQuaternion(_q1); _q2.setFromAxisAngle(_up, ang).multiply(_q1);
+    b.parent.getWorldQuaternion(_q3).invert(); b.quaternion.copy(_q3.multiply(_q2));
+  };
+  function rideStart(v) {
+    if (ride.st || !v) return;
+    ride.st = 'toCar'; ride.v = v; ride.t = 0; rico.away = true;
+    ride.home = { pos: rico.pos.clone(), rot: rico.h.root.rotation.y };
+  }
+  function rideSay(line, t = 5) { say('Rico', line, t); ride.talk = Math.min(t, 4); }
+  function rideUpdate(dt) {
+    const v = ride.v, m = rico;
+    ride.t += dt; ride.talk = Math.max(0, ride.talk - dt);
+    if (!v || !v.group.parent) { rideEnd(); return; }
+    const pd = v.door ? v.door('door-pass') : null;
+    if (ride.st === 'toCar') {
+      const at = sideDoor(v, -1);
+      const near = me().distanceTo(m.pos) < 30;
+      if (walkTo(m, at, dt, near && m.pos.distanceTo(at) > 6 ? 2.8 : 1.4) || ride.t > 25) { ride.st = 'open'; ride.t = 0; m.h.play('Interact', 0.1, 1.5, true); }
+    } else if (ride.st === 'open') {
+      m.h.root.rotation.y += wrapAngle(Math.atan2(v.pos.x - m.pos.x, v.pos.z - m.pos.z) - m.h.root.rotation.y) * Math.min(1, dt * 10);
+      if (pd) pd.rotation.y = pd.userData.open * Math.min(1, ride.t / 0.45);
+      if (ride.t > 0.6) { ride.st = 'riding'; ride.t = 0; m.h.play('Sitting_Idle_Loop', 0.2, 1, true); if (!v.cabLayout) m.h.root.visible = false; }
+    } else if (ride.st === 'riding') {
+      if (pd && ride.t < 0.6) pd.rotation.y = pd.userData.open * Math.max(0, 1 - ride.t / 0.5);
+    } else if (ride.st === 'out') {
+      if (pd) pd.rotation.y = pd.userData.open * Math.min(1, ride.t / 0.4);
+      if (ride.t > 0.45) {
+        const at = sideDoor(v, -1);
+        m.pos.set(at.x, collision.surface(at.x, at.z, v.pos.y + 1.5), at.z);
+        m.h.root.position.copy(m.pos); m.h.root.rotation.set(0, v.heading, 0); m.h.root.visible = true; m.h.post = null;
+        ride.st = 'shut'; ride.t = 0; m.h.play('Idle_Loop', 0.2, 1, true);
+      }
+    } else if (ride.st === 'shut') {
+      if (pd) pd.rotation.y = pd.userData.open * Math.max(0, 1 - ride.t / 0.4);
+      if (ride.t > 0.5) {
+        // down the sidewalk on the passenger side, the way the truck was facing
+        const f = new THREE.Vector3(Math.sin(v.heading), 0, Math.cos(v.heading)), left = new THREE.Vector3(Math.cos(v.heading), 0, -Math.sin(v.heading));
+        ride.to = m.pos.clone().addScaledVector(left, -2.6).addScaledVector(f, 38);
+        ride.st = 'leave'; ride.t = 0;
+      }
+    } else if (ride.st === 'leave') {
+      const done = walkTo(m, ride.to, dt, 1.45);
+      const far = m.pos.distanceTo(me()) > 60;
+      if (done || far || ride.t > 40) rideEnd();
+    }
+    if (ride.st === 'riding') {
+      if (v.cabLayout) {
+        v.seat(m.h, 1); m.h.update(dt);
+        // he looks over at you when he talks, and out of the window otherwise
+        ride.look = (ride.look || 0) + ((ride.talk > 0 ? 0.75 : Math.sin(ride.t * 0.21) * 0.35 - 0.15) - (ride.look || 0)) * Math.min(1, dt * 3);
+        turnHead(m.h, ride.look);
+        placeAccessories(m.h);
+      }
+    } else if (ride.st) { m.h.update(dt); placeAccessories(m.h); }
+  }
+  function rideEnd() {
+    const m = rico;
+    if (ride.home) { m.pos.copy(ride.home.pos); m.h.root.position.copy(m.pos); m.h.root.rotation.set(0, ride.home.rot, 0); }
+    m.h.post = null; m.h.play(m.pose, 0.2, 1, true); m.away = false;
+    ride.st = null; ride.v = null;
+    S.holdCar = false;
+  }
+  game.rico = { get state() { return ride.st; }, get truck() { return truck || leftTruck; }, get dest() { return pro?.dest || null; }, get phase() { return pro?.phase || null; }, get pos() { return rico.pos; } };
 
   function updatePrologue(dt, a) {
     pro.t += dt;
@@ -376,33 +466,35 @@ export function installGang(game) {
       return '';
     }
     if (pro.phase === 'truck') {
-      if (S.vehicle === truck) {
+      // Rico heads for the passenger door as soon as you go for the truck
+      if (!ride.st && truck && (player.pos.distanceTo(truck.pos) < 14 || S.entering?.v === truck || S.vehicle === truck)) rideStart(truck);
+      S.holdCar = S.vehicle === truck && ride.st !== 'riding';
+      if (S.vehicle === truck && ride.st !== 'riding') return 'Wait for Rico to get in';
+      if (S.vehicle === truck && ride.st === 'riding') {
+        S.holdCar = false;
         pro.phase = 'drive'; pro.t = 0; pro.lineT = 3;
-        rico.h.root.visible = false;
         const d = CITY.downtown;
         const r = nearestRoad(graph, d[0], d[1]) || { x: d[0], z: d[1] };
         pro.dest = { x: r.x, z: r.z };
         game.setWaypoint?.(r.x, r.z, 'Drop Rico downtown');
-        say('Rico', 'Downtown. And mind the potholes, my back is not what it was.', 4);
+        rideSay('Downtown. And mind the potholes, my back is not what it was.', 4);
       }
       return S.mode === 'foot' ? 'Get in Rico\'s pickup' : '';
     }
     if (pro.phase === 'drive') {
       const RIDE = ['You know what I like about you, John? You don\'t ask questions. Don\'t start now.', 'See that billboard? I\'m gonna be on one of those someday. Wanted poster, probably.',
         'First rule of the Gulf Line: get paid. Second rule: see rule one.', 'Is that smell the truck or you? ...It\'s the truck. I hope.', 'Cops in this city are bored. Don\'t give them anything to do.'];
-      if ((pro.lineT -= dt) <= 0 && pro.said !== RIDE.length) { pro.said = (pro.said || 0); say('Rico', RIDE[pro.said], 5); pro.said++; pro.lineT = 14; }
+      if ((pro.lineT -= dt) <= 0 && pro.said !== RIDE.length) { pro.said = (pro.said || 0); rideSay(RIDE[pro.said], 5); pro.said++; pro.lineT = 14; }
       const v = S.vehicle;
       if (v && Math.hypot(v.pos.x - pro.dest.x, v.pos.z - pro.dest.z) < 40 && Math.abs(v.speed) < 3) {
-        say('Rico', 'This is me. Here\'s two hundred for the ride. Now get a gun, get a job, get a car. In that order. I\'m taking my truck.', 7);
+        rideSay('This is me. Here\'s two hundred for the ride. Now get a gun, get a job, get a car. In that order. Leave the truck, Wrench picks her up.', 7);
         hud.bigMessage('PROLOGUE COMPLETE', 'You have almost nothing. Buy what you need · +$200', 5);
         S.money += 200;
         P.story.prologue = true; career.save();
-        // Rico drives his pickup back to the yard
-        const t = truck;
-        if (S.vehicle === t) game.exitVehicle?.();
-        setTimeout(() => { scene.remove(t.group); const i = game.parked.indexOf(t); if (i >= 0) game.parked.splice(i, 1); if (truck === t) truck = null; }, 400);
+        // Rico climbs out and walks off; the truck stays at the curb until Wrench collects it
+        ride.st = 'out'; ride.t = 0;
+        leftTruck = truck;
         game.setWaypoint?.(game.gunShops?.[0]?.x ?? player.pos.x, game.gunShops?.[0]?.z ?? player.pos.z, 'Calvera Arms Exchange (gunsmith)');
-        rico.h.root.visible = true;
         pro = null;
       }
       return '';
@@ -453,9 +545,15 @@ export function installGang(game) {
       flameMat.uniforms.uTime.value += dt;
       ember.lookAt(game.camera.position.x, ember.position.y, game.camera.position.z);
       // crew: turn to look at you when you're close, accessories follow heads
-      const near = player.pos.distanceTo(_f.set(HQ.x, player.pos.y, HQ.z)) < 70;
+      const near = me().distanceTo(_f.set(HQ.x, me().y, HQ.z)) < 70;
+      if (ride.st) rideUpdate(dt);
+      // Wrench collects Rico's truck once you're well away from it
+      if (leftTruck && S.vehicle !== leftTruck && me().distanceTo(leftTruck.pos) > 140) {
+        const t = leftTruck; leftTruck = null; scene.remove(t.group); const i = game.parked.indexOf(t); if (i >= 0) game.parked.splice(i, 1); if (truck === t) truck = null;
+      }
       for (const m of crew) {
-        m.h.root.visible = near && !(pro && pro.phase === 'drive' && m === rico);
+        if (m === rico && ride.st) continue;
+        m.h.root.visible = near;
         if (!m.h.root.visible) continue;
         const dx = player.pos.x - m.pos.x, dz = player.pos.z - m.pos.z, d = Math.hypot(dx, dz);
         const want = d < 6 && m.pose !== 'Sitting_Idle_Loop' ? Math.atan2(dx, dz) : m.look;

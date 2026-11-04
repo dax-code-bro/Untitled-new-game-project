@@ -2,7 +2,8 @@
 import * as THREE from 'three';
 import { clamp, lerp } from '../util.js';
 import { VEHICLES } from '../assets/library.js';
-import { makeBodyMaterial, randomPaint, FIXED_PAINT, SECOND_PAINT, buildCar, wheelGeometry, hasSpec } from '../assets/carbuilder.js';
+import { makeBodyMaterial, makeCabinDepthMaterial, randomPaint, FIXED_PAINT, SECOND_PAINT, buildCar, wheelGeometry, hasSpec } from '../assets/carbuilder.js';
+import { cabinLayout, splitDoors, POSE } from '../assets/cabin.js';
 
 export function randomCarType(rnd) {
   const list = Object.entries(VEHICLES).filter(([, v]) => v.weight > 0);
@@ -21,6 +22,7 @@ function mats() {
 }
 const _box = new THREE.Box3(), _v = new THREE.Vector3(), _q = new THREE.Quaternion(), _qs = new THREE.Quaternion();
 const X = new THREE.Vector3(1, 0, 0), Y = new THREE.Vector3(0, 1, 0);
+const _sq = new THREE.Quaternion(), _sv = new THREE.Vector3(), _sv2 = new THREE.Vector3(), _sq2 = new THREE.Quaternion();
 
 export class Vehicle {
   constructor(lib, type) {
@@ -43,8 +45,21 @@ export class Vehicle {
       const paint = FIXED_PAINT[type] || randomPaint();
       u.uPaint.value.setRGB(paint[0], paint[1], paint[2]); u.uMetal.value = paint[3];
       if (SECOND_PAINT[type]) u.uPaint2.value.setRGB(...SECOND_PAINT[type]);
-      model.getObjectByName('body').traverse((o) => { if (o.isMesh) o.material = this.bodyMat; });
+      model.getObjectByName('body').traverse((o) => { if (o.isMesh && o.userData.shell) o.material = this.bodyMat; });
       this.procSpec = spec;
+      // the close-up level: clear glass and a cabin you can see into
+      const cab = model.getObjectByName('cabin');
+      if (cab) {
+        this.cabinMat = makeBodyMaterial(spec, pm.isMeshPhysicalMaterial, 'cabin', u);
+        this.glassMat = makeBodyMaterial(spec, true, 'glass', u);
+        cab.material = this.cabinMat;
+        cab.customDepthMaterial = makeCabinDepthMaterial(u);
+        const glass = cab.getObjectByName('cabin-glass'); glass.material = this.glassMat;
+        this.cab = { mesh: cab, glass, inner: cab.getObjectByName('cabin-int'), wheel: cab.getObjectByName('cabin-wheel'), spin: cab.getObjectByName('cabin-spin'),
+          dials: cab.getObjectByName('cabin-dials'), spd: cab.getObjectByName('needle-spd'), rpm: cab.getObjectByName('needle-rpm'), clear: null, doors: null, doorGlass: [] };
+        this.cabLayout = cabinLayout(spec);
+        this.setClear(true);
+      }
     }
     if (proto.userData.paintable) {
       // per-car paint on the realistic model's body panels
@@ -109,6 +124,90 @@ export class Vehicle {
   }
 
   forward() { return { x: Math.sin(this.heading), z: Math.cos(this.heading) }; }
+
+  // ---- the cabin
+  // clear glass with the interior showing, or the old tinted look (traffic with nobody at the wheel)
+  setClear(on) {
+    const c = this.cab;
+    if (!c || c.clear === on) return;
+    c.clear = on;
+    this.bodyMat.userData.u.uClear.value = on ? 1 : 0;
+    c.glass.visible = c.inner.visible = c.wheel.visible = c.dials.visible = on;
+    for (const g of c.doorGlass) g.visible = on;
+  }
+  // split the front doors out of the body so they can swing open
+  openableDoors() {
+    const c = this.cab;
+    if (!c || c.doors) return;
+    const d = splitDoors(this.procSpec, c.mesh.geometry);
+    c.doors = [];
+    if (!d) return;
+    c.mesh.geometry = d.body; c.glass.geometry = d.body;
+    for (const D of d.doors) {
+      const pivot = new THREE.Group(); pivot.name = D.name; pivot.position.set(D.hinge[0], 0, D.hinge[1]); pivot.userData.open = D.open;
+      const skin = new THREE.Mesh(D.geo, this.cabinMat); skin.position.set(-D.hinge[0], 0, -D.hinge[1]);
+      skin.castShadow = skin.receiveShadow = true; skin.customDepthMaterial = c.mesh.customDepthMaterial;
+      const gl = new THREE.Mesh(D.geo, this.glassMat); gl.position.copy(skin.position); gl.userData.noHit = true; gl.renderOrder = 2; gl.visible = !!c.clear;
+      pivot.add(skin, gl); c.mesh.add(pivot); c.doorGlass.push(gl); c.doors.push(pivot);
+    }
+  }
+  door(name) { this.openableDoors(); return this.group.getObjectByName(name); }
+  // sit a person in seat i (0 driver, 1 front passenger, 2.. rear), hips on the cushion, leaning back with the seat
+  seat(h, i = 0) {
+    const L = this.cabLayout;
+    if (!L) return false;
+    const st = L.seats[Math.min(i, L.seats.length - 1)];
+    const m = this.body.children[0];
+    m.updateWorldMatrix(true, false);
+    _sq.setFromAxisAngle(X, -st.th);
+    const sc = _sv2.copy(h.root.scale).multiply(h.model.scale); // body size lives on the root (weight) or the model (crew)
+    // bigger people, and hats, sink a little deeper so their heads clear the roof
+    const sink = Math.max(0, sc.y - 1) * 0.84 + (h.acc && h.acc.some((a) => a.userData.at && a.userData.at[1] > 0.08) ? 0.06 : 0);
+    _sv.set(-POSE.pelvis[0] * sc.x, -POSE.pelvis[1] * sc.y, -POSE.pelvis[2] * sc.z).applyQuaternion(_sq).add(_sv2.set(st.x, st.y - sink, st.z));
+    m.localToWorld(h.root.position.copy(_sv));
+    m.getWorldQuaternion(_sq2);
+    h.root.quaternion.copy(_sq2).multiply(_sq);
+    return true;
+  }
+  // the driver's eyes, for the cockpit camera
+  eyeWorld(out) {
+    const L = this.cabLayout;
+    if (!L) return null;
+    const m = this.body.children[0];
+    m.updateWorldMatrix(true, false);
+    return m.localToWorld(out.set(L.eye.x, L.eye.y, L.eye.z));
+  }
+  // steering wheel turns with the front wheels, needles follow speed and revs
+  updateCabin(dt) {
+    const c = this.cab;
+    if (!c) return;
+    const turn = -this.steer * 5.2;
+    c.spin.rotation.z = turn;
+    if (!c.spd.visible) c.spd.visible = c.rpm.visible = true;
+    const sp = Math.abs(this.speed || 0), mph = sp * 2.237, top = Math.max(20, this.spec.top || 50);
+    c.spd.rotation.z = 0.75 * Math.PI - 1.5 * Math.PI * Math.min(1, mph / 140);
+    const gear = Math.min(5, Math.floor(sp / (top / 5))), within = (sp - gear * (top / 5)) / (top / 5);
+    const rpm = sp < 0.5 ? 0.1 + Math.sin(performance.now() * 0.02) * 0.004 : 0.2 + within * 0.55 + gear * 0.02;
+    this._rpm = lerp(this._rpm || 0.1, rpm, Math.min(1, dt * 6));
+    c.rpm.rotation.z = 0.75 * Math.PI - 1.5 * Math.PI * this._rpm;
+  }
+  // the driver's hands ride the rim as it turns (two-bone IK)
+  handsOnWheel(pose) {
+    const c = this.cab;
+    if (!c || !pose || !pose.ok) return;
+    c.wheel.updateWorldMatrix(true, false);
+    const k = this.cabLayout.wheel.R * Math.SQRT1_2, a = Math.max(-0.9, Math.min(0.9, c.spin.rotation.z));
+    const q = this.group.quaternion;
+    const F = { fw: new THREE.Vector3(0, 0, 1).applyQuaternion(q), right: new THREE.Vector3(-1, 0, 0).applyQuaternion(q), up: new THREE.Vector3(0, 1, 0).applyQuaternion(q), chest: pose.chest.getWorldPosition(new THREE.Vector3()) };
+    const col = new THREE.Vector3(0, 0, 1).transformDirection(c.wheel.matrixWorld);
+    for (const [side, sx] of [['L', 1], ['R', -1]]) {
+      const lx = sx * k, ly = k;
+      const rx = lx * Math.cos(a) - ly * Math.sin(a), ry = lx * Math.sin(a) + ly * Math.cos(a);
+      // the wrist sits just behind and inside the rim, so the palm lies on it and the fingers wrap it
+      const p = c.wheel.localToWorld(new THREE.Vector3(rx * 0.86, ry * 0.86, -0.045));
+      pose.reach(side === 'L' ? pose.L : pose.R, p, F, side);
+    }
+  }
 
   // tuning: swap rims, fit a spoiler
   setRims(spokes) {
@@ -257,5 +356,5 @@ export class Vehicle {
     }
   }
 
-  dispose() { this.tail.dispose(); if (this.bodyMat) this.bodyMat.dispose(); if (this.sirenRed) { this.sirenRed.dispose(); this.sirenBlue.dispose(); } }
+  dispose() { this.tail.dispose(); if (this.bodyMat) this.bodyMat.dispose(); if (this.cabinMat) { this.cabinMat.dispose(); this.glassMat.dispose(); this.cab.mesh.customDepthMaterial?.dispose(); } if (this.sirenRed) { this.sirenRed.dispose(); this.sirenBlue.dispose(); } }
 }

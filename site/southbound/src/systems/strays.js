@@ -1,5 +1,5 @@
 // The parts of the city nobody plans: stray dogs working the sidewalks and
-// dumpsters, rats in the alleys (more of them at night), and homeless camps
+// dumpsters, rats and mice in the alleys (more of them at night), and homeless camps
 // tucked against walls: a tent or a tarp, a shopping cart, boxes, and someone
 // sitting there. People react: they step around dogs, jump at rats, and you
 // can spare some change.
@@ -107,23 +107,28 @@ export function installStrays(game) {
   const rats = [];
   const nRats = q.label === 'Phone' ? 8 : 18;
   const ratMat = new THREE.MeshStandardMaterial({ color: 0x4a4038, roughness: 0.95 }), tailMat = new THREE.MeshStandardMaterial({ color: 0xb08a80, roughness: 0.7 });
-  for (let i = 0; i < nRats && alley.length; i++) {
+  // and house mice: half the size, sandy grey, bigger ears, quicker, and they freeze before they bolt
+  const mouseMat = new THREE.MeshStandardMaterial({ color: 0x8a7a68, roughness: 0.95 });
+  const nMice = q.label === 'Phone' ? 4 : 12;
+  for (let i = 0; i < nRats + nMice && alley.length; i++) {
+    const mouse = i >= nRats;
     const [x, z] = alley[(rnd() * alley.length) | 0];
     const g = new THREE.Group();
-    const body = new THREE.Mesh(new THREE.SphereGeometry(0.06, 10, 8), ratMat); body.scale.set(0.8, 0.7, 1.6); body.position.y = 0.05; g.add(body);
-    const head = new THREE.Mesh(new THREE.ConeGeometry(0.035, 0.08, 8), ratMat); head.rotation.x = Math.PI / 2; head.position.set(0, 0.05, 0.12); g.add(head);
-    for (const s of [-1, 1]) { const ear = new THREE.Mesh(new THREE.SphereGeometry(0.014, 6, 4), tailMat); ear.position.set(s * 0.025, 0.085, 0.09); g.add(ear); }
+    const body = new THREE.Mesh(new THREE.SphereGeometry(0.06, 10, 8), mouse ? mouseMat : ratMat); body.scale.set(0.8, 0.7, 1.6); body.position.y = 0.05; g.add(body);
+    const head = new THREE.Mesh(new THREE.ConeGeometry(0.035, 0.08, 8), mouse ? mouseMat : ratMat); head.rotation.x = Math.PI / 2; head.position.set(0, 0.05, 0.12); g.add(head);
+    for (const s of [-1, 1]) { const ear = new THREE.Mesh(new THREE.SphereGeometry(mouse ? 0.022 : 0.014, 6, 4), tailMat); ear.position.set(s * (mouse ? 0.03 : 0.025), mouse ? 0.09 : 0.085, 0.09); g.add(ear); }
+    if (mouse) g.scale.setScalar(0.5);
     const tail = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.008, 0.16, 5), tailMat); tail.rotation.x = Math.PI / 2 - 0.25; tail.position.set(0, 0.035, -0.17); g.add(tail);
     g.traverse((o) => { if (o.isMesh) o.userData.noHit = true; });
     scene.add(g);
-    rats.push({ g, pos: new THREE.Vector3(x, ground(x, z), z), home: [x, z], target: null, heading: rnd() * 6.28, t: rnd() * 5, tail });
+    rats.push({ g, pos: new THREE.Vector3(x, ground(x, z), z), home: [x, z], target: null, heading: rnd() * 6.28, t: rnd() * 5, tail, mouse });
   }
 
   const _v = new THREE.Vector3();
   return {
     camps, dogs, rats,
     update(dt) {
-      const pp = player.pos, night = sky.hour < 6 || sky.hour > 20;
+      const pp = game.S.mode === 'car' && game.S.vehicle ? game.S.vehicle.pos : player.pos, night = sky.hour < 6 || sky.hour > 20;
       // camp figures go to the nearest camps
       const near = camps.map((c) => [Math.hypot(c.x - pp.x, c.z - pp.z), c]).sort((a, b) => a[0] - b[0]).slice(0, sitters.length).filter(([d]) => d < 90).map(([, c]) => c);
       for (const c of camps) c.sitter = null;
@@ -174,15 +179,20 @@ export function installStrays(game) {
         r.g.visible = dist < 45 && (night || r.home[0] % 3 < 1.2);
         if (!r.g.visible) continue;
         r.t += dt;
-        const spooked = dist < 4.5 || peds.list.some((p) => p.mode !== 'dead' && Math.abs(p.pos.x - r.pos.x) < 1.5 && Math.abs(p.pos.z - r.pos.z) < 1.5);
-        if (spooked && !r.target) {
-          const a = Math.random() * 6.28; r.target = [r.home[0] + Math.cos(a) * 3, r.home[1] + Math.sin(a) * 3];
-          for (const p of peds.list) if (!p.role && p.mode !== 'dead' && p.pos.distanceTo(r.pos) < 2 && Math.random() < 0.5) { p.h.play('Hit_Chest', 0.05, 1.6, true); if (p.pos.distanceTo(pp) < 20) hud.toast(pick(['"Ugh! A rat!"', '"Oh hell no."', '"Get away, get away!"']), 1.4); }
+        const spooked = dist < (r.mouse ? 3 : 4.5) || peds.list.some((p) => p.mode !== 'dead' && Math.abs(p.pos.x - r.pos.x) < 1.5 && Math.abs(p.pos.z - r.pos.z) < 1.5);
+        if (spooked && !r.target && !(r.freeze > 0)) {
+          if (r.mouse && r.freeze === undefined) { r.freeze = 0.4 + Math.random() * 0.5; } // a mouse freezes for a beat first
+          else {
+            r.freeze = undefined;
+            const a = Math.random() * 6.28; r.target = [r.home[0] + Math.cos(a) * 3, r.home[1] + Math.sin(a) * 3];
+            for (const p of peds.list) if (!p.role && p.mode !== 'dead' && p.pos.distanceTo(r.pos) < 2 && Math.random() < (r.mouse ? 0.3 : 0.5)) { p.h.play('Hit_Chest', 0.05, 1.6, true); if (p.pos.distanceTo(pp) < 20) hud.toast(pick(r.mouse ? ['"Was that a mouse?"', '"Eek!"', '"Ugh, mice."'] : ['"Ugh! A rat!"', '"Oh hell no."', '"Get away, get away!"']), 1.4); }
+          }
         }
+        if (r.freeze > 0) r.freeze -= dt;
         if (r.target) {
           const dx = r.target[0] - r.pos.x, dz = r.target[1] - r.pos.z, L = Math.hypot(dx, dz);
           if (L < 0.15) r.target = null;
-          else { r.heading = Math.atan2(dx, dz); r.pos.x += (dx / L) * 3.2 * dt; r.pos.z += (dz / L) * 3.2 * dt; r.pos.y = ground(r.pos.x, r.pos.z, r.pos.y); }
+          else { const sp = r.mouse ? 4.2 : 3.2; r.heading = Math.atan2(dx, dz); r.pos.x += (dx / L) * sp * dt; r.pos.z += (dz / L) * sp * dt; r.pos.y = ground(r.pos.x, r.pos.z, r.pos.y); }
         }
         r.g.position.copy(r.pos); r.g.rotation.y = r.heading + (r.target ? 0 : Math.sin(r.t * 7) * 0.15);
         r.tail.rotation.y = Math.sin(r.t * (r.target ? 22 : 4)) * 0.4;

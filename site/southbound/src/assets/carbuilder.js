@@ -9,6 +9,7 @@
 // no download, and every model has real-world proportions.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { cabinLayout, buildInterior, wheelGeometryCab, dialMaterials, dialGeometry } from './cabin.js';
 
 // ---------------------------------------------------------------- helpers
 const hyp2 = (a, b) => Math.sqrt(a * a + b * b);
@@ -205,11 +206,13 @@ export function deriveSpec(baseKey, o = {}) {
     s.zA0 = L / 2 - 0.25; s.zA1 = L / 2 - 0.45; s.zC0 = -L / 2 + 0.05; s.zC1 = -L / 2 + 0.08;
     s.belt = 1.35 * ky; s.roof = 2.95 * ky; s.hood = s.belt; s.nose = 0.9; s.deck = s.belt; s.tail = s.belt;
     s.axF = L / 2 - 2.3; s.axR = -L / 2 + 2.6; s.glassBack = -99; s.zB = -99; s.doorR = 99; s.Rw = 0.5; s.tw = 0.3; s.hwc = W / 2 - 0.02; s.tumble = 0.0;
-    s.head = [W / 2 - 0.3, 0.7, 0.16, 0.08]; s.tail4 = [W / 2 - 0.15, 0.9, 0.08, 0.18]; s.stripe = 1.05; s.cabover = true; delete s.box;
+    s.head = [W / 2 - 0.3, 0.7, 0.16, 0.08]; s.tail4 = [W / 2 - 0.15, 0.9, 0.08, 0.18]; s.stripe = 1.05; s.cabover = true; delete s.box; s.bus = true;
   }
   return s;
 }
 export function registerSpec(id, spec) { P[id] = spec; }
+// Rico's '89 pickup: a short-bed workhorse on steel wheels, faded paint and rust
+P['rusty-pickup'] = { ...deriveSpec('truck', { L: 5.2, W: 1.95, hk: 0.97, spokes: 0 }), rust: 0.85 };
 export function hasSpec(id) { return !!P[id]; }
 
 function bodySDF(s) {
@@ -288,10 +291,14 @@ function bodySDF(s) {
 // ------------------------------------------------------------ materials
 const BODY_GLSL = /* glsl */ `
 uniform vec3 uPaint, uPaint2;
-uniform float uMetal, uLights, uBrake, uSirenR, uSirenB, uLivery, uTint, uLightK;
+uniform float uMetal, uLights, uBrake, uSirenR, uSirenB, uLivery, uTint, uLightK, uClear, uRust;
 uniform vec4 uCab, uCabZ, uBody, uAxle, uHead, uTail, uMisc, uBar;
 varying vec3 vCarP; varying vec3 vCarN;
-vec3 sbAlb; vec3 sbEmit; float sbRough, sbMetal, sbCoat;
+vec3 sbAlb; vec3 sbEmit; float sbRough, sbMetal, sbCoat, sbGlassK;
+float sbHash(vec3 p){ p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
+float sbNoise(vec3 x){ vec3 i = floor(x), f = fract(x); f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(mix(sbHash(i), sbHash(i + vec3(1,0,0)), f.x), mix(sbHash(i + vec3(0,1,0)), sbHash(i + vec3(1,1,0)), f.x), f.y),
+             mix(mix(sbHash(i + vec3(0,0,1)), sbHash(i + vec3(1,0,1)), f.x), mix(sbHash(i + vec3(0,1,1)), sbHash(i + vec3(1,1,1)), f.x), f.y), f.z); }
 float sbRect(vec2 p, vec2 c, vec2 hs, float r){ vec2 q = abs(p - c) - hs + r; return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r; }
 float sbGap(float d){ float aa = fwidth(d) * 1.5 + 1e-4; return 1.0 - smoothstep(0.0025, 0.0025 + aa, abs(d)); }
 void sbPlate(vec2 p, vec2 c){
@@ -303,7 +310,7 @@ void sbZones(){
   vec3 n = normalize(vCarN); vec3 p = vCarP; float ax = abs(p.x);
   float belt = uCab.x, roof = uCab.y;
   float doorF = uAxle.x - uAxle.z - 0.14;
-  sbAlb = uPaint; sbRough = mix(0.3, 0.36, uMetal); sbMetal = uMetal * 0.6; sbCoat = 1.0; sbEmit = vec3(0.0);
+  sbAlb = uPaint; sbRough = mix(0.3, 0.36, uMetal); sbMetal = uMetal * 0.6; sbCoat = 1.0; sbEmit = vec3(0.0); sbGlassK = 0.0;
   bool paint = true;
   // liveries
   if (uLivery > 0.5 && uLivery < 1.5 && ((p.z < doorF && p.z > uMisc.w + 0.0 && p.y < belt && p.y > uBody.w + 0.16) || p.y > belt + 0.02)) sbAlb = uPaint2;
@@ -329,7 +336,7 @@ void sbZones(){
         if (edge > 0.0) { glass = edge > 0.016 && abs(p.z - uAxle.w) > 0.045; trim = !glass; }
       }
     }
-    if (glass) { sbAlb = vec3(0.01, 0.012, 0.014) * (1.0 - uTint * 0.8) + vec3(0.03, 0.035, 0.04) * (1.0 - uTint) * step(p.y, belt + (roof - belt) * 0.45); sbRough = 0.025; sbMetal = 0.0; sbCoat = 1.0; paint = false; }
+    if (glass) { sbGlassK = 1.0; sbAlb = vec3(0.01, 0.012, 0.014) * (1.0 - uTint * 0.8) + vec3(0.03, 0.035, 0.04) * (1.0 - uTint) * step(p.y, belt + (roof - belt) * 0.45); sbRough = 0.025; sbMetal = 0.0; sbCoat = 1.0; paint = false; }
     else if (trim) { sbAlb = vec3(0.018); sbRough = 0.3; sbMetal = 0.0; sbCoat = 0.6; paint = false; }
   }
   // front: headlights, grille, plate
@@ -366,6 +373,18 @@ void sbZones(){
     else { sbAlb = vec3(0.9, 0.85, 0.6); sbRough = 0.2; sbCoat = 0.5; sbMetal = 0.0; sbEmit = vec3(1.0, 0.8, 0.3) * (0.15 + uLights * 2.5); }
     paint = false;
   }
+  // old paint: rust from the sills and arches up, a sun-faded, chalky top
+  if (paint && uRust > 0.0) {
+    float rn = sbNoise(p * 7.0) * 0.6 + sbNoise(p * 23.0) * 0.4;
+    float low = clamp(1.0 - (p.y - uBody.w) / 0.45, 0.0, 1.0) + clamp(1.0 - dW / (uAxle.z + 0.25), 0.0, 1.0) * 0.6;
+    float th = 0.66 - uRust * 0.16 - low * 0.22;
+    float r = smoothstep(th, th + 0.05, rn);
+    sbCoat *= 1.0 - uRust * 0.85; sbRough = mix(sbRough, 0.72, uRust * 0.8); sbMetal *= 1.0 - uRust * 0.7;
+    if (n.y > 0.5) sbAlb = mix(sbAlb, sbAlb * 0.75 + 0.1, uRust * 0.55);
+    sbAlb = mix(sbAlb, mix(vec3(0.13, 0.05, 0.018), vec3(0.32, 0.13, 0.04), sbNoise(p * 70.0)), r);
+    sbRough = mix(sbRough, 0.95, r); sbMetal *= 1.0 - r; sbCoat *= 1.0 - r;
+    if (r > 0.5) paint = false;
+  }
   // door handles
   if (paint && abs(n.x) > 0.6 && abs(p.y - (belt - 0.085)) < 0.017) {
     if (abs(p.z - (uAxle.w > -50.0 ? uAxle.w - 0.22 : doorF - 0.85)) < 0.075 || (uMisc.w < 50.0 && abs(p.z - (uMisc.w + 0.22 + 0.12)) < 0.075 && false)) { sbAlb = vec3(0.55); sbMetal = 1.0; sbRough = 0.18; paint = false; }
@@ -398,15 +417,45 @@ function bodyUniforms(s) {
     uHead: V4(...s.head), uTail: V4(...s.tail4),
     uMisc: V4(s.glassBack, s.box ? 0 : 1, s.grille, s.doorR),
     uBar: V4(s.bar ? s.roof + 0.008 : 0, s.bar === 'taxi' ? 2 : 1, s.stripe || 0, s.twoTone ? 1 : 0),
+    uClear: { value: 0 }, uRust: { value: s.rust || 0 },
   };
 }
 
 export { getWheelMaterial };
-export function makeBodyMaterial(s, physical) {
-  const Mat = physical ? THREE.MeshPhysicalMaterial : THREE.MeshStandardMaterial;
-  const m = new Mat({ color: 0xffffff, roughness: 0.35, metalness: 0.3, ...(physical ? { clearcoat: 1, clearcoatRoughness: 0.04 } : {}) });
+// mode: undefined = closed shell (painted glass), 'cabin' = the glass is cut out
+// (when uClear is on) and the inside of the shell is trimmed like an interior,
+// 'glass' = only the windows, see-through. Pass `u` to share another
+// material's uniforms (paint, lights) with this one.
+export function makeBodyMaterial(s, physical, mode, u) {
+  const Mat = physical || mode === 'glass' ? THREE.MeshPhysicalMaterial : THREE.MeshStandardMaterial;
+  const m = new Mat({ color: 0xffffff, roughness: 0.35, metalness: 0.3, ...(physical || mode === 'glass' ? { clearcoat: 1, clearcoatRoughness: 0.04 } : {}) });
   m.name = 'carbody';
-  m.userData.u = bodyUniforms(s);
+  m.userData.u = u || bodyUniforms(s);
+  if (mode === 'cabin') m.side = THREE.DoubleSide;
+  if (mode === 'glass') { m.transparent = true; m.depthWrite = false; m.side = THREE.DoubleSide; }
+  const zones = mode === 'glass'
+    ? `#include <color_fragment>
+sbZones();
+if (sbGlassK < 0.5) discard;
+{ float fr = pow(1.0 - abs(dot(normalize(vNormal), normalize(vViewPosition))), 4.0);
+  float a = 0.14 + uTint * 0.5;
+  if (uAxle.w > -50.0 && vCarP.z < uAxle.w - 0.05 && uTint > 0.3) a += 0.25; // privacy glass in the back
+  // edge-on glass turns into a mirror of the sky, not a black sheet
+  diffuseColor.rgb = mix(vec3(0.012, 0.014, 0.016), vec3(0.32, 0.35, 0.39), fr); diffuseColor.a = mix(a, 0.5, fr); }`
+    : mode === 'cabin'
+      ? `#include <color_fragment>
+sbZones();
+if (uClear > 0.5) {
+  if (sbGlassK > 0.5) discard;
+  if (!gl_FrontFacing) {
+    // inside of the shell: headliner, door cards with an armrest band, carpet
+    float yy = vCarP.y;
+    sbAlb = yy > uCab.x + 0.03 ? vec3(0.3, 0.29, 0.27) : yy < uBody.w + 0.14 ? vec3(0.022) : abs(yy - (uCab.x - 0.17)) < 0.03 ? vec3(0.085, 0.082, 0.078) : vec3(0.04);
+    sbRough = 0.92; sbMetal = 0.0; sbCoat = 0.0; sbEmit = vec3(0.0);
+  }
+}
+diffuseColor.rgb = sbAlb;`
+      : '#include <color_fragment>\nsbZones();\ndiffuseColor.rgb = sbAlb;';
   m.onBeforeCompile = function (shader) {
     Object.assign(shader.uniforms, this.userData.u);
     shader.vertexShader = shader.vertexShader
@@ -414,13 +463,29 @@ export function makeBodyMaterial(s, physical) {
       .replace('#include <begin_vertex>', '#include <begin_vertex>\nvCarP = position; vCarN = normal;');
     shader.fragmentShader = shader.fragmentShader
       .replace('#include <common>', '#include <common>\n' + BODY_GLSL)
-      .replace('#include <color_fragment>', '#include <color_fragment>\nsbZones();\ndiffuseColor.rgb = sbAlb;')
+      .replace('#include <color_fragment>', zones)
       .replace('#include <roughnessmap_fragment>', 'float roughnessFactor = sbRough;')
       .replace('#include <metalnessmap_fragment>', 'float metalnessFactor = sbMetal;')
       .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += sbEmit;')
       .replace('#include <lights_physical_fragment>', '#include <lights_physical_fragment>\n#ifdef USE_CLEARCOAT\nmaterial.clearcoat *= sbCoat;\n#endif');
   };
-  m.customProgramCacheKey = () => 'sbcarbody' + (physical ? 'p' : 's');
+  m.customProgramCacheKey = () => 'sbcarbody' + (physical || mode === 'glass' ? 'p' : 's') + (mode || '');
+  return m;
+}
+// shadow pass for the cabin shell: sunlight comes in through the windows
+export function makeCabinDepthMaterial(u) {
+  const m = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking });
+  m.userData.u = u;
+  m.onBeforeCompile = function (shader) {
+    Object.assign(shader.uniforms, this.userData.u);
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', '#include <common>\nvarying vec3 vCarP; varying vec3 vCarN;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvCarP = position; vCarN = normal;');
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', '#include <common>\nuniform vec3 uPaint, uPaint2;\n' + BODY_GLSL.replace('uniform vec3 uPaint, uPaint2;', ''))
+      .replace('#include <clipping_planes_fragment>', '#include <clipping_planes_fragment>\nsbZones();\nif (uClear > 0.5 && sbGlassK > 0.5) discard;');
+  };
+  m.customProgramCacheKey = () => 'sbcabdepth';
   return m;
 }
 
@@ -519,8 +584,30 @@ export function buildCar(type, quality) {
   const hi = new THREE.Mesh(geo, mat);
   const lo = new THREE.Mesh(surfaceNets(sdf, [-s.W / 2 - 0.3, 0.0, -s.L / 2 - 0.1], [s.W / 2 + 0.3, top, s.L / 2 + 0.1], Math.max(0.11, s.L / 60)), mat);
   hi.castShadow = lo.castShadow = true; hi.receiveShadow = lo.receiveShadow = true;
+  hi.userData.shell = lo.userData.shell = true;
   const body = new THREE.LOD();
-  body.addLevel(hi, 0); body.addLevel(lo, phone ? 25 : 45);
+  // up close: the same shell with the glass cut out and a real interior inside
+  const L = quality && quality.key === 'phone' ? null : cabinLayout(s); // phones keep the tinted shell
+  if (L) {
+    const cab = new THREE.Mesh(geo, mat);
+    cab.name = 'cabin'; cab.castShadow = cab.receiveShadow = true; cab.userData.shell = true;
+    const glass = new THREE.Mesh(geo, mat); glass.name = 'cabin-glass'; glass.userData.noHit = true; glass.renderOrder = 2;
+    const inner = new THREE.Mesh(buildInterior(s), getWheelMaterial()); inner.name = 'cabin-int'; inner.userData.noHit = true; inner.receiveShadow = true;
+    const wheel = new THREE.Group(); wheel.name = 'cabin-wheel'; wheel.position.set(L.wheel.x, L.wheel.y, L.wheel.z); wheel.rotation.x = L.wheel.tau;
+    const spin = new THREE.Mesh(wheelGeometryCab(), getWheelMaterial()); spin.name = 'cabin-spin'; spin.userData.noHit = true; spin.receiveShadow = true; wheel.add(spin);
+    const { dialMat, needleMat } = dialMaterials();
+    const dials = new THREE.Group(); dials.name = 'cabin-dials';
+    dials.position.set(L.dx, L.wheel.y + 0.04, L.dashZ - 0.004); dials.rotation.set(0.3, Math.PI, 0);
+    const face = new THREE.Mesh(dialGeometry(), dialMat); face.userData.noHit = true; dials.add(face);
+    const ng = new THREE.BoxGeometry(0.0035, 0.047, 0.002).translate(0, 0.019, 0);
+    for (const [nm, x] of [['needle-spd', 0.075], ['needle-rpm', -0.075]]) {
+      const nd = new THREE.Mesh(ng, needleMat); nd.name = nm; nd.position.set(x, 0, 0.003); nd.rotation.z = 0.75 * Math.PI; nd.userData.noHit = true; nd.visible = false; dials.add(nd);
+    }
+    cab.add(glass, inner, wheel, dials);
+    body.addLevel(cab, 0);
+    body.addLevel(hi, 22);
+  } else body.addLevel(hi, 0);
+  body.addLevel(lo, phone ? 25 : 45);
   body.name = 'body';
   body.material = mat; // shared by both levels
   root.add(body);
@@ -558,6 +645,7 @@ export function randomPaint(rnd = Math.random) {
 export const FIXED_PAINT = {
   taxi: [0.62, 0.42, 0.02, 0.0], police: [0.01, 0.01, 0.012, 0.2], ambulance: [0.8, 0.8, 0.78, 0.0], firetruck: [0.45, 0.012, 0.01, 0.3],
   'garbage-truck': [0.04, 0.16, 0.06, 0.2], delivery: [0.82, 0.82, 0.8, 0.0], 'sedan-sports': [0.55, 0.06, 0.01, 0.7],
+  'rusty-pickup': [0.2, 0.3, 0.31, 0.05],
 };
 export const SECOND_PAINT = { police: [0.85, 0.85, 0.85], ambulance: [0.5, 0.01, 0.01], firetruck: [0.85, 0.85, 0.8], 'garbage-truck': [0.75, 0.75, 0.72], delivery: [0.04, 0.12, 0.35] };
 export { surfaceNets, smax, smin, roundBox, block, profile, mirrorX, hyp2, hyp3 };

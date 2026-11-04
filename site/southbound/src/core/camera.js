@@ -26,6 +26,24 @@ export class CameraRig {
     if (a.camera) this.mode = (this.mode + 1) % 4;
     this.fp = (this.mode === 3 || opts.scope > 0) && !opts.vehicle && !!opts.eye;
     const modeK = [1, 1.6, 0.7, 1][this.mode];
+    // in the car, the fourth view is from the driver's seat: dash, wheel and mirrors
+    this.cab = this.mode === 3 && !!opts.vehicle && !!opts.cabEye;
+    if (this.cab) {
+      const cam = this.camera;
+      if (!this.free && performance.now() - opts.lastLook > 1400) { this.yaw += wrapAngle(opts.heading - this.yaw) * Math.min(1, dt * 3); this.pitch += (0.12 - this.pitch) * Math.min(1, dt * 2); }
+      const rel = clamp(wrapAngle(this.yaw - opts.heading), -2.3, 2.3), pt = clamp(this.pitch - 0.12, -0.55, 0.6);
+      const q = opts.cabQ;
+      const d = this._dir.set(Math.sin(rel) * Math.cos(pt), -Math.sin(pt), Math.cos(rel) * Math.cos(pt)).applyQuaternion(q);
+      cam.up.set(0, 1, 0).applyQuaternion(q);
+      cam.position.copy(opts.cabEye);
+      cam.lookAt(cam.position.x + d.x, cam.position.y + d.y, cam.position.z + d.z);
+      cam.up.set(0, 1, 0);
+      if (cam.near !== 0.12) { cam.near = 0.12; cam.updateProjectionMatrix(); } // your own collar and hair stay out of the shot
+      const fov = this.settings.fov + 4 + Math.min(Math.abs(opts.speed) * 0.12, 6);
+      if (Math.abs(cam.fov - fov) > 0.05) { cam.fov = lerp(cam.fov, fov, Math.min(1, dt * 4)); cam.updateProjectionMatrix(); }
+      this.dist = 0.1;
+      return;
+    }
     if (this.fp) {
       // first person: from the eyes, a touch in front so the head never shows
       const cam = this.camera;

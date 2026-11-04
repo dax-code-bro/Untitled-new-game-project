@@ -78,6 +78,36 @@ async (opts) => {
     }
     report.notes.push(`${n} land vehicles driven`);
   });
+  await run('car cabin: seats, doors, glass, cockpit', async () => {
+    const v = new G.Vehicle(G.lib, 'sedan');
+    v.pos.set(G.player.pos.x + 30, G.hm.height(G.player.pos.x + 30, G.player.pos.z), G.player.pos.z); v.sync(0);
+    G.scene.add(v.group);
+    ok(!!v.cabLayout && v.cabLayout.seats.length >= 2, 'a sedan has a driver and a passenger seat');
+    ok(v.cabLayout.seats.length >= 4, 'a sedan has a rear bench');
+    const L = v.cabLayout, s = G.player.h.root;
+    ok(L.wheel.y > L.floorY && L.wheel.y < v.procSpec.roof && L.eye.y < v.procSpec.roof, 'wheel and eyes inside the cabin');
+    v.seat(G.player.h, 0);
+    ok(finite(s.position) && s.position.distanceTo(v.pos) < 2, 'seating puts you in the car');
+    const d = v.door('door-drv'), p2 = v.door('door-pass');
+    ok(!!d && !!p2 && d.userData.open < 0 && p2.userData.open > 0, 'both front doors split out and swing outward');
+    v.setClear(false); ok(v.bodyMat.userData.u.uClear.value === 0 && !v.cab.glass.visible, 'tinted when nobody is at the wheel');
+    v.setClear(true); ok(v.bodyMat.userData.u.uClear.value === 1 && v.cab.inner.visible, 'clear glass shows the cabin');
+    v.steer = 0.4; v.speed = 20; v.updateCabin(1 / 30);
+    ok(Math.abs(v.cab.spin.rotation.z) > 1 && v.cab.spd.visible, 'the wheel turns and the needles move');
+    v.handsOnWheel(SB.gunPose()); ok(finite(G.player.h.model.getObjectByName('wristL').getWorldPosition(new SB.V3())), 'hands on the wheel stay finite');
+    ok(!!v.eyeWorld(new SB.V3()), 'cockpit eye point');
+    G.scene.remove(v.group); v.dispose();
+    s.rotation.set(0, G.player.heading, 0); s.position.copy(G.player.pos);
+    // every land model builds a cabin that fits it
+    let bad = [];
+    for (const id of opts.land) { const w = new G.Vehicle(G.lib, id); const C = w.cabLayout; if (C && !(C.seats.every((q) => Number.isFinite(q.y) && q.y > 0) && Number.isFinite(C.wheel.y))) bad.push(id); w.dispose(); }
+    ok(bad.length === 0, 'every cabin layout is sane: ' + bad.slice(0, 5).join(','));
+  });
+  await run('rusty pickup is a full car', async () => {
+    const v = new G.Vehicle(G.lib, 'rusty-pickup');
+    ok(v.procedural && v.bodyMat.userData.u.uRust.value > 0.5 && !!v.cabLayout, 'Rico\'s pickup: procedural, rusty, with a cab');
+    v.dispose();
+  });
   await run('boats + aircraft', async () => {
     const m = G.marineAir.marinas[0];
     for (const b of opts.boats) {
@@ -186,6 +216,56 @@ async (opts) => {
     }
     report.notes.push(`${n} interiors entered`);
   });
+  await run('walls: rounds go through drywall, not brick', async () => {
+    const c = G.combat, d = G.estate.doors.find((x) => x.b.style === 4);
+    await G.estate.enter(d);
+    const g = G.estate.inside.it.g; g.updateMatrixWorld(true);
+    let wall = null;
+    g.traverse((o) => { const P = o.geometry && o.geometry.parameters; if (!wall && o.isMesh && !o.userData.surf && o.material?.userData?.surf === 'drywall' && P && Math.min(P.width, P.depth) < 0.3 && Math.max(P.width, P.depth) > 2) wall = o; });
+    ok(!!wall, 'a home has drywall partitions');
+    if (wall) {
+      const P = wall.geometry.parameters, wp = wall.getWorldPosition(new SB.V3());
+      const n = P.width > P.depth ? new SB.V3(0, 0, 1) : new SB.V3(1, 0, 0);
+      const o = wp.clone().addScaledVector(n, 1.5); o.y = wp.y + 0.2;
+      const statics = []; g.traverse((m) => { if (m.isMesh && !m.userData.noHit) statics.push(m); });
+      const T = { peds: G.peds, vehicles: [], animals: [], statics };
+      c._pen = 3; const h1 = c.trace(o, n.clone().negate(), 20, T); c._pen = null;
+      ok(h1.through && h1.through[0].surf === 'drywall', 'a rifle round goes through the partition (' + (h1.through ? h1.through.map((x) => x.surf).join('>') : h1.surf) + ')');
+      c._pen = 0; const h2 = c.trace(o, n.clone().negate(), 20, T); c._pen = null;
+      ok(!h2.through && h2.kind === 'building' && h2.surf === 'drywall', 'birdshot stops in the drywall');
+      const before = c.holes.count;
+      h1.dir = n.clone().negate(); h1.origin = o; h1.ammo = { dmg: 1, pen: 0 };
+      c.impact(h1, { cat: 'rifle', pen: 3, damage: 30 }, T, o);
+      ok(c.holes.count > before, 'entry and exit holes are left in the wall');
+    }
+    G.estate.leave();
+    const brick = { t: 0, kind: 'building', box: { data: { surf: 'brick' } }, tExit: 9, point: new SB.V3() };
+    c.wallInfo(brick, new SB.V3(1, 0, 0));
+    ok(brick.surf === 'brick' && brick.thick > 1, 'a whole brick building is too thick to shoot through');
+  });
+  await run('houses: burn, fire department, rebuild', async () => {
+    const D = G.demolition, B = G.city.buildings;
+    const bi = B.findIndex((b) => b.style === 4 && !b.ruined && Math.hypot(b.x - G.player.pos.x, b.z - G.player.pos.z) < 2000);
+    ok(bi >= 0, 'there are houses');
+    if (bi >= 0) {
+      const b = B[bi], m = new SB.THREE.Matrix4();
+      D.destroy(bi);
+      G.city.mesh.getMatrixAt(bi, m);
+      ok(b.ruined === 'fire' && D.sites.has(bi) && Math.abs(m.determinant()) < 1e-9, 'the house is burning and its model is replaced by the shell');
+      ok(!!G.career.p.ruins[bi], 'the ruin is saved');
+      const site = D.sites.get(bi);
+      G.player.pos.set(b.x + b.w + 12, G.player.pos.y, b.z);
+      SB.skipRender(true); for (let k = 0; k < 20; k++) SB.step(15, 1 / 15); SB.skipRender(false);
+      ok(!!site.engine, 'a fire engine is dispatched');
+      // the builder: jump the clock through the job
+      site.phase = 'ruin'; site.t0 = G.sky.day * 24 + G.sky.hour - 2 - 16;
+      SB.skipRender(true); SB.step(2, 1 / 30); SB.skipRender(false);
+      ok(site.phase === 'build' && site.studs.count > 0, 'construction underway: framing at ' + site.stage);
+      D.finish(bi);
+      G.city.mesh.getMatrixAt(bi, m);
+      ok(!b.ruined && Math.abs(m.determinant()) > 1e-6 && !G.career.p.ruins[bi], 'the house is rebuilt and back on the map');
+    }
+  });
   await run('properties: buy a few', async () => {
     for (const p of G.estate.props.slice(0, 5)) { G.career.p.properties.push(p.id); }
     G.estate.update(1); ok(true, 'property income tick');
@@ -208,6 +288,31 @@ async (opts) => {
   await run('weather + time of day', async () => {
     for (const w of ['clear', 'cloudy', 'overcast', 'rain', 'storm']) for (const h of [3, 7, 12, 18.3, 22]) { SB.setWeather(w); SB.setHour(h); SB.step(1, 1 / 30); }
     SB.setWeather('clear'); SB.setHour(12);
+  });
+
+  await run('prologue: Rico rides along, then walks off', async () => {
+    const P = G.career.p, money0 = G.S.money;
+    P.story.prologue = false;
+    G.gang.startPrologue();
+    SB.skipRender(true);
+    SB.step(2); document.querySelector('.sbskip')?.click(); SB.step(4);
+    ok(G.rico.phase === 'truck' && !!G.rico.truck, 'after the intro: get in Rico\'s pickup');
+    for (let k = 0; k < 40 && G.rico.state !== 'riding'; k++) SB.step(10);
+    ok(G.rico.state === 'riding', 'Rico walked to the passenger door and got in (' + G.rico.state + ')');
+    const t = G.rico.truck;
+    G.player.pos.copy(t.pos); SB.enterNearest(); SB.step(5);
+    ok(G.S.vehicle === t && G.rico.phase === 'drive', 'driving Rico downtown');
+    const d = G.rico.dest;
+    t.pos.set(d.x, G.collision.surface(d.x, d.z, 500), d.z); t.vel.set(0, 0); t.speed = 0;
+    SB.step(3);
+    ok(G.rico.state === 'out' || G.rico.state === 'shut' || G.rico.state === 'leave', 'at the drop-off Rico gets out (' + G.rico.state + ')');
+    ok(P.story.prologue && G.S.money >= money0 + 200, 'paid $200 and the prologue is done');
+    SB.step(30);
+    const p0 = G.rico.pos.clone(); SB.step(30);
+    ok(G.rico.state === 'leave' && G.rico.pos.distanceTo(p0) > 0.5, 'he walks off down the sidewalk');
+    for (let k = 0; k < 90 && G.rico.state; k++) SB.step(15);
+    ok(G.rico.state === null, 'and is back at the yard afterwards');
+    SB.exitCar(); SB.skipRender(false);
   });
 
   // ---------------- save / load ----------------

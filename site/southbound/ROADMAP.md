@@ -195,6 +195,55 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 
 ## Session log
 
+- **Inside cars, through walls, houses that burn:**
+  - **Car interiors.**
+    - Up close, every procedural car has see-through glass with privacy glass in the back, and the glass turns to a reflection when seen edge-on.
+    - Inside is a cabin sized from the car's own measurements:
+      - Dash with a binnacle and lit speedometer and tachometer whose needles move, centre stack with a radio, knobs and four slatted vents, and a glovebox.
+      - Column and stalks, and a steering wheel that turns with the front wheels.
+      - Console with the gear lever and cup holders, pedals.
+      - Seats with bolsters and headrests, a rear bench where there's room, seatbelts.
+      - Sun visors, dome light, rear-view mirror, door pulls, and a parcel shelf or cargo floor.
+    - The inside of the shell is trimmed as headliner, door cards and carpet.
+    - Sunlight falls through the windows.
+    - Front doors are split out of the body and swing on their hinges.
+    - You sit in the driver's seat, reclined to fit that car's roof and floor, with your hands IK'd to the rim as it turns.
+    - Traffic shows clear glass when someone is at the wheel, tinted when nobody is.
+    - The fourth camera (V) in a car is the driver's-eye cockpit view.
+  - **Rico rides along.** He walks round to the passenger door, opens it and climbs in, and the truck waits for him. He rides with you, turning to you when he talks. At the drop-off he gets out, shuts the door and walks off down the sidewalk. The truck is left at the curb, and Wrench collects it.
+  - **Rico's truck.** The '89 pickup is a full procedural truck with faded paint and rust climbing from the sills and arches.
+  - **Walls.**
+    - Rounds go through what they can: glass, drywall (studs are harder), hollow doors, framed outside walls, sheet metal.
+    - With a rifle or armour-piercing ammo they also go through stucco, wood, brick veneer and block.
+    - Masonry, stone, steel poles and trees stop everything.
+    - Each wall costs the round energy and penetration, so whoever is behind it takes less.
+    - Bullet holes are drawn per pixel for each material: drywall, wood, brick, concrete, metal and glass.
+      - A drywall hole shows the torn paper, the gypsum core and the cavity behind it: the wood stud where one is (16 in on centre), or the back of the far panel, or pink insulation in outside walls.
+      - Exit holes blow out wider, and a group of shots tears into one big hole you can see the framing through.
+  - **Houses burn and come back.**
+    - A rocket or a car going up next to a house sets it on fire. It chars to a shell and the flames come out of it.
+    - The family gets out and watches from across the street, and someone calls it in.
+    - An engine drives down the road with its siren, the crew runs hoses and knocks the fire down, then they pack up and leave.
+    - The survivors load a van and move out.
+    - A builder then puts the house back over about a game day and a half:
+      - The site is fenced, with a dumpster, a portable toilet, a lumber stack and a permit sign.
+      - Debris is cleared and the slab is poured.
+      - Studs, plates and headers go up wall by wall, then the roof trusses.
+      - OSB sheathing goes on, then decking and shingle courses from the eaves up, then siding from the bottom up.
+    - Workers in hard hats and hi-vis hammer away in the daytime only.
+    - Ruins and rebuilds are saved.
+  - **Startup flicker fixed.** The black blinks at the start came from dynamic resolution resizing the canvas after each frame was drawn. It now resizes before drawing. The loading screen also stays up until the world has rendered once, then fades out.
+  - **Mice** join the rats: smaller, quicker, and they freeze before they bolt.
+  - **Guns look like their own guns.** Every catalogue gun leaves the factory with its own fittings, so guns that share a base model still look different:
+    - Optics: red dot tube, holographic window, variable scope on rings, or a micro dot on a pistol slide. Iron sights when there's no glass.
+    - Muzzle devices: birdcage hider, compensator, brake, suppressor can.
+    - Under the handguard: vertical or angled grip, weapon light, folded bipod, hand stop.
+    - Slings on long guns and shell carriers on shotguns.
+    - Gunsmith attachments now show on the gun, replacing the factory part in that slot.
+    - In first person you sight through the optic.
+    - The muzzle flash comes from the end of the muzzle device. The bore line is found from each model's geometry.
+  - **Chain-link fences** around lots are see-through galvanised wire mesh with a top rail and posts, not grey slabs.
+
 - **Start with nothing:** a new game gives you $150, the clothes you're
   wearing and your fists. Rico no longer hands out a gun or a truck: he pays
   you $200 for the ride downtown, tells you to buy a 9mm (Walt sells the

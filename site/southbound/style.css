@@ -58,6 +58,7 @@ select { background: #1f1814; color: var(--paper); border: 1px solid var(--line)
 
 /* ---------- loading */
 #loading { background: #0a0705; align-items: flex-end; justify-content: flex-start; z-index: 30; overflow: hidden; }
+#loading.fadeout { opacity: 0; transition: opacity .6s ease; pointer-events: none; }
 #loading .load-art { position: absolute; inset: -4%; background: url('assets/ui/loading.jpg') center / cover no-repeat, radial-gradient(ellipse at 50% 100%, #3b1d17, #0a0705 70%); animation: sbKen 40s ease-in-out infinite alternate; }
 #loading .load-shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0) 35%, rgba(0,0,0,.55) 70%, rgba(0,0,0,.88)), linear-gradient(90deg, rgba(0,0,0,.55), rgba(0,0,0,0) 60%); }
 @keyframes sbKen { from { transform: scale(1.0) translate(0, 0); } to { transform: scale(1.08) translate(-1.5%, -1%); } }

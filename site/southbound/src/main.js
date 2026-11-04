@@ -33,6 +33,8 @@ import { placeCivic } from './systems/civic.js';
 import { installNeeds } from './systems/needs.js';
 import { installStrays } from './systems/strays.js';
 import { createPowerLines } from './world/powerlines.js';
+import { createHoles } from './world/holes.js';
+import { installDemolition } from './systems/demolition.js';
 import { installWounds } from './systems/wounds.js';
 import { installStreetCrime } from './systems/streetcrime.js';
 import { installAuction } from './systems/auction.js';
@@ -185,6 +187,7 @@ async function createGame(progress) {
   audio.start();
   const peds = new Peds(lib, q, scene, collision, settings);
   const combat = new Combat(scene, hm, collision, settings, audio);
+  combat.holes = createHoles(scene); // bullet holes: drywall, brick, metal, wood, glass
   const police = new Police(lib, scene, hm, collision, graph, peds, audio);
   const hud = new HUD($('#hud'), hm, graph, city.buildings, settings);
   // weapons: RDR-style wheel, holsters, per-weapon holds (IK), gun HUD silhouette
@@ -256,16 +259,13 @@ async function createGame(progress) {
   post = createPost(renderer, scene, camera, q);
   if (post) renderer.toneMapping = THREE.NoToneMapping; // the post chain does filmic tone mapping
   applySize();
-  addEventListener('resize', applySize);
+  addEventListener('resize', () => { applySize(); try { if (typeof render === 'function') render(); } catch (e) { /* first frames */ } });
 
   // warm up shaders so the first frames don't hitch
   progress(0.97, 'Compiling shaders');
   await nextFrame();
   sky.update(0, 0, player.pos);
   renderer.compile(scene, camera);
-
-  $('#loading').classList.remove('show');
-  $('#hud').classList.add('show');
   if (settings.isTouch || settings.platform === 'phone') { $('#touch').classList.add('show'); document.body.classList.add('touch'); }
 
   // ---- state
@@ -440,6 +440,9 @@ async function createGame(progress) {
         if (m.silent) w.silent = true;
         if (m.zoom) w.scope = m.zoom;
       }
+      // the part shows on the gun: rebuild its model with the new fittings
+      w.fitted = Object.fromEntries(Object.entries(slots).map(([s, pid]) => [s, ATTACHMENTS.find((x) => x.id === pid).name]));
+      for (const k of Object.keys(combat.models)) if (k === id || k.startsWith(id + '#')) { const m = combat.models[k]; const vis = m.visible; scene.remove(m); delete combat.models[k]; const n = combat.model(id, k.slice(id.length)); if (n) n.visible = vis; }
       hud.toast(`${a.name} fitted to your ${w.name}`, 2.2);
     },
   });
@@ -475,6 +478,7 @@ async function createGame(progress) {
   installStreetLife(game);
   const worldEvents = installWorldEvents(game);
   game.audio = audio;
+  const demolition = installDemolition(game); // houses burn, the fire department comes, builders rebuild
   game.nearestRoadPoint = (x, z) => { const r = nearestRoad(x, z); if (!r) return null; const p = {}; traffic.sampleEdge(r.e, r.s, p); return p; };
   const details = installDetails(game);
   game.onCarExploded = (v) => { peds.panic(v.pos, 50); if (witnesses(v.pos, 60) || police.nearPolice(80)) police.crime(v.type === 'police' ? 'copKill' : 'kill'); };
@@ -493,6 +497,7 @@ async function createGame(progress) {
   const tmpV = new THREE.Vector3();
   const _sunC = new THREE.Color();
   const focus = new THREE.Vector3();
+  const _cabEye = new THREE.Vector3();
   let last = performance.now();
 
   function enterVehicle(v, fromTraffic) {
@@ -516,7 +521,10 @@ async function createGame(progress) {
     S.mode = 'car'; S.vehicle = v;
     combat.hideAll(); combat.holstered = true; if (wheel.open) wheel.hide(false);
     v.onHitPed = (p, killed) => { if (killed) police.crime(p.role === 'cop' ? 'copKill' : 'kill'); else police.crime('assault'); peds.panic(p.pos, 25); };
-    player.char.root.visible = false;
+    // you sit in the driver's seat, hands on the wheel, where the glass lets people see you
+    const seated = !!v.cabLayout && !v.isAir && !v.isBoat;
+    player.char.root.visible = seated;
+    if (seated) { v.setClear(true); player.h.play('Driving_Loop', 0.15, 1, true); v.seat(player.h, 0); }
     hud.toast(`${v.spec.name}`, 2.5);
   }
   // walk round to the driver's door, open it, climb in (parked cars)
@@ -525,7 +533,8 @@ async function createGame(progress) {
     const left = new THREE.Vector3(Math.cos(v.heading), 0, -Math.sin(v.heading)), fwd = new THREE.Vector3(Math.sin(v.heading), 0, Math.cos(v.heading));
     const at = v.pos.clone().addScaledVector(left, v.spec.width / 2 + 0.55).addScaledVector(fwd, (v.spec.wf || 1.3) * 0.2);
     combat.holstered = true;
-    S.entering = { v, t: 0, phase: 0, at, door: v.group.getObjectByName('door-drv') };
+    S.entering = { v, t: 0, phase: 0, at, door: v.door ? v.door('door-drv') : v.group.getObjectByName('door-drv') };
+    game.onDoorOpen?.(v);
   }
   function updateEnter(dt) {
     const e = S.entering, v = e.v;
@@ -558,6 +567,8 @@ async function createGame(progress) {
     player.vel.set(0, 0, 0);
     player.heading = v.heading;
     player.char.root.visible = true;
+    player.h.root.rotation.set(0, v.heading, 0); player.h.root.position.copy(player.pos);
+    player.h.play('Idle_Loop', 0.2, 1, true);
     v.vel.set(0, 0); v.speed = 0;
     { const door = v.group.getObjectByName('door-drv'); if (door) { door.rotation.y = door.userData.open; S.doorClose = { door, t: -0.35 }; } }
     parked.push(v);
@@ -749,6 +760,7 @@ async function createGame(progress) {
     } else {
       const v = S.vehicle;
       const ctl = S.auto ? autopilot(v, dt) : { throttle: a.throttle, brake: a.brake, steer: -a.moveX, handbrake: a.handbrake, nitro: a.sprint };
+      if (S.holdCar) { ctl.throttle = 0; ctl.brake = 1; ctl.nitro = false; } // someone is still getting in
       v.physics(dt, ctl, hm, collision);
       if (v.isAir) prompt = `ALT ${Math.round(v.alt)} m · ${v.heli ? 'Space/Shift up-down, W/S tilt, A/D turn' : `PWR ${Math.round(v.power * 100)}% · W/S power, Space/Shift pitch, A/D bank`}`;
       for (const p of v.isAir || v.isBoat ? [] : parked) {
@@ -758,6 +770,10 @@ async function createGame(progress) {
       }
       v.night = sky.night;
       v.sync(dt);
+      if (v.cabLayout && player.char.root.visible) {
+        v.seat(player.h, 0); player.h.update(dt);
+        v.updateCabin(dt); v.handsOnWheel(gunPose);
+      }
       if (v.impact > 4) rig.shake = Math.min(1, v.impact / 15);
       if (v.impact > 4 && !v._hitLatch) { v._hitLatch = true; const f = v.forward ? v.forward() : { x: 0, z: 1 }, dir = (v.speed || 0) >= 0 ? 1 : -1; damageVehicle(v, (v.impact - 3) * 2.2, v.pos.x + f.x * 3 * dir, v.pos.z + f.z * 3 * dir); }
       if (v.impact < 1) v._hitLatch = false;
@@ -792,6 +808,7 @@ async function createGame(progress) {
     wounds.update(dt);
     streetCrime.update(dt);
     auction.update(dt);
+    demolition.update(dt);
     wayfinding.update(dt);
     worldEvents.update(dt);
     details.update(dt);
@@ -837,7 +854,7 @@ async function createGame(progress) {
     if (scoped && a.sprint && (S.breath ?? 4) > 0) { S.breath = (S.breath ?? 4) - dt; S.steady = Math.min(1, (S.steady || 0) + dt * 4); } else { S.breath = Math.min(4, (S.breath ?? 4) + dt * 0.8); S.steady = Math.max(0, (S.steady || 0) - dt * 2); }
     if (scoped !== !!S.scoped) { S.scoped = scoped; document.body.classList.toggle('scoped', scoped); player.h.model.visible = !scoped; if (scoped) hud.toast('Hold Shift to hold your breath', 1.6); }
     if (scoped) for (const m of Object.values(combat.models)) m.visible = false;
-    rig.update(dt, a, focus, { vehicle: S.vehicle, heading: S.vehicle?.heading, speed: S.vehicle?.speed || 0, lastLook: input.lastLookTime, aiming: S.mode === 'foot' && player.aiming && armed, eye: S.mode === 'foot' && player.char.root.visible ? getEye() : null, scope: scoped ? combat.def.scope : 0, steady: Math.max(S.steady || 0, game.buffs?.steady > 0 ? 0.55 : 0) }, collision);
+    rig.update(dt, a, focus, { vehicle: S.vehicle, cabEye: S.vehicle?.cabLayout && player.char.root.visible ? S.vehicle.eyeWorld(_cabEye) : null, cabQ: S.vehicle?.group.quaternion, heading: S.vehicle?.heading, speed: S.vehicle?.speed || 0, lastLook: input.lastLookTime, aiming: S.mode === 'foot' && player.aiming && armed, eye: S.mode === 'foot' && player.char.root.visible ? getEye() : null, scope: scoped ? combat.def.scope : 0, steady: Math.max(S.steady || 0, game.buffs?.steady > 0 ? 0.55 : 0) }, collision);
 
     law.camera(camera);
     gang.camera(camera);
@@ -894,8 +911,10 @@ async function createGame(progress) {
       post.update(sky.sunDir, sky.sunDir.y > 0.02 && weather.cover < 0.75, aimingNow ? 18 : camera.position.distanceTo(focus) + 1, aimingNow);
     }
 
-    if (!S.skipRender) render(); // tests can step the simulation without drawing
+    // resize before drawing: resizing the canvas clears it, and a cleared canvas left
+    // on screen is a black frame (this was the flicker during the first seconds)
     dynamicResolution(dt);
+    if (!S.skipRender) render(); // tests can step the simulation without drawing
     hud.update(dt, {
       pos: mapPos, yaw: rig.yaw, heading: S.mode === 'car' ? S.vehicle.heading : player.heading,
       driving: S.mode === 'car', speed: S.vehicle?.speed || 0, hour: sky.hour, day: sky.day, prompt,
@@ -989,6 +1008,16 @@ async function createGame(progress) {
     else S.highTimer = 0;
   }
 
+  // Everything the systems added has shaders too: compile them, draw the world
+  // once and let the browser show it, and only then lift the loading screen
+  // (a fade, not a cut) so the first thing you see is the world, never a black screen.
+  progress(0.99, 'Preparing the world');
+  try { renderer.compile(scene, camera); } catch (e) { /* compiled lazily instead */ }
+  try { tick(1 / 60); } catch (e) { console.error(e); }
+  await nextFrame(); await nextFrame();
+  last = performance.now();
+  $('#hud').classList.add('show');
+  { const ld = $('#loading'); ld.classList.add('fadeout'); setTimeout(() => ld.classList.remove('show', 'fadeout'), 700); }
   requestAnimationFrame(frame);
 
   // debug / automation hooks (used by the playtest script)

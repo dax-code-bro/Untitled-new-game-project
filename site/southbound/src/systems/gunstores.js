@@ -140,6 +140,8 @@ export function buildShop(game, r, st) {
     g.rotation.y = Math.atan2(-nx, -nz); // front (+z local) faces the road
     const M = (c, r = 0.85, m = 0) => new THREE.MeshStandardMaterial({ color: c, roughness: r, metalness: m });
     const wall = st.style ? wallMaterial(st) : M(st.wall || 0x8c7f6e), trim = M(0x2b2420), wood = M(0x5a3a22, 0.6), floor = M(0x6d6458, 0.8), glass = new THREE.MeshStandardMaterial({ color: 0x223038, roughness: 0.05, metalness: 0.3, transparent: true, opacity: 0.35 });
+    wall.userData.surf = { brick: 'brick', 'civic-brick': 'brick', siding: 'frame', stucco: 'stucco', metal: 'metal', quonset: 'metal', block: 'block', civic: 'masonry' }[st.style] || 'block';
+    wood.userData.surf = 'wood';
     const box = (w, h, d, x, yy, z, m, hit = true) => { const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); b.position.set(x, yy, z); b.castShadow = b.receiveShadow = true; if (hit) b.userData.hitStatic = true; g.add(b); return b; };
     box(W, 1, D + 2.4, 0, -0.5, 1.2, floor);
     const parts = { back: [], sides: [], roof: [], awning: [], front: [] };
