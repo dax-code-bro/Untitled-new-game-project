@@ -3,6 +3,40 @@
 Owner paths: `scenes/lib/director/`, `episodes/s01e01/final/scenes/`, `episodes/s01e01/final/cut/`.
 How it works: `README.md` in this folder. Latest state first.
 
+## Session 18 (2026-11-04, short budgeted session: 1C-16 lower 3/4 after perf 6231555, X4-03 beats - STILLS only)
+
+Shot ids, lengths, line cue times UNCHANGED. 1C flight acts untouched (no hz / phase / tOffset change in 1C).
+- (1) 1C-16 re-framed (`sky-off-verdor.spec.js`): s17's near top-down view made the wrapped grip (perf 6231555) read as
+  pale cones with blown backs. Now a LOWER 3/4 from her front-right / inland side (away from the sun az 102):
+  `frame: hand.R [-0.32, 0.02], hand.L [0.32, 0.02], from 226, dist 1.45, rise 0.75 (~27 deg down), track`, 100 mm,
+  plus shot `exposure: -0.25`. Three rounds of stills at 0.25 / 0.5 / 0.75, ALL LOOKED AT:
+  - r1 (from 214, rise 0.55, +-0.22): hands read well (knuckles over the bar, fingers wrapped), ~40 % left covered.
+  - r2 (from 226, rise 0.75, +-0.22): NO wing membrane over the lens at any of the three phases, Leaf's crest out of
+    frame; both hands clear on the bar, belt + buckle above. Skin p95 ~233 (backs still hot).
+  - r3 (now in the spec, +-0.32, exposure -0.25): hands larger, skin p95 222-226 / p99 ~235 (no blow-out). 0.5 is the
+    best frame: both hands wrapped round the bar, centred. KNOWN ISSUES: (a) the framing DRIFTS over the shot - at
+    0.75 the hands sit low and her LEFT hand (screen right) touches the right edge (the tracked solve does not hold the
+    targets; dist 1.45 soft vs the two screen targets fight). Try next: drop `dist` (let the targets set the distance)
+    or a static solve (`track: false, at: 1.5`), or targets +-0.27; re-still 0.75 first. (b) Her coat SLEEVES render as
+    stiff flat boards sticking out (top-left / top-right in a 3/4 view; the near-top-down s17 view hid them) ->
+    REQUEST humans: rider coat sleeves follow the forearm in the grip pose. (c) Fingertips still show as small points
+    under the bar (perf track tightening). (d) Thumbs: on the rider's side of the bar, not visible yet at this height.
+  Stills: `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/director/s18/r1/`, `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/director/s18/r2/`, `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/director/s18/r3/` (1C-16_018/036/054.png), r3 strip `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/director/s18/r3/r3.png`.
+  Contact sheet (r1 0.25 | r2 x3 | r3 x3): `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/director/s18/sheet.jpg`.
+- (2) X4-03 DECISION (`verdor-aerial.spec.js`, still not wired): follow the shot list ("Deep slow beats overhead"):
+  Charcoal BEATS (`CHAR_FLY()`, CHAR_HZ 0.625) instead of CHAR_GLIDE - in a 35 mm wide he is small, the slow beat sells
+  "stays high and heavy", and a beating shadow reads crossing the quay. **NOTE FOR SOUND**: X4-03 = wingbeat at 0.16 s
+  then every 1.6 s (0.16 / 1.76 / 3.36 s in the 4 s shot), the 1C convention; the air rush can stay under it.
+- (3) VERDOR_AERIAL builder NOT started (budget went to 1C-16 stills). Steps unchanged from s17 NEXT 2.
+- Verify: director selftest 20/20; build-shots --check clean (no table change).
+- NEXT (exact, in order):
+  1. 1C-16 drift fix (above), re-still `node scenes/lib/director/tools/still.mjs 1C-16@0.25 1C-16@0.5 1C-16@0.75 --preset draft --out /tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/director/s18/r4`.
+  2. Videos (DO NOT run in a short session - owner/background only, ~10 min/shot here):
+     `node scenes/lib/director/tools/render-shots.mjs --only 1C-16 --force --work /tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/director/work1B`
+     (s17 queue still pending: `--only 1C-10,1C-13,1C-14,1C-19`, `--only 1C-07,1C-08,1C-09,1C-11,1C-12,1C-15,1C-17,1C-18`,
+     `--only 1C-04,1C-06,X3-10`), then re-assemble the 1C cut (edl-1C) and sample EVERY 6th frame of 1C-16 (wing / drift).
+  3. VERDOR_AERIAL builder + registry entry (s17 NEXT 2), then VERDOR_HARBOR, OUTER_ROCKS.
+
 ## Session 17 (2026-11-03, short budgeted session: 1C-16 re-frame after the rider grip, 1C-14 hands, X4 plan - STILLS only)
 
 Shot ids, lengths, line cue times UNCHANGED. **Flight timing for sound: nothing changed** (no flight act touched).

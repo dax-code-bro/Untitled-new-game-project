@@ -187,7 +187,15 @@ export default {
       // back at both hands; her face is above the frame top / far out of focus at f/4.)
       // (s17: after perf bcf1965 (grip pose, wrists ~6 cm back/up) Leaf's neck crest filled ~40 % top-left at rise 0.45:
       // camera raised to 1.0 m, 1.6 m out, 4 deg off the centre line - looks DOWN past the crest onto the hands.)
-      cam: { rig: 'follow', frame: { subjects: [['abbyR.hand.R', [-0.22, -0.05]], ['abbyR.hand.L', [0.22, -0.05]]], from: 184, dist: 1.6, rise: 1.0, track: true }, mm: 100, fstop: 4, focus: 'abbyR.hand.R' },
+      // (s18: after perf 6231555 (knuckles over the bar, fingers wrapped) the near top-down view read the hands as pale cones
+      // and the sun-lit backs blew out (~240). LOWER 3/4 from her front-right, toward her RIGHT / inland side (away from the sun at
+      // az 102): the bar and the knuckles in profile, a thumb on her side of the bar can show later. still s18/r1 (from
+      // 214, 1.5 m, rise 0.55): hands good, but a neck-crest plate covered ~40 % of the frame left -> from 226 (46 deg off
+      // the centre line: the crest slides out of frame left), 1.45 m, rise 0.75 (~27 deg down: the line of sight clears it).)
+      cam: { rig: 'follow', frame: { subjects: [['abbyR.hand.R', [-0.32, 0.02]], ['abbyR.hand.L', [0.32, 0.02]]], from: 226, dist: 1.45, rise: 0.75, track: true }, mm: 100, fstop: 4, focus: 'abbyR.hand.R' },
+      // (s18 r2: her coat SLEEVES read as stiff boards in a 3/4 view (humans cloth) -> hands larger (+-0.32) push them to the
+      // frame edges; sun-lit backs of the hands at p95 ~233 -> exposure trim -0.25 for this insert only)
+      exposure: -0.25,
       set: { shadowExtent: 30 },
       cast: {
         leaf: { tack: true, ...inForm(TALK.leaf[0], TALK.leaf[1], TALK.leaf[2], T['1C-16'], 3), acts: LEAF_FLY() },
