@@ -234,6 +234,15 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
     - Ruins and rebuilds are saved.
   - **Startup flicker fixed.** The black blinks at the start came from dynamic resolution resizing the canvas after each frame was drawn. It now resizes before drawing. The loading screen also stays up until the world has rendered once, then fades out.
   - **Mice** join the rats: smaller, quicker, and they freeze before they bolt.
+  - **Guns look like their own guns.** Every catalogue gun leaves the factory with its own fittings, so guns that share a base model still look different:
+    - Optics: red dot tube, holographic window, variable scope on rings, or a micro dot on a pistol slide. Iron sights when there's no glass.
+    - Muzzle devices: birdcage hider, compensator, brake, suppressor can.
+    - Under the handguard: vertical or angled grip, weapon light, folded bipod, hand stop.
+    - Slings on long guns and shell carriers on shotguns.
+    - Gunsmith attachments now show on the gun, replacing the factory part in that slot.
+    - In first person you sight through the optic.
+    - The muzzle flash comes from the end of the muzzle device. The bore line is found from each model's geometry.
+  - **Chain-link fences** around lots are see-through galvanised wire mesh with a top rail and posts, not grey slabs.
 
 - **Start with nothing:** a new game gives you $150, the clothes you're
   wearing and your fists. Rico no longer hands out a gun or a truck: he pays

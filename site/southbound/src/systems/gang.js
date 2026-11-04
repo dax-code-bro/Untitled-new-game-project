@@ -350,6 +350,7 @@ export function installGang(game) {
   // climbs in, rides with you (turning to you when he talks), and at the drop-off he
   // gets out, shuts the door and walks off down the sidewalk to his meeting
   const ride = { st: null, t: 0, v: null, to: null, talk: 0, home: null };
+  const me = () => (S.mode === 'car' && S.vehicle ? S.vehicle.pos : player.pos); // where you are (on foot or at the wheel)
   const _q1 = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _q3 = new THREE.Quaternion(), _up = new THREE.Vector3();
   const sideDoor = (v, side) => {
     const left = new THREE.Vector3(Math.cos(v.heading), 0, -Math.sin(v.heading)), fwd = new THREE.Vector3(Math.sin(v.heading), 0, Math.cos(v.heading));
@@ -387,7 +388,7 @@ export function installGang(game) {
     const pd = v.door ? v.door('door-pass') : null;
     if (ride.st === 'toCar') {
       const at = sideDoor(v, -1);
-      const near = player.pos.distanceTo(m.pos) < 30;
+      const near = me().distanceTo(m.pos) < 30;
       if (walkTo(m, at, dt, near && m.pos.distanceTo(at) > 6 ? 2.8 : 1.4) || ride.t > 25) { ride.st = 'open'; ride.t = 0; m.h.play('Interact', 0.1, 1.5, true); }
     } else if (ride.st === 'open') {
       m.h.root.rotation.y += wrapAngle(Math.atan2(v.pos.x - m.pos.x, v.pos.z - m.pos.z) - m.h.root.rotation.y) * Math.min(1, dt * 10);
@@ -413,7 +414,7 @@ export function installGang(game) {
       }
     } else if (ride.st === 'leave') {
       const done = walkTo(m, ride.to, dt, 1.45);
-      const far = m.pos.distanceTo(player.pos) > 60;
+      const far = m.pos.distanceTo(me()) > 60;
       if (done || far || ride.t > 40) rideEnd();
     }
     if (ride.st === 'riding') {
@@ -433,7 +434,7 @@ export function installGang(game) {
     ride.st = null; ride.v = null;
     S.holdCar = false;
   }
-  game.rico = { get state() { return ride.st; } };
+  game.rico = { get state() { return ride.st; }, get truck() { return truck || leftTruck; }, get dest() { return pro?.dest || null; }, get phase() { return pro?.phase || null; }, get pos() { return rico.pos; } };
 
   function updatePrologue(dt, a) {
     pro.t += dt;
@@ -544,10 +545,10 @@ export function installGang(game) {
       flameMat.uniforms.uTime.value += dt;
       ember.lookAt(game.camera.position.x, ember.position.y, game.camera.position.z);
       // crew: turn to look at you when you're close, accessories follow heads
-      const near = player.pos.distanceTo(_f.set(HQ.x, player.pos.y, HQ.z)) < 70;
+      const near = me().distanceTo(_f.set(HQ.x, me().y, HQ.z)) < 70;
       if (ride.st) rideUpdate(dt);
       // Wrench collects Rico's truck once you're well away from it
-      if (leftTruck && S.vehicle !== leftTruck && player.pos.distanceTo(leftTruck.pos) > 140) {
+      if (leftTruck && S.vehicle !== leftTruck && me().distanceTo(leftTruck.pos) > 140) {
         const t = leftTruck; leftTruck = null; scene.remove(t.group); const i = game.parked.indexOf(t); if (i >= 0) game.parked.splice(i, 1); if (truck === t) truck = null;
       }
       for (const m of crew) {

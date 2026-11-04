@@ -128,7 +128,7 @@ export function installStrays(game) {
   return {
     camps, dogs, rats,
     update(dt) {
-      const pp = player.pos, night = sky.hour < 6 || sky.hour > 20;
+      const pp = game.S.mode === 'car' && game.S.vehicle ? game.S.vehicle.pos : player.pos, night = sky.hour < 6 || sky.hour > 20;
       // camp figures go to the nearest camps
       const near = camps.map((c) => [Math.hypot(c.x - pp.x, c.z - pp.z), c]).sort((a, b) => a[0] - b[0]).slice(0, sitters.length).filter(([d]) => d < 90).map(([, c]) => c);
       for (const c of camps) c.sitter = null;

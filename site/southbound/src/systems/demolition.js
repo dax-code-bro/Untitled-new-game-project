@@ -31,7 +31,8 @@ export function installDemolition(game) {
   const sites = new Map();
   const saved = new Map(), savedRoof = new Map(), savedGutter = new Map();
   const abs = () => sky.day * 24 + sky.hour;
-  const near = (p, r) => player.pos.distanceTo(p) < r;
+  const me = () => (S.mode === 'car' && S.vehicle ? S.vehicle.pos : player.pos); // on foot or at the wheel
+  const near = (p, r) => me().distanceTo(p) < r;
   const VC = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, metalness: 0 });
   // one fire light for the whole game, moved to whichever house is burning (adding and
   // removing lights at run time would recompile every shader in the scene)
@@ -168,7 +169,7 @@ export function installDemolition(game) {
       siding.push({ x: x0 + dx * L / 2 + (dx === 0 ? Math.sign(x0 - b.x) * 0.1 : 0), z: z0 + dz * L / 2 + (dz === 0 ? Math.sign(z0 - b.z) * 0.1 : 0), y: b.y + 0.1 + k * 0.2 + 0.1, L: L + 0.2, along: dx !== 0 });
     }
     const wood = new THREE.MeshStandardMaterial({ color: 0xc9a46c, roughness: 0.85 });
-    const inst = (geo, mat, list, fn) => { const im = new THREE.InstancedMesh(geo, mat, Math.max(1, list.length)); const m4 = new THREE.Matrix4(); list.forEach((it, i) => { fn(it, m4); im.setMatrixAt(i, m4); }); im.count = 0; im.castShadow = im.receiveShadow = true; im.userData.noHit = true; g.add(im); return im; };
+    const inst = (geo, mat, list, fn) => { const im = new THREE.InstancedMesh(geo, mat, Math.max(1, list.length)); const m4 = new THREE.Matrix4(); list.forEach((it, i) => { fn(it, m4); im.setMatrixAt(i, m4); }); im.count = 0; im.frustumCulled = false; im.castShadow = im.receiveShadow = true; im.userData.noHit = true; g.add(im); return im; }; // revealed piece by piece: a bounding sphere taken while empty would cull them for good
     const q = new THREE.Quaternion(), Y = new THREE.Vector3(0, 1, 0), v = new THREE.Vector3(), sc = new THREE.Vector3();
     site.studs = inst(new THREE.BoxGeometry(1, 1, 1), wood, studs, (it, m) => { q.setFromAxisAngle(Y, it.along ? 0 : Math.PI / 2); const h = it.h || 0.001; m.compose(v.set(it.x, it.y + h / 2, it.z), q, sc.set(0.038, h, 0.089)); });
     site.headers = inst(new THREE.BoxGeometry(1, 1, 1), wood, studs.filter((s) => s.header), (it, m) => { q.setFromAxisAngle(Y, it.along ? 0 : Math.PI / 2); m.compose(v.set(it.x, it.y + it.header, it.z), q, sc.set(0.42, 0.18, 0.089)); });
@@ -507,7 +508,7 @@ export function installDemolition(game) {
         if (walkTo(w.h, w.to, dt, 1.3) || w.t < -12) { w.phase = 'work'; w.t = 4 + Math.random() * 6; face(w.h, new THREE.Vector3(b.x, b.y, b.z)); w.h.play('Interact', 0.2, 1, false); w.knock = 0; }
       } else if (w.phase === 'work') {
         // hammering: the swing and the sound
-        if ((w.knock -= dt) <= 0) { w.knock = 0.45 + Math.random() * 0.3; w.h.play('Interact', 0.05, 1.6, true); if (near(w.h.root.position, 40)) game.audio?.thud?.(0.12 * (1 - player.pos.distanceTo(w.h.root.position) / 40)); }
+        if ((w.knock -= dt) <= 0) { w.knock = 0.45 + Math.random() * 0.3; w.h.play('Interact', 0.05, 1.6, true); if (near(w.h.root.position, 40)) game.audio?.thud?.(0.12 * (1 - me().distanceTo(w.h.root.position) / 40)); }
         if (w.t <= 0) { w.phase = 'walk'; w.to = null; w.t = 0; }
       }
       w.h.update(dt); placeAccessories(w.h);

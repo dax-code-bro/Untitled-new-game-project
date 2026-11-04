@@ -440,6 +440,9 @@ async function createGame(progress) {
         if (m.silent) w.silent = true;
         if (m.zoom) w.scope = m.zoom;
       }
+      // the part shows on the gun: rebuild its model with the new fittings
+      w.fitted = Object.fromEntries(Object.entries(slots).map(([s, pid]) => [s, ATTACHMENTS.find((x) => x.id === pid).name]));
+      for (const k of Object.keys(combat.models)) if (k === id || k.startsWith(id + '#')) { const m = combat.models[k]; const vis = m.visible; scene.remove(m); delete combat.models[k]; const n = combat.model(id, k.slice(id.length)); if (n) n.visible = vis; }
       hud.toast(`${a.name} fitted to your ${w.name}`, 2.2);
     },
   });

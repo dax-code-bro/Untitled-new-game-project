@@ -7,6 +7,7 @@
 // parts. All names are invented for this game.
 import * as THREE from 'three';
 import { loadOpen, loaded, instance, Q } from '../assets/open.js';
+import { dressGun } from './gunparts.js';
 // open-source bow models (Quaternius CC0 medieval weapons pack)
 const BOW_MODELS = [Q('medieval_weapons_pack', 'Bow_Wooden'), Q('medieval_weapons_pack', 'Bow_Wooden2')];
 BOW_MODELS.forEach(loadOpen);
@@ -27,7 +28,7 @@ export const GUN_MODELS = {
   python: { m: RG + 'ColtPython', real: 1, axis: '-z', len: 0.29, g: [0.1, 0.3], w: [0.36, 0.62], t: [0.28, 1], kind: 'pistol', revolver: 1 },
   navy: { m: RG + 'NavyColt1851', real: 1, axis: '-x', len: 0.33, g: [0.08, 0.3], w: [0.36, 0.62], t: [0.3, 1], kind: 'pistol', revolver: 1 },
   m4a1: { m: RG + 'M4A1', real: 1, axis: '+z', len: 0.84, g: [0.36, 0.35], f: [0.7, 0.6], w: [0.47, 0.35], b: [0.42, 0.85], t: [0.42, 1], kind: 'long' },
-  m24: { m: RG + 'M24', real: 1, axis: '+x', len: 1.09, g: [0.33, 0.45], f: [0.6, 0.55], w: [0.42, 0.4], b: [0.45, 0.85], t: [0.45, 1], kind: 'long', action: 'bolt' },
+  m24: { m: RG + 'M24', real: 1, scoped: 1, axis: '+x', len: 1.09, g: [0.33, 0.45], f: [0.6, 0.55], w: [0.42, 0.4], b: [0.45, 0.85], t: [0.45, 1], kind: 'long', action: 'bolt' },
   remington: { m: RG + 'Remington870', real: 1, axis: '+x', len: 0.9, g: [0.05, 0.45], f: [0.52, 0.35], w: [0.4, 0.5], b: [0.35, 0.8], t: [0.35, 1], kind: 'long', action: 'pump' },
   pistol1: { m: SV + 'Pistol_1', len: 0.21, g: [0.16, 0.32], w: [0.15, 0], t: [0.08, 1], kind: 'pistol' },
   pistol2: { m: SV + 'Pistol_2', len: 0.2, g: [0.16, 0.32], w: [0.15, 0], t: [0.08, 1], kind: 'pistol' },
@@ -41,8 +42,8 @@ export const GUN_MODELS = {
   ak: { m: TG + 'AK', flip: 1, len: 0.88, g: [0.42, 0.45], f: [0.74, 0.72], w: [0.57, 0.4], b: [0.5, 0.85], t: [0.5, 1], kind: 'long' },
   smg: { m: TG + 'SMG', flip: 1, len: 0.62, g: [0.15, 0.42], f: [0.5, 0.45], w: [0.5, 0.35], b: [0.3, 0.9], t: [0.3, 1], kind: 'long' },
   mpistol: { m: TG + 'SMG', flip: 1, len: 0.42, g: [0.15, 0.42], f: [0.5, 0.45], w: [0.5, 0.35], b: [0.3, 0.9], t: [0.3, 1], kind: 'pistol' },
-  sniperA: { m: TG + 'Sniper', flip: 1, len: 1.2, g: [0.24, 0.45], f: [0.56, 0.7], w: [0.4, 0.3], b: [0.36, 0.85], t: [0.36, 1], kind: 'long', action: 'bolt' },
-  sniperB: { m: TG + 'Sniper_2', flip: 1, len: 1.25, g: [0.25, 0.42], f: [0.6, 0.65], w: [0.5, 0.3], b: [0.4, 0.85], t: [0.42, 1], kind: 'long', action: 'bolt' },
+  sniperA: { m: TG + 'Sniper', flip: 1, scoped: 1, len: 1.2, g: [0.24, 0.45], f: [0.56, 0.7], w: [0.4, 0.3], b: [0.36, 0.85], t: [0.36, 1], kind: 'long', action: 'bolt' },
+  sniperB: { m: TG + 'Sniper_2', flip: 1, scoped: 1, len: 1.25, g: [0.25, 0.42], f: [0.6, 0.65], w: [0.5, 0.3], b: [0.4, 0.85], t: [0.42, 1], kind: 'long', action: 'bolt' },
   shotgunT: { m: TG + 'Shotgun', flip: 1, len: 1.0, g: [0.33, 0.5], f: [0.7, 0.55], w: [0.5, 0.45], b: [0.48, 0.85], t: [0.48, 1], kind: 'long', action: 'pump' },
   grenadel: { m: TG + 'GrenadeLauncher', flip: 1, len: 0.75, g: [0.12, 0.3], f: [0.68, 0.3], w: [0.55, 0.5], b: [0.4, 0.9], t: [0.4, 1], kind: 'long', action: 'pump' },
 };
@@ -323,6 +324,13 @@ function buildOpenGun(w, G) {
   else { inner.position.set(-cx, -box.min.y, -box.max.z); holder.rotation.y = Math.PI; }
   holder.scale.setScalar(k);
   const L = ((G.axis || 'x')[1] === 'z' ? size.z : size.x) * k, H = size.y * k;
+  // where the bore actually is: the middle of the geometry right at the muzzle end
+  if (G.bore === undefined) {
+    const ak = axis[1] === 'x' ? 'x' : 'z', end = axis[0] === '+' ? box.max[ak] : box.min[ak], span = ak === 'x' ? size.x : size.z, v = new THREE.Vector3();
+    let y0 = Infinity, y1 = -Infinity;
+    inner.traverse((o) => { if (!o.isMesh || !o.geometry.attributes.position) return; const p = o.geometry.attributes.position; for (let i = 0; i < p.count; i++) { v.fromBufferAttribute(p, i).applyMatrix4(o.matrixWorld); if (Math.abs(v[ak] - end) < span * 0.025) { y0 = Math.min(y0, v.y); y1 = Math.max(y1, v.y); } } });
+    G.bore = y1 > y0 ? Math.min(0.95, Math.max(0.2, ((y0 + y1) / 2 - box.min.y) / size.y)) : 0.8;
+  }
   const at = (fx, fy) => new THREE.Vector3(0, fy * H, fx * L); // butt-relative point in hold space
   const grip = at(...G.g);
   // the wrist sits behind and a little above the middle of the grip
@@ -331,8 +339,9 @@ function buildOpenGun(w, G) {
   g.add(holder);
   const rel = (v) => v.clone().sub(wrist);
   const fore = G.f ? rel(at(...G.f)).add(new THREE.Vector3(0.035, -0.045, -0.02)) : rel(at(G.g[0] + 0.1, G.g[1]));
-  g.userData.muzzle = rel(at(1, 0.8));
+  g.userData.muzzle = rel(at(1, G.bore));
   g.userData.hold = {
+    at: (fx, fy) => rel(at(fx, fy)),
     kind: G.kind, action: G.action || 'mag', revolver: !!G.revolver, len: L,
     fore, well: rel(at(...(G.w || G.g))).add(new THREE.Vector3(0.03, -0.06, 0)), bolt: rel(at(...(G.b || [0.4, 0.9]))).add(new THREE.Vector3(-0.04, 0.03, 0)),
     butt: rel(at(0, 0.62)), mid: rel(at(0.45, 0.5)), sight: rel(at(...(G.t || [0.4, 1]))), sightY: 0, sightZ: 0,
@@ -345,7 +354,7 @@ function buildOpenGun(w, G) {
 export function buildWeaponModel(w) {
   if (w.melee && w.model?.melee) return buildMeleeModel(w);
   const G = gunModelFor(w);
-  if (G) { const og = buildOpenGun(w, G); if (og) return og; }
+  if (G) { const og = buildOpenGun(w, G); if (og) { dressGun(og, w, G); return og; } }
   const g = new THREE.Group();
   const m = w.model || {};
   const metal = mat(w.finish || [0.03, 0.03, 0.035], 0.35, 0.8), dark = mat([0.02, 0.02, 0.022], 0.6, 0.3);

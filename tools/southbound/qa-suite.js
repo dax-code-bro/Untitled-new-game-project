@@ -290,6 +290,31 @@ async (opts) => {
     SB.setWeather('clear'); SB.setHour(12);
   });
 
+  await run('prologue: Rico rides along, then walks off', async () => {
+    const P = G.career.p, money0 = G.S.money;
+    P.story.prologue = false;
+    G.gang.startPrologue();
+    SB.skipRender(true);
+    SB.step(2); document.querySelector('.sbskip')?.click(); SB.step(4);
+    ok(G.rico.phase === 'truck' && !!G.rico.truck, 'after the intro: get in Rico\'s pickup');
+    for (let k = 0; k < 40 && G.rico.state !== 'riding'; k++) SB.step(10);
+    ok(G.rico.state === 'riding', 'Rico walked to the passenger door and got in (' + G.rico.state + ')');
+    const t = G.rico.truck;
+    G.player.pos.copy(t.pos); SB.enterNearest(); SB.step(5);
+    ok(G.S.vehicle === t && G.rico.phase === 'drive', 'driving Rico downtown');
+    const d = G.rico.dest;
+    t.pos.set(d.x, G.collision.surface(d.x, d.z, 500), d.z); t.vel.set(0, 0); t.speed = 0;
+    SB.step(3);
+    ok(G.rico.state === 'out' || G.rico.state === 'shut' || G.rico.state === 'leave', 'at the drop-off Rico gets out (' + G.rico.state + ')');
+    ok(P.story.prologue && G.S.money >= money0 + 200, 'paid $200 and the prologue is done');
+    SB.step(30);
+    const p0 = G.rico.pos.clone(); SB.step(30);
+    ok(G.rico.state === 'leave' && G.rico.pos.distanceTo(p0) > 0.5, 'he walks off down the sidewalk');
+    for (let k = 0; k < 90 && G.rico.state; k++) SB.step(15);
+    ok(G.rico.state === null, 'and is back at the yard afterwards');
+    SB.exitCar(); SB.skipRender(false);
+  });
+
   // ---------------- save / load ----------------
   await run('save round trip', async () => {
     G.career.save();
