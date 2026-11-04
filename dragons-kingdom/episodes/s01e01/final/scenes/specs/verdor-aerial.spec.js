@@ -94,8 +94,11 @@ export default {
     'X4-03': {
       staging: 'HIGH STATIC 35 mm from above the town looking east-north-east down the slope: roofs below; Charcoal stays high (top right, small) and his shadow slides over the quay and up into the town ahead of him.',
       cam: { rig: 'static', pos: [180, 95, 1640], look: [300, 10, 1600], mm: 35, fstop: 8, focus: [300, 10, 1600] },
-      cast: { charcoal: { tack: true, root: [[0, [380, 62, 1540]], [4, [372, 62, 1604], 'linear']], yawKeys: 185, acts: CHAR_GLIDE() }, remiR: {} },
-      notes: 'the shadow lands ~100 m west of him (sun 102/31): check it crosses the quay at 0.3-0.6 of the shot',
+      // (s18: shot list sound = "Deep slow beats overhead." -> he BEATS (CHAR_FLY, one beat / 1.6 s), not a glide: the
+      // beats are what sells "he stays high and heavy" in a 35 mm wide where he is small; a beating shadow reads too.
+      // SOUND: wingbeat at 0.16 s then every 1.6 s (0.16 / 1.76 / 3.36) - the 1C convention, CHAR_HZ unchanged.)
+      cast: { charcoal: { tack: true, root: [[0, [380, 62, 1540]], [4, [372, 62, 1604], 'linear']], yawKeys: 185, acts: CHAR_FLY() }, remiR: {} },
+      notes: 'the shadow lands ~100 m west of him (sun 102/31): check it crosses the quay at 0.3-0.6 of the shot; Charcoal beats (shot list sound: deep slow beats overhead)',
     },
     'X4-06': {
       staging: '50 mm STATIC on the terrace farm: a farmer leans on a tool (foreground left, face soft/turned), watches the riders pass high over the town (background right), unimpressed.',
