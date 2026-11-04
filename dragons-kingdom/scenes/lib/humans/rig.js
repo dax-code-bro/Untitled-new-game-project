@@ -275,7 +275,10 @@ export function handShape(ch, side, shape, amount = 1) {
     const ca = ax.fcurl[fi];
     set(`finger${f}-1`, q.setFromAxisAngle(ca, c * 0.85).premultiply(qs));
     set(`finger${f}-2`, q.setFromAxisAngle(ca, c * 1.1));
-    set(`finger${f}-3`, q.setFromAxisAngle(ca, c * 0.75));
+    // last joint: 0.75 of the curl unless the shape gives its own scale (dip: a number, or one per finger
+    // index..little - grips that close the tips in round a bar)
+    const dp = Array.isArray(s.dip) ? s.dip[fi] : s.dip;
+    set(`finger${f}-3`, q.setFromAxisAngle(ca, c * (dp ?? 0.75)));
   }
   // thumb: swing across the palm (thumbIn) + curl
   const ti = s.thumbIn ?? 0.2, tc = curls[0];

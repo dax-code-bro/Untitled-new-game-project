@@ -509,8 +509,10 @@ else {
   // fingers, fingertips past the bar's far side; abby_ride_injured keeps her injured LEFT arm off the bar
   {
     const { createRider, BAR_GRIP } = await import('./index.js');
-    // BAR_GRIP.thumbWrap off (default until the coat cuffs lose their thumb weights, see PROGRESS): the
-    // thumb stays behind the bar on the rider's side, within 6 cm of its axis; on: wrapped, within 4 cm
+    const { fingerTip } = await import('./ridergrip.js');
+    // BAR_GRIP.thumbWrap on (default since the coat cuffs lost their hand weights, look 2h): the thumb
+    // wrapped round the bar's near side, its last joint AND its tip within 4 cm of the axis; off: the
+    // thumb stays behind the bar on the rider's side, its last joint within 6 cm
     const thumbWrap = !!BAR_GRIP.thumbWrap;
     const rows = [];
     let good = true;
@@ -553,17 +555,29 @@ else {
         const injured = id === 'abby_ride_injured' && sd === 'L';
         const th = W(`finger1-3.${sd}`);
         const r = { id, sd, thumbFwd: +(th.clone().sub(C).dot(fwdB) * 100).toFixed(1), thumbToBar: +(off(th).length() * 100).toFixed(1), palmUp: +palm.y.toFixed(2), knuckToBar: +(off(knuck).length() * 100).toFixed(1), tipToBar: +(off(tip).length() * 100).toFixed(1), tipY: +((tip.y - C.y) * 100).toFixed(1), wristMove: +(wr.distanceTo(sd === 'L' ? before.wL : before.wR) * 100).toFixed(1) };
+        // fingertip ENDS (ridergrip fingerTip: past the last joint) and the thumb's tip: the most any finger
+        // end sticks out of the bar's surface (cm), the most forward of the bar's axis, the lowest below it
+        const ends = [2, 3, 4, 5].map((f) => fingerTip(ch, f, sd, ch.bone(`wrist.${sd}`)));
+        r.endOut = +Math.max(...ends.map((e) => off(e).length() * 100 - 1.7)).toFixed(1);
+        r.endFwd = +Math.max(...ends.map((e) => e.clone().sub(C).dot(fwdB) * 100)).toFixed(1);
+        r.endY = +Math.min(...ends.map((e) => (e.y - C.y) * 100)).toFixed(1);
+        const tt = fingerTip(ch, 1, sd, ch.bone(`wrist.${sd}`));
+        r.thumbTip = +(off(tt).length() * 100).toFixed(1); r.thumbTipFwd = +(tt.clone().sub(C).dot(fwdB) * 100).toFixed(1);
         rows.push(r);
         if (injured) { if (r.wristMove > 0.5) good = false; continue; }
         // palm faces down onto the bar, knuckle row within 4 cm of its axis, the middle finger's last
         // joint within 3.5 cm of the axis and TUCKED UNDER it (1 cm or more below its centre - not
         // hanging in front as a point); the thumb's last joint on the bar's near (rider's) side (within
         // 4 cm of its axis with thumbWrap, 6 cm without). Same limits for every build (the
-        // injured build's bar is level, so its free right hand grips like the others)
+        // injured build's bar is level, so its free right hand grips like the others). Fingertip ends
+        // tucked: within 1.2 cm of the bar's surface, none more than 0.5 cm in front of its axis (round the
+        // underside toward the rider, not hanging below the front edge as points), none 2.8 cm below it
         if (!(r.palmUp < -0.3 && r.knuckToBar < 4 && r.tipToBar < 3.5 && r.tipY < -1 && r.thumbFwd < -1 && r.thumbToBar < (thumbWrap ? 4 : 6))) good = false;
+        if (thumbWrap && !(r.thumbTip < 4 && r.thumbTipFwd < 0)) good = false;
+        if (BAR_GRIP.dip == null && !(r.endOut < 1.2 && r.endFwd < 0.5 && r.endY > -2.8)) good = false;
       }
     }
-    if (rows.length) ok(good, `rider grip: hands closed round the grab bar (${rows.map((r) => `${r.id}.${r.sd} palm.y ${r.palmUp} knuckle ${r.knuckToBar} cm tip ${r.tipToBar} cm tipY ${r.tipY} thumb ${r.thumbToBar} cm (fwd ${r.thumbFwd}) wrist moved ${r.wristMove} cm`).join('; ')})`);
+    if (rows.length) ok(good, `rider grip: hands closed round the grab bar (${rows.map((r) => `${r.id}.${r.sd} palm.y ${r.palmUp} knuckle ${r.knuckToBar} cm tip ${r.tipToBar} cm tipY ${r.tipY} thumb ${r.thumbToBar} cm (fwd ${r.thumbFwd}) thumb tip ${r.thumbTip} cm (fwd ${r.thumbTipFwd}) fingertip ends out ${r.endOut} cm fwd ${r.endFwd} low ${r.endY} wrist moved ${r.wristMove} cm`).join('; ')})`);
   }
   // worn props never follow a hand: no belt / buckle / purse vertex keeps an arm or hand weight
   {

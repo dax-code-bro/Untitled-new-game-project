@@ -14,8 +14,14 @@ import * as THREE from 'three';
 import { twoBoneIK, twistForearm, handFrame, handShape, orientHand, wpos, aimBone } from './rig.js';
 import { bodyRig } from './motion.js';
 
-/** The overhand grip round a ~3.4 cm bar: every finger joint closed (tips under the bar), thumb across. */
-export const BAR_GRIP = { curl: [0.62, 1.0, 1.08, 1.12, 1.16], together: 0.9, thumbIn: 0.65, tilt: 0.25, thumbWrap: 0 };
+/**
+ * The overhand grip round a ~3.4 cm bar: every finger joint closed (tips under the bar), thumb across.
+ * wrap: the fingers' PIP / DIP line from the bar's axis = bar radius + wrap x palm length; tipPad: each
+ * fingertip's end from the axis = bar radius + tipPad x palm length (the last joint closes until the
+ * tip lies on the bar's near underside instead of hanging below it); thumbWrap 0..1: thumb round the
+ * near (rider's) side. dip (optional, number or per finger) overrides the fitted last-joint curl.
+ */
+export const BAR_GRIP = { curl: [0.62, 1.0, 1.08, 1.12, 1.16], together: 0.9, thumbIn: 0.65, tilt: 0.25, thumbWrap: 1, wrap: 0.08, tipPad: 0.05 };
 /** Rider build ids whose LEFT arm is the injured one (held in, never on the bar). */
 export const INJURED_LEFT = new Set(['abby_ride_injured']);
 
@@ -101,7 +107,7 @@ export function riderGrip(rider, opts = {}) {
     // fit the wrap: the middle finger's three joints (knuckle, PIP, DIP) lie on a circle round the bar's
     // axis - the hand slides (in the bar's cross-section) until that circle is centred on the bar, and the
     // fingers curl until its radius is the bar's plus half a finger (tips tucked under, not hanging below)
-    const Rt = bar.radius + 0.1 * pl;
+    const Rt = bar.radius + (shape.wrap ?? 0.1) * pl, Rtip = bar.radius + (shape.tipPad ?? 0.05) * pl;
     const sec = (p) => { _v.copy(p).sub(C); return [_v.dot(fwd), _v.dot(up)]; };
     for (let it = 0; it < 4 && amount > 0.5; it++) {
       const a = sec(wpos(ch.bone(`finger3-1.${sd}`) || wr, new THREE.Vector3()));
@@ -121,11 +127,50 @@ export function riderGrip(rider, opts = {}) {
       });
       poseHand(wrist);
     }
+    // the last joints close until each fingertip's end lies on the bar's near underside (radius Rtip),
+    // further round the curl than its DIP - not hanging below the bar as a point (skipped with a fixed dip)
+    if (shape.dip == null && amount > 0.5) for (const f of [2, 3, 4, 5]) tuckTip(ch, f, sd, C, axis, fwd, up, Rtip, amount);
     if (shape.thumbWrap !== 0) wrapThumb(ch, sd, C, axis, fwd, up, bar.radius + 0.1 * pl, sg, amount * (shape.thumbWrap ?? 1));
     wr.updateMatrixWorld(true);
     done.push(sd);
   }
   return done;
+}
+
+/**
+ * World position of a finger's END (fingertip pad / nail end, past its last joint). The rig's bone axes
+ * do not run along the bones (MakeHuman glTF: +y is ~140 deg off), so the last phalanx's direction is
+ * taken as the child offset of the joint before it, read in the last bone's own frame (skinned check:
+ * within 2 mm on the four fingers, 7 mm on the thumb); its length ~0.95 of the middle phalanx.
+ */
+export function fingerTip(ch, f, sd, fallback, out = new THREE.Vector3()) {
+  const b2 = ch.bone(`finger${f}-2.${sd}`), b3 = ch.bone(`finger${f}-3.${sd}`);
+  if (!b2 || !b3) return wpos(fallback, out);
+  const h3 = wpos(b3, out), L = h3.distanceTo(wpos(b2, _t));
+  return h3.addScaledVector(_t.copy(b3.position).normalize().applyQuaternion(b3.getWorldQuaternion(_tq)), 0.95 * L);
+}
+const _t = new THREE.Vector3(), _tq = new THREE.Quaternion();
+
+/**
+ * Aim a finger's last phalanx (a leaf: nothing else moves) so its end lies Rtip from the bar's axis, the
+ * solution further round the grip's curl (front -> under -> rider's side) than the DIP joint itself.
+ */
+function tuckTip(ch, f, sd, C, axis, fwd, up, Rtip, amount) {
+  const b3 = ch.bone(`finger${f}-3.${sd}`);
+  if (!b3) return;
+  const h = wpos(b3, new THREE.Vector3()), tip = fingerTip(ch, f, sd, b3, new THREE.Vector3());
+  const rel = (p) => { _t.copy(p).sub(C); return [_t.dot(fwd), _t.dot(up), _t.dot(axis)]; };
+  const d = rel(h), e = rel(tip);
+  const l = Math.hypot(e[0] - d[0], e[1] - d[1]), D = Math.hypot(d[0], d[1]);
+  if (l < 1e-4 || D < 1e-4) return;
+  // circle (axis, Rtip) meets circle (DIP, l): a = distance from the axis-side along d to the chord
+  const a = (D * D + Rtip * Rtip - l * l) / (2 * D);
+  const hh = Math.sqrt(Math.max(0, Rtip * Rtip - a * a));
+  const ux = d[0] / D, uy = d[1] / D;
+  // clockwise in (fwd, up) = on round the curl: of the two points take the one with d x s < 0
+  const s1 = [a * ux + hh * uy, a * uy - hh * ux];
+  const target = C.clone().addScaledVector(fwd, s1[0]).addScaledVector(up, s1[1]).addScaledVector(axis, e[2]);
+  aimBone(b3, tip, target.sub(h), amount);
 }
 
 /** Centre of the circle through three 2-D points (null when they are in a line). */
@@ -158,7 +203,7 @@ function wrapThumb(ch, sd, C, axis, fwd, up, R, sg, amount) {
   // the proximal phalanx down the near face
   aimBone(b2, h3, ring(-100 * deg, ax(h2) - sg * 0.35 * L2).sub(h2), amount);
   wpos(b3, h3);
-  // the distal phalanx curls under the bar (its tip along the bone's +y, MakeHuman / glTF bones)
-  const tip = new THREE.Vector3(0, L2 * 0.8 / b3.getWorldScale(new THREE.Vector3()).y, 0).applyMatrix4(b3.matrixWorld);
+  // the distal phalanx curls under the bar (its tip from fingerTip: the bones' +y is not along them)
+  const tip = fingerTip(ch, 1, sd, b3, new THREE.Vector3());
   aimBone(b3, tip, ring(-150 * deg, ax(h3) - sg * 0.25 * L2).sub(h3), amount);
 }

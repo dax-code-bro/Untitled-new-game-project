@@ -958,3 +958,50 @@ NEXT (look, in order):
 3. Right cuff shows a small light-green ragged fringe (inner side / backface of the hem) and the coat's split
    hem at lower right reads jagged at draft; check cloth.js back-face colour and the hem's solidify.
 4. Older list (2g NEXT 2-5).
+
+## perf s10 (rider grip: thumb wrap on, fingertips tucked) - short session
+Done (ridergrip.js, rig.js handShape, selftest-perf.mjs; API unchanged, new keys optional, pure in t):
+- BAR_GRIP.thumbWrap = 1 (look 2h moved the coat cuffs off the hand bones: coat move 0.00 cm).
+- FOUND: the rig's bone +y does NOT run along the bones (finger3-2 +y . bone dir = -0.79, thumb -0.41),
+  so wrapThumb's tip (and the s9 "tip" estimates) were wrong - the thumb tip was aimed with a bogus
+  lever and stood 4.8 cm out behind the bar. New export `fingerTip(ch, f, sd, fallback)`: the last
+  phalanx's direction = the child offset of the joint before it, read in the last bone's frame, length
+  0.95 x the middle phalanx (checked against CPU-skinned fingertip vertices: within 2 mm on the four
+  fingers, 7 mm on the thumb; probe saved at scratch eng1/perf10/_probe_tips.mjs - copy into
+  humans/cache/ to run, `node scenes/lib/humans/cache/_probe_tips.mjs abby_ride,remi_ride`).
+- `tuckTip()`: after the wrap fit each finger's last phalanx (a leaf, nothing else moves) is aimed so
+  its END lies at bar radius + tipPad x palm length (BAR_GRIP.tipPad 0.05) from the axis, on round the
+  curl (front -> under -> rider's side) - closed-form circle/circle solve, no iteration. A fixed
+  `shape.dip` (number or per finger; handShape now honours it, default 0.75 as before) skips it.
+- Wrap radius: BAR_GRIP.wrap 0.08 (PIP/DIP line at bar radius + 0.08 x palm; was hard-coded 0.1).
+- selftest rider grip: thumb's last joint AND tip within 4 cm of the axis on the rider's side (tip fwd < 0);
+  fingertip ends within 1.2 cm of the bar surface, none > 0.5 cm in front of the axis, none > 2.8 cm below.
+  Values (skinned probe, cross-section fwd/up cm from the bar axis, bar r 1.7): abby_ride.R tips
+  f2 (-1.9,-1.0) f3 (-2.0,-0.1) f4 (-1.9,-1.0) f5 (-1.0,-2.2), thumb tip (-1.0,-2.4); before: f4 (-2.5,-2.3),
+  f5 (-0.5,-2.9) (the pinky hung 1.2 cm under the bar's lower edge), thumb tip (-4.7,-0.4).
+  Selftest: abby out 0.4 / fwd -0.5 / low -2.1, thumb 2.6 + tip 2.9 cm; remi 0.6 / -0.8 / -2.2, thumb
+  2.6 + tip 3.9 cm; abby_ride_injured.R 0.4 / -1.1 / -1.9, thumb 2.5 + tip 2.7; injured LEFT unmoved 0.2 cm.
+Checked: selftest-perf all passed; npm test 48 pass / 0 fail / 1 skipped.
+Images (scratch eng1/perf10/): before/1C-16_036.png (pixel-identical to look9/after = HEAD c388c00),
+after/1C-16_036.png (director still 1C-16@0.5 draft), 1C-16_grip_before_after.png (left before, right
+after), 1C-16_grip_crop.png (2x hands, top before / bottom after).
+RESULT at 1C-16 draft: SUBTLE. Sleeves / coat do not move with the thumb wrap on (as the probe said). The
+small pink tips that peeked out at the outer edges of each hand (index / little finger) are smaller; the
+rounded lobes still showing under the bar's lower edge are the middle phalanges / DIP joints curling
+under (r 2.3-2.5 cm from the axis + ~0.7 cm of finger), not the tips - that is what a real overhand grip
+shows from a high front camera. The thumb is behind the bar from this lens (expected, see s9 NEXT 3).
+
+NEXT (perf, in order):
+1. If 1C-16 still reads "pointy": the lobes are MakeHuman's tapered finger ends at draft (look track: pad
+   bulge / tip fattening on rebuild, PROGRESS look 2g NEXT 2) - not more curl: the PIP/DIP line is already
+   at bar r + 0.08 palm (tighter = fingers into the leather). REQUEST director: 1C-16 camera a little lower
+   and more to the side, or an over-shoulder insert to show the thumb wrap.
+2. The little finger's PIP sits 1.4 cm from the axis (bar r 1.7: ~0.3 cm into the bar; pre-existing, its
+   knuckle is low in the palm's arch). Fix: let the pinky's base joint curl less / tilt the hand's ulnar
+   side up (orientHand roll), check in the probe.
+3. remi_ride thumb tip 3.9 cm from the axis (limit 4): wrapThumb's R uses + 0.1 palm; his thumb is long -
+   aim the distal at R scaled by thumb length if a test or a shot needs it.
+4. Not done (budget): farmer "lean on a tool" posture for X4-06 (motion.js postures: crouch / kneel / cower
+   / hunch / crawl / brace). Plan: posture 'lean' with o.tool (prop in both hands, butt planted ~0.35 m in
+   front of the lead foot, hands stacked at chest height, weight on the tool: hips back, spine01-03 flexed
+   ~12 deg, head up), hands from rig twoBoneIK onto the shaft points; pure in t like the others.
