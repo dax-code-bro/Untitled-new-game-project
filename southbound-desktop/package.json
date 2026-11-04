@@ -1,0 +1,28 @@
+{
+  "name": "southbound",
+  "productName": "Southbound",
+  "version": "0.9.0",
+  "description": "Southbound: an open-world game set in the State of Calvera",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "game": "node copy-game.mjs",
+    "start": "node copy-game.mjs && electron .",
+    "dist:win": "node copy-game.mjs && electron-builder --win nsis portable --publish never",
+    "dist:dir": "node copy-game.mjs && electron-builder --dir --publish never"
+  },
+  "build": {
+    "appId": "com.southbound.game",
+    "productName": "Southbound",
+    "asar": false,
+    "directories": { "output": "release" },
+    "files": ["main.js", "preload.js", "package.json", "game/**/*"],
+    "win": { "target": ["nsis", "portable"], "icon": "build/icon.png" },
+    "nsis": { "oneClick": false, "allowToChangeInstallationDirectory": true, "shortcutName": "Southbound", "createDesktopShortcut": true },
+    "portable": { "artifactName": "Southbound-Portable-${version}.exe" }
+  },
+  "devDependencies": {
+    "electron": "33.2.1",
+    "electron-builder": "25.1.8"
+  }
+}

@@ -1,0 +1,54 @@
+# Southbound desktop app for Windows: builds the installer and the portable .exe
+# on GitHub's windows-latest, then starts the packaged game (no GPU on the runner,
+# so it draws with SwiftShader), waits until the whole world has loaded and saves
+# a screenshot. Download from the run's "Southbound-Windows" artifact.
+name: southbound-desktop
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/ultimate-ai-legend-KhpoT]
+    paths:
+      - '.github/workflows/southbound-desktop.yml'
+      - 'southbound-desktop/**'
+      - 'site/southbound/game.js'
+      - 'site/southbound/index.html'
+      - 'site/southbound/style.css'
+      - 'site/southbound/assets/**'
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: pwsh
+        working-directory: southbound-desktop
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install Electron and the packager
+        run: npm install --no-audit --no-fund
+      - name: Build the installer and the portable exe
+        run: npm run dist:win
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - name: Smoke test - start the packaged game and load the world
+        run: |
+          $env:SOUTHBOUND_SMOKE = '1'
+          $env:SOUTHBOUND_SMOKE_OUT = "$PWD\release"
+          $p = Start-Process -FilePath "release\win-unpacked\Southbound.exe" -PassThru -NoNewWindow -RedirectStandardOutput smoke-out.txt -RedirectStandardError smoke-err.txt
+          if (-not $p.WaitForExit(1200000)) { Stop-Process -Id $p.Id -Force; Write-Host 'timed out' }
+          Get-Content smoke-out.txt
+          Get-Content smoke-err.txt -Tail 30
+          if (-not (Select-String -Path smoke-out.txt -Pattern 'SMOKE OK' -Quiet)) { exit 1 }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Southbound-Windows
+          path: |
+            southbound-desktop/release/*.exe
+            southbound-desktop/release/smoke.png
+          if-no-files-found: error
+          retention-days: 30

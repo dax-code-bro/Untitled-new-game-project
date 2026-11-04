@@ -45,14 +45,15 @@ export function createPost(renderer, scene, camera, quality) {
   const composer = new EffectComposer(renderer, { frameBufferType: THREE.HalfFloatType, multisampling: 0 });
   composer.addPass(new RenderPass(scene, camera));
   const size = renderer.getDrawingBufferSize(new THREE.Vector2());
-  const high = quality.label === 'High' || quality.label === 'Ultra';
+  const top = quality.label === 'Ultra' || !!quality.cine;
+  const high = quality.label === 'High' || top;
 
   let ao = null;
   if (quality.ao || high) {
     ao = new N8AOPostPass(scene, camera, size.x, size.y);
     Object.assign(ao.configuration, {
       aoRadius: 1.6, distanceFalloff: 1.0, intensity: 1.4, color: new THREE.Color(0, 0, 0),
-      halfRes: quality.label !== 'Ultra', aoSamples: quality.label === 'Ultra' ? 16 : 8, denoiseSamples: 8,
+      halfRes: !top, aoSamples: quality.cine ? 24 : top ? 16 : 8, denoiseSamples: quality.cine ? 12 : 8,
     });
     composer.addPass(ao);
   }
@@ -68,7 +69,7 @@ export function createPost(renderer, scene, camera, quality) {
   }
 
   let dof = null;
-  if (quality.label === 'Ultra') {
+  if (top) {
     dof = new DepthOfFieldEffect(camera, { worldFocusDistance: 8, worldFocusRange: 40, bokehScale: 0, resolutionScale: 0.5 });
     composer.addPass(new EffectPass(camera, dof));
   }

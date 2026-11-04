@@ -37,12 +37,23 @@ export const PRESETS = {
     bloom: true, ao: true, aa: 'smaa', traffic: 105, physicalPaint: true,
     anisotropy: 16, envEvery: 5, grassRadius: 60, reflections: 0.6,
   },
+  // Cinematic: for the very top cards (RTX 4090 / 5090 class). Supersampled, 8K shadow map,
+  // full-resolution ambient occlusion, the longest draw distance and the densest world.
+  cinematic: {
+    label: 'Cinematic', maxPixelRatio: 3, minScale: 0.85, targetFps: 60, cine: true,
+    terrainSegs: 1280, treeCount: 75000, grass: 0, drawDistance: 4800,
+    shadows: 3, shadowMap: 8192, shadowRange: 240,
+    bloom: true, ao: true, aa: 'smaa', traffic: 120, physicalPaint: true,
+    anisotropy: 16, envEvery: 3, grassRadius: 85, reflections: 0.75,
+  },
 };
+// running as the desktop app (southbound-desktop): no browser limits to plan around
+export const DESKTOP = typeof window !== 'undefined' && !!window.SB_DESKTOP;
 
 // GPU families a PC player can pick from on the start screen.
 export const GPU_CHOICES = [
   { id: 'auto', label: 'Auto-detect (recommended)', preset: null },
-  { id: 'rtx-top', label: 'NVIDIA RTX 5090 / 5080 / 4090 / 4080 · AMD RX 9070 / 7900', preset: 'ultra' },
+  { id: 'rtx-top', label: 'NVIDIA RTX 5090 / 5080 / 4090 / 4080 · AMD RX 9070 / 7900', preset: 'cinematic' },
   { id: 'rtx-high', label: 'NVIDIA RTX 5070 / 4070 / 3080 / 3090 · AMD RX 7800 / 6900', preset: 'ultra' },
   { id: 'rtx-mid', label: 'NVIDIA RTX 4060 / 3060 / 3070 · AMD RX 7600 / 6600–6800 · Intel Arc', preset: 'high' },
   { id: 'rtx-old', label: 'NVIDIA RTX 2060–2080 · GTX 1660 · AMD RX 5600 / 5700', preset: 'high' },
@@ -67,6 +78,7 @@ export function detectGPU() {
   let preset = 'low';
   if (/swiftshader|llvmpipe|software|basic render/.test(n)) preset = 'low';
   else if (mobile) preset = 'phone';
+  else if (/rtx\s*(5090|5080|4090|4080)|rx\s*(9070|79\d\d)/.test(n)) preset = 'cinematic';
   else if (/rtx\s*(50|40)[6-9]0|rtx\s*30[89]0|rx\s*(9070|79\d\d|78\d\d|69\d\d)/.test(n)) preset = 'ultra';
   else if (/rtx|rx\s*(7\d\d\d|6[6-8]\d\d)|arc\s*a7|radeon pro/.test(n)) preset = 'high';
   else if (/apple m\d (pro|max|ultra)/.test(n)) preset = 'high';
