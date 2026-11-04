@@ -245,7 +245,7 @@ export const GLSL_VOR3 = /* glsl */`
 // rear rim stands above the front of the next one (imbricate overlap).
 // p: rest position / cell size. Returns height (cell units), its gradient d/dp,
 // cavity, crown (raised, rubbed), two per-scale randoms.
-struct DKV3 { float h; vec3 g; float cav; float crown; float id; float id2; float e; float up; float q; };
+struct DKV3 { float h; vec3 g; float cav; float crown; float id; float id2; float e; float up; float q; float ew; };
 // (r2 s6) e: a random per cell EDGE (symmetric in the two cells: the same on both sides of a seam),
 // up: +1 / -1 which of the two cells lies on top where that edge is an overlap (antisymmetric)
 float dkKeel3 = 0.0;   // keel height along each scale (set by the caller)
@@ -258,7 +258,7 @@ DKV3 dkVor3(vec3 p, vec3 T, float an, float tilt, float k, float cavW, float jit
   vec3 ip = floor(p), fp = fract(p);
   float ka = 1.0 / an - 1.0;
   float K = dkVorK;
-  float d1 = 1e9; vec3 m1 = vec3(0.0); vec3 c1 = vec3(0.0); float d2 = 1e9; vec3 c2 = vec3(0.0);
+  float d1 = 1e9; vec3 m1 = vec3(0.0); vec3 c1 = vec3(0.0); float d2 = 1e9; vec3 c2 = vec3(0.0); float d3 = 1e9;
   float ws = 0.0; vec3 wg = vec3(0.0); float w1 = 0.0; vec3 g1w = vec3(0.0);
   for (int kk = -1; kk <= 1; kk++) for (int j = -1; j <= 1; j++) for (int i = -1; i <= 1; i++) {
     vec3 g = vec3(float(i), float(j), float(kk));
@@ -269,8 +269,9 @@ DKV3 dkVor3(vec3 p, vec3 T, float an, float tilt, float k, float cavW, float jit
     float w = exp(-K * l);
     vec3 gl = -(rm + ka * dot(rm, T) * T) / l;          // grad of l w.r.t. p
     ws += w; wg += w * gl;
-    if (l < d1) { d2 = d1; c2 = c1; d1 = l; m1 = rm; c1 = ip + g; w1 = w; g1w = gl; }
-    else if (l < d2) { d2 = l; c2 = ip + g; }
+    if (l < d1) { d3 = d2; d2 = d1; c2 = c1; d1 = l; m1 = rm; c1 = ip + g; w1 = w; g1w = gl; }
+    else if (l < d2) { d3 = d2; d2 = l; c2 = ip + g; }
+    else if (l < d3) { d3 = l; }
   }
   DKV3 V;
   float wo = max(ws - w1, 1e-30);
@@ -305,6 +306,10 @@ DKV3 dkVor3(vec3 p, vec3 T, float an, float tilt, float k, float cavW, float jit
   V.id = h3.y; V.id2 = h3.z;
   V.e = dkH33(c1 + c2 + 3.3).x; V.q = q;
   V.up = dkH33(c1 + 11.9).y > dkH33(c2 + 11.9).y ? 1.0 : -1.0;
+  // (r2 s9) confidence of the per-EDGE values (e, up): where the second-nearest cell switches (d2 = d3,
+  // a straight line from a plate corner inward) e/up jump; callers fade their edge effects to a plain
+  // seam there so a plate's rim never splits into hard-edged triangular facets
+  V.ew = smoothstep(0.0, 0.16, d3 - d2);
   return V;
 }
 // sparse enlarged tubercles (osteoderms) on a coarser lattice: a raised, keeled dome in
