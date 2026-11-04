@@ -880,6 +880,7 @@ async function createGame(progress) {
     const dd = basePreset.drawDistance * settings.drawDistance;
     terrain.update(camera.position, dd);
     veg.update(camera.position, dd);
+    city.facades?.update(camera.position, dt);
     if (veg.cover.update) {
       veg.cover.update(camera.position, sky.sunDir, _sunC.copy(sky.sun.color).multiplyScalar(sky.sun.intensity), weather);
       const pp = S.mode === 'foot' ? player.pos : S.vehicle ? S.vehicle.pos : focus;

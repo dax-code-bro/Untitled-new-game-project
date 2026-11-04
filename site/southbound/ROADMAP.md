@@ -140,6 +140,21 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 - [x] Loading screen with in-game art, tips and progress
 - [x] Fewer touch buttons: ◎ interact replaces the car button; map, phone, arsenal, free cam moved to pause
 
+## Phase 1.13 — Buildings in real 3D (`src/world/facades.js`)
+
+- [x] Cornices, parapet walls with copings, plinths, string courses, stone quoins, metal
+      corner trims and caps on towers
+- [x] Shopfronts: piers between the bays, sign bands, granite stall risers, glazing bars,
+      canvas awnings; shop interiors no longer blank white, glass reflects the street
+- [x] Every window gets a sill and a head (stone on brick, painted casings and shutters on
+      houses), placed on the shader's window grid, streamed in around the camera
+- [x] Houses: front doors facing the street, porches with posts, rails, steps and a roof,
+      corner boards, fascia, chimneys; gable roofs get ridge caps, eave and rake boards
+- [x] Rooftops: AC units with fans and louvres, round wooden water tanks on legs
+- [x] Fixed: a NaN in the shingle-roof shader on gable ends blacked out the whole screen
+      (through bloom) when looking at houses in Mill Creek
+- [x] The same pieces export to the Unity scene (`calvera-facades.json`)
+
 ## Phase 1.12 — Carryover to Unity 6 + HDRP (`southbound-unity/`)
 
 - [x] Unity 6 HDRP project with a setup window (packages, HDRP wizard, materials, world, save)

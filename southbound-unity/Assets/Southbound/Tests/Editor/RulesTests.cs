@@ -323,6 +323,35 @@ namespace Southbound.Tests
         }
     }
 
+    public class FacadeTests
+    {
+        [Test]
+        public void PiecesTurnLikeThreeJs()
+        {
+            // a 2 x 1 x 1 box at (10, 5, 0) turned a quarter about Y: its +X end points down -Z (three.js, right-handed)
+            var k = new FacadeKind { Name = "t", Shape = "box", F = new[] { 10f, 5f, 0f, (float)(Math.PI / 2), 0f, 2f, 1f, 1f, 0f }, Colors = new[] { 0 } };
+            var (x, y, z) = k.Point(0, 0.5, 0, 0);
+            Assert.AreEqual(10, x, 1e-5); Assert.AreEqual(5, y, 1e-5); Assert.AreEqual(-1, z, 1e-5);
+            // tipped about X: +Z end goes down (an awning sloping out)
+            var a = new FacadeKind { Name = "a", Shape = "box", F = new[] { 0f, 0f, 0f, 0f, 0.5f, 1f, 1f, 2f, 0f }, Colors = new[] { 0 } };
+            var (_, ay, az) = a.Point(0, 0, 0, 0.5);
+            Assert.Less(ay, 0);
+            Assert.AreEqual(Math.Cos(0.5), az, 1e-5);
+        }
+
+        [Test]
+        public void CalveraHasItsArchitecture()
+        {
+            string dir = CalveraWorld.DefaultFolder(TestFiles.ProjectRoot);
+            if (!File.Exists(FacadeData.FileIn(dir))) Assert.Ignore("calvera-facades.json not exported yet");
+            var kinds = FacadeData.Load(dir);
+            Assert.Greater(kinds.Sum(k => k.Count), 20000);
+            Assert.IsTrue(kinds.Any(k => k.Name == "canvas"), "awnings");
+            Assert.IsTrue(kinds.Any(k => k.Name == "near-stone"), "window sills");
+            foreach (var k in kinds) Assert.AreEqual(k.Count * k.Stride, k.F.Length, k.Name);
+        }
+    }
+
     public class WorldTests
     {
         static CalveraWorld world;

@@ -45,6 +45,8 @@ namespace Southbound.EditorTools
                 BuildRoads(world);
                 EditorUtility.DisplayProgressBar("Southbound", "Buildings", 0.55f);
                 BuildBuildings(world);
+                EditorUtility.DisplayProgressBar("Southbound", "Cornices, shopfronts, porches, window sills", 0.62f);
+                FacadeBuilder.Build(dataDir, MeshDir);
                 EditorUtility.DisplayProgressBar("Southbound", "Trees", 0.7f);
                 Vegetation.Plant(world, terrain);
                 EditorUtility.DisplayProgressBar("Southbound", "Sun, sky and John", 0.9f);
