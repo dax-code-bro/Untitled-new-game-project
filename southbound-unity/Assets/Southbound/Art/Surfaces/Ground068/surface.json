@@ -1,0 +1,16 @@
+{
+  "name": "Ground068",
+  "source": "ambientcg",
+  "tileMeters": 3,
+  "size": 512,
+  "maps": [
+    "color",
+    "normal",
+    "rough"
+  ],
+  "files": {
+    "BaseColor": "Ground068_BaseColor.jpg",
+    "Normal": "Ground068_Normal.png",
+    "Mask": "Ground068_Mask.png"
+  }
+}

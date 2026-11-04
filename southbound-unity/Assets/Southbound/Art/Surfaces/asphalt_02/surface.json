@@ -1,0 +1,17 @@
+{
+  "name": "asphalt_02",
+  "source": "polyhaven",
+  "tileMeters": 4,
+  "size": 512,
+  "maps": [
+    "ao",
+    "color",
+    "normal",
+    "rough"
+  ],
+  "files": {
+    "BaseColor": "asphalt_02_BaseColor.jpg",
+    "Normal": "asphalt_02_Normal.png",
+    "Mask": "asphalt_02_Mask.png"
+  }
+}

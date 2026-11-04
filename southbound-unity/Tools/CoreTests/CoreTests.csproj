@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Compiles Southbound's engine-free game rules (Assets/Southbound/Core) and the
+       same NUnit tests Unity's Test Runner uses, so they run without Unity:
+         dotnet test southbound-unity/Tools/CoreTests
+       Online tests (real downloads from ambientCG / Poly Haven / cgbookcase):
+         dotnet test southbound-unity/Tools/CoreTests (filter Category=Online) -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <IsPackable>false</IsPackable>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../Assets/Southbound/Core/**/*.cs" />
+    <Compile Include="../../Assets/Southbound/Tests/Editor/**/*.cs" />
+    <Compile Include="OnlineTests.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="NUnit" Version="3.14.0" />
+    <PackageReference Include="NUnit3TestAdapter" Version="4.6.0" />
+  </ItemGroup>
+</Project>

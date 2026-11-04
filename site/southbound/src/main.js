@@ -317,7 +317,7 @@ async function createGame(progress) {
   sky.hour = profile.hour; sky.day = profile.day;
   const interact = new Interactions(scene, hm);
   const game = {
-    S, scene, hm, graph, city, player, combat, hud, sky, weather, career, interact, parked, lib, q, settings, camera, input, traffic, peds, police, collision, rig, surf,
+    S, scene, hm, graph, city, veg, player, combat, hud, sky, weather, career, interact, parked, lib, q, settings, camera, input, traffic, peds, police, collision, rig, surf,
     pause: (b) => { S.frozen = b; },
     teleport: (x, z, heading = 0) => { api.teleport(x, z, heading); },
     enterVehicle: (v) => enterVehicle(v, null),
@@ -350,6 +350,16 @@ async function createGame(progress) {
   $('#pause-phone').onclick = () => { setPaused(false); systems.phoneSys?.phone?.show('inv'); };
   $('#pause-arsenal').onclick = () => { setPaused(false); api.openArsenal?.(); };
   $('#pause-cam').onclick = () => { setPaused(false); toggleFreeCam(); };
+  // the whole profile as a file: back it up, or carry it over to the Unity version
+  $('#pause-export').onclick = () => {
+    career.save();
+    const blob = new Blob([JSON.stringify(career.p, null, 1)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = 'southbound-save.json';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    hud.toast('Save exported: southbound-save.json', 2.5);
+  };
 
   hud.toast(settings.isTouch
     ? 'Welcome to Calvera. Tap 🚗 near a car to drive · 🔫 switch weapon · 🎯 aim · 💥 fire'

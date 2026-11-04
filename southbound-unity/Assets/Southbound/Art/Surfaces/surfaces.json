@@ -1,0 +1,527 @@
+[
+  {
+    "name": "Asphalt012",
+    "source": "ambientcg",
+    "tileMeters": 3.2,
+    "size": 512,
+    "maps": [
+      "color",
+      "height",
+      "normal",
+      "rough"
+    ],
+    "files": {
+      "BaseColor": "Asphalt012_BaseColor.jpg",
+      "Normal": "Asphalt012_Normal.png",
+      "Mask": "Asphalt012_Mask.png",
+      "Height": "Asphalt012_Height.png"
+    }
+  },
+  {
+    "name": "BathroomTiles02",
+    "source": "cgbookcase",
+    "tileMeters": 1.5,
+    "size": 512,
+    "maps": [
+      "color",
+      "height",
+      "normal",
+      "rough"
+    ],
+    "files": {
+      "BaseColor": "BathroomTiles02_BaseColor.jpg",
+      "Normal": "BathroomTiles02_Normal.png",
+      "Mask": "BathroomTiles02_Mask.png",
+      "Height": "BathroomTiles02_Height.png"
+    }
+  },
+  {
+    "name": "Cobblestone01",
+    "source": "cgbookcase",
+    "tileMeters": 1.6,
+    "size": 512,
+    "maps": [
+      "ao",
+      "color",
+      "height",
+      "normal",
+      "rough"
+    ],
+    "files": {
+      "BaseColor": "Cobblestone01_BaseColor.jpg",
+      "Normal": "Cobblestone01_Normal.png",
+      "Mask": "Cobblestone01_Mask.png",
+      "Height": "Cobblestone01_Height.png"
+    }
+  },
+  {
+    "name": "Concrete034",
+    "source": "ambientcg",
+    "tileMeters": 2.5,
+    "size": 512,
+    "maps": [
+      "color",
+      "normal",
+      "rough"
+    ],
+    "files": {
+      "BaseColor": "Concrete034_BaseColor.jpg",
+      "Normal": "Concrete034_Normal.png",
+      "Mask": "Concrete034_Mask.png"
+    }
+  },
+  {
+    "name": "CorrugatedSteel005",
+    "source": "ambientcg",
+    "tileMeters": 2.2,
+    "size": 512,
+    "maps": [
+      "ao",
+      "color",
+      "height",
+      "metal",
+      "normal",
+      "rough"
+    ],
+    "files": {
+      "BaseColor": "CorrugatedSteel005_BaseColor.jpg",
+      "Normal": "CorrugatedSteel005_Normal.png",
+      "Mask": "CorrugatedSteel005_Mask.png",
+      "Height": "CorrugatedSteel005_Height.png"
+    }
+  },
+  {
+    "name": "Dirt01",
+    "source": "cgbookcase",
+    "tileMeters": 2.2,
+    "size": 512,
+    "maps": [
+      "ao",
+      "color",
+      "height",
+      "normal",
+      "rough"
+    ],
+    "files": {
+      "BaseColor": "Dirt01_BaseColor.jpg",
+      "Normal": "Dirt01_Normal.png",
+      "Mask": "Dirt01_Mask.png",
+      "Height": "Dirt01_Height.png"
+    }
+  },
+  {
+    "name": "Facade002",
+    "source": "ambientcg",
+    "tileMeters": 15,
+    "size": 512,
+    "maps": [
+      "color",
+      "emit",
+      "metal",
+      "normal",
+      "rough"
+    ],
+    "files": {
+      "BaseColor": "Facade002_BaseColor.jpg",
+      "Normal": "Facade002_Normal.png",
+      "Mask": "Facade002_Mask.png",
+      "Emission": "Facade002_Emission.jpg"
+    }
+  },
+  {
+    "name": "Facade012",
+    "source": "ambientcg",
+    "tileMeters": 30,
+    "size": 512,
+    "maps": [
+      "color",
+      "emit",
+      "normal",
+      "rough"
+    ],
+    "files": {
+      "BaseColor": "Facade012_BaseColor.jpg",
+      "Normal": "Facade012_Normal.png",
+      "Mask": "Facade012_Mask.png",
+      "Emission": "Facade012_Emission.jpg"
+    }
+  },
+  {
+    "name": "Facade014",
+    "source": "ambientcg",
+    "tileMeters": 80,
+    "size": 512,
+    "maps": [
+      "color",
+      "emit",
+      "normal",
+      "rough"
+    ],
+    "files": {
+      "BaseColor": "Facade014_BaseColor.jpg",
+      "Normal": "Facade014_Normal.png",
+      "Mask": "Facade014_Mask.png",
+      "Emission": "Facade014_Emission.jpg"
+    }
+  },
+  {
+    "name": "Grass004",
+    "source": "ambientcg",
+    "tileMeters": 2.4,
+    "size": 512,
+    "maps": [
+      "color",
+      "normal",
+      "rough"
+    ],
+    "files": {
+      "BaseColor": "Grass004_BaseColor.jpg",
+      "Normal": "Grass004_Normal.png",
+      "Mask": "Grass004_Mask.png"
+    }
+  },
+  {
+    "name": "Gravel004",
+    "source": "ambientcg",
+    "tileMeters": 1.6,
+    "size": 512,
+    "maps": [
+      "ao",
+      "color",
+      "height",
+      "normal",
+      "rough"
+    ],
+    "files": {
+      "BaseColor": "Gravel004_BaseColor.jpg",
+      "Normal": "Gravel004_Normal.png",
+      "Mask": "Gravel004_Mask.png",
+      "Height": "Gravel004_Height.png"
+    }
+  },
+  {
+    "name": "Ground037",
+    "source": "ambientcg",
+    "tileMeters": 3,
+    "size": 512,
+    "maps": [
+      "color",
+      "normal",
+      "rough"
+    ],
+    "files": {
+      "BaseColor": "Ground037_BaseColor.jpg",
+      "Normal": "Ground037_Normal.png",
+      "Mask": "Ground037_Mask.png"
+    }
+  },
+  {
+    "name": "Ground068",
+    "source": "ambientcg",
+    "tileMeters": 3,
+    "size": 512,
+    "maps": [
+      "color",
+      "normal",
+      "rough"
+    ],
+    "files": {
+      "BaseColor": "Ground068_BaseColor.jpg",
+      "Normal": "Ground068_Normal.png",
+      "Mask": "Ground068_Mask.png"
+    }
+  },
+  {
+    "name": "Rock030",
+    "source": "ambientcg",
+    "tileMeters": 6,
+    "size": 512,
+    "maps": [
+      "color",
+      "normal",
+      "rough"
+    ],
+    "files": {
+      "BaseColor": "Rock030_BaseColor.jpg",
+      "Normal": "Rock030_Normal.png",
+      "Mask": "Rock030_Mask.png"
+    }
+  },
+  {
+    "name": "RoofingTiles013A",
+    "source": "ambientcg",
+    "tileMeters": 2.6,
+    "size": 512,
+    "maps": [
+      "ao",
+      "color",
+      "height",
+      "normal",
+      "rough"
+    ],
+    "files": {
+      "BaseColor": "RoofingTiles013A_BaseColor.jpg",
+      "Normal": "RoofingTiles013A_Normal.png",
+      "Mask": "RoofingTiles013A_Mask.png",
+      "Height": "RoofingTiles013A_Height.png"
+    }
+  },
+  {
+    "name": "RustyCorrugatedMetalPanel01",
+    "source": "cgbookcase",
+    "tileMeters": 2.2,
+    "size": 512,
+    "maps": [
+      "ao",
+      "color",
+      "height",
+      "metal",
+      "normal",
+      "rough"
+    ],
+    "files": {
+      "BaseColor": "RustyCorrugatedMetalPanel01_BaseColor.jpg",
+      "Normal": "RustyCorrugatedMetalPanel01_Normal.png",
+      "Mask": "RustyCorrugatedMetalPanel01_Mask.png",
+      "Height": "RustyCorrugatedMetalPanel01_Height.png"
+    }
+  },
+  {
+    "name": "StuccoWall01",
+    "source": "cgbookcase",
+    "tileMeters": 2.6,
+    "size": 512,
+    "maps": [
+      "ao",
+      "color",
+      "height",
+      "normal",
+      "rough"
+    ],
+    "files": {
+      "BaseColor": "StuccoWall01_BaseColor.jpg",
+      "Normal": "StuccoWall01_Normal.png",
+      "Mask": "StuccoWall01_Mask.png",
+      "Height": "StuccoWall01_Height.png"
+    }
+  },
+  {
+    "name": "WoodFloor007",
+    "source": "ambientcg",
+    "tileMeters": 2,
+    "size": 512,
+    "maps": [
+      "ao",
+      "color",
+      "height",
+      "normal",
+      "rough"
+    ],
+    "files": {
+      "BaseColor": "WoodFloor007_BaseColor.jpg",
+      "Normal": "WoodFloor007_Normal.png",
+      "Mask": "WoodFloor007_Mask.png",
+      "Height": "WoodFloor007_Height.png"
+    }
+  },
+  {
+    "name": "asphalt_02",
+    "source": "polyhaven",
+    "tileMeters": 4,
+    "size": 512,
+    "maps": [
+      "ao",
+      "color",
+      "normal",
+      "rough"
+    ],
+    "files": {
+      "BaseColor": "asphalt_02_BaseColor.jpg",
+      "Normal": "asphalt_02_Normal.png",
+      "Mask": "asphalt_02_Mask.png"
+    }
+  },
+  {
+    "name": "brick_wall_10",
+    "source": "polyhaven",
+    "tileMeters": 2.5,
+    "size": 512,
+    "maps": [
+      "ao",
+      "color",
+      "normal",
+      "rough"
+    ],
+    "files": {
+      "BaseColor": "brick_wall_10_BaseColor.jpg",
+      "Normal": "brick_wall_10_Normal.png",
+      "Mask": "brick_wall_10_Mask.png"
+    }
+  },
+  {
+    "name": "brown_mud",
+    "source": "polyhaven",
+    "tileMeters": 3,
+    "size": 512,
+    "maps": [
+      "ao",
+      "color",
+      "height",
+      "normal",
+      "rough"
+    ],
+    "files": {
+      "BaseColor": "brown_mud_BaseColor.jpg",
+      "Normal": "brown_mud_Normal.png",
+      "Mask": "brown_mud_Mask.png",
+      "Height": "brown_mud_Height.png"
+    }
+  },
+  {
+    "name": "cliff_side",
+    "source": "polyhaven",
+    "tileMeters": 7,
+    "size": 512,
+    "maps": [
+      "ao",
+      "color",
+      "height",
+      "normal",
+      "rough"
+    ],
+    "files": {
+      "BaseColor": "cliff_side_BaseColor.jpg",
+      "Normal": "cliff_side_Normal.png",
+      "Mask": "cliff_side_Mask.png",
+      "TerrainMask": "cliff_side_TerrainMask.png",
+      "Height": "cliff_side_Height.png"
+    }
+  },
+  {
+    "name": "coast_sand_01",
+    "source": "polyhaven",
+    "tileMeters": 3,
+    "size": 512,
+    "maps": [
+      "ao",
+      "color",
+      "normal",
+      "rough"
+    ],
+    "files": {
+      "BaseColor": "coast_sand_01_BaseColor.jpg",
+      "Normal": "coast_sand_01_Normal.png",
+      "Mask": "coast_sand_01_Mask.png"
+    }
+  },
+  {
+    "name": "forest_ground_04",
+    "source": "polyhaven",
+    "tileMeters": 3,
+    "size": 512,
+    "maps": [
+      "ao",
+      "color",
+      "normal",
+      "rough"
+    ],
+    "files": {
+      "BaseColor": "forest_ground_04_BaseColor.jpg",
+      "Normal": "forest_ground_04_Normal.png",
+      "Mask": "forest_ground_04_Mask.png"
+    }
+  },
+  {
+    "name": "forest_leaves_02",
+    "source": "polyhaven",
+    "tileMeters": 2.6,
+    "size": 512,
+    "maps": [
+      "ao",
+      "color",
+      "height",
+      "normal",
+      "rough"
+    ],
+    "files": {
+      "BaseColor": "forest_leaves_02_BaseColor.jpg",
+      "Normal": "forest_leaves_02_Normal.png",
+      "Mask": "forest_leaves_02_Mask.png",
+      "Height": "forest_leaves_02_Height.png"
+    }
+  },
+  {
+    "name": "plastered_wall_03",
+    "source": "polyhaven",
+    "tileMeters": 3,
+    "size": 512,
+    "maps": [
+      "ao",
+      "color",
+      "normal",
+      "rough"
+    ],
+    "files": {
+      "BaseColor": "plastered_wall_03_BaseColor.jpg",
+      "Normal": "plastered_wall_03_Normal.png",
+      "Mask": "plastered_wall_03_Mask.png"
+    }
+  },
+  {
+    "name": "red_brick",
+    "source": "polyhaven",
+    "tileMeters": 2.2,
+    "size": 512,
+    "maps": [
+      "ao",
+      "color",
+      "height",
+      "normal",
+      "rough"
+    ],
+    "files": {
+      "BaseColor": "red_brick_BaseColor.jpg",
+      "Normal": "red_brick_Normal.png",
+      "Mask": "red_brick_Mask.png",
+      "Height": "red_brick_Height.png"
+    }
+  },
+  {
+    "name": "square_concrete_pavers",
+    "source": "polyhaven",
+    "tileMeters": 2.4,
+    "size": 512,
+    "maps": [
+      "ao",
+      "color",
+      "height",
+      "normal",
+      "rough"
+    ],
+    "files": {
+      "BaseColor": "square_concrete_pavers_BaseColor.jpg",
+      "Normal": "square_concrete_pavers_Normal.png",
+      "Mask": "square_concrete_pavers_Mask.png",
+      "Height": "square_concrete_pavers_Height.png"
+    }
+  },
+  {
+    "name": "weathered_plank_siding",
+    "source": "polyhaven",
+    "tileMeters": 2.4,
+    "size": 512,
+    "maps": [
+      "ao",
+      "color",
+      "height",
+      "normal",
+      "rough"
+    ],
+    "files": {
+      "BaseColor": "weathered_plank_siding_BaseColor.jpg",
+      "Normal": "weathered_plank_siding_Normal.png",
+      "Mask": "weathered_plank_siding_Mask.png",
+      "Height": "weathered_plank_siding_Height.png"
+    }
+  }
+]

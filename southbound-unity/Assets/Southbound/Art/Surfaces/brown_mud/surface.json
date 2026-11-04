@@ -1,0 +1,19 @@
+{
+  "name": "brown_mud",
+  "source": "polyhaven",
+  "tileMeters": 3,
+  "size": 512,
+  "maps": [
+    "ao",
+    "color",
+    "height",
+    "normal",
+    "rough"
+  ],
+  "files": {
+    "BaseColor": "brown_mud_BaseColor.jpg",
+    "Normal": "brown_mud_Normal.png",
+    "Mask": "brown_mud_Mask.png",
+    "Height": "brown_mud_Height.png"
+  }
+}

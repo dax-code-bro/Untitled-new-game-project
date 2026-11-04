@@ -1,0 +1,17 @@
+{
+  "name": "brick_wall_10",
+  "source": "polyhaven",
+  "tileMeters": 2.5,
+  "size": 512,
+  "maps": [
+    "ao",
+    "color",
+    "normal",
+    "rough"
+  ],
+  "files": {
+    "BaseColor": "brick_wall_10_BaseColor.jpg",
+    "Normal": "brick_wall_10_Normal.png",
+    "Mask": "brick_wall_10_Mask.png"
+  }
+}

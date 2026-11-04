@@ -140,6 +140,21 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 - [x] Loading screen with in-game art, tips and progress
 - [x] Fewer touch buttons: ◎ interact replaces the car button; map, phone, arsenal, free cam moved to pause
 
+## Phase 1.12 — Carryover to Unity 6 + HDRP (`southbound-unity/`)
+
+- [x] Unity 6 HDRP project with a setup window (packages, HDRP wizard, materials, world, save)
+- [x] Game rules ported to engine-free C#: arsenal (234 weapons, 195 attachments, matched
+      number for number by a test), ballistics and penetration, armour and hit zones, needs,
+      rebuild stages, the web save (read and written back)
+- [x] Calvera exported from the web game: terrain, ground cover, water, roads, buildings,
+      roofs, 47 345 trees and bushes; built into a scene in one click
+- [x] 29 CC0 surfaces as HDRP Lit materials and terrain layers, plus a downloader for the
+      2K/4K/8K originals (ambientCG, Poly Haven, cgbookcase)
+- [x] John: controller, third-person camera, animation retargeting, gunplay with wall
+      penetration and bullet holes; a penetration range by the spawn
+- [x] Web game: Pause > Export save (imports into Unity)
+- [ ] Vehicles, people and police AI, interiors, missions and jobs, HUD, HDRP water
+
 ## Phase 3 — Content catalogs (targets)
 
 | Item | Target | Done |

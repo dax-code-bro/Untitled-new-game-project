@@ -387,6 +387,8 @@ export async function createVegetation(hm, quality, scene, collision, cityBlocks
   return {
     placed: inst.length,
     cover,
+    // every tree and bush: [variant id, x, y, z, rotation, scale] (exported to the Unity project)
+    list: () => inst.map((t) => [variants[t.v].id, t.x, t.y, t.z, t.rot, t.k]),
     update(cam, drawDistance) {
       refreshT -= 1 / 60;
       if (refreshT <= 0 || cam.distanceToSquared(camPrev) > 64) { refreshNear(cam); refreshT = 0.3; camPrev.copy(cam); }

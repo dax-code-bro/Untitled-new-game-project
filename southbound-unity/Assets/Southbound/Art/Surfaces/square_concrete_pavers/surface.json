@@ -1,0 +1,19 @@
+{
+  "name": "square_concrete_pavers",
+  "source": "polyhaven",
+  "tileMeters": 2.4,
+  "size": 512,
+  "maps": [
+    "ao",
+    "color",
+    "height",
+    "normal",
+    "rough"
+  ],
+  "files": {
+    "BaseColor": "square_concrete_pavers_BaseColor.jpg",
+    "Normal": "square_concrete_pavers_Normal.png",
+    "Mask": "square_concrete_pavers_Mask.png",
+    "Height": "square_concrete_pavers_Height.png"
+  }
+}

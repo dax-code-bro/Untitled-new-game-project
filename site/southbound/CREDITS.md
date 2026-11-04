@@ -59,3 +59,11 @@ From the [Khronos glTF Sample Assets](https://github.com/KhronosGroup/glTF-Sampl
 From [Quaternius](https://quaternius.com) (CC0, via [quaternius-showcase](https://github.com/trebeljahr/quaternius-showcase)):
 Animals pack (deer, stag, wolf as coyote, horse, cow, bull — rigged and animated), House Interior pack (beds, sofas, kitchens,
 bathrooms, lamps, shelves, plants, curtains), Fish pack (fish, shark), Medieval Weapons pack (wooden bows).
+
+## Unity version (`southbound-unity/`)
+
+The Unity project uses the same assets as above (converted to PNG/JPG and plain
+glTF by `tools/southbound/export-unity.mjs`). Its texture downloader fetches the
+full-resolution originals of the same 29 CC0 sets directly from ambientCG, Poly Haven
+and cgbookcase, and writes each set's credit next to it. Bullet-hole decals are drawn
+in code.

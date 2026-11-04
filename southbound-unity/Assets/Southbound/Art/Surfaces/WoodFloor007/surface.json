@@ -1,0 +1,19 @@
+{
+  "name": "WoodFloor007",
+  "source": "ambientcg",
+  "tileMeters": 2,
+  "size": 512,
+  "maps": [
+    "ao",
+    "color",
+    "height",
+    "normal",
+    "rough"
+  ],
+  "files": {
+    "BaseColor": "WoodFloor007_BaseColor.jpg",
+    "Normal": "WoodFloor007_Normal.png",
+    "Mask": "WoodFloor007_Mask.png",
+    "Height": "WoodFloor007_Height.png"
+  }
+}

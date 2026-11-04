@@ -1,0 +1,17 @@
+{
+  "name": "forest_ground_04",
+  "source": "polyhaven",
+  "tileMeters": 3,
+  "size": 512,
+  "maps": [
+    "ao",
+    "color",
+    "normal",
+    "rough"
+  ],
+  "files": {
+    "BaseColor": "forest_ground_04_BaseColor.jpg",
+    "Normal": "forest_ground_04_Normal.png",
+    "Mask": "forest_ground_04_Mask.png"
+  }
+}

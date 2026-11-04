@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Compile check for the Unity scripts (Core + Runtime + Editor) against Unity's
+       reference assemblies from NuGet, so CI catches API mistakes without a Unity
+       licence. It only builds; nothing runs.  dotnet build southbound-unity/Tools/UnityCheck
+       The Input System path (SB_INPUTSYSTEM) is not checked here: no reference assemblies. -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <NoWarn>$(NoWarn);CS0618;CS0649;CS0414;NU1701</NoWarn>
+    <DefineConstants>$(DefineConstants);UNITY_EDITOR;UNITY_2021_3_OR_NEWER;ENABLE_LEGACY_INPUT_MANAGER</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../Assets/Southbound/Core/**/*.cs" />
+    <Compile Include="../../Assets/Southbound/Runtime/**/*.cs" />
+    <Compile Include="../../Assets/Southbound/Editor/**/*.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="UnityEngine.Modules" Version="2021.3.33" ExcludeAssets="all" GeneratePathProperty="true" />
+    <PackageReference Include="Unity3D.SDK" Version="2021.1.14.1" ExcludeAssets="all" GeneratePathProperty="true" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="$(PkgUnityEngine_Modules)/lib/net45/*.dll" Private="false" />
+    <Reference Include="$(PkgUnity3D_SDK)/lib/UnityEditor.dll" Private="false" />
+  </ItemGroup>
+</Project>

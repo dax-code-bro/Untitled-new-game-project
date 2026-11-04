@@ -1,0 +1,48 @@
+# Southbound for Unity: checks what can be checked without a Unity licence.
+#  - rules: the engine-free C# port of the game rules (weapon catalog matched
+#    number for number against the web game, ballistics, needs, rebuilds, the web
+#    save, the exported Calvera world), with the same NUnit tests Unity runs.
+#  - compile: every Unity script (Core, Runtime, Editor) built against Unity's
+#    reference assemblies.
+#  - textures: real downloads from ambientCG, Poly Haven and cgbookcase, one set
+#    of each kind plus every set at 1K, so the editor's downloader is known to work.
+name: southbound-unity
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/ultimate-ai-legend-KhpoT]
+    paths:
+      - '.github/workflows/southbound-unity.yml'
+      - 'southbound-unity/Assets/Southbound/Core/**'
+      - 'southbound-unity/Assets/Southbound/Runtime/**'
+      - 'southbound-unity/Assets/Southbound/Editor/**'
+      - 'southbound-unity/Assets/Southbound/Tests/**'
+      - 'southbound-unity/Tools/**'
+      - 'southbound-unity/Data/**'
+jobs:
+  rules-and-compile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Game rules (NUnit)
+        run: dotnet test southbound-unity/Tools/CoreTests --filter "Category!=Online" --logger "console;verbosity=normal"
+      - name: Unity scripts compile against UnityEngine/UnityEditor reference assemblies
+        run: dotnet build southbound-unity/Tools/UnityCheck -warnaserror
+  textures:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Download from the three CC0 texture sites
+        run: dotnet test southbound-unity/Tools/CoreTests --filter "Category=Online" --logger "console;verbosity=detailed"

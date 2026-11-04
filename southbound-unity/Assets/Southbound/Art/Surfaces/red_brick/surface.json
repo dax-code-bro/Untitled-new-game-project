@@ -1,0 +1,19 @@
+{
+  "name": "red_brick",
+  "source": "polyhaven",
+  "tileMeters": 2.2,
+  "size": 512,
+  "maps": [
+    "ao",
+    "color",
+    "height",
+    "normal",
+    "rough"
+  ],
+  "files": {
+    "BaseColor": "red_brick_BaseColor.jpg",
+    "Normal": "red_brick_Normal.png",
+    "Mask": "red_brick_Mask.png",
+    "Height": "red_brick_Height.png"
+  }
+}
