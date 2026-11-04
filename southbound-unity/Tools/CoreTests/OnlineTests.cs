@@ -18,8 +18,6 @@ namespace Southbound.Tests
         [TestCase("Rock030")]
         [TestCase("asphalt_02")]
         [TestCase("cliff_side")]
-        [TestCase("Cobblestone01")]
-        [TestCase("RustyCorrugatedMetalPanel01")]
         public void Downloads2K(string name)
         {
             using var f = new MaterialFetcher();
@@ -32,40 +30,21 @@ namespace Southbound.Tests
             Assert.Greater(new FileInfo(r.Files["Color"]).Length, 200_000, "a 2K colour map is more than 200 KB");
         }
 
-        /// <summary>Prints what cgbookcase's API and download page say about one set (keeps the downloader current).</summary>
-        [Test]
-        public void CgBookcaseProbe()
-        {
-            using var http = new System.Net.Http.HttpClient();
-            http.DefaultRequestHeaders.UserAgent.ParseAdd("Southbound-Unity/1.0");
-            void Show(string url, string around)
-            {
-                string body;
-                try { body = http.GetStringAsync(url).GetAwaiter().GetResult(); }
-                catch (Exception e) { TestContext.Progress.WriteLine($"{url}: {e.Message}"); return; }
-                TestContext.Progress.WriteLine($"{url}: {body.Length} chars");
-                int n = 0;
-                foreach (System.Text.RegularExpressions.Match m in System.Text.RegularExpressions.Regex.Matches(body, ".{0,220}" + around + ".{0,220}"))
-                    if (n++ < 6) TestContext.Progress.WriteLine("   ...." + m.Value.Replace("\n", " "));
-            }
-            Show("https://www.cgbookcase.com/api/textures", "Cobblestone01");
-            Show("https://www.cgbookcase.com/api/textures/cobblestone-01", "(?i:zip|download|url)");
-            Show("https://www.cgbookcase.com/textures/thanks?t=Cobblestone01_MR_2K.zip&r=2&u=Cobblestone01", "(?i:\\.zip|download|b2|backblaze|cdn\\.)");
-        }
-
-        /// <summary>Every set in the library resolves (only checks the first request of each).</summary>
+        /// <summary>Every set from a site with a download API (ambientCG, Poly Haven) comes down at 1K.</summary>
         [Test]
         public void EverySetIsReachable()
         {
             using var f = new MaterialFetcher();
             int ok = 0;
-            foreach (var set in MaterialLibrary.Sets)
+            var auto = MaterialLibrary.Sets.Where(x => x.Automatic).ToArray();
+            foreach (var set in auto)
             {
                 var r = f.FetchAsync(set, "1K", Out("all-" + set.Name)).GetAwaiter().GetResult();
                 TestContext.Progress.WriteLine($"{set.Name,-30} {set.Source,-10} {(r.Ok ? "OK " + string.Join(",", r.Files.Keys) : "FAILED " + r.Error + " | " + string.Join(" ", r.Log))}");
                 if (r.Ok) ok++;
             }
-            Assert.AreEqual(MaterialLibrary.Sets.Length, ok);
+            Assert.AreEqual(24, auto.Length);
+            Assert.AreEqual(auto.Length, ok);
         }
     }
 }

@@ -73,7 +73,7 @@ namespace Southbound.EditorTools
                 "Build materials", Surfaces.BuildAll);
 
             Step(4, "Full-resolution textures (recommended)", FullRes,
-                "Downloads the 2K / 4K / 8K originals from ambientCG, Poly Haven and cgbookcase and rebuilds the materials. This is where the detail comes from.",
+                "Downloads the 2K / 4K / 8K originals from ambientCG and Poly Haven (24 sets) and rebuilds the materials; the 5 cgbookcase sets are a quick browser download each. This is where the detail comes from.",
                 "Download...", MaterialDownloader.Open);
 
             Step(5, "Animations", AnimationsLegacy(),

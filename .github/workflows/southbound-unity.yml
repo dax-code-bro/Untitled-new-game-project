@@ -4,8 +4,9 @@
 #    save, the exported Calvera world), with the same NUnit tests Unity runs.
 #  - compile: every Unity script (Core, Runtime, Editor) built against Unity's
 #    reference assemblies.
-#  - textures: real downloads from ambientCG, Poly Haven and cgbookcase, one set
-#    of each kind plus every set at 1K, so the editor's downloader is known to work.
+#  - textures: real downloads from ambientCG and Poly Haven (two sets each at 2K,
+#    every set at 1K), so the editor's downloader is known to work. cgbookcase
+#    only serves files in a browser; those 5 sets are imported by hand.
 name: southbound-unity
 on:
   workflow_dispatch:
@@ -44,5 +45,5 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
-      - name: Download from the three CC0 texture sites
+      - name: Download from ambientCG and Poly Haven
         run: dotnet test southbound-unity/Tools/CoreTests --filter "Category=Online" --logger "console;verbosity=detailed"

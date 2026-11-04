@@ -27,6 +27,14 @@ namespace Southbound.Core
         public string Use;
         public string SourceId => Source == TextureSource.CgBookcase ? CgSlug(Name) : Name;
         public string License => "CC0 1.0";
+        /// <summary>ambientCG and Poly Haven have download APIs; cgbookcase only serves files through its website.</summary>
+        public bool Automatic => Source != TextureSource.CgBookcase;
+        public string Page => Source switch
+        {
+            TextureSource.AmbientCG => $"https://ambientcg.com/view?id={Name}",
+            TextureSource.PolyHaven => $"https://polyhaven.com/a/{Name}",
+            _ => $"https://www.cgbookcase.com/textures/{SourceId}",
+        };
         public string Credit => Source switch
         {
             TextureSource.AmbientCG => $"{Name} by ambientCG (ambientcg.com), CC0",
@@ -135,8 +143,12 @@ namespace Southbound.Core
             }
         }
 
-        void Unzip(byte[] zip, string outDir, FetchResult r)
+        void Unzip(byte[] zip, string outDir, FetchResult r) => ExtractZip(zip, outDir, r);
+
+        /// <summary>Unpacks the maps we use from a texture zip (any of the three sites' naming) into outDir.</summary>
+        public static void ExtractZip(byte[] zip, string outDir, FetchResult r)
         {
+            Directory.CreateDirectory(outDir);
             using (var z = new ZipArchive(new MemoryStream(zip), ZipArchiveMode.Read))
                 foreach (var e in z.Entries)
                 {
@@ -194,61 +206,10 @@ namespace Southbound.Core
             }
         }
 
-        // cgbookcase: the texture page's Download button goes to a "thanks" page
-        // (/textures/thanks?t=Cobblestone01_MR_2K.zip&r=2&u=Cobblestone01) that hands out the zip.
-        // Their sets top out at 2K.
-        async Task CgBookcase(MaterialSet set, string res, string outDir, FetchResult r, CancellationToken ct)
-        {
-            var root = new Uri("https://www.cgbookcase.com/");
-            string page = System.Text.Encoding.UTF8.GetString(await Get(new Uri(root, $"textures/{set.SourceId}").ToString(), r, ct));
-            var links = Links(page, root);
-            string want = res.ToUpperInvariant() == "1K" ? "1K" : "2K";
-            string thanks = links.FirstOrDefault(u => u.Contains($"_{want}.zip")) ?? links.FirstOrDefault(u => u.Contains(".zip"));
-            if (thanks == null) throw new Exception($"cgbookcase: no download button on the page ({links.Count} links)");
-            if (!thanks.Contains($"_{want}.zip"))
-                thanks = Regex.Replace(Regex.Replace(thanks, @"_\dK\.zip", $"_{want}.zip"), @"([?&]r=)\d", "${1}" + want.Substring(0, 1));
-            string file = Regex.Match(thanks, @"[?&]t=([^&]+\.zip)").Groups[1].Value;
-            if (file.Length == 0) file = Path.GetFileName(new Uri(thanks).AbsolutePath);
-            byte[] zip = null;
-            if (new Uri(thanks).AbsolutePath.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)) zip = await Get(thanks, r, ct);
-            else
-            {
-                byte[] body = await Get(thanks, r, ct);
-                if (IsZip(body)) zip = body; // the thanks URL served the file itself
-                else
-                {
-                    string html = System.Text.Encoding.UTF8.GetString(body);
-                    var direct = Links(html, new Uri(thanks)).Concat(Regex.Matches(html, @"https?://[^\s""'<>()]+").Cast<Match>().Select(m => m.Value.Replace("&amp;", "&")))
-                        .FirstOrDefault(u => u.Contains(file) && !u.Contains("/textures/thanks"));
-                    var candidates = new List<string>();
-                    if (direct != null) candidates.Add(direct);
-                    string name = set.Name;
-                    candidates.Add($"https://cdn.cgbookcase.cloud/file/cgbookcase/textures/downloads/{name}/{file}");
-                    candidates.Add($"https://cdn.cgbookcase.cloud/file/cgbookcase/textures/downloads/{file}");
-                    candidates.Add($"https://cgbookcase.b-cdn.net/textures/downloads/{name}/{file}");
-                    foreach (var c in candidates)
-                    {
-                        try { var b = await Get(c, r, ct); if (IsZip(b)) { zip = b; break; } }
-                        catch (HttpRequestException e) { r.Log.Add("  " + e.Message); }
-                    }
-                    if (zip == null)
-                    {
-                        int at = html.IndexOf(".zip", StringComparison.OrdinalIgnoreCase);
-                        r.Log.Add("thanks page: " + (at >= 0 ? html.Substring(Math.Max(0, at - 300), Math.Min(600, html.Length - Math.Max(0, at - 300))) : html.Substring(0, Math.Min(600, html.Length))).Replace('\n', ' '));
-                        throw new Exception($"cgbookcase: couldn't find the file behind {thanks}");
-                    }
-                }
-            }
-            Unzip(zip, outDir, r);
-        }
-
-        static bool IsZip(byte[] b) => b != null && b.Length > 4 && b[0] == 'P' && b[1] == 'K';
-
-        static List<string> Links(string html, Uri baseUri) =>
-            Regex.Matches(html, "(?:href|src)=\"([^\"]+)\"").Cast<Match>()
-                .Select(m => m.Groups[1].Value.Replace("&amp;", "&"))
-                .Select(u => Uri.TryCreate(baseUri, u, out var abs) ? abs.ToString() : u)
-                .Distinct().ToList();
+        // cgbookcase hands its zips out from JavaScript on the download page, so there is no
+        // URL to fetch: download it in a browser and use Southbound > Materials > Import downloaded zip.
+        Task CgBookcase(MaterialSet set, string res, string outDir, FetchResult r, CancellationToken ct) =>
+            throw new NotSupportedException($"cgbookcase downloads only work in a browser: open {set.Page}, press Download (2K), then use Southbound > Materials > Import downloaded zip");
 
         static IEnumerable<string> FindStrings(object o)
         {

@@ -33,7 +33,7 @@ namespace Southbound.EditorTools
             EditorGUILayout.HelpBox(
                 "The project ships 512 px copies of the 29 surfaces (what the web game streams). This downloads the originals " +
                 "from ambientCG, Poly Haven and cgbookcase (all CC0, free) and rebuilds the materials with them.\n\n" +
-                "2K: about 0.5 GB to download.  4K: about 2 GB, the right choice for an RTX-class PC.  8K: about 7 GB, close-up detail, heavy on VRAM.\n(The five cgbookcase sets top out at 2K; they use 2K at any setting.)",
+                "2K: about 0.4 GB to download.  4K: about 2 GB, the right choice for an RTX-class PC.  8K: about 7 GB, close-up detail, heavy on VRAM.\n24 sets come down automatically (ambientCG, Poly Haven). The 5 cgbookcase sets (2K) are a browser download each; the log lists their pages, then use Import downloaded zip.",
                 MessageType.Info);
             using (new EditorGUI.DisabledScope(job != null))
                 res = GUILayout.Toolbar(res, Resolutions);
@@ -69,6 +69,7 @@ namespace Southbound.EditorTools
                     foreach (var set in MaterialLibrary.Sets)
                     {
                         if (ct.IsCancellationRequested) break;
+                        if (!set.Automatic) { done++; continue; } // cgbookcase: by hand (see the log)
                         current = set.Name;
                         results.Add(await f.FetchAsync(set, resolution, Path.Combine(rawRoot, set.Name), ct).ConfigureAwait(false));
                         done++;
@@ -99,29 +100,66 @@ namespace Southbound.EditorTools
                 {
                     EditorUtility.DisplayProgressBar("Southbound", $"Packing {r.Set.Name}", i++ / (float)Math.Max(1, results.Count));
                     if (!r.Ok) { log.Add($"✗ {r.Set.Name} ({r.Set.Source}): {r.Error}  — keeps the bundled 512 px maps"); continue; }
-                    string dir = $"{Paths.Downloaded}/{r.Set.Name}";
-                    Paths.Ensure(dir);
-                    string abs = Paths.Abs(dir), n = r.Set.Name;
-                    void Copy(string map, string to) { if (r.Files.TryGetValue(map, out var src)) File.Copy(src, Path.Combine(abs, $"{n}_{to}{Path.GetExtension(src)}"), true); }
-                    Copy("Color", "BaseColor");
-                    Copy("Normal", "Normal");
-                    Copy("Height", "Height");
-                    Copy("Emission", "Emission");
-                    r.Files.TryGetValue("Roughness", out var rough);
-                    r.Files.TryGetValue("AO", out var ao);
-                    r.Files.TryGetValue("Metal", out var metal);
-                    r.Files.TryGetValue("Height", out var height);
-                    Surfaces.PackMasks(rough, ao, metal, height, Path.Combine(abs, $"{n}_Mask.png"), Path.Combine(abs, $"{n}_TerrainMask.png"));
-                    File.WriteAllText(Path.Combine(abs, "SOURCE.txt"), $"{r.Set.Credit}\nLicense: {r.Set.License}\nResolution: {r.Resolution}\n");
-                    log.Add($"✓ {n} {r.Resolution} ({string.Join(", ", r.Files.Keys)})");
+                    InstallOne(r);
+                    log.Add($"✓ {r.Set.Name} {r.Resolution} ({string.Join(", ", r.Files.Keys)})");
                     ok++;
                 }
             }
             finally { EditorUtility.ClearProgressBar(); }
             AssetDatabase.Refresh();
             Surfaces.BuildAll();
-            log.Add($"{ok}/{MaterialLibrary.Sets.Length} sets at full resolution. Materials rebuilt.");
-            Debug.Log($"Southbound: {ok}/{MaterialLibrary.Sets.Length} texture sets downloaded and installed.");
+            log.Add($"{ok} sets at full resolution. Materials rebuilt.");
+            var manual = MaterialLibrary.Sets.Where(s => !s.Automatic).ToList();
+            if (manual.Count > 0)
+            {
+                log.Add($"{manual.Count} cgbookcase sets have to be downloaded in a browser (2K, free, no account): open each page, press Download, then Southbound > Materials > Import downloaded zip.");
+                foreach (var s in manual) log.Add("   " + s.Page);
+            }
+            Debug.Log($"Southbound: {ok} texture sets downloaded and installed.");
+        }
+
+        /// <summary>Copies a set's maps into Art/Downloaded and packs its HDRP masks.</summary>
+        public static void InstallOne(FetchResult r)
+        {
+            string dir = $"{Paths.Downloaded}/{r.Set.Name}";
+            Paths.Ensure(dir);
+            string abs = Paths.Abs(dir), n = r.Set.Name;
+            void Copy(string map, string to) { if (r.Files.TryGetValue(map, out var src)) File.Copy(src, Path.Combine(abs, $"{n}_{to}{Path.GetExtension(src)}"), true); }
+            Copy("Color", "BaseColor");
+            Copy("Normal", "Normal");
+            Copy("Height", "Height");
+            Copy("Emission", "Emission");
+            r.Files.TryGetValue("Roughness", out var rough);
+            r.Files.TryGetValue("AO", out var ao);
+            r.Files.TryGetValue("Metal", out var metal);
+            r.Files.TryGetValue("Height", out var height);
+            Surfaces.PackMasks(rough, ao, metal, height, Path.Combine(abs, $"{n}_Mask.png"), Path.Combine(abs, $"{n}_TerrainMask.png"));
+            File.WriteAllText(Path.Combine(abs, "SOURCE.txt"), $"{r.Set.Credit}\nLicense: {r.Set.License}\nResolution: {r.Resolution}\n");
+        }
+
+        /// <summary>For sets downloaded in a browser (cgbookcase), or any texture zip from the three sites.</summary>
+        [MenuItem("Southbound/Materials/Import downloaded zip...", priority = 22)]
+        public static void ImportZip()
+        {
+            string file = EditorUtility.OpenFilePanel("Texture zip (e.g. Cobblestone01_MR_2K.zip)", Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) + "/Downloads", "zip");
+            if (string.IsNullOrEmpty(file)) return;
+            string fname = Path.GetFileNameWithoutExtension(file);
+            var set = MaterialLibrary.Sets.OrderByDescending(s => s.Name.Length).FirstOrDefault(s => fname.StartsWith(s.Name, StringComparison.OrdinalIgnoreCase));
+            if (set == null)
+            {
+                EditorUtility.DisplayDialog("Southbound", $"{Path.GetFileName(file)} doesn't match any of the 29 surfaces (the file name should start with the set name, e.g. Cobblestone01_...).", "OK");
+                return;
+            }
+            var r = new FetchResult { Set = set, Resolution = fname.Contains("4K") ? "4K" : fname.Contains("8K") ? "8K" : fname.Contains("1K") ? "1K" : "2K" };
+            string tmp = Path.Combine(Paths.ProjectRoot, "Library", "SouthboundDownloads", "manual", set.Name);
+            MaterialFetcher.ExtractZip(File.ReadAllBytes(file), tmp, r);
+            if (!r.Ok) { EditorUtility.DisplayDialog("Southbound", $"No colour and normal map found in {Path.GetFileName(file)} (got: {string.Join(", ", r.Files.Keys)}).", "OK"); return; }
+            InstallOne(r);
+            AssetDatabase.Refresh();
+            Surfaces.Build(set);
+            Surfaces.Layer(set);
+            AssetDatabase.SaveAssets();
+            Debug.Log($"Southbound: {set.Name} installed from {Path.GetFileName(file)} ({string.Join(", ", r.Files.Keys)}).");
         }
 
         void OnDestroy() { cancel?.Cancel(); EditorApplication.update -= Poll; }
