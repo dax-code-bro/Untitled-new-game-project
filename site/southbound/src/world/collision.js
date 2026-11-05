@@ -37,6 +37,12 @@ export class CollisionWorld {
       const i = Math.floor(lx / G.pitch), j = Math.floor(lz / G.pitch);
       if (i >= 0 && i < G.nx && j >= 0 && j < G.nz) {
         const m = Math.max(Math.abs(lx - (i + 0.5) * G.pitch), Math.abs(lz - (j + 0.5) * G.pitch)), w = (G.pitch - G.street) / 2;
+        if (G === CITY && this.parks && this.parks.has(i + ',' + j) && m < w - 3.5) {
+          // a park: lawn at ground level, the two paths across it just proud of the grass
+          const dx = Math.abs(lx - (i + 0.5) * G.pitch), dz = Math.abs(lz - (j + 0.5) * G.pitch);
+          return dx < 1.5 || dz < 1.5 ? G.height + 0.08 : null;
+        }
+        if (G === TOWN && m < w - 3) return null; // Mill Creek: lawns behind the sidewalk
         if (m < w) return G.height + 0.22;
         if (m < w + 0.2) return G.height + 0.18;
       }

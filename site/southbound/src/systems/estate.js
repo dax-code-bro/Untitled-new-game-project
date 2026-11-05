@@ -107,7 +107,11 @@ export function installEstate(game) {
     const wallC = [0xeeebe6, 0xd6dce0, 0xe6e2da, 0xc6d1c4, 0xdcd6d0, 0xf4f3f0][Math.floor(r() * 6)]; // neutral paints (warm beige + amber bulbs read as yellow-brown)
     const floorC = kind === 'warehouse' ? 0x6d6d68 : kind === 'office' ? 0x4a4f55 : [0x7a5434, 0x8c6a46, 0x5c3f28, 0xb8b2a4][Math.floor(r() * 4)];
     const homeFloor = kind === 'home' || kind === 'apartment' ? texMat('woodfloor', [0xffffff, 0xd8c8b4, 0xb89a80, 0xf0e4d4][Math.floor(r() * 4)], 0.45) : null;
-    const wallM = texMat('plaster', wallC, 0.9) || M(wallC, 0.9), floorM = homeFloor || (kind === 'warehouse' || kind === 'store' || kind === 'office' ? texMat('concrete', floorC === 0x4a4f55 ? 0x8a8f95 : 0xb0aca4, 0.8) : null) || M(floorC, kind === 'home' || kind === 'apartment' ? 0.45 : 0.8);
+    // painted drywall: the paint colour, with only a faint roller texture (the plaster scan's own
+    // albedo turned every room into rough grey concrete)
+    const wallM = M(wallC, 0.9);
+    if (S && S.plaster && S.plaster.normal) { wallM.normalMap = S.plaster.normal; wallM.normalScale = new THREE.Vector2(0.18, 0.18); }
+    const floorM = homeFloor || (kind === 'warehouse' || kind === 'store' || kind === 'office' ? texMat('concrete', floorC === 0x4a4f55 ? 0x8a8f95 : 0xb0aca4, 0.8) : null) || M(floorC, kind === 'home' || kind === 'apartment' ? 0.45 : 0.8);
     if (homeFloor) homeFloor.userData.texSize = 2.0;
     wallM.userData.texSize = 3.0; floorM.userData.texSize = 2.5;
     // what the walls are made of: drywall on studs inside; outside walls framed in houses, block in shops, sheet steel in warehouses
@@ -119,7 +123,9 @@ export function installEstate(game) {
     for (const m of [boxAt(g, W + 0.4, H, 0.2, 0, 0, -D / 2 - 0.1, wallM, true, o), boxAt(g, W + 0.4, H, 0.2, 0, 0, D / 2 + 0.1, wallM, true, o),
       boxAt(g, 0.2, H, D, -W / 2 - 0.1, 0, 0, wallM, true, o), boxAt(g, 0.2, H, D, W / 2 + 0.1, 0, 0, wallM, true, o)]) m.userData.surf = outerSurf;
     // windows (glowing with daylight) and the front door
-    const winM = new THREE.MeshStandardMaterial({ color: 0x223040, emissive: 0xbfd6ee, emissiveIntensity: 0.8, roughness: 0.1 });
+    // daylight through the glass by day; after dark the panes are black with the room reflected
+    const sunUp = Math.max(0, Math.min(1, Math.min(game.sky.hour - 6, 19.5 - game.sky.hour) / 1.2));
+    const winM = new THREE.MeshStandardMaterial({ color: 0x223040, emissive: sunUp > 0 ? 0xbfd6ee : 0x0a1020, emissiveIntensity: 0.05 + 0.75 * sunUp, roughness: 0.1 });
     winM.userData.surf = 'glass';
     for (let x = -W / 2 + 2; x < W / 2 - 1.5; x += 3.2) { const w = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.4), winM); w.position.set(x, 1.6, -D / 2 + 0.01); g.add(w); }
     const door = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 2.2), M(0x3a2a1c, 0.6)); door.position.set(0, 1.1, D / 2 - 0.01); door.rotation.y = Math.PI; door.userData.surf = 'door'; g.add(door);
@@ -225,8 +231,11 @@ export function installEstate(game) {
     }
     for (const lx of [-W / 4, W / 4]) put(QH(pick(['Light_Ceiling1', 'Light_Ceiling2', 'Light_Ceiling4'])), 0.6, lx, 0, 0, 'y', false, H - 0.62);
     // lights
-    const lc = kind === 'office' || kind === 'store' || kind === 'warehouse' ? 0xf4f6ff : 0xffeedd;
-    for (const lx of [-W / 4, W / 4]) { const L = new THREE.PointLight(lc, kind === 'warehouse' ? 60 : 22, Math.max(W, D), 1.6); L.position.set(lx, H - 0.4, 0); g.add(L); const fx = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.06, 0.8), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: lc, emissiveIntensity: 2 })); fx.position.set(lx, H - 0.05, 0); g.add(fx); }
+    // homes by day: the lights are off and the rooms are lit by the windows (soft, cooler);
+    // after dark (and in shops, offices and warehouses, always) the ceiling lights are on
+    const hr = game.sky.hour, dayIn = (kind === 'home' || kind === 'apartment') && hr > 7.5 && hr < 18.5;
+    const lc = dayIn ? 0xeef2ff : kind === 'office' || kind === 'store' || kind === 'warehouse' ? 0xf4f6ff : 0xffeedd;
+    for (const lx of [-W / 4, W / 4]) { const L = new THREE.PointLight(lc, kind === 'warehouse' ? 60 : dayIn ? 9 : 22, Math.max(W, D) * (dayIn ? 1.3 : 1), dayIn ? 1.0 : 1.6); L.position.set(lx, H - 0.3, 0); g.add(L); const fx = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.06, 0.8), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: lc, emissiveIntensity: dayIn ? 0.08 : 2 })); fx.position.set(lx, H - 0.05, 0); g.add(fx); }
     // fire safety: a pull station and a horn/strobe by the door, a smoke detector on the ceiling
     const fireM = new THREE.MeshStandardMaterial({ color: 0xc81e1e, roughness: 0.45 });
     const pull = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.18, 0.06), fireM); pull.position.set(o.x + 1.4, o.y + 1.25, o.z + D / 2 - 0.2); g.add(pull);

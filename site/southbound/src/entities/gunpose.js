@@ -216,6 +216,18 @@ export class GunPose {
       if (st !== 2) { this.reach(this.L, gun.localToWorld(_g.set(0.05, 0.02, 0.06)).clone(), F, 'L'); orientHand(this.L, gunVec(gun, GRIP.fore.F), gunVec(gun, GRIP.fore.S)); }
       return;
     }
+    // first person, not aiming: a two-handed low ready in front of the chest (the third-person idle
+    // clip seen from the eyes showed the pistol canted 60 degrees with the fingers off the grip)
+    if (s.fp && s.state !== 'reload') {
+      dir.copy(aim).multiplyScalar(0.86).addScaledVector(F.up, -0.5).normalize();
+      pos.copy(s.eye).addScaledVector(aim, 0.4).addScaledVector(F.up, -0.3).addScaledVector(F.right, 0.07);
+      this.place(gun, pos, dir, F.up, 0);
+      this.reach(this.R, gun.localToWorld(_g.set(0, 0, 0)).clone(), F, 'R');
+      orientHand(this.R, gunVec(gun, GRIP.pistol.F), gunVec(gun, GRIP.pistol.S));
+      this.reach(this.L, gun.localToWorld(_g.set(0.045, -0.03, -0.01)).clone(), F, 'L');
+      orientHand(this.L, gunVec(gun, GRIP.cup.F), gunVec(gun, GRIP.cup.S));
+      return;
+    }
     // relaxed / reload: the clip moves the right arm; the gun follows the hand
     this.attachToHand(gun, this.R);
     if (s.state === 'reload') {

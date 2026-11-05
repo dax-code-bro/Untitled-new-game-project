@@ -276,7 +276,15 @@ export class Heightmap {
         if (x > AIRFIELD.x0 && x < AIRFIELD.x1 && Math.abs(z - AIRFIELD.z) < AIRFIELD.w / 2) paved = 1;
         if (x > AIRFIELD.x1 - 120 && x < AIRFIELD.x1 && z > AIRFIELD.z - 60 && z < AIRFIELD.z - 16) paved = 1; // apron
         if (x > cx0 && x < cx1 && z > cz0 && z < cz1) paved = 1;
-        if (x > tx0 && x < tx1 && z > tz0 && z < tz1) paved = Math.max(paved, 0.85);
+        // the port yard between the last blocks and the water: concrete, not a field
+        if (x > cx0 + 6 && x < cx1 - 6 && z >= cz1 && z < cz1 + 78 && z < coastZ(x) - 8) paved = 1;
+        if (x > tx0 && x < tx1 && z > tz0 && z < tz1) {
+          // streets and the sidewalk along them; the yards behind are grass
+          const lx = x - TOWN.x0, lz = z - TOWN.z0, bi = Math.floor(lx / TOWN.pitch), bj = Math.floor(lz / TOWN.pitch);
+          const inBlock = bi >= 0 && bi < TOWN.nx && bj >= 0 && bj < TOWN.nz;
+          const m = Math.max(Math.abs(lx - (bi + 0.5) * TOWN.pitch), Math.abs(lz - (bj + 0.5) * TOWN.pitch));
+          if (!inBlock || m > (TOWN.pitch - TOWN.street) / 2 - 3.5) paved = Math.max(paved, 0.85);
+        }
         splat[k * 4] = sand * 255;
         splat[k * 4 + 1] = forest * 255;
         splat[k * 4 + 2] = dry * 255;

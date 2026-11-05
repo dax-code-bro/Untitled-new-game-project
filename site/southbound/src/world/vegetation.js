@@ -137,15 +137,27 @@ export async function createVegetation(hm, quality, scene, collision, cityBlocks
   const rnd = mulberry32(99);
   const inst = []; // {v, x, y, z, rot, k}
   const nrm = new THREE.Vector3();
-  const blocked = (x, z, r) => {
+  const blocked = (x, z, r, pit = false) => {
     let hit = false;
-    collision.query(x, z, r, (it) => { if (it.t === 0 && x > it.minX - r && x < it.maxX + r && z > it.minZ - r && z < it.maxZ + r) hit = true; });
+    collision.query(x, z, r + 8, (it) => {
+      if (hit) return;
+      // walls: a trunk stands clear of porches, steps and awnings too (they reach ~2.6 m out)
+      const rr = it.t === 0 && it.y1 - it.y0 > 3 && !pit ? Math.max(r, 3.1) : r;
+      if (it.t === 0 && x > it.minX - rr && x < it.maxX + rr && z > it.minZ - rr && z < it.maxZ + rr) hit = true;
+      else if (it.t === 3) {
+        // keep roads (and the verge a trunk would stand in) clear
+        const dx = it.bx - it.ax, dz = it.bz - it.az, L2 = dx * dx + dz * dz || 1;
+        const t = Math.max(0, Math.min(1, ((x - it.ax) * dx + (z - it.az) * dz) / L2));
+        if (Math.hypot(it.ax + dx * t - x, it.az + dz * t - z) < it.hw + (pit ? 0.5 : Math.min(r, 2.5) + 0.6)) hit = true;
+      }
+    });
     return hit;
   };
-  const place = (id, x, z, trunk = true) => {
+  // pit: a street tree in a pavement pit by the kerb (allowed right up to the road)
+  const place = (id, x, z, trunk = true, pit = false) => {
     const y = hm.height(x, z);
     if (y < hm.waterLevel(x, z) + 0.4) return false;
-    if (blocked(x, z, id.startsWith('bush') ? 1 : 2.5)) return false;
+    if (blocked(x, z, pit ? 1.2 : id.startsWith('bush') ? 1 : 2.5, pit)) return false;
     const v = variants[byId[id]];
     const [h0, h1] = HEIGHT[id];
     const k = (h0 + rnd() * (h1 - h0)) / v.height;
@@ -178,15 +190,20 @@ export async function createVegetation(hm, quality, scene, collision, cityBlocks
   }
   for (const bl of cityBlocks) {
     if (bl.type !== 'park') continue;
-    for (let k = 0; k < 22; k++) place(pick(['oak_a', 'oak_b', 'ash_a', 'ash_b']), bl.cx + (rnd() - 0.5) * 64, bl.cz + (rnd() - 0.5) * 64);
-    for (let k = 0; k < 14; k++) place(pick(['bush_a', 'bush_c']), bl.cx + (rnd() - 0.5) * 66, bl.cz + (rnd() - 0.5) * 66, false);
+    // on the lawns, not on the two paths across the park or its benches
+    const offPath = (x, z) => Math.abs(x - bl.cx) > 4.5 && Math.abs(z - bl.cz) > 4.5;
+    for (let k = 0; k < 22; k++) { const id = pick(['oak_a', 'oak_b', 'ash_a', 'ash_b']), x = bl.cx + (rnd() - 0.5) * 64, z = bl.cz + (rnd() - 0.5) * 64; if (offPath(x, z)) place(id, x, z); }
+    for (let k = 0; k < 14; k++) { const id = pick(['bush_a', 'bush_c']), x = bl.cx + (rnd() - 0.5) * 66, z = bl.cz + (rnd() - 0.5) * 66; if (offPath(x, z)) place(id, x, z, false); }
   }
   for (let i = 0; i <= CITY.nx; i++) {
-    const x = CITY.x0 + i * CITY.pitch + CITY.street / 2 + 1.5;
+    // tree pits at the kerb edge (0.8 m in), clear of the lamp posts and of where people walk (1.7 m in)
+    const x = CITY.x0 + i * CITY.pitch + CITY.street / 2 + 0.8;
     for (let z = CITY.z0 + 14; z < CITY.z0 + CITY.nz * CITY.pitch; z += 18) {
       const m = (z - CITY.z0) % CITY.pitch;
       if (m < 14 || m > CITY.pitch - 14) continue;
-      place('ash_b', x, z);
+      let lamp = false;
+      collision.query(x, z, 3, (it) => { if (it.t === 1 && it.r <= 0.3 && Math.hypot(it.x - x, it.z - z) < 2.4) lamp = true; });
+      if (!lamp) place('ash_b', x, z, true, true);
     }
   }
 
@@ -270,6 +287,7 @@ export async function createVegetation(hm, quality, scene, collision, cityBlocks
     list.forEach((t, i) => data.set([t.x, t.y, t.z, t.k], i * 4));
     geo.setAttribute('aInst', new THREE.InstancedBufferAttribute(data, 4));
     geo.instanceCount = list.length;
+    geo.userData.list = list;
     const mat = new THREE.ShaderMaterial({
       uniforms: {
         ...grassUniforms, tImp: { value: v.imp }, uNear: { value: Q.near },
@@ -368,6 +386,7 @@ export async function createVegetation(hm, quality, scene, collision, cityBlocks
       if (!cell) continue;
       for (const i of cell) {
         const t = inst[i];
+        if (!t.k) continue; // cleared for a lot built later
         const dx = t.x - cam.x, dz = t.z - cam.z;
         if (dx * dx + dz * dz > r * r * 1.1) continue;
         const n = counts[t.v];
@@ -388,7 +407,21 @@ export async function createVegetation(hm, quality, scene, collision, cityBlocks
     placed: inst.length,
     cover,
     // every tree and bush: [variant id, x, y, z, rotation, scale] (exported to the Unity project)
-    list: () => inst.map((t) => [variants[t.v].id, t.x, t.y, t.z, t.rot, t.k]),
+    list: () => inst.filter((t) => t.k).map((t) => [variants[t.v].id, t.x, t.y, t.z, t.rot, t.k]),
+    // take out every tree and bush on a lot (a shop or workshop put up after the woods grew), trunks and all
+    clearRect(x0, z0, x1, z1) {
+      let n = 0;
+      for (const t of inst) if (t.k && t.x > x0 && t.x < x1 && t.z > z0 && t.z < z1) { t.k = 0; n++; }
+      if (!n) return 0;
+      for (const m of impMeshes) {
+        const a = m.geometry.attributes.aInst, list = m.geometry.userData.list;
+        list.forEach((t, i) => { if (!t.k) a.array[i * 4 + 3] = 0; });
+        a.needsUpdate = true;
+      }
+      collision.query((x0 + x1) / 2, (z0 + z1) / 2, Math.max(x1 - x0, z1 - z0) / 2 + 2, (it) => { if (it.t === 1 && it.x > x0 && it.x < x1 && it.z > z0 && it.z < z1) it.r = 0; });
+      camPrev.set(1e9, 0, 1e9);
+      return n;
+    },
     update(cam, drawDistance) {
       refreshT -= 1 / 60;
       if (refreshT <= 0 || cam.distanceToSquared(camPrev) > 64) { refreshNear(cam); refreshT = 0.3; camPrev.copy(cam); }

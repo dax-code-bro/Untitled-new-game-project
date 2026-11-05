@@ -35,6 +35,17 @@ export function installStreetLife(game) {
     collision.query(x, z, 2, (it) => { if (it.t === 0 && x > it.minX - m && x < it.maxX + m && z > it.minZ - m && z < it.maxZ + m) hit = true; });
     return hit;
   };
+  // nothing gets dumped in the carriageway
+  const onRoad = (x, z, m) => {
+    let hit = false;
+    collision.query(x, z, 12, (it) => {
+      if (hit || it.t !== 3) return;
+      const dx = it.bx - it.ax, dz = it.bz - it.az, L2 = dx * dx + dz * dz || 1;
+      const t = Math.max(0, Math.min(1, ((x - it.ax) * dx + (z - it.az) * dz) / L2));
+      if (Math.hypot(it.ax + dx * t - x, it.az + dz * t - z) < it.hw + m) hit = true;
+    });
+    return hit;
+  };
   // alleys: the gaps between buildings inside city blocks
   const blockW = CITY.pitch - CITY.street;
   for (const bl of city.cityBlocks) {
@@ -56,7 +67,7 @@ export function installStreetLife(game) {
   for (const j of city.junk || []) {
     if (j.kind === 'sign') continue;
     const list = MIX[j.kind] || MIX.trash;
-    if (inBuilding(j.x, j.z, 0.6)) continue;
+    if (inBuilding(j.x, j.z, 0.6) || onRoad(j.x, j.z, 0.8)) continue;
     spots.push({ kind: list[(rnd() * list.length) | 0], x: j.x, z: j.z, rot: rnd() * 6.28 });
   }
 

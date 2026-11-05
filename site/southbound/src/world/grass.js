@@ -6,7 +6,7 @@
 // like the terrain (sun, shadows, sky light, fog) and also glow when the
 // sun is behind them, sway in rolling gusts and part around the player.
 import * as THREE from 'three';
-import { CITY } from './layout.js';
+import { CITY, TOWN } from './layout.js';
 import { worldUniforms } from './terrain.js';
 import { mulberry32 } from '../util.js';
 
@@ -26,7 +26,38 @@ export const coverUniforms = {
   uSunDirG: { value: new THREE.Vector3(0, 1, 0) },
   uSunColG: { value: new THREE.Color(1, 1, 1) },
   uWindK: { value: 1 },
+  // mown yards: 1 within a lot's width of any building (set once the town is built)
+  uLawn: { value: (() => { const t = new THREE.DataTexture(new Uint8Array(4), 1, 1); t.needsUpdate = true; return t; })() },
 };
+const LAWN_N = 512;
+// park paths (cx, cz, half the lawn's width): no grass on them (the terrain map is too coarse)
+coverUniforms.uParks = { value: [0, 1, 2, 3].map(() => new THREE.Vector4(0, 0, 0, 0)) };
+
+// a low-res mask of the developed land: yards, lots and verges round every building get mown
+function lawnTexture(buildings, half) {
+  const N = LAWN_N, cell = (half * 2) / N, a = new Float32Array(N * N);
+  const fill = (ax, az, bx, bz) => {
+    const x0 = Math.max(0, Math.floor((ax + half) / cell)), x1 = Math.min(N - 1, Math.floor((bx + half) / cell));
+    const z0 = Math.max(0, Math.floor((az + half) / cell)), z1 = Math.min(N - 1, Math.floor((bz + half) / cell));
+    for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) a[z * N + x] = 1;
+  };
+  for (const b of buildings) {
+    const pad = b.h > 14 ? 26 : 16;
+    fill(b.x - b.w / 2 - pad, b.z - b.d / 2 - pad, b.x + b.w / 2 + pad, b.z + b.d / 2 + pad);
+  }
+  // the verges and vacant lots round the edge of the city and the town are kept mown too
+  for (const [G, m] of [[CITY, 45], [TOWN, 35]]) fill(G.x0 - m, G.z0 - m, G.x0 + G.nx * G.pitch + m, G.z0 + G.nz * G.pitch + m);
+  // soften the edge into the meadow
+  const o = new Uint8Array(N * N);
+  for (let z = 0; z < N; z++) for (let x = 0; x < N; x++) {
+    let t = 0, n = 0;
+    for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) { const xx = x + dx, zz = z + dz; if (xx >= 0 && zz >= 0 && xx < N && zz < N) { t += a[zz * N + xx]; n++; } }
+    o[z * N + x] = Math.round((t / n) * 255);
+  }
+  const tex = new THREE.DataTexture(o, N, N, THREE.RedFormat, THREE.UnsignedByteType);
+  tex.magFilter = THREE.LinearFilter; tex.minFilter = THREE.LinearFilter; tex.needsUpdate = true;
+  return tex;
+}
 
 // One tuft: `blades` tapered, curved blades around a small root area.
 function tuftGeometry(blades, flower, rnd) {
@@ -58,7 +89,7 @@ function tuftGeometry(blades, flower, rnd) {
 
 // Flower head: two crossed quads at the top of the stem (aBlade.y = 2 marks head verts)
 function addHead(g, rnd) {
-  const s = 0.065 + rnd() * 0.04, y = 0.98;
+  const s = 0.032 + rnd() * 0.022, y = 0.98; // 6-11 cm across, like real daisies and asters
   for (const ang of [0, Math.PI / 2]) {
     const c = Math.cos(ang) * s, sn = Math.sin(ang) * s;
     const o = g.v;
@@ -90,7 +121,7 @@ function makeMaterial(surf, flower) {
 attribute vec4 aOff; attribute vec4 aBlade;
 uniform vec3 uCam; uniform float uSize; uniform vec4 uPush; uniform vec4 uPush2; uniform float uTime; uniform float uWindK;
 uniform sampler2D uHeightTex; uniform sampler2D uSplatTex; uniform sampler2D tGrassC; uniform sampler2D tDryC;
-uniform float uWorldHalf; uniform float uHN; uniform vec4 uCityB; uniform vec2 uTexS;
+uniform float uWorldHalf; uniform float uHN; uniform vec4 uCityB; uniform vec2 uTexS; uniform sampler2D uLawn; uniform vec4 uParks[4];
 varying vec3 vGCol; varying float vGT; varying vec3 vGW; varying float vHead; varying vec2 vHUv; varying float vHue; varying float vFar;
 float gHash(vec2 p){ p = fract(p*vec2(123.34, 456.21)); p += dot(p, p+45.32); return fract(p.x*p.y); }
 float gNoise(vec2 p){ vec2 i = floor(p), f = fract(p); vec2 u = f*f*(3.0-2.0*f);
@@ -105,6 +136,7 @@ vec4 sp = texture(uSplatTex, huv);
 float e = 2.0 * uWorldHalf / (uHN - 1.0);
 float slope = length(vec2(texture(uHeightTex, gUV(wxz + vec2(e, 0.0))).r - gy, texture(uHeightTex, gUV(wxz + vec2(0.0, e))).r - gy)) / e;
 float inCity = step(uCityB.x, wxz.x) * step(wxz.x, uCityB.z) * step(uCityB.y, wxz.y) * step(wxz.y, uCityB.w);
+inCity = max(inCity, smoothstep(0.2, 0.8, texture(uLawn, (wxz + uWorldHalf) / (2.0 * uWorldHalf)).r));
 // where grass grows: not on roads/pavement, sand, steep rock; thinner on the forest floor
 float dens = (1.0 - smoothstep(0.04, 0.35, sp.a)) * (1.0 - smoothstep(0.25, 0.6, sp.r)) * (1.0 - sp.g * 0.6) * (1.0 - smoothstep(0.5, 0.85, slope));
 float d = length(wxz - uCam.xz);
@@ -113,8 +145,9 @@ float lod = clamp(1.0 - (d - R * 0.3) / (R * 0.7), 0.0, 1.0);
 float keepP = mix(0.3, 1.0, lod);
 #ifdef SB_FLOWER
   float patchN = gNoise(wxz * 0.045 + 13.0) * 0.7 + gNoise(wxz * 0.21) * 0.3;
-  dens *= smoothstep(0.44, 0.66, patchN) * (1.0 - inCity * 0.7) * (1.0 - sp.g * 0.8);
+  dens *= smoothstep(0.44, 0.66, patchN) * (1.0 - inCity) * (1.0 - sp.g * 0.8); // no wildflowers in a mown lawn (they read as litter)
 #endif
+for (int k = 0; k < 4; k++) { vec4 P = uParks[k]; vec2 pd0 = abs(wxz - P.xy); if (P.z > 0.0 && max(pd0.x, pd0.y) < P.z && min(pd0.x, pd0.y) < 1.75) dens = 0.0; }
 float keep = step(aOff.w, dens * keepP);
 // height: tall golden grass on the dry plains, meadow elsewhere, mown lawns in the city
 float hN = gNoise(wxz * 0.07) * 0.65 + gNoise(wxz * 0.31) * 0.35;
@@ -262,7 +295,7 @@ export function createGroundCover(hm, quality, scene, surf, density = 1) {
   if (density <= 0) return { update() {} };
   const tufts = Math.round(P.tufts * density);
   const grass = makeField(surf, hm.n, tufts, P.R, P.blades, false, 7, quality);
-  const flowers = makeField(surf, hm.n, Math.round(tufts / 5), P.R * 0.85, 3, true, 11, quality);
+  const flowers = makeField(surf, hm.n, Math.round(tufts / 7), P.R * 0.85, 3, true, 11, quality);
   scene.add(grass, flowers);
   return {
     grass, flowers,
@@ -278,6 +311,9 @@ export function createGroundCover(hm, quality, scene, surf, density = 1) {
       parts.forEach((pt, i) => scene.add(makeScatter(pt.geo, pt.mat, Math.round(n / parts.length), 60, 31 + i, hm.n, quality)));
     },
     push(i, x, y, z, r) { (i ? coverUniforms.uPush2 : coverUniforms.uPush).value.set(x, y, z, r); },
+    // mow the yards round these buildings
+    setLawns(buildings) { coverUniforms.uLawn.value = lawnTexture(buildings, worldUniforms.uWorldHalf.value); },
+    setParks(parks) { parks.slice(0, 4).forEach((pk, i) => coverUniforms.uParks.value[i].set(pk.cx, pk.cz, pk.W / 2 - pk.ring, 0)); },
   };
 }
 
@@ -294,12 +330,12 @@ function makeScatter(src, srcMat, count, R, seed, hn, quality) {
   geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e6);
   const mat = srcMat.clone();
   mat.onBeforeCompile = (shader) => {
-    Object.assign(shader.uniforms, worldUniforms, { uCam: coverUniforms.uCam, uSize: { value: size }, uHN: { value: hn },
+    Object.assign(shader.uniforms, worldUniforms, { uCam: coverUniforms.uCam, uLawn: coverUniforms.uLawn, uSize: { value: size }, uHN: { value: hn },
       uCityB: { value: new THREE.Vector4(CITY.x0 - 20, CITY.z0 - 20, CITY.x0 + CITY.nx * CITY.pitch + 20, CITY.z0 + CITY.nz * CITY.pitch + 20) } });
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>', `#include <common>
 attribute vec4 aOff;
-uniform vec3 uCam; uniform float uSize; uniform sampler2D uHeightTex; uniform sampler2D uSplatTex; uniform float uWorldHalf; uniform float uHN; uniform vec4 uCityB;
+uniform vec3 uCam; uniform float uSize; uniform sampler2D uHeightTex; uniform sampler2D uSplatTex; uniform float uWorldHalf; uniform float uHN; uniform vec4 uCityB; uniform sampler2D uLawn;
 vec2 rUV(vec2 xz){ return ((xz + uWorldHalf) / (2.0*uWorldHalf) * (uHN - 1.0) + 0.5) / uHN; }
 mat3 rRot; float rK; vec3 rBase;`)
       .replace('#include <beginnormal_vertex>', `
@@ -310,6 +346,7 @@ vec4 sp = texture(uSplatTex, huv);
 float e = 2.0 * uWorldHalf / (uHN - 1.0);
 float slope = length(vec2(texture(uHeightTex, rUV(wxz + vec2(e, 0.0))).r - gy, texture(uHeightTex, rUV(wxz + vec2(0.0, e))).r - gy)) / e;
 float inCity = step(uCityB.x, wxz.x) * step(wxz.x, uCityB.z) * step(uCityB.y, wxz.y) * step(wxz.y, uCityB.w);
+inCity = max(inCity, smoothstep(0.2, 0.8, texture(uLawn, (wxz + uWorldHalf) / (2.0 * uWorldHalf)).r));
 float dens = (1.0 - smoothstep(0.03, 0.2, sp.a)) * (1.0 - inCity) * (0.35 + sp.b * 0.4 + sp.g * 0.25 + smoothstep(0.15, 0.5, slope) * 0.6 - sp.r * 0.2);
 float d = length(wxz - uCam.xz);
 float keep = step(aOff.w, dens) * smoothstep(uSize * 0.5, uSize * 0.38, d);

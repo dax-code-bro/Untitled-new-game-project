@@ -151,12 +151,16 @@ async function createGame(progress) {
   progress(0.74, 'Building Port Calvera and Mill Creek');
   await nextFrame();
   const city = createBuildings(hm, q, scene, collision, surf, graph);
+  const parks = roads.parkify(city.cityBlocks); // lawns and paths in the park blocks, stalls in the parking lots
+  city.lotStalls = roads.lotStalls || [];
   const billboards = createBillboards(scene, graph, hm, collision, q);
   createPowerLines(scene, graph, hm, collision, q);
   progress(0.84, 'Growing Pinewood Hollow');
   await nextFrame();
   const veg = await createVegetation(hm, q, scene, collision, city.cityBlocks, (p) => progress(0.84 + p * 0.07, 'Growing forests'), surf, settings.grass === false ? 0 : 1);
-  addSidewalkColliders(collision);
+  addSidewalkColliders(collision, parks);
+  veg.cover?.setLawns?.(city.buildings); // yards and lots round every building are mown
+  veg.cover?.setParks?.(parks); // and no grass on the park paths
   progress(0.92, 'Lighting the sky');
   await nextFrame();
   const sky = createSky(renderer, scene, q);
@@ -172,8 +176,9 @@ async function createGame(progress) {
   player.heading = Math.PI / 2;
   const parked = [];
   const myCar = new Vehicle(lib, lib.cars.concept ? 'concept' : 'sedan-sports');
-  myCar.pos.set(CITY.x0 - 14, CITY.height + 0.1, spawn.z - 6);
-  myCar.heading = Math.PI / 2;
+  // parked at the kerb of the street on the city's west edge (not out on the grass)
+  myCar.pos.set(CITY.x0 - 6.6, CITY.height + 0.1, CITY.z0 + 3 * CITY.pitch + 19); // past the crossing, not in it
+  myCar.heading = 0;
   myCar.sync(0);
   scene.add(myCar.group);
   parked.push(myCar);
@@ -793,7 +798,7 @@ async function createGame(progress) {
       if (v.drowned) prompt = 'The engine is flooded — press F to get out';
       focus.copy(v.pos);
     }
-    for (const p of parked) { p.night = sky.night; p.sync(dt); }
+    for (const p of parked) { p.night = p.lightsOn ? sky.night : 0; p.sync(dt); } // parked: engine off, lights off
     if (S.doorClose) { const dc = S.doorClose; dc.t += dt; dc.door.rotation.y = dc.door.userData.open * Math.max(0, 1 - dc.t / 0.5) * (dc.t < 0.15 ? 1 : 1); if (dc.t > 0.5) S.doorClose = null; }
     if (!S.dead) {
       const ip = interact.update(dt, focus, S.mode === 'car', S.mode === 'foot' && a.enter && !prompt, S.vehicle ? S.vehicle.speed : 0);
@@ -1133,11 +1138,18 @@ async function createGame(progress) {
   };
 }
 
-function addSidewalkColliders(collision) {
+function addSidewalkColliders(collision, parks = []) {
   // Sidewalk slabs: walkable boxes you step up onto
   for (const G of [CITY, TOWN]) {
     for (let i = 0; i < G.nx; i++) for (let j = 0; j < G.nz; j++) {
       const x = G.x0 + i * G.pitch + G.street / 2, z = G.z0 + j * G.pitch + G.street / 2, w = G.pitch - G.street;
+      const park = G === CITY ? parks.find((pk) => Math.abs(pk.cx - (x + w / 2)) < 1 && Math.abs(pk.cz - (z + w / 2)) < 1) : { ring: 3 };
+      if (park) {
+        // a park (or a Mill Creek block): only the pavement ring round it is raised; the lawn is at ground level
+        const r = park.ring;
+        for (const [ax, az, bx, bz] of [[x, z, x + w, z + r], [x, z + w - r, x + w, z + w], [x, z + r, x + r, z + w - r], [x + w - r, z + r, x + w, z + w - r]]) collision.addBox(ax, az, bx, bz, G.height - 1, G.height + 0.22, { walkable: true });
+        continue;
+      }
       collision.addBox(x, z, x + w, z + w, G.height - 1, G.height + 0.22, { walkable: true });
     }
   }

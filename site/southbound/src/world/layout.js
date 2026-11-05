@@ -36,9 +36,14 @@ export const REGIONS = [
   { name: 'Bayou Verde', sub: 'Wetlands & creeks', test: (x, z) => Math.hypot(x - BAYOU.x, z - BAYOU.z) < BAYOU.r },
   { name: 'Gulf Shore', sub: 'Coast', test: (x, z) => z > coastZ(x) - 120 },
   { name: 'Pinewood Hollow', sub: 'Dense forest', test: (x, z) => Math.hypot(x - FOREST.x, z - FOREST.z) < FOREST.r },
+  { name: 'Redgrass Airfield', sub: 'Airstrip', test: (x, z) => x > AIRFIELD.x0 - 80 && x < AIRFIELD.x1 + 80 && Math.abs(z - AIRFIELD.z) < 150 },
   { name: 'Redgrass Plains', sub: 'Open hunting land', test: (x, z) => Math.hypot(x - PLAINS.x, z - PLAINS.z) < PLAINS.r },
   { name: 'Sierra Norte', sub: 'Hills', test: (x, z) => z < -1500 },
-  { name: 'Calvera River', sub: 'River valley', test: () => true },
+  // the neighbourhoods around the city (walk-ups, houses, the poor end of town)
+  { name: 'Calvera Outskirts', sub: 'Edge of the city', test: (x, z) => Math.hypot(Math.max(CITY.x0 - x, 0, x - CITY.x0 - CITY.nx * CITY.pitch), Math.max(CITY.z0 - z, 0, z - CITY.z0 - CITY.nz * CITY.pitch)) < 430 },
+  // only near the river itself (it used to be the name for everywhere without one)
+  { name: 'Calvera River', sub: 'River valley', test: (x, z) => { const P = CHANNELS[0].pts; for (let i = 0; i < P.length; i += 3) if (Math.hypot(P[i][0] - x, P[i][1] - z) < 360) return true; return false; } },
+  { name: 'Calvera County', sub: 'Open country', test: () => true },
 ];
 export function regionAt(x, z) {
   for (const r of REGIONS) if (r.test(x, z)) return r;

@@ -107,7 +107,7 @@ export function installDetails(game) {
     collision.query(hit.point.x, hit.point.z, 1, (it) => { if (it.t === 0 && it.data && it.data.building && hit.point.x > it.minX - 0.3 && hit.point.x < it.maxX + 0.3 && hit.point.z > it.minZ - 0.3 && hit.point.z < it.maxZ + 0.3) box = it; });
     if (!box || hit.point.y - box.y0 > 6.5) return; // ground floor glass only
     const d = [[Math.abs(hit.point.x - box.minX), -1, 0], [Math.abs(hit.point.x - box.maxX), 1, 0], [Math.abs(hit.point.z - box.minZ), 0, -1], [Math.abs(hit.point.z - box.maxZ), 0, 1]].sort((a, b) => a[0] - b[0])[0];
-    const m = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 0.7), new THREE.MeshBasicMaterial({ map: crackTex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 0.7), new THREE.MeshStandardMaterial({ map: crackTex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, roughness: 0.2 }));
     m.position.copy(hit.point).add(new THREE.Vector3(d[1] * 0.03, 0, d[2] * 0.03));
     m.lookAt(m.position.x + d[1], m.position.y, m.position.z + d[2]);
     m.userData.noHit = true; m.userData.noReflect = true;

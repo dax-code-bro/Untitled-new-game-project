@@ -77,7 +77,8 @@ export function placeCivic(game, points) {
     // marked units parked out front
     site.units.forEach((type, i) => {
       if (!game.Vehicle) return;
-      const p = new THREE.Vector3(-3.2 + i * 6.4, 0, 9 / 2 + 6.5).applyMatrix4(shop.g.matrixWorld);
+      // on the forecourt (or right in front of the door if the road is close)
+      const p = new THREE.Vector3(-3.2 + i * 6.4, 0, 9 / 2 + 2.4 + Math.max(1.3, (shop.forecourt || 0) / 2)).applyMatrix4(shop.g.matrixWorld);
       const v = new game.Vehicle(lib, type);
       v.pos.set(p.x, game.collision.surface(p.x, p.z, shop.y + 5), p.z); v.heading = shop.keeperFace + Math.PI / 2; v.sync(0);
       scene.add(v.group); game.parked.push(v); v.civic = site.id;

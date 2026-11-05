@@ -6,6 +6,7 @@
 // them back where they belong once you're well away.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { CITY, TOWN } from '../world/layout.js';
 
 const paint = (g, hex) => {
   const c = new THREE.Color(hex), n = g.attributes.position.count, a = new Float32Array(n * 3);
@@ -57,6 +58,9 @@ export function installProps(game) {
   const items = [];
   const add = (type, x, z, rotY) => {
     if (items.length >= max || inBuilding(x, z, 0.4)) return;
+    // only on a sidewalk (not out on the grass verge beyond the last street)
+    const pv = collision.paved(x, z);
+    if (pv === null || (Math.abs(pv - CITY.height - 0.22) > 0.01 && Math.abs(pv - TOWN.height - 0.22) > 0.01)) return;
     const y = collision.surface(x, z, 400);
     items.push({ type, home: { x, y, z, rotY }, p: new THREE.Vector3(x, y, z), v: new THREE.Vector3(), q: new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), rotY), w: new THREE.Vector3(), sleep: true, still: 0 });
   };

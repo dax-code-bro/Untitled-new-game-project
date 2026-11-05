@@ -91,21 +91,22 @@ function makeFacadeMaterial(surf, group = 'tower') {
     }[group];
     Object.assign(shader.uniforms, tex);
     shader.vertexShader = shader.vertexShader
-      .replace('#include <common>', '#include <common>\nattribute vec4 aInfo;\nvarying vec3 vWPos; varying vec3 vWNrm; flat varying vec4 vInfo; varying vec3 vSize;')
+      .replace('#include <common>', '#include <common>\nattribute vec4 aInfo;\nvarying vec3 vWPos; varying vec3 vWNrm; flat varying vec4 vInfo; varying vec3 vSize; varying float vTopY;')
       .replace('#include <begin_vertex>', `#include <begin_vertex>
 vInfo = aInfo;
 mat4 sbIM = modelMatrix * instanceMatrix;
 vWPos = (sbIM * vec4(transformed,1.0)).xyz;
 vWNrm = normalize(mat3(sbIM) * objectNormal);
-vSize = vec3(length(sbIM[0].xyz), length(sbIM[1].xyz), length(sbIM[2].xyz));`);
+vSize = vec3(length(sbIM[0].xyz), length(sbIM[1].xyz), length(sbIM[2].xyz));
+vTopY = sbIM[3].y + vSize.y;`);
     shader.fragmentShader = shader.fragmentShader
       .replace('#include <common>', `#include <common>
-varying vec3 vWPos; varying vec3 vWNrm; flat varying vec4 vInfo; varying vec3 vSize;
+varying vec3 vWPos; varying vec3 vWNrm; flat varying vec4 vInfo; varying vec3 vSize; varying float vTopY;
 uniform float uNight;
 uniform sampler2D ${Object.keys(tex).join(', ')};
 ${GLSL_NOISE}
 ${ROOM_GLSL}
-float sbRough; float sbMetal; vec3 sbEmit; vec3 sbNt; vec3 sbT; float sbAO;
+float sbRough; float sbMetal; vec3 sbEmit; vec3 sbNt; vec3 sbT; float sbAO; float sbWinK = 0.0;
 // parallax: shift the texture lookup along the view by the surface height (bricks stand proud of the mortar)
 vec2 sbPara(sampler2D hm, vec2 uv, vec3 vt, float depth){ float hh = texture2D(hm, uv).r; return uv + vt.xy / max(vt.z, 0.35) * (hh - 0.5) * depth; }
 `)
@@ -130,25 +131,43 @@ vec2 sbPara(sampler2D hm, vec2 uv, vec3 vt, float depth){ float hh = texture2D(h
     float u = abs(n.x) > 0.5 ? vWPos.z : vWPos.x;
     float v = vWPos.y - baseY;
     vec2 uvm = vec2(u, v);
-    bool shop = (style < 2.5 || style > 4.5) && v < 4.4 && v > 0.25 && vInfo.w < 0.5;
+    // shops on the ground floor, on walls that face a street (not up on a setback, not on an alley)
+    float wbit = n.z > 0.5 ? 0.0 : n.z < -0.5 ? 1.0 : n.x > 0.5 ? 2.0 : 3.0;
+    bool streetWall = mod(floor(floor(vInfo.w / 2.0) / pow(2.0, wbit) + 0.001), 2.0) > 0.5;
+    bool shop = (style < 2.5 || style > 4.5) && v < 4.4 && v > 0.25 && mod(vInfo.w, 2.0) < 0.5 && streetWall;
     bool done = false;
 ${group === 'tower' ? `
     if (useTex && style < 0.5 && !shop) {
       vec2 uv = uvm / vec2(${S('glass')}, ${S('glass')} * 1.2);
-      diffuseColor.rgb = texture2D(tGlassC, uv).rgb;
+      // the photo has some offices lit (warm squares); by day those are dark glass like the rest
+      vec3 ge = texture2D(tGlassE, uv).rgb;
+      vec3 gc = texture2D(tGlassC, uv).rgb;
+      // the photo's cream blinds read as lights left on in broad daylight: make them grey blinds
+      float gl = dot(gc, vec3(0.299, 0.587, 0.114));
+      gc = mix(gc, vec3(gl * 0.72), smoothstep(0.28, 0.5, gl) * clamp((gc.r - gc.b) * 5.0, 0.0, 1.0) * 0.9);
+      diffuseColor.rgb = mix(gc, vec3(0.09, 0.115, 0.14), clamp(dot(ge, vec3(0.333)) * 1.6, 0.0, 0.9) * (1.0 - uNight));
       sbRough = texture2D(tGlassR, uv).g;
       sbMetal = texture2D(tGlassM, uv).g;
       sbNt = texture2D(tGlassN, uv).xyz * 2.0 - 1.0;
-      sbEmit = texture2D(tGlassE, uv).rgb * uNight * 1.4;
+      // lit offices at night: warm lamps or cool fluorescent tubes, never paper-white
+      vec3 offTint = mix(vec3(1.0, 0.82, 0.6), vec3(0.8, 0.88, 1.0), step(0.55, fract(sin(dot(floor(uv * 6.0) + seed, vec2(12.99, 78.23))) * 43758.5)));
+      sbEmit = ge * offTint * uNight * 0.85;
       done = true;
     } else if (useTex && style < 1.5 && !shop) {
       vec2 uv = uvm / ${S('office')} + vec2(seed * 0.37, 0.0);
       vec3 oc = texture2D(tOffC, uv).rgb;
+      vec3 oe = texture2D(tOffE, uv).rgb;
+      float litW = clamp(dot(oe, vec3(0.333)) * 1.6, 0.0, 0.9);
+      // offices the photo shows lit read as dark glass by day; their lamps come on at dusk
+      oc = mix(oc, vec3(0.1, 0.12, 0.14), litW * (1.0 - uNight));
+      float ol = dot(oc, vec3(0.299, 0.587, 0.114));
+      oc = mix(oc, vec3(ol * 0.72), smoothstep(0.28, 0.5, ol) * clamp((oc.r - oc.b) * 5.0, 0.0, 1.0) * 0.9); // cream blinds -> grey
       float detail = dot(texture2D(tConC, uvm / ${S('concrete')}).rgb, vec3(0.333));
       diffuseColor.rgb = oc * (0.85 + 0.3 * detail);
-      sbRough = 0.55;
+      sbRough = mix(0.55, 0.12, litW);
       sbNt = texture2D(tOffN, uv).xyz * 2.0 - 1.0;
-      sbEmit = texture2D(tOffE, uv).rgb * uNight * 2.2;
+      vec3 offTint = mix(vec3(1.0, 0.82, 0.6), vec3(0.8, 0.88, 1.0), step(0.55, fract(sin(dot(floor(uv * 6.0) + seed, vec2(12.99, 78.23))) * 43758.5)));
+      sbEmit = oe * offTint * uNight * 1.3;
       done = true;
     }` : ''}
     if (!done) {
@@ -187,13 +206,19 @@ ${group === 'frame' ? `
         if (fract(seed * 5.3) < 0.35) { wall = texture2D(tRuC, uv).rgb; sbNt = texture2D(tRuN, uv).xyz * 2.0 - 1.0; sbRough = 0.8; sbMetal = 0.2; }
         else { wall = texture2D(tStlC, uv).rgb * base * 1.7; sbNt = texture2D(tStlN, uv).xyz * 2.0 - 1.0; sbRough = 0.55; sbMetal = 0.45; }
       }` : ''}
+      // below the ground floor on the downhill side: a poured-concrete foundation, not siding or brick
+      if (v < 0.02) {
+        float fn = fract(sin(dot(floor(vec2(u * 0.8, v * 2.0)), vec2(12.99, 78.23))) * 43758.55);
+        wall = vec3(0.52, 0.51, 0.48) * (0.88 + 0.12 * fn) * (0.8 + 0.2 * smoothstep(-2.0, 0.0, v));
+        sbNt = vec3(0.0, 0.0, 1.0); sbRough = 0.95; sbMetal = 0.0;
+      }
       // windows: each one a room
       vec2 cellSz = style < 2.5 ? vec2(3.2, 3.4) : style < 3.5 ? vec2(9.0, 6.0) : style < 4.5 ? vec2(3.6, 3.0) : vec2(4.0, 4.0);
       vec2 winSz  = style < 2.5 ? vec2(0.42, 0.5) : style < 3.5 ? vec2(0.3, 0.18) : style < 4.5 ? vec2(0.32, 0.42) : vec2(0.75, 0.55);
       vec2 g = vec2(u, v - (style < 3.5 ? 1.0 : 0.6)) / cellSz;
       vec2 cid = floor(g); vec2 f = fract(g);
       vec2 d = abs(f - 0.5) - winSz * 0.5;
-      float isWin = step(max(d.x, d.y), 0.0) * step(0.0, g.y) * step(v, vSize.y - 0.8);
+      float isWin = step(max(d.x, d.y), 0.0) * step(0.0, g.y) * step(v, vTopY - baseY - 0.8);
       float frame = isWin * (1.0 - step(max(d.x, d.y), -0.03));
       float h = sbHash(cid + seed * 13.1);
       // a mullion down the middle of some windows, a transom across others
@@ -208,12 +233,16 @@ ${group === 'frame' ? `
         frame = isWin * clamp(mull, 0.0, 1.0);
         rf = vec2(sf, clamp(v / 4.0, 0.0, 1.0)); rcell = vec2(6.0, 4.0); rdepth = 9.0; h = sbHash(vec2(shopId, seed));
       }
-      float aliasFade = smoothstep(0.25, 0.6, max(fwidth(g.x), fwidth(g.y)));
+      // too fine to draw: the upper-floor window grid far off. A shopfront's 6 m bays only go when
+      // they're tiny on screen, and then as dark glass, not as the wall colour
+      float aliasFade = shop ? smoothstep(0.4, 0.9, max(fwidth(u / 6.0), fwidth(v / 4.0))) : smoothstep(0.25, 0.6, max(fwidth(g.x), fwidth(g.y)));
       float lit = step(0.72, sbHash(cid * 1.7 + seed));
       vec3 warm = mix(vec3(1.0, 0.72, 0.42), vec3(0.85, 0.9, 1.0), step(0.8, sbHash(cid + 3.3)));
       if (shop) { lit = step(0.35, h); warm = mix(vec3(1.0, 0.86, 0.66), vec3(0.88, 0.93, 1.0), step(0.6, h)); }
       // the room behind the glass
-      vec3 room = sbRoom(-Vc, n, sbT * (abs(n.x) > 0.5 ? 1.0 : 1.0), rf, rcell, rdepth, h, lit * uNight + (shop ? 0.14 * (1.0 - uNight) * lit : 0.0), warm, (1.0 - uNight) * (shop ? 0.2 : 0.3), shop ? 1.0 : 0.0);
+      // by day a room seen through glass is far darker than the sunlit street outside it (the old
+      // levels made every shop window read as a pale panel)
+      vec3 room = sbRoom(-Vc, n, sbT * (abs(n.x) > 0.5 ? 1.0 : 1.0), rf, rcell, rdepth, h, lit * uNight + (shop ? 0.08 * (1.0 - uNight) * lit : 0.0), warm, (1.0 - uNight) * (shop ? 0.06 : 0.16), shop ? 1.0 : 0.0);
       // blinds or curtains in some windows (drawn at the glass)
       vec2 wl = (f - 0.5) / winSz + 0.5;
       float blind = 0.0, curtain = 0.0;
@@ -232,7 +261,7 @@ ${group === 'frame' ? `
       diffuseColor.rgb = mix(wall, vec3(0.02, 0.022, 0.025), winMix);
       diffuseColor.rgb = mix(diffuseColor.rgb, coverC * 0.75, winMix * cover);
       diffuseColor.rgb = mix(diffuseColor.rgb, shop ? vec3(0.12) : vec3(0.78, 0.77, 0.74), frame * (1.0 - aliasFade));
-      diffuseColor.rgb = mix(diffuseColor.rgb, mix(wall, vec3(0.05, 0.06, 0.07), winSz.x * winSz.y * 0.9), aliasFade);
+      diffuseColor.rgb = mix(diffuseColor.rgb, mix(wall, vec3(0.05, 0.06, 0.07), shop ? 0.85 : winSz.x * winSz.y * 0.9), aliasFade);
       sbRough = mix(sbRough, mix(0.04, 0.7, cover), isWin);
       sbMetal = mix(sbMetal, 0.0, isWin);
       if (isWin > 0.5) { sbNt = vec3(0.0, 0.0, 1.0); sbAO = 1.0; }
@@ -242,7 +271,9 @@ ${group === 'frame' ? `
       // what the glass sees: the pavement below, the buildings across the street at eye level, sky above
       float across = 0.65 + 0.7 * sbHash(vec2(floor((u + R.x * 7.0 + R.z * 7.0) / 4.0), seed));
       vec3 streetR = mix(vec3(0.06, 0.06, 0.065), vec3(0.15, 0.145, 0.14) * across, smoothstep(-0.25, 0.02, R.y));
-      vec3 skyR = mix(streetR, vec3(0.42, 0.52, 0.68), smoothstep(0.05, 0.45, R.y + (vWPos.y - baseY) * 0.004)) * (1.0 - uNight * 0.93);
+      // down on the street, a ray reflected off a shop window has to climb steeply to clear the
+      // buildings across the road: it sees their facades, only rarely sky (the sky made every pane pale)
+      vec3 skyR = mix(streetR, vec3(0.42, 0.52, 0.68), shop ? smoothstep(0.6, 0.95, R.y) : smoothstep(0.05, 0.45, R.y + (vWPos.y - baseY) * 0.004)) * (1.0 - uNight * 0.93);
       float streak = 0.85 + 0.15 * sin(u * 3.1 + v * 0.7 + seed);
       roomLight += skyR * ((shop ? 0.14 : 0.06) + F * 0.8) * streak * isWin * (1.0 - cover * 0.6) * (1.0 - frame);
       // lit blinds glow at night
@@ -251,6 +282,9 @@ ${group === 'frame' ? `
       vec3 farGlow = warm * winSz.x * winSz.y * 0.16 * uNight * (shop ? 0.5 : 0.8);
       sbEmit = mix(roomLight * isWin, farGlow, aliasFade);
       if (shop) sbEmit *= 0.85;
+      // the glass's reflection is drawn above (street, buildings across, sky): the sky probe would
+      // otherwise wash every pane out to a flat pale grey when looked at along the street
+      sbWinK = isWin * (1.0 - frame) * (1.0 - aliasFade) * (1.0 - cover);
     }
   }
   diffuseColor.rgb *= mix(1.0, sbAO, 0.8);
@@ -265,7 +299,8 @@ ${group === 'frame' ? `
     normal = normalize((viewMatrix * vec4(nw, 0.0)).xyz);
   }
 }`)
-      .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += sbEmit;');
+      .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += sbEmit;')
+      .replace('#include <aomap_fragment>', '#include <aomap_fragment>\nreflectedLight.indirectSpecular *= 1.0 - 0.7 * sbWinK;');
   };
   mat.customProgramCacheKey = () => 'sbfacade-' + group;
   return mat;
@@ -280,7 +315,8 @@ export function createBuildings(hm, quality, scene, collision, surf, graph = nul
   const fences = []; // chain-link runs {x,y,z,w,h,d}
   const add = (x, z, w, d, h, y, style, color) => {
     B.push({ x, z, w, d, h, y, style, color: color ?? pick(PALETTES[style]) });
-    collision.addBox(x - w / 2, z - d / 2, x + w / 2, z + d / 2, y - 2, y + h, { building: true, surf: ['masonry', 'masonry', 'brick', 'metal', 'frame', 'block'][style] || 'masonry' });
+    const cb = collision.addBox(x - w / 2, z - d / 2, x + w / 2, z + d / 2, y - 2, y + h, { building: true, surf: ['masonry', 'masonry', 'brick', 'metal', 'frame', 'block'][style] || 'masonry' });
+    Object.defineProperty(B[B.length - 1], 'col', { value: cb, enumerable: false, writable: true });
   };
 
   // ---- Port Calvera
@@ -323,6 +359,28 @@ export function createBuildings(hm, quality, scene, collision, surf, graph = nul
       for (let k = 0; k < nprops; k++) props.push({ x: lx + (rnd() - 0.5) * fw * 0.6, y: top, z: lz + (rnd() - 0.5) * fd * 0.6, w: 2 + rnd() * 3, h: 1.2 + rnd() * 2, d: 2 + rnd() * 3, color: 0x77787a });
       if (!tall && !mid && rnd() < 0.3) props.push({ x: lx, y: top, z: lz, w: 2.6, h: 4, d: 2.6, color: 0x6b4a33, tower: true }); // water tower (drawn round in facades.js)
     }
+  }
+
+  // Port: a concrete yard from the last street down to the quay (it was a grass field), then
+  // warehouses + container stacks on it
+  {
+    const x0 = CITY.x0 + 6, x1 = CITY.x0 + CITY.nx * CITY.pitch - 6, z0 = CITY.z0 + CITY.nz * CITY.pitch + 9, z1 = z0 + 69;
+    const nx = Math.ceil((x1 - x0) / 4), nz = Math.ceil((z1 - z0) / 4);
+    const g = new THREE.PlaneGeometry(1, 1, nx, nz).rotateX(-Math.PI / 2);
+    const P = g.attributes.position, U = g.attributes.uv;
+    for (let k = 0; k < P.count; k++) {
+      const x = x0 + (P.getX(k) + 0.5) * (x1 - x0);
+      const z = Math.min(z0 + (P.getZ(k) + 0.5) * (z1 - z0), coastZ(x) - 8);
+      P.setXYZ(k, x, hm.height(x, z) + 0.03, z);
+      U.setXY(k, x / 5, z / 5);
+    }
+    g.computeVertexNormals();
+    const cm = surf && surf.concrete && surf.concrete.real
+      ? new THREE.MeshStandardMaterial({ map: surf.concrete.color, normalMap: surf.concrete.normal || null, color: 0xb9b6ae, roughness: 0.9 })
+      : new THREE.MeshStandardMaterial({ color: 0x8d8a83, roughness: 0.92 });
+    const yard = new THREE.Mesh(g, cm);
+    yard.receiveShadow = true; yard.userData.surf = 'concrete';
+    scene.add(yard);
   }
 
   // Port: warehouses + container stacks between the city and the shore
@@ -407,7 +465,7 @@ export function createBuildings(hm, quality, scene, collision, surf, graph = nul
     roofs.push({ x, z, w: 10, d: 12, h: 3, y: y + 5, rot: 0, color: 0x4a4a4a });
     add(x + 22, z + 6, 14, 20, 7, y - 0.5, 3, 0xa53a2c);
     roofs.push({ x: x + 22, z: z + 6, w: 15, d: 21, h: 5, y: y + 6.5, rot: Math.PI / 2, color: 0x5b5b5b });
-    props.push({ x: x + 34, y: y - 0.5, z: z - 6, w: 4.5, h: 14, d: 4.5, color: 0xb9b9b4 });
+    props.push({ x: x + 34, y: Math.min(y, hm.height(x + 34, z - 6)) - 0.5, z: z - 6, w: 4.5, h: 14, d: 4.5, color: 0xb9b9b4 }); // silo, standing on its own ground
   }
   for (let k = 0; k < 8; k++) {
     const x = FOREST.x + (rnd() - 0.5) * FOREST.r, z = FOREST.z + (rnd() - 0.5) * FOREST.r;
@@ -588,6 +646,137 @@ export function createBuildings(hm, quality, scene, collision, surf, graph = nul
     void placed;
   }
 
+  // ---- tidy-up once everything is placed: no house buried to its eaves in a hillside,
+  // nothing standing on a road, no two buildings inside each other
+  {
+    const elevated = (b) => b.y - hm.height(b.x, b.z) > 3;
+    const reinsert = (b) => {
+      const c = b.col; if (!c) return;
+      c.minX = b.x - b.w / 2; c.maxX = b.x + b.w / 2; c.minZ = b.z - b.d / 2; c.maxZ = b.z + b.d / 2; c.y0 = b.y - 2; c.y1 = b.y + b.h;
+      collision._insert(c.minX, c.minZ, c.maxX, c.maxZ, c);
+    };
+    // move a building and whatever sits on it (its roof, rooftop units)
+    const shift = (b, dx, dy, dz) => {
+      const top = b.y + b.h, on = (o) => Math.abs(o.x - b.x) < b.w / 2 + 0.6 && Math.abs(o.z - b.z) < b.d / 2 + 0.6 && Math.abs(o.y - top) < 0.6;
+      for (const r of roofs) if (on(r)) { r.x += dx; r.y += dy; r.z += dz; }
+      for (const pr of props) if (on(pr)) { pr.x += dx; pr.y += dy; pr.z += dz; }
+      b.x += dx; b.y += dy; b.z += dz;
+      reinsert(b);
+    };
+    const corners = (b) => [[-1, -1], [1, -1], [-1, 1], [1, 1]].map(([a, c]) => hm.height(b.x + a * b.w / 2, b.z + c * b.d / 2));
+    const roadUnder = (b) => {
+      let seg = null;
+      collision.query(b.x, b.z, Math.max(b.w, b.d) + 14, (it) => {
+        if (seg || it.t !== 3) return;
+        for (const [a, c] of [[-1, -1], [1, -1], [-1, 1], [1, 1], [0, 0], [0, -1], [0, 1], [-1, 0], [1, 0]]) {
+          const x = b.x + a * b.w / 2, z = b.z + c * b.d / 2;
+          if (distToSeg(x, z, it.ax, it.az, it.bx, it.bz).d < it.hw + 0.4) { seg = it; return; }
+        }
+      });
+      return seg;
+    };
+    const hitsBuilding = (b) => B.some((o) => o !== b && Math.abs(o.x - b.x) < (o.w + b.w) / 2 + 0.5 && Math.abs(o.z - b.z) < (o.d + b.d) / 2 + 0.5 && o.y < b.y + b.h && o.y + o.h > b.y);
+    for (const b of B) {
+      if (elevated(b)) continue;
+      // 1. off the road: step away from it, square to the road
+      const seg = roadUnder(b);
+      if (seg) {
+        const r = distToSeg(b.x, b.z, seg.ax, seg.az, seg.bx, seg.bz);
+        const px = seg.ax + (seg.bx - seg.ax) * r.t, pz = seg.az + (seg.bz - seg.az) * r.t;
+        let nx = b.x - px, nz = b.z - pz; const L = Math.hypot(nx, nz) || 1; nx /= L; nz /= L;
+        const ox = b.x, oz = b.z;
+        let moved = false;
+        for (let step = 1; step <= 24 && !moved; step++) {
+          shift(b, nx, 0, nz);
+          if (!roadUnder(b) && !hitsBuilding(b)) moved = true;
+        }
+        if (!moved) shift(b, ox - b.x, 0, oz - b.z);
+        else { const cs = corners(b), lo = Math.min(...cs); shift(b, 0, lo + 0.05 - b.y, 0); }
+      }
+      // 2. small buildings dug into a slope: lift the uphill side out (a foundation wall shows downhill)
+      if (b.h < 9) {
+        const cs = corners(b), hi = Math.max(...cs);
+        if (hi - b.y > 1.6) shift(b, 0, hi - 0.4 - b.y, 0);
+      }
+    }
+    // 3. overlaps: trim the later building back from the earlier one
+    for (let i = 0; i < B.length; i++) for (let j = i + 1; j < B.length; j++) {
+      const a = B[i], o = B[j];
+      const ox = Math.min(a.x + a.w / 2, o.x + o.w / 2) - Math.max(a.x - a.w / 2, o.x - o.w / 2);
+      const oz = Math.min(a.z + a.d / 2, o.z + o.d / 2) - Math.max(a.z - a.d / 2, o.z - o.d / 2);
+      const oy = Math.min(a.y + a.h, o.y + o.h) - Math.max(a.y, o.y);
+      if (ox <= 0.05 || oz <= 0.05 || oy <= 0.3) continue;
+      if (o.y >= a.y + a.h - 0.6 || a.y >= o.y + o.h - 0.6) continue; // one stands on the other (tower setbacks)
+      const cut = Math.min(ox, oz) + 0.5, alongX = ox <= oz;
+      const top = o.y + o.h, on = (q2) => Math.abs(q2.x - o.x) < o.w / 2 + 0.6 && Math.abs(q2.z - o.z) < o.d / 2 + 0.6 && Math.abs(q2.y - top) < 0.6;
+      const sgn = alongX ? Math.sign(o.x - a.x) || 1 : Math.sign(o.z - a.z) || 1;
+      for (const r of roofs) if (on(r)) { if (alongX) { r.w -= cut; r.x += sgn * cut / 2; } else { r.d -= cut; r.z += sgn * cut / 2; } }
+      if (alongX) { o.w -= cut; o.x += sgn * cut / 2; } else { o.d -= cut; o.z += sgn * cut / 2; }
+      reinsert(o);
+    }
+  }
+
+  // street junk never lands on a road or inside a building
+  for (let k = junk.length - 1; k >= 0; k--) {
+    const j = junk[k]; if (j.kind === 'sign') continue;
+    let bad = false;
+    collision.query(j.x, j.z, 16, (it) => {
+      if (bad) return;
+      if (it.t === 0 && j.x > it.minX - 0.6 && j.x < it.maxX + 0.6 && j.z > it.minZ - 0.6 && j.z < it.maxZ + 0.6) bad = true;
+      else if (it.t === 3 && distToSeg(j.x, j.z, it.ax, it.az, it.bx, it.bz).d < it.hw + 1.2) bad = true;
+    });
+    if (bad) junk.splice(k, 1);
+  }
+
+  // which walls face a street (bit 0 +z, 1 -z, 2 +x, 3 -x): shopfronts only go on those;
+  // side walls over a gap to the next building and back walls on an alley get windows
+  if (graph) {
+    const segs = [];
+    for (const e of graph.edges) for (let i = 1; i < e.pts.length; i++) segs.push([e.pts[i - 1][0], e.pts[i - 1][1], e.pts[i][0], e.pts[i][1], e.width / 2]);
+    const SC = 48, sgrid = new Map();
+    segs.forEach((sg, k) => {
+      for (let gx = Math.floor((Math.min(sg[0], sg[2]) - 30) / SC); gx <= Math.floor((Math.max(sg[0], sg[2]) + 30) / SC); gx++)
+        for (let gz = Math.floor((Math.min(sg[1], sg[3]) - 30) / SC); gz <= Math.floor((Math.max(sg[1], sg[3]) + 30) / SC); gz++) {
+          const key = gx + ',' + gz; if (!sgrid.has(key)) sgrid.set(key, []); sgrid.get(key).push(k);
+        }
+    });
+    const nearRoad = (x, z, pad) => {
+      for (const k of sgrid.get(Math.floor(x / SC) + ',' + Math.floor(z / SC)) || []) if (distToSeg(x, z, segs[k][0], segs[k][1], segs[k][2], segs[k][3]).d < segs[k][4] + pad) return true;
+      return false;
+    };
+    // buildings by cell, to stop a wall's line of sight at the next building
+    const BC = 32, bgrid = new Map();
+    B.forEach((o, k) => {
+      for (let gx = Math.floor((o.x - o.w / 2) / BC); gx <= Math.floor((o.x + o.w / 2) / BC); gx++)
+        for (let gz = Math.floor((o.z - o.d / 2) / BC); gz <= Math.floor((o.z + o.d / 2) / BC); gz++) {
+          const key = gx + ',' + gz; if (!bgrid.has(key)) bgrid.set(key, []); bgrid.get(key).push(k);
+        }
+    });
+    const blockedBy = (x, z, self) => {
+      for (const k of bgrid.get(Math.floor(x / BC) + ',' + Math.floor(z / BC)) || []) {
+        const o = B[k]; if (o === self) continue;
+        if (o.y > self.y + 3 || o.y + o.h < self.y + 1) continue; // a block up on a roof, or one far below
+        if (Math.abs(x - o.x) < o.w / 2 && Math.abs(z - o.z) < o.d / 2) return true;
+      }
+      return false;
+    };
+    for (const b of B) {
+      let mask = 0;
+      const W4 = [[0, 1, b.d / 2, b.w], [0, -1, b.d / 2, b.w], [1, 0, b.w / 2, b.d], [-1, 0, b.w / 2, b.d]];
+      W4.forEach(([nx, nz, half, len], bit) => {
+        let hit = false;
+        // walk out from the wall: the street has to be in view, not behind the next building
+        for (let t = -0.4; t <= 0.41 && !hit; t += 0.2) for (const out of [0.8, 2.5, 4, 6.5, 9, 12, 15]) {
+          const x = b.x + nx * (half + out) + (nz !== 0 ? t * len : 0), z = b.z + nz * (half + out) + (nx !== 0 ? t * len : 0);
+          if (blockedBy(x, z, b)) break;
+          if (out >= 4 && nearRoad(x, z, 2)) { hit = true; break; }
+        }
+        if (hit) mask |= 1 << bit;
+      });
+      b.street = mask;
+    }
+  }
+
   const box = new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0);
   const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(), p = new THREE.Vector3(), col = new THREE.Color();
   // three facade shaders (see makeFacadeMaterial); instOf[bi] = { mesh, i } for one building
@@ -603,11 +792,16 @@ export function createBuildings(hm, quality, scene, collision, surf, graph = nul
     const info = new Float32Array(list.length * 4);
     list.forEach((bi, i) => {
       const b = B[bi];
-      m4.compose(p.set(b.x, b.y, b.z), q.identity(), s.set(b.w, b.h, b.d));
+      // walls carry on into the ground (a foundation): no gap under the low corner on a slope
+      const lo = Math.min(...[[-1, -1], [1, -1], [-1, 1], [1, 1]].map(([a, c]) => hm.height(b.x + a * b.w / 2, b.z + c * b.d / 2)));
+      const drop = b.y - hm.height(b.x, b.z) > 3 ? 0 : Math.max(0.5, b.y - lo + 0.4);
+      Object.defineProperty(b, 'found', { value: drop, enumerable: false, writable: true, configurable: true });
+      m4.compose(p.set(b.x, b.y - drop, b.z), q.identity(), s.set(b.w, b.h + drop, b.d));
       gm.setMatrixAt(i, m4);
       gm.setColorAt(i, col.setHex(b.color));
       // w: up on a lower block (a tower's setback): no shopfront up there
-      info.set([b.style, b.y, rnd() * 100, b.y - hm.height(b.x, b.z) > 1.2 ? 1 : 0], i * 4);
+      // w: 1 = up on a lower block (no shopfront up there) + 2 x the street-facing wall mask
+      info.set([b.style, b.y, rnd() * 100, (b.y - hm.height(b.x, b.z) > 1.2 ? 1 : 0) + 2 * (b.street ?? 15)], i * 4);
       instOf[bi] = { mesh: gm, i };
     });
     bbox.setAttribute('aInfo', new THREE.InstancedBufferAttribute(info, 4));
@@ -671,6 +865,31 @@ export function createBuildings(hm, quality, scene, collision, surf, graph = nul
   roofMesh.receiveShadow = true;
   scene.add(roofMesh);
 
+  // rooftop units never stand inside a taller block (the setback of a tower sits on the same roof):
+  // slide each one out onto the terrace round it, or leave it off if the terrace is too narrow
+  {
+    const inside = (x, z, w, h, d, y) => B.find((o) => x + w / 2 > o.x - o.w / 2 && x - w / 2 < o.x + o.w / 2 && z + d / 2 > o.z - o.d / 2 && z - d / 2 < o.z + o.d / 2 && y < o.y + o.h - 0.05 && y + h > o.y + 0.05);
+    for (let k = props.length - 1; k >= 0; k--) {
+      const pr = props[k];
+      const o = inside(pr.x, pr.z, pr.w, pr.h, pr.d, pr.y);
+      if (!o) continue;
+      const base = B.find((b) => Math.abs(b.y + b.h - pr.y) < 0.3 && Math.abs(pr.x - b.x) < b.w / 2 && Math.abs(pr.z - b.z) < b.d / 2);
+      let ok = false;
+      if (base) {
+        const tries = [
+          [o.x + o.w / 2 + pr.w / 2 + 0.4, pr.z], [o.x - o.w / 2 - pr.w / 2 - 0.4, pr.z],
+          [pr.x, o.z + o.d / 2 + pr.d / 2 + 0.4], [pr.x, o.z - o.d / 2 - pr.d / 2 - 0.4],
+        ].sort((a, b2) => Math.hypot(a[0] - pr.x, a[1] - pr.z) - Math.hypot(b2[0] - pr.x, b2[1] - pr.z));
+        for (const [x, z] of tries) {
+          // inside the parapet (0.25 m) with a little clearance, and clear of every other block
+          if (Math.abs(x - base.x) + pr.w / 2 > base.w / 2 - 0.5 || Math.abs(z - base.z) + pr.d / 2 > base.d / 2 - 0.5) continue;
+          if (inside(x, z, pr.w, pr.h, pr.d, pr.y)) continue;
+          pr.x = x; pr.z = z; ok = true; break;
+        }
+      }
+      if (!ok) props.splice(k, 1);
+    }
+  }
   const allProps = props.slice();
   props.splice(0, props.length, ...props.filter((pr) => !pr.tower));
   const propMesh = new THREE.InstancedMesh(box, new THREE.MeshStandardMaterial({ roughness: 0.7, metalness: 0.2 }), props.length);
@@ -702,17 +921,50 @@ export function createBuildings(hm, quality, scene, collision, surf, graph = nul
           else if (wire > 0.06 + fw * 0.6) discard;
         }`);
     };
+    // chain-link comes in panels between posts: step each panel to the ground under it (no
+    // hovering ends on a slope) and leave a gap where a run would cross a road or a building
+    const panels = [];
+    for (const f of fences) {
+      const along = f.w > f.d, L = along ? f.w : f.d, n = Math.max(1, Math.ceil(L / 2.5)), pl = L / n;
+      for (let k = 0; k < n; k++) {
+        const c = -L / 2 + pl * (k + 0.5), x = along ? f.x + c : f.x, z = along ? f.z : f.z + c;
+        let clear = true;
+        collision.query(x, z, pl + 8, (it) => {
+          if (!clear) return;
+          if (it.t === 0) {
+            // the whole panel, end to end, stays out of the building
+            for (let u = -0.5; u <= 0.51 && clear; u += 0.25) {
+              const sx = along ? x + u * pl : x, sz = along ? z : z + u * pl;
+              if (sx > it.minX - 0.3 && sx < it.maxX + 0.3 && sz > it.minZ - 0.3 && sz < it.maxZ + 0.3) clear = false;
+            }
+          }
+          else if (it.t === 3) {
+            const dx = it.bx - it.ax, dz = it.bz - it.az, L2 = dx * dx + dz * dz || 1;
+            const t = Math.max(0, Math.min(1, ((x - it.ax) * dx + (z - it.az) * dz) / L2));
+            if (Math.hypot(it.ax + dx * t - x, it.az + dz * t - z) < it.hw + 0.6 + pl / 2) clear = false;
+          }
+        });
+        if (!clear) continue;
+        const ya = hm.height(along ? x - pl / 2 : x, along ? z : z - pl / 2), yb = hm.height(along ? x + pl / 2 : x, along ? z : z + pl / 2);
+        panels.push({ x, z, y: Math.min(ya, yb) - 0.05, h: f.h + Math.abs(ya - yb), L: pl, along });
+      }
+    }
+    fences.panels = panels;
     const fg = new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0);
-    const fmesh = new THREE.InstancedMesh(fg, fm, fences.length);
-    const rail = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.02, 0.02, 1, 6).rotateZ(Math.PI / 2).translate(0.5, 0, 0), new THREE.MeshStandardMaterial({ color: 0x8e9498, roughness: 0.4, metalness: 0.8 }), fences.length);
+    const fmesh = new THREE.InstancedMesh(fg, fm, Math.max(1, panels.length));
+    const rail = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.02, 0.02, 1, 6).rotateZ(Math.PI / 2).translate(0.5, 0, 0), new THREE.MeshStandardMaterial({ color: 0x8e9498, roughness: 0.4, metalness: 0.8 }), Math.max(1, panels.length));
     const postsL = [];
-    fences.forEach((f, i) => {
-      const along = f.w > f.d, L = along ? f.w : f.d;
-      m4.compose(p.set(f.x, f.y, f.z), q.identity(), s.set(along ? f.w : 0.02, f.h, along ? 0.02 : f.d)); fmesh.setMatrixAt(i, m4);
-      q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), along ? 0 : -Math.PI / 2);
-      m4.compose(p.set(along ? f.x - f.w / 2 : f.x, f.y + f.h, along ? f.z : f.z - f.d / 2), q, s.set(L, 1, 1)); rail.setMatrixAt(i, m4);
-      for (let t = -L / 2; t <= L / 2 + 0.01; t += Math.max(1.5, L / Math.ceil(L / 3))) postsL.push([along ? f.x + t : f.x, f.y, along ? f.z : f.z + t, f.h]);
-    });
+    fmesh.count = rail.count = 0;
+    let fi = 0;
+    for (const f of panels) {
+      if (fi >= fmesh.instanceMatrix.count) break;
+      m4.compose(p.set(f.x, f.y, f.z), q.identity(), s.set(f.along ? f.L : 0.02, f.h, f.along ? 0.02 : f.L)); fmesh.setMatrixAt(fi, m4);
+      q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), f.along ? 0 : -Math.PI / 2);
+      m4.compose(p.set(f.along ? f.x - f.L / 2 : f.x, f.y + f.h, f.along ? f.z : f.z - f.L / 2), q, s.set(f.L, 1, 1)); rail.setMatrixAt(fi, m4);
+      for (const t of [-f.L / 2, f.L / 2]) postsL.push([f.along ? f.x + t : f.x, f.y, f.along ? f.z : f.z + t, f.h]);
+      fi++;
+    }
+    fmesh.count = rail.count = fi;
     const posts = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.03, 0.03, 1, 8).translate(0, 0.5, 0), rail.material, postsL.length);
     postsL.forEach(([x, y, z, h], i) => { m4.compose(p.set(x, y, z), q.identity(), s.set(1, h + 0.05, 1)); posts.setMatrixAt(i, m4); });
     for (const im of [fmesh, rail, posts]) { im.castShadow = quality.shadows > 0; im.receiveShadow = true; im.computeBoundingSphere(); scene.add(im); }
@@ -757,5 +1009,5 @@ export function createBuildings(hm, quality, scene, collision, surf, graph = nul
   });
   // real 3D architecture on the boxes: cornices, parapets, shopfronts, window sills and heads
   const facades = createFacades(B, { scene, quality, surf, roofOf, roofs, hm, graph, props: allProps });
-  return { buildings: B, cityBlocks, lakeHouses, junk, count: B.length, mesh, meshes, instOf, roofMesh, roofs, roofOf, gutterMesh, gutterRanges, facades };
+  return { buildings: B, cityBlocks, lakeHouses, junk, count: B.length, mesh, meshes, instOf, roofMesh, roofs, roofOf, gutterMesh, gutterRanges, facades, props: allProps, fences };
 }

@@ -69,8 +69,9 @@ export function createFacades(B, { scene, quality, surf, roofOf, roofs, hm, grap
   const col = new THREE.Color();
 
   // ---- piece lists: [x, y, z, ry, rx, sx, sy, sz, rz] + rgb
-  const makeList = () => ({ f: [], c: [] });
-  const add = (L, x, y, z, ry, rx, sx, sy, sz, rgb, rz = 0) => { L.f.push(x, y, z, ry, rx, sx, sy, sz, rz); L.c.push(rgb); };
+  const makeList = () => ({ f: [], c: [], o: [] });
+  let owner = -1; // the building a piece belongs to (for the placement audit)
+  const add = (L, x, y, z, ry, rx, sx, sy, sz, rgb, rz = 0) => { L.f.push(x, y, z, ry, rx, sx, sy, sz, rz); L.c.push(rgb); if (L.o) L.o.push(owner); };
 
   const ground = (b) => b.y - (hm ? hm.height(b.x, b.z) : b.y) < 1.2;
   // the four walls: outward normal, the axis the shader's u runs along, where the wall is
@@ -114,6 +115,7 @@ export function createFacades(B, { scene, quality, surf, roofOf, roofs, hm, grap
   const S = { stone: makeList(), paint: makeList(), metal: makeList(), canvas: makeList(), brick: makeList() };
   const ranges = new Map(); // bi -> { stone: [a, n], ... } for hiding a building
   B.forEach((b, bi) => {
+    owner = bi;
     const st = b.style, seed = hash(b.x, b.z), top = b.y + b.h;
     const gable = roofOf && roofOf.has(bi);
     const start = {}; for (const k in S) start[k] = S[k].c.length;
@@ -157,8 +159,9 @@ export function createFacades(B, { scene, quality, surf, roofOf, roofs, hm, grap
         }
       }
     } else {
-      // plinth at the street
-      if (atGround && !SHOP_STYLE(st)) for (const W of W4) onWall(S.stone, W, (W.u0 + W.u1) / 2, b.y + 0.35, W.u1 - W.u0 + 0.16, 0.7, 0.08, 0x8f8b84);
+      // plinth at the street (shop blocks: on the walls without a shopfront)
+      const streetWall = (k) => ((b.street ?? 15) >> k) & 1;
+      if (atGround) W4.forEach((W, k) => { if (!SHOP_STYLE(st) || !streetWall(k)) onWall(S.stone, W, (W.u0 + W.u1) / 2, b.y + 0.35, W.u1 - W.u0 + 0.16, 0.7, 0.08, 0x8f8b84); });
       if (!gable) {
         // cornice: a slab overhanging the walls just under the roof line, then a parapet with a coping
         const over = st <= 1 ? 0.25 : st === 3 ? 0.18 : 0.45, ct = st <= 1 ? 0.35 : st === 3 ? 0.25 : 0.55;
@@ -208,7 +211,8 @@ export function createFacades(B, { scene, quality, surf, roofOf, roofs, hm, grap
         const sign = pickC(SIGN, hash(seed, 3.1));
         const pier = st === 2 ? S.brick : st <= 1 ? S.metal : S.stone;
         const pierC = st === 2 ? 0xffffff : st <= 1 ? 0x2f3338 : trim;
-        for (const W of W4) {
+        for (const [k, W] of W4.entries()) {
+          if (!streetWall(k)) continue;
           const len = W.u1 - W.u0, mid = (W.u0 + W.u1) / 2;
           onWall(S.paint, W, mid, b.y + (SHOP_GLASS + SHOP_TOP) / 2, len + 0.3, SHOP_TOP - SHOP_GLASS, 0.22, sign);           // sign band
           onWall(S.stone, W, mid, b.y + SHOP_TOP + 0.06, len + 0.4, 0.12, 0.34, 0xb6b0a4);                                  // its cap
@@ -232,13 +236,51 @@ export function createFacades(B, { scene, quality, surf, roofOf, roofs, hm, grap
         }
       }
     }
+    // warehouses and sheds: a roll-up loading door and a steel personnel door on the street side
+    if (st === 3 && atGround) {
+      const F = W4[front(b)], len = F.u1 - F.u0, mid = (F.u0 + F.u1) / 2;
+      if (len >= 7) {
+        const dw = Math.min(4.2, len * 0.36), dh = Math.min(4.2, b.h - 1.2), du = mid - len * 0.3;
+        onWall(S.metal, F, du, b.y + dh / 2, dw, dh, 0.06, 0x8b8f91);                               // the roll-up door
+        for (let y = 0.25; y < dh; y += 0.25) onWall(S.metal, F, du, b.y + y, dw, 0.03, 0.08, 0x6e7275); // its slats
+        onWall(S.metal, F, du, b.y + dh + 0.22, dw + 0.4, 0.44, 0.38, 0x55595c);                    // the drum housing
+        for (const sd of [-1, 1]) onWall(S.metal, F, du + sd * (dw / 2 + 0.08), b.y + dh / 2, 0.16, dh, 0.12, 0x4a4e51); // guides
+        const pu = mid; // where the way in is (estate.js puts the door in the middle of the street wall)
+        onWall(S.paint, F, pu, b.y + 1.05, 0.95, 2.1, 0.05, 0x5a6168);                               // steel door
+        onWall(S.paint, F, pu, b.y + 2.2, 1.15, 0.12, 0.07, 0x3d4247);                               // its frame head
+        onWall(S.metal, F, pu + 0.32, b.y + 1.0, 0.12, 0.05, 0.08, 0xb8b8b0);                       // the bar handle
+        onWall(S.metal, F, pu, b.y + 2.55, 1.4, 0.06, 0.8, 0x5c6063);                                // a little canopy
+      }
+    }
+    // warehouse roofs: rows of skylights and a few extract vents (they were bare grey decks)
+    if (st === 3 && !gable && b.w * b.d > 200) {
+      const alongX = b.w >= b.d, L = alongX ? b.w : b.d, Wd = alongX ? b.d : b.w;
+      const rows = Math.max(1, Math.floor(Wd / 9));
+      for (let k = 0; k < rows; k++) {
+        const c = -Wd / 2 + (k + 0.5) * (Wd / rows);
+        for (let a = -L / 2 + 3; a < L / 2 - 5; a += 6.5) {
+          const len = Math.min(5, L / 2 - 2 - a);
+          const x = alongX ? b.x + a + len / 2 : b.x + c, z = alongX ? b.z + c : b.z + a + len / 2;
+          add(S.metal, x, top + 0.14, z, 0, 0, alongX ? len + 0.16 : 1.36, 0.28, alongX ? 1.36 : len + 0.16, 0x6d7174);   // curb frame
+          add(S.paint, x, top + 0.3, z, 0, 0, alongX ? len : 1.2, 0.06, alongX ? 1.2 : len, 0x9fb1bb);                    // the glazing
+        }
+      }
+      for (let v = 0; v < 2 + Math.floor(seed * 3); v++) {
+        const a = (hash(seed, v * 3.3) - 0.5) * (L - 6), c = (hash(v * 1.7, seed) > 0.5 ? 1 : -1) * (Wd / 2 - 1.8); // along the edge, clear of the skylights
+        const x = alongX ? b.x + a : b.x + c, z = alongX ? b.z + c : b.z + a;
+        add(S.metal, x, top + 0.35, z, 0, 0, 0.7, 0.7, 0.7, 0x8a8d8f);
+        add(S.metal, x, top + 0.78, z, Math.PI / 4, 0, 0.9, 0.12, 0.9, 0x7a7d80);
+      }
+    }
     const r = {}; for (const k in S) r[k] = [start[k], S[k].c.length - start[k]]; ranges.set(bi, r);
   });
 
-  const Cone = { f: [], c: [] };
+  const Cone = { f: [], c: [], o: [] };
   // gable roofs: a ridge cap, fascia boards along the eaves and rake boards up the gable ends
   const roofTrim = new Map();
+  const roofOwner = new Map(); if (roofOf) for (const [bi, ri] of roofOf) roofOwner.set(ri, bi);
   if (roofs) roofs.forEach((r, ri) => {
+    owner = roofOwner.has(ri) ? roofOwner.get(ri) : -1;
     const alongZ = Math.abs(Math.sin(r.rot || 0)) > 0.5;
     const L = alongZ ? r.d : r.w, Sp = alongZ ? r.w : r.d, hs = Sp / 2;
     const a0 = S.paint.c.length, b0 = S.stone.c.length;
@@ -261,7 +303,8 @@ export function createFacades(B, { scene, quality, surf, roofOf, roofs, hm, grap
     if (r && t) { r.roofPaint = t.paint; r.roofStone = t.stone; }
   }
   // rooftop units: fans on the AC boxes; water towers as round tanks on legs
-  const C = { f: [], c: [] };
+  const C = { f: [], c: [], o: [] };
+  owner = -1;
   for (const pr of props) {
     if (pr.color === 0x77787a) {
       const n = pr.w * pr.d > 9 ? 2 : 1, rr = Math.min(pr.w / n, pr.d) * 0.36;
@@ -283,6 +326,49 @@ export function createFacades(B, { scene, quality, surf, roofOf, roofs, hm, grap
 
   const m4 = new THREE.Matrix4(), qY = new THREE.Quaternion(), qX = new THREE.Quaternion(), p = new THREE.Vector3(), s = new THREE.Vector3();
   const AY = new THREE.Vector3(0, 1, 0), AX = new THREE.Vector3(1, 0, 0), AZ = new THREE.Vector3(0, 0, 1);
+
+  // nothing pokes into the next building: a porch, awning, step or rooftop unit that would is left off
+  {
+    const BC = 32, bgrid = new Map();
+    B.forEach((o, k) => {
+      for (let gx = Math.floor((o.x - o.w / 2) / BC); gx <= Math.floor((o.x + o.w / 2) / BC); gx++)
+        for (let gz = Math.floor((o.z - o.d / 2) / BC); gz <= Math.floor((o.z + o.d / 2) / BC); gz++) {
+          const key = gx + ',' + gz; if (!bgrid.has(key)) bgrid.set(key, []); bgrid.get(key).push(k);
+        }
+    });
+    const R = new THREE.Matrix4(), hq = new THREE.Quaternion(), hr = new THREE.Quaternion();
+    const clip = (L) => {
+      const f = L.f;
+      for (let i = 0; i < L.c.length; i++) {
+        const o9 = i * 9;
+        if (!f[o9 + 5] || Math.max(f[o9 + 5], f[o9 + 7]) > 8) continue; // big slabs (cornices) stay
+        hq.setFromAxisAngle(AY, f[o9 + 3]);
+        if (f[o9 + 4]) hq.multiply(hr.setFromAxisAngle(AX, f[o9 + 4]));
+        if (f[o9 + 8]) hq.multiply(hr.setFromAxisAngle(AZ, f[o9 + 8]));
+        const m = R.makeRotationFromQuaternion(hq).elements, a = f[o9 + 5] / 2, bb = f[o9 + 6] / 2, c = f[o9 + 7] / 2;
+        const ex = Math.abs(m[0]) * a + Math.abs(m[4]) * bb + Math.abs(m[8]) * c;
+        const ey = Math.abs(m[1]) * a + Math.abs(m[5]) * bb + Math.abs(m[9]) * c;
+        const ez = Math.abs(m[2]) * a + Math.abs(m[6]) * bb + Math.abs(m[10]) * c;
+        const x = f[o9], y = f[o9 + 1], z = f[o9 + 2];
+        const own = L.o ? L.o[i] : -1, ob = own >= 0 ? B[own] : null;
+        let bad = false;
+        for (let gx = Math.floor((x - ex) / BC); gx <= Math.floor((x + ex) / BC) && !bad; gx++)
+          for (let gz = Math.floor((z - ez) / BC); gz <= Math.floor((z + ez) / BC) && !bad; gz++)
+            for (const k of bgrid.get(gx + ',' + gz) || []) {
+              if (k === own) continue;
+              const o = B[k];
+              if (ob && (Math.abs(o.y - (ob.y + ob.h)) < 0.7 || Math.abs(ob.y - (o.y + o.h)) < 0.7)) continue; // its own setback
+              const ox = Math.min(x + ex, o.x + o.w / 2) - Math.max(x - ex, o.x - o.w / 2);
+              const oz = Math.min(z + ez, o.z + o.d / 2) - Math.max(z - ez, o.z - o.d / 2);
+              const oy = Math.min(y + ey, o.y + o.h) - Math.max(y - ey, o.y);
+              if (ox > 0.04 && oz > 0.04 && oy > 0.04) { bad = true; break; }
+            }
+        if (bad) { f[o9 + 5] = 0; f[o9 + 6] = 0; f[o9 + 7] = 0; }
+      }
+    };
+    for (const k in S) clip(S[k]);
+    clip(C); clip(Cone);
+  }
   const write = (mesh, L, i0, n, dst = 0) => {
     for (let i = 0; i < n; i++) {
       const o = (i0 + i) * 9;
@@ -335,11 +421,13 @@ export function createFacades(B, { scene, quality, surf, roofOf, roofs, hm, grap
   }
   const hidden = new Set();
   const nearPieces = (b, bi) => {
+    owner = bi;
     const st = b.style;
     if (st <= 1 && !ground(b)) return; // tower faces are photographed curtain walls
     const seed = hash(b.x, b.z), G = windowGrid(st), trim = pickC(TRIM[st] || TRIM[1], seed);
-    const shopFloor = SHOP_STYLE(st) && ground(b);
-    for (const W of walls(b)) {
+    const shopBlock = SHOP_STYLE(st) && ground(b);
+    for (const [wk, W] of walls(b).entries()) {
+      const shopFloor = shopBlock && (((b.street ?? 15) >> wk) & 1) === 1;
       // windows exactly where the shader draws them, whole ones only
       if (st >= 2) {
         const ww = G.ws[0] * G.cs[0], wh = G.ws[1] * G.cs[1];
@@ -393,7 +481,7 @@ export function createFacades(B, { scene, quality, surf, roofOf, roofs, hm, grap
   const last = new THREE.Vector3(1e9, 0, 1e9);
   let timer = 0;
   function refresh(cam) {
-    for (const k in NEAR) { NEAR[k].f.length = 0; NEAR[k].c.length = 0; }
+    for (const k in NEAR) { NEAR[k].f.length = 0; NEAR[k].c.length = 0; NEAR[k].o.length = 0; }
     const seen = new Set();
     const g0x = Math.floor((cam.x - nearR) / CELL), g1x = Math.floor((cam.x + nearR) / CELL);
     const g0z = Math.floor((cam.z - nearR) / CELL), g1z = Math.floor((cam.z + nearR) / CELL);
@@ -421,16 +509,21 @@ export function createFacades(B, { scene, quality, surf, roofOf, roofs, hm, grap
 
   // every piece, including every window sill and head on every building (for the Unity carryover)
   function exportPieces() {
-    const saved = {}; for (const k in NEAR) saved[k] = { f: NEAR[k].f.slice(), c: NEAR[k].c.slice() };
-    for (const k in NEAR) { NEAR[k].f.length = 0; NEAR[k].c.length = 0; }
+    const saved = {}; for (const k in NEAR) saved[k] = { f: NEAR[k].f.slice(), c: NEAR[k].c.slice(), o: NEAR[k].o.slice() };
+    for (const k in NEAR) { NEAR[k].f.length = 0; NEAR[k].c.length = 0; NEAR[k].o.length = 0; }
     B.forEach((b, bi) => { if (!hidden.has(bi)) nearPieces(b, bi); });
     const out = { stride: 9, layout: 'x,y,z,ry,rx,sx,sy,sz,rz (three.js space; rotation order Y then X then Z), rgb', kinds: {} };
-    const put = (name, shape, L) => { if (L.c.length) out.kinds[name] = { shape, f: Array.from(L.f, (v) => Math.round(v * 1000) / 1000), c: L.c.slice() }; };
+    const put = (name, shape, L) => {
+      const keep = []; for (let i = 0; i < L.c.length; i++) if (L.f[i * 9 + 5] && L.f[i * 9 + 6] && L.f[i * 9 + 7]) keep.push(i);
+      if (!keep.length) return;
+      const f = []; for (const i of keep) for (let j = 0; j < 9; j++) f.push(Math.round(L.f[i * 9 + j] * 1000) / 1000);
+      out.kinds[name] = { shape, f, c: keep.map((i) => L.c[i]), o: L.o ? keep.map((i) => L.o[i]) : null };
+    };
     for (const k in S) put(k, 'box', S[k]);
     put('wood', 'cylinder', C);
     put('roofcone', 'cone', Cone);
     for (const k in NEAR) put('near-' + k, 'box', NEAR[k]);
-    for (const k in NEAR) { NEAR[k].f = saved[k].f; NEAR[k].c = saved[k].c; }
+    for (const k in NEAR) { NEAR[k].f = saved[k].f; NEAR[k].c = saved[k].c; NEAR[k].o = saved[k].o; }
     return out;
   }
 

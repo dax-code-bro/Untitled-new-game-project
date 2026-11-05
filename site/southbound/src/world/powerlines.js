@@ -72,5 +72,6 @@ export function createPowerLines(scene, graph, hm, collision, q) {
   const lg = new THREE.BufferGeometry(); lg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   const lines = new THREE.LineSegments(lg, new THREE.LineBasicMaterial({ color: 0x1a1a1a, transparent: true, opacity: 0.8 }));
   lines.frustumCulled = false; lines.userData.noHit = true; scene.add(lines);
+  scene.userData.powerlines = { poles, wires, H }; // for the placement audit
   return { count: poles.length };
 }
