@@ -105,7 +105,7 @@ def G_doublet(c, hem=0.68, **kw):
 
 def G_kirtle(c, hem=0.03, sleeves='long', belt=False, **kw):
     """Women's fitted dress (laced bodice, full skirt to the ankles)."""
-    return dict({'type': 'kirtle', 'fabric': 'wool', 'color': _c(c), 'ease': 0.014, 'loose': 0.012, 'hang': 0.3, 'cinch': True, 'cinch_ease': 0.016,
+    return dict({'type': 'kirtle', 'fabric': 'wool', 'color': _c(c), 'ease': 0.014, 'loose': 0.012, 'hang': 0.3, 'cinch': True, 'cinch_ease': 0.016, 'back_env': 0.03,
                  'torso_smooth': 40, 'sleeves': sleeves, 'stack': 0.025,
                  'sleeve_frac': 0.35 if sleeves == 'rolled' else 0.95, 'hem': hem, 'flare': 1.9, 'prefold': 0.05, 'folds': 11, 'neck': 0.05,
                  'layer': 2, 'pin_hips': 0.7, 'belt': belt, 'thickness': 0.0025, 'wear': 0.6, 'dust': 0.6}, **kw)

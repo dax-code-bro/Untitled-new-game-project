@@ -545,6 +545,20 @@ def apply_envelope(D, S, torso, g, ylo):
     r = np.linalg.norm(d, axis=1)
     dirs = d / np.maximum(r[:, None], 1e-9)
     w = torso * np.clip((top - S[:, 1]) / 0.05, 0, 1) * np.clip((S[:, 1] - (ylo - 0.25)) / 0.05, 0, 1)
+    be = g.get('back_env', 0.0)
+    if be > 0:
+        # the upper back (above the armpits, up to `back_env` under the neck joint): the cloth spans
+        # the shoulder blades across the spine instead of following the groove (crowd05's kirtle
+        # printed the spine and both blades). Back-facing vertices only (within ~60 deg of straight
+        # back), out to the slice's convex hull + ease, at most `back_cap`
+        nk = D.lm('neck01')[1]
+        bk = np.clip((-dirs[:, 2] - 0.45) / 0.3, 0, 1)
+        wy = np.clip((S[:, 1] - (top - 0.05)) / 0.05, 0, 1) * np.clip((nk - be - S[:, 1]) / 0.04, 0, 1)
+        wb = torso * bk * wy
+        push = np.minimum(np.maximum(0.0, r_env - r), g.get('back_cap', 0.025))
+        rn0 = r + np.maximum(0.0, r_env - r) * w
+        rn = np.maximum(rn0, r + push * wb)
+        return S + dirs * (rn - r)[:, None]
     rn = r + np.maximum(0.0, r_env - r) * w
     return S + dirs * (rn - r)[:, None]
 

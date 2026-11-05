@@ -1169,3 +1169,41 @@ KNOWN: at her left waist (screen left, from behind) a brown patch shows under th
    final. The hoe shaft reads only as a thin pale line from this angle.
 Checked: selftest-perf all passed; npm test 48 pass / 0 fail / 1 skipped.
 NEXT (perf, in order): s11 NEXT 1 (1C-16 pinky still), 3 (REQUEST props: real hoe), 4 (remi_ride thumb).
+
+
+## LOOK round 2k (2026-11-05, short session) - crowd05 kirtle back (perf s12 REQUEST)
+FINDING: the body is NOT through the kirtle on the upper back. perf s12's probe counts every body vertex
+in the buffer, hidden ones too (the build drops hidden faces from the index but keeps the vertices), and
+compares radial distance from the spine line to the NEAREST cloth vertex - over the shoulder blades that
+vertex sits beside the ray and reads "inside". Only 54 of the 185 "back verts" are drawn, all within 3 rings
+of the back neckline. A ray test (new cache/_probe_gap.mjs, not committed - cache/ is ignored: radial ray
+from each back body vertex 30-51 cm over the root bone to the kirtle surface) finds 0 vertices within 3 mm,
+none through, before and after. The "print" is the kirtle's own shape: above the armpits the drape envelope
+(garments.py apply_envelope) did not apply, so the shell there followed the spine groove and blade edges at
+ease distance and the sim kept that.
+CHANGED (garments.py apply_envelope, characters.py G_kirtle):
+1. new garment key `back_env` (m under the neck joint; default 0 = off): back-facing torso vertices (within
+   ~60 deg of straight back) from the armpit line up to neck01 - back_env (4 cm fade) are pushed out to the
+   slice's convex hull + ease, at most `back_cap` (default 2.5 cm). The cloth spans the blades across the
+   spine. G_kirtle default back_env 0.03 -> EVERY kirtle wearer changes on its next rebuild (only crowd05
+   rebuilt + checked here).
+2. Tried + reverted: adding clavicle / shoulder01 bones to postfix.fix_valleys' torso set - 9 more vertices
+   filled on crowd05, no visible change.
+PROBE (crowd05, ray gap cloth - skin, mean cm by height over the root bone, drape / new director lean):
+   before 36cm 1.43 | 40 1.21 | 44 1.14 | 48 1.14 | 52 1.12 ;  lean 1.57 | 1.19 | 1.10 | 1.23
+   after  36cm 1.80 | 40 1.50 | 44 1.43 | 48 1.45 | 52 1.20 ;  lean 2.03 | 1.48 | 1.38 | 1.55
+   (perf's _probe_back.mjs, same flawed metric: drape 40/185 max 1.4 -> 35/185 max 1.2; lean 47 -> 45, 1.2.)
+Rebuilt: crowd05 only. Checked: selftest-perf all passed; npm test 48 pass / 0 fail / 1 skipped.
+Images (scratch eng1/look12/): before/, after/ (draft X4-06@0.6), X4-06_043_before_after.png,
+X4-06_back_x3_before_after.png (left before).
+RESULT (draft, looked): partly fixed. The spine groove down the upper back is softer and the space between the
+blades is fuller; the blade edges and some small dimples/ripples on the mid back still show.
+NEXT (look, in order):
+1. crowd05 kirtle back, remaining print: the mid-back ripples are below the new band (armpit line and down,
+   where the envelope already applies) - likely the sim draping the wool onto the back in the dress->basket
+   pose. Try `bodice_pin` (as G_doublet: the laced bodice keeps its cut shape) on G_kirtle, or a larger
+   torso_smooth, then rebuild crowd05 (~1 min) and compare with the ray probe + X4-06@0.6 draft.
+2. Full rebuild needed for the kirtle wearers to pick up back_env (all characters using G_kirtle / crowd
+   'kirtle' rows): spot-check one hero kirtle (characters.py ~line 327) and one crowd row at draft after it.
+3. Fingertip pad bulge (postfix.py build-time tip fattening) - still not started (budget).
+4. 2j NEXT 2-4 unchanged.
