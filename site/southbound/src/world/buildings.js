@@ -422,7 +422,7 @@ export function createBuildings(hm, quality, scene, collision, surf, graph = nul
   const junk = []; // spots for street junk (filled with open models later)
   const roadDist = (x, z, r) => {
     let best = 1e9;
-    collision.query(x, z, r, (it) => { if (it.t === 3) { const d = distToSeg(x, z, it.ax, it.az, it.bx, it.bz).d - it.hw; if (d < best) best = d; } });
+    collision.query(x, z, r, (it) => { if (it.t === 3 && !it.lane) { const d = distToSeg(x, z, it.ax, it.az, it.bx, it.bz).d - it.hw; if (d < best) best = d; } });
     return best;
   };
   const freeLot = (x, z, w, d) => {
@@ -430,11 +430,13 @@ export function createBuildings(hm, quality, scene, collision, surf, graph = nul
     collision.query(x, z, Math.max(w, d) + 4, (it) => {
       if (!ok) return;
       if (it.t === 0 && x + w / 2 + 2.5 > it.minX && x - w / 2 - 2.5 < it.maxX && z + d / 2 + 2.5 > it.minZ && z - d / 2 - 2.5 < it.maxZ) ok = false;
-      else if (it.t === 3 && distToSeg(x, z, it.ax, it.az, it.bx, it.bz).d < it.hw + Math.max(w, d) / 2 + 2.5) ok = false;
+      else if (it.t === 3 && !it.lane && distToSeg(x, z, it.ax, it.az, it.bx, it.bz).d < it.hw + Math.max(w, d) / 2 + 2.5) ok = false;
     });
     return ok;
   };
-  const flatAt = (x, z, w, d) => { const ys = [[-1, -1], [1, -1], [-1, 1], [1, 1]].map(([a, b]) => hm.height(x + a * w / 2, z + b * d / 2)); return { y: Math.min(...ys), dy: Math.max(...ys) - Math.min(...ys) }; };
+  // older lots read the ground as it was before the outer-neighbourhood streets (same lots as ever)
+  const flatAt = (x, z, w, d) => { const ys = [[-1, -1], [1, -1], [-1, 1], [1, 1]].map(([a, b]) => (hm.heightBase || hm.height).call(hm, x + a * w / 2, z + b * d / 2)); return { y: Math.min(...ys), dy: Math.max(...ys) - Math.min(...ys) }; };
+  const flatNow = (x, z, w, d) => { const ys = [[-1, -1], [1, -1], [-1, 1], [1, 1]].map(([a, b]) => hm.height(x + a * w / 2, z + b * d / 2)); return { y: Math.min(...ys), dy: Math.max(...ys) - Math.min(...ys) }; };
   const POOR = { 2: [0x6e4a3c, 0x5e463a, 0x7a5444], 3: [0x7d7f78, 0x6a6e66, 0x8a7c66, 0x5f6a5a], 4: [0xb8ab92, 0xa49a86, 0x9aa6a0, 0xc2b49a, 0x8f8a7e, 0xa8968a], 5: [0xa89272, 0x9a8a78, 0x8e9a90] };
   const placeLot = (x, z, e) => {
     // e: 0 at the city edge .. 1 far out
@@ -496,6 +498,94 @@ export function createBuildings(hm, quality, scene, collision, surf, graph = nul
       }
     }
     for (const u of used) junk.push({ x: u.x + 8, z: u.z + 8, kind: 'sign', name: u.name });
+  }
+
+  // ---- the outer neighbourhoods (north and east, on the `lane` streets from layout.js):
+  // right past the shops on the edge strip, two- to four-storey brick and stucco walk-ups
+  // with a corner store; then houses with yards; then the poor end: tired houses, garages,
+  // sheds and trailers, junk and chain-link. Its own random stream and appended after
+  // everything else, so the rest of the map (and saved homes) is unchanged.
+  if (graph) {
+    const rr = mulberry32(5150);
+    const pk = (a) => a[(rr() * a.length) | 0];
+    const cx0 = CITY.x0, cx1 = CITY.x0 + CITY.nx * CITY.pitch, cz0 = CITY.z0, cz1 = CITY.z0 + CITY.nz * CITY.pitch;
+    const outOf = (x, z) => Math.max(cx0 - x, x - cx1, cz0 - z, z - cz1);
+    // a lot is clear when it overlaps no building box and stays off every road (sampled along the road)
+    const lotClear = (x, z, w, d, margin) => {
+      let ok = true;
+      collision.query(x, z, Math.max(w, d) + 14, (it) => {
+        if (!ok) return;
+        if (it.t === 0) { if (x + w / 2 + margin > it.minX && x - w / 2 - margin < it.maxX && z + d / 2 + margin > it.minZ && z - d / 2 - margin < it.maxZ) ok = false; return; }
+        if (it.t !== 3) return;
+        const L = Math.hypot(it.bx - it.ax, it.bz - it.az), n = Math.max(1, Math.ceil(L / 2));
+        for (let k = 0; k <= n && ok; k++) {
+          const px = it.ax + (it.bx - it.ax) * k / n, pz = it.az + (it.bz - it.az) * k / n;
+          const dx = Math.max(Math.abs(px - x) - w / 2, 0), dz = Math.max(Math.abs(pz - z) - d / 2, 0);
+          if (Math.hypot(dx, dz) < it.hw + 1.2) ok = false;
+        }
+      });
+      return ok;
+    };
+    let placed = 0;
+    for (const e of graph.edges) {
+      if (!e.lane) continue;
+      const [ax, az] = e.pts[0], [bx, bz] = e.pts[e.pts.length - 1];
+      const L = Math.hypot(bx - ax, bz - az), tx = (bx - ax) / L, tz = (bz - az) / L;
+      const alongX = Math.abs(tx) > 0.5; // the street runs east-west: lots face north/south
+      for (const side of [-1, 1]) {
+        const nx = -tz * side, nz = tx * side;
+        let s = 6;
+        while (s < L - 6) {
+          const px = ax + tx * s, pz = az + tz * s, out = outOf(px, pz);
+          const e01 = Math.min(1, Math.max(0, (out - 34) / 190)); // 0 at the edge strip .. 1 far out
+          let kind;
+          if (out < 34) { s += 8; continue; }                    // the shops' strip along the city edge (they sit within ~28 m)
+          if (e01 < 0.25) kind = rr() < 0.75 ? 'walkup' : 'corner';
+          else if (e01 < 0.6) kind = rr() < 0.8 ? 'house' : pk(['corner', 'garage', 'house2']);
+          else kind = pk(['house', 'house', 'shed', 'trailer', 'garage', 'house']);
+          const gapP = e01 < 0.25 ? 0.08 : e01 < 0.6 ? 0.2 : 0.45;      // empty lots get commoner further out
+          const dims = {
+            walkup: [12 + rr() * 6, 12 + rr() * 4, 7 + rr() * 7, rr() < 0.6 ? 2 : 5],
+            corner: [11 + rr() * 4, 10 + rr() * 3, 4.6 + rr() * 1.4, 5],
+            house: [8.5 + rr() * 2.5, 8.5 + rr() * 3, rr() < 0.3 ? 6.2 : 3.6, 4],
+            house2: [9 + rr() * 2, 10 + rr() * 2, 6.2, 4],
+            garage: [7, 7, 3.4, 3], shed: [5, 4, 3, 3], trailer: [12, 4, 3, 4],
+          }[kind];
+          const [front, deep, h, style] = dims;
+          const w = alongX ? front : deep, d = alongX ? deep : front;
+          const setback = e.width / 2 + (kind === 'walkup' || kind === 'corner' ? 3.5 : 6 + rr() * 3);
+          const x = px + nx * (setback + (alongX ? d : w) / 2), z = pz + nz * (setback + (alongX ? d : w) / 2);
+          s += front + (e01 < 0.25 ? 1.5 + rr() * 2 : 4 + rr() * (6 + e01 * 14));
+          if (rr() < gapP) { s += 6 + rr() * 10; continue; }
+          const f = flatNow(x, z, w, d);
+          // walk-ups and corner stores step into the hillside like terraced streets (the uphill wall is buried)
+          if (f.dy > (style === 2 || style === 5 ? 4.5 : 2.4) || f.y < hm.waterLevel(x, z) + 0.6 || !lotClear(x, z, w, d, 1.5)) continue;
+          const poor = e01 > 0.55;
+          const color = poor ? pk(POOR[style] || PALETTES[style]) : pk(PALETTES[style]);
+          add(x, z, w, d, h, f.y + 0.05, style, color);
+          B[B.length - 1].extra = true;
+          placed++;
+          if (style === 4 || kind === 'garage' || kind === 'shed') {
+            // gable roof with the ridge along the street
+            roofs.push({ x, z, w: w + 0.8, d: d + 0.8, h: kind === 'shed' ? 1.4 : 2.2 + rr() * 0.8, y: f.y + 0.05 + h, rot: alongX ? 0 : Math.PI / 2, color: pk([0x3b3b3e, 0x5a3a2c, 0x4d5560, 0x6b4636, 0x2f3a2a]) });
+          }
+          if (e01 > 0.3) {
+            for (let k = 0; k < (poor ? 2 + ((rr() * 3) | 0) : (rr() < 0.4 ? 1 : 0)); k++)
+              junk.push({ x: x + (rr() - 0.5) * (w + 6), z: z + (rr() - 0.5) * (d + 6), kind: rr() < 0.5 ? 'trash' : rr() < 0.5 ? 'pile' : 'tyre' });
+            if (rr() < (poor ? 0.45 : 0.25)) {
+              // a fenced yard behind the house (chain-link out here)
+              const yw = w + 6, yd = d + 6, bx2 = x + nx * 3, bz2 = z + nz * 3;
+              for (const [fx, fz, sw, sd] of [[bx2, bz2 - yd / 2, yw, 0.06], [bx2, bz2 + yd / 2, yw, 0.06], [bx2 - yw / 2, bz2, 0.06, yd], [bx2 + yw / 2, bz2, 0.06, yd]]) {
+                // leave the street side open
+                if ((alongX && Math.sign(fz - bz2) === -Math.sign(nz)) || (!alongX && Math.sign(fx - bx2) === -Math.sign(nx))) continue;
+                fences.push({ x: fx, y: hm.height(fx, fz), z: fz, w: sw, h: 1.8, d: sd });
+              }
+            }
+          }
+        }
+      }
+    }
+    void placed;
   }
 
   const box = new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0);

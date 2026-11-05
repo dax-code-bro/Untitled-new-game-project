@@ -140,6 +140,17 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 - [x] Loading screen with in-game art, tips and progress
 - [x] Fewer touch buttons: ◎ interact replaces the car button; map, phone, arsenal, free cam moved to pause
 
+## Phase 1.14 — Port Calvera fades out on every side
+
+- [x] Residential streets run out of the north and east edges of the city (between the
+      shops on the edge strip) to an outer street; before, the poor edge of town only
+      existed along the two west highways
+- [x] Along them, walk-ups and corner stores first (terraced into the hill), then houses
+      with porches and yards, then the poor end: tired houses, garages, sheds, trailers,
+      junk and chain-link
+- [x] Every older building, road and shop stays exactly where it was (checked), so saved
+      homes don't move; up to 48 new homes are for sale as "Calvera outskirts"
+
 ## Phase 1.13 — Buildings in real 3D (`src/world/facades.js`)
 
 - [x] Cornices, parapet walls with copings, plinths, string courses, stone quoins, metal

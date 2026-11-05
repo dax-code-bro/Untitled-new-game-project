@@ -211,7 +211,7 @@ float sbVN(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f)
     // Street ribbons stop short of intersections; intersections get their own tile.
     const gridTrim = (id) => (id[0] === 'c' ? CITY.street / 2 : id[0] === 't' ? TOWN.street / 2 : 0);
     const g = ribbon(e.pts, e.ys, e.width, gridTrim(e.a), gridTrim(e.b), 0.1);
-    if (collision && collision.addRoad) collision.addRoad(e.pts, e.ys, e.width);
+    if (collision && collision.addRoad) collision.addRoad(e.pts, e.ys, e.width, !!e.lane);
     (isHw ? hwGeos : stGeos).push(g);
     // street lights every ~40 m on alternating sides
     const step = isHw ? 6 : 5;

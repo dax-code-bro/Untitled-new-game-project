@@ -69,6 +69,14 @@ export class Heightmap {
     const n = this.n, h = this.h, k = j * n + i;
     return lerp(lerp(h[k], h[k + 1], fx), lerp(h[k + n], h[k + n + 1], fx), fz);
   }
+  // terrain before the outer-neighbourhood streets were cut in (see shapeRoads)
+  heightBase(x, z) {
+    if (!this.h0) return this.height(x, z);
+    const gx = clamp(this.toGrid(x), 0, this.res - 0.001), gz = clamp(this.toGrid(z), 0, this.res - 0.001);
+    const i = gx | 0, j = gz | 0, fx = gx - i, fz = gz - j;
+    const n = this.n, h = this.h0, k = j * n + i;
+    return lerp(lerp(h[k], h[k + 1], fx), lerp(h[k + n], h[k + n + 1], fx), fz);
+  }
   normal(x, z, out) {
     const e = this.cell;
     const hx = this.height(x + e, z) - this.height(x - e, z);
@@ -193,6 +201,9 @@ export class Heightmap {
   // Road profile: smooth grades, bridges over water, then cut/fill the terrain.
   shapeRoads(graph) {
     for (const e of graph.edges) {
+      // the newer outer-neighbourhood streets come last: keep the terrain as it was before
+      // them, so the older generators see the same ground and place the same buildings
+      if (e.lane && !this.h0) this.h0 = this.h.slice();
       const pts = e.pts;
       let ys = pts.map(([x, z]) => this.height(x, z));
       if (e.kind === 'highway') {
