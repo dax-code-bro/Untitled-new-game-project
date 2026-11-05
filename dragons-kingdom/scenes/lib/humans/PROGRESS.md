@@ -1098,3 +1098,33 @@ NEXT (perf, in order):
 3. REQUEST props: a real hoe (worn ash shaft ~1.25 m, forged blade on a gooseneck) for the props library;
    tools.js toolProp is a stand-in (local frame documented there: origin on the ground, +y up the shaft).
 4. remi_ride thumb tip 3.9 cm (limit 4) - s10 NEXT 3 still open.
+
+## LOOK round 2j (2026-11-05, short session) - X4-06 farmer's "bald" head, Remi's ride cuffs
+NOTE FOR THE DIRECTOR: crowd05 (X4-06's farmer) is a WOMAN - characters.py builds her female (gender 0.0),
+middle-aged (age 0.55), brown skin, black hair pulled back under a kerchief, in a kirtle + apron. Specs and
+reports should say "she" / "the farmer woman", not "he". (Identity not changed here; if a male farmer is
+wanted, pick a male crowd id - e.g. crowd08 / crowd14 - or ask LOOK for a new build.)
+FIXED (rebuilt crowd05 and remi_ride only):
+1. crowd05 read BALD at draft: not missing hair - her kerchief was a close-fitting brick-red cloth
+   ([0.2, 0.075, 0.045], almost her skin colour) covering the whole skull down to the nape, and the hair
+   groom keeps strands only outside the covering + 1.2 cm, so no hair showed at all. Now: kerchief 'oatmeal'
+   linen, tied higher at the back (new head-shell param `back`, garments.py head_shell / head_cover_depth;
+   default unchanged: coif 0.09, kerchief 0.085, cap 0.05 below the eye line) with back 0.03, front 0.05:
+   a band of black hair shows at the nape. crowd() rows take `kerchief={...}` kwargs (characters.py).
+2. remi_ride cuffs: new per-side sleeve length `sleeve_frac_L` / `sleeve_frac_R` (garments.py
+   sleeve_frac(), overrides sleeve_frac for the cut and the cuff snap). remi_ride coat L 0.91, R 1.1
+   (was 0.97 both). Cuff end past the wrist joint (probe p98, rest / grip): L +6.5 -> +3.7 / +2.2 cm,
+   R -2.2 -> +1.7 / +1.7 cm. (A first try L 0.80 gave -8.4: the left cuff moves ~0.9 cm per 0.01.)
+Checked: selftest-perf all passed; npm test 48 pass / 0 fail / 1 skipped.
+Images (scratch eng1/look11/): before/, after/ (draft X4-06@0.6, 1C-18@0.5), X4-06_043_before_after.png,
+X4-06_head_before_after.png (crop, left before), 1C-18_036_before_after.png.
+RESULT: X4-06 - the farmer's head now reads as a light head cloth over dark hair, not a bare scalp.
+KNOWN (X4-06, both before and after): her kirtle back prints the spine / shoulder blades and shows a dark
+hole at the small of the back (the hoe-lean pose pushes the body through the kirtle?) - look at final.
+
+NEXT (look, in order):
+1. X4-06 crowd05 kirtle back: dark hole at the small of the back + spine print in the lean pose - check at
+   final quality; likely a body-through-cloth spot (fix_hide / hide_under rings) for the lean.
+2. 2i NEXT 1 still open: rebuild abby_ride_injured, fall_ride, scout_ride with the sleeve/skirt pools.
+3. Fingertip pad bulge (postfix.py build-time tip fattening) - not started (budget).
+4. 2i NEXT 2 (1C-16 coat skirt flat panel) and 2h NEXT 3.

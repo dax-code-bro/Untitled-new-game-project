@@ -718,6 +718,12 @@ def cuff_delta(D, S, loop_ids, side, extra=0.012, rings=None):
     return out
 
 
+def sleeve_frac(g, s, default):
+    """Sleeve length (fraction of the forearm, elbow -> wrist) for side s: 'sleeve_frac_L' /
+    'sleeve_frac_R' override 'sleeve_frac' (a posed build whose two cuffs end at different places)."""
+    return g.get(f'sleeve_frac_{s}', g.get('sleeve_frac', default))
+
+
 def upper_garment(D, g):
     """Shirt / tunic / coat / gown bodice / gambeson. Spec keys:
     ease (m), sleeves: 'long'|'elbow'|'short'|'none'|'rolled', hem: height above ground (m) or None
@@ -756,10 +762,10 @@ def upper_garment(D, g):
             frac = 1.08
         elif sl == 'rolled':
             a, b = D.lm(f'lowerarm01.{s}'), D.lm(f'wrist.{s}')
-            frac = g.get('sleeve_frac', 0.45)
+            frac = sleeve_frac(g, s, 0.45)
         else:
             a, b = D.lm(f'lowerarm01.{s}'), D.lm(f'wrist.{s}')
-            frac = g.get('sleeve_frac', 0.93)
+            frac = sleeve_frac(g, s, 0.93)
         ax = b - a
         L = np.linalg.norm(ax)
         ax /= L
@@ -788,7 +794,7 @@ def upper_garment(D, g):
             ax = b_ - a_
             Lx = np.linalg.norm(ax)
             ax = ax / Lx
-            frac = g.get('sleeve_frac', 0.93 if sl == 'long' else 0.45)
+            frac = sleeve_frac(g, side, 0.93 if sl == 'long' else 0.45)
 
             def tf(Q, a_=a_, ax=ax, Lx=Lx, frac=frac):
                 t = (Q - a_) @ ax
@@ -1289,7 +1295,7 @@ def head_cover_depth(D, g, P_rest):
     kind = g['type']
     if kind in ('coif', 'kerchief', 'cap'):
         front = g.get('front', 0.045)
-        line = ey + front * np.cos(ang / 2) ** 2 - {'coif': 0.09, 'kerchief': 0.085, 'cap': 0.05}[kind] * np.sin(ang / 2) ** 2
+        line = ey + front * np.cos(ang / 2) ** 2 - g.get('back', {'coif': 0.09, 'kerchief': 0.085, 'cap': 0.05}[kind]) * np.sin(ang / 2) ** 2
         return P[:, 1] - line
     if kind == 'hood':
         # everything but the face opening
@@ -1312,7 +1318,7 @@ def head_shell(D, g):
     front = g.get('front', 0.045)               # how far down the forehead (above the eye line)
     if kind in ('coif', 'kerchief', 'cap'):
         # covers the skull above a hairline-like curve; coif also covers the ears and ties under the chin
-        line = ey + front * np.cos(ang / 2) ** 2 - {'coif': 0.09, 'kerchief': 0.085, 'cap': 0.05}[kind] * np.sin(ang / 2) ** 2
+        line = ey + front * np.cos(ang / 2) ** 2 - g.get('back', {'coif': 0.09, 'kerchief': 0.085, 'cap': 0.05}[kind]) * np.sin(ang / 2) ** 2
         keep = P[:, 1] > line
         if kind == 'coif':
             # cheek straps down to the jaw, in front of the ears

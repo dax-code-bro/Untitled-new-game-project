@@ -310,7 +310,9 @@ def cast():
     }
     C.append(remi)
     C.append(variant(remi, 'remi_ride', pose='ride', pose_params={'lean': 0.12, 'reach': 0.32}, cloth_subdiv=0,
-                     outfit=[dict(g, overlap=0.0) if g['type'] == 'coat' else g for g in remi['outfit']]))
+                     # per-side sleeve length: at 0.97 both, the ride build's left cuff ended 6.5 cm past the wrist
+                     # joint, the right 2.2 cm short of it (round 2i probe)
+                     outfit=[dict(g, overlap=0.0, sleeve_frac_L=0.91, sleeve_frac_R=1.1) if g['type'] == 'coat' else g for g in remi['outfit']]))
     # ========================================================== Alexandria
     alex = person('alexandria', 'Queen Alexandria', 0.0, 0.62, 'fair', lod='hero', muscle=0.4, weight=0.45, height=0.55,
                   details=_merge(VERDOR_FACE, {'nose/nose-scale-vert': 0.1, 'chin/chin-height': 0.1, 'cheek/l-cheek-bones': 0.35, 'cheek/r-cheek-bones': 0.32,
@@ -535,8 +537,11 @@ def crowd():
          ('kirtle', 'plumbrown'), ('coif+veil', None), 'basket_hip', dict(layer='shawl', shawl='greybrown', foot='shoes', ex='smile', pp={'flex': 0.1, 'head_pitch': 0.05})),
         ('crowd04', 1.0, 0.36, 'olive', (0.5, 0.4, 0.62), {'style': 'crop', 'color': HAIR['black'], 'length': (0.02, 0.06), 'curl': 0.6, 'clump': 0.6},
          ('tunic', 'straw'), None, 'cheer2', dict(belt='cord', foot='shoes', ex='laugh', layer='rolled')),
+        # (X4-06's farmer) a light linen kerchief tied higher at the back, black hair showing at the nape and
+        # brow: a close brick-red kerchief on brown skin, hair all under it, read as a bald head at draft
         ('crowd05', 0.0, 0.55, 'brown', (0.45, 0.6, 0.48), {'style': 'pulled', 'color': HAIR['black'], 'count': 4000, 'loft': 0.003},
-         ('kirtle', 'ochre'), ('kerchief', 'brick'), 'basket_front', dict(layer='apron', foot='shoes', ex='smile', pp={'head_yaw': 0.3})),
+         ('kirtle', 'ochre'), ('kerchief', 'oatmeal'), 'basket_front', dict(layer='apron', foot='shoes', ex='smile', pp={'head_yaw': 0.3},
+                                                                           kerchief={'back': 0.03, 'front': 0.05})),
         ('crowd06', 1.0, 0.78, 'light', (0.35, 0.45, 0.42), {'style': 'none', 'color': HAIR['white'], 'beard': {'count': 7000, 'length': (0.012, 0.035), 'curl': 0.4, 'color': HAIR['white'], 'clump': 0.7}},
          ('tunic', 'greybrown'), ('hood', 'russet'), 'stand', dict(belt='cord', foot='shoes', ex='smile', hem=0.32, pp={'flex': 0.22, 'head_pitch': -0.12, 'elbow': 0.4})),
         ('crowd07', 0.0, 0.3, 'olive', (0.45, 0.4, 0.45), {'style': 'braid', 'color': HAIR['darkbrown'], 'length': 0.4, 'hang': 'R', 'part': 0.004},
@@ -599,7 +604,7 @@ def crowd():
             if k == 'coif+veil':
                 out_ += [G_coif(), G_veil(length=0.45)]
             elif k == 'kerchief':
-                out_.append(G_kerchief(K[c], tail=False))
+                out_.append(G_kerchief(K[c], tail=False, **x.get('kerchief', {})))
             elif k == 'cap':
                 out_.append(G_cap(K[c]))
             elif k == 'hood':
