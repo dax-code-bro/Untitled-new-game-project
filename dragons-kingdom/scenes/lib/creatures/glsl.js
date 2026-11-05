@@ -245,11 +245,18 @@ export const GLSL_VOR3 = /* glsl */`
 // rear rim stands above the front of the next one (imbricate overlap).
 // p: rest position / cell size. Returns height (cell units), its gradient d/dp,
 // cavity, crown (raised, rubbed), two per-scale randoms.
-struct DKV3 { float h; vec3 g; float cav; float crown; float id; float id2; float e; float up; float q; float ew; };
+struct DKV3 { float h; vec3 g; float cav; float crown; float id; float id2; float e; float up; float q; float ew; vec3 m; float d1; };
 // (r2 s6) e: a random per cell EDGE (symmetric in the two cells: the same on both sides of a seam),
 // up: +1 / -1 which of the two cells lies on top where that edge is an overlap (antisymmetric)
 float dkKeel3 = 0.0;   // keel height along each scale (set by the caller)
 float dkVorK = 9.0;    // (r2 s8) smooth-min sharpness of the border distance: lower = rounder plate outlines (corners fill in)
+// (r2 s10) sliver suppression: the surface cuts a 3D Voronoi cell whose point lies well off the surface
+// in a thin cap or sliver (q ~ 1 all over it: a flat, straight-edged "shard" of its own value). Stretching
+// the metric along the surface normal (dkVorN, unit, set by the caller; dkVorKn 0 = off = unchanged) makes
+// those off-surface points lose their territory to the cells around them. N varies smoothly over the
+// surface, so the pattern stays continuous.
+vec3 dkVorN = vec3(0.0, 1.0, 0.0);
+float dkVorKn = 0.0;
 // shape: q = d1 / F2s, where F2s is a SMOOTH minimum of the distances to all the other
 // cell points (no creases inside a scale where the second-nearest neighbour changes):
 // 0 at the scale's centre, ~1 on its border -> height 1 - q^k: k = 2 a rounded bead,
@@ -264,10 +271,10 @@ DKV3 dkVor3(vec3 p, vec3 T, float an, float tilt, float k, float cavW, float jit
     vec3 g = vec3(float(i), float(j), float(kk));
     vec3 o = 0.5 + (dkH33(ip + g) - 0.5) * jit;
     vec3 r = g + o - fp;
-    vec3 rm = r + ka * dot(r, T) * T;
+    vec3 rm = r + ka * dot(r, T) * T + dkVorKn * dot(r, dkVorN) * dkVorN;
     float l = sqrt(dot(rm, rm)) + 1e-5;
     float w = exp(-K * l);
-    vec3 gl = -(rm + ka * dot(rm, T) * T) / l;          // grad of l w.r.t. p
+    vec3 gl = -(rm + ka * dot(rm, T) * T + dkVorKn * dot(rm, dkVorN) * dkVorN) / l;          // grad of l w.r.t. p
     ws += w; wg += w * gl;
     if (l < d1) { d3 = d2; d2 = d1; c2 = c1; d1 = l; m1 = rm; c1 = ip + g; w1 = w; g1w = gl; }
     else if (l < d2) { d3 = d2; d2 = l; c2 = ip + g; }
@@ -310,6 +317,8 @@ DKV3 dkVor3(vec3 p, vec3 T, float an, float tilt, float k, float cavW, float jit
   // a straight line from a plate corner inward) e/up jump; callers fade their edge effects to a plain
   // seam there so a plate's rim never splits into hard-edged triangular facets
   V.ew = smoothstep(0.0, 0.16, d3 - d2);
+  // (r2 s10) offset to the own cell point (in the cell metric, cell units) and its length
+  V.m = m1; V.d1 = d1;
   return V;
 }
 // sparse enlarged tubercles (osteoderms) on a coarser lattice: a raised, keeled dome in

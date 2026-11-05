@@ -374,12 +374,16 @@ void dkSkin(inout vec3 albedo) {
   fsub = mix(fsub, 0.42, uHeadLk2.z * isHead * (1.0 - peri));
   float gA = L * exp2(l0), gC = gA * 2.0;
   float fwr = length(fwidth(vRest));
-  float vh = 0.0, vcav = 0.0, vcr = 0.0, vid = 0.0, ve = 0.5, vup = 0.0, vq = 0.0, vew = 1.0; vec3 vg = vec3(0.0);
+  float vh = 0.0, vcav = 0.0, vcr = 0.0, vid = 0.0, ve = 0.5, vup = 0.0, vq = 0.0, vew = 1.0, vd1 = 0.0; vec3 vg = vec3(0.0), vm = vec3(0.0);
   float gDet = 1.0;
   float tiltJ = uSkin3.z + uHeadLk.w * isHead;
   // (r2 s8) X3-15 "broken slate": on the head plates (headVar, Charcoal) the border distance is a softer
   // smooth-min, so a plate's corners round off and its outline reads as a domed scute, not a cut chip
   dkVorK = mix(9.0, 5.5, clamp(uLook3.w * 2.2, 0.0, 1.0) * isHead);
+  // (r2 s10) X3-15 "shards" were sliver sections of cells whose point lies well off the head surface
+  // (debug tint |m.N| confirmed it): a normal-stretched metric hands those to their neighbours
+  dkVorN = normalize(vRestN);
+  dkVorKn = clamp(uLook3.w * 2.2, 0.0, 1.0) * isHead;
   if (chainM < 0.5) {
     // the pattern of a level depends only on its size (offset (n) for size 2^n), so the
     // pattern is continuous where the octave index changes
@@ -388,10 +392,10 @@ void dkSkin(inout vec3 albedo) {
     if (C.id2 >= fsub) {
       DKV3 F = dkVor3(vRest / gA + l0 * 7.31, Tr, an, tilt, dome, groove, uScl2.x);
       float dF = 1.0 - smoothstep(0.35, 0.9, fwr / gA);
-      vh = F.h * gA * dF; vg = (F.g + tiltJ * (vec3(F.id, F.id2, fract(F.id * 7.13 + F.id2)) - 0.5) * 2.2) * dF; vcav = F.cav * dF; vcr = F.crown * dF; vid = F.id; ve = F.e; vup = F.up; vq = F.q * dF; vew = F.ew;
+      vh = F.h * gA * dF; vg = (F.g + tiltJ * (vec3(F.id, F.id2, fract(F.id * 7.13 + F.id2)) - 0.5) * 2.2) * dF; vcav = F.cav * dF; vcr = F.crown * dF; vid = F.id; ve = F.e; vup = F.up; vq = F.q * dF; vew = F.ew; vm = F.m; vd1 = F.d1;
       gDet = dF;
     } else {
-      vh = C.h * gC * dC; vg = (C.g + tiltJ * (vec3(C.id, C.id2, fract(C.id * 7.13 + C.id2)) - 0.5) * 2.2) * dC; vcav = C.cav * dC; vcr = C.crown * dC; vid = C.id; ve = C.e; vup = C.up; vq = C.q * dC; vew = C.ew;
+      vh = C.h * gC * dC; vg = (C.g + tiltJ * (vec3(C.id, C.id2, fract(C.id * 7.13 + C.id2)) - 0.5) * 2.2) * dC; vcav = C.cav * dC; vcr = C.crown * dC; vid = C.id; ve = C.e; vup = C.up; vq = C.q * dC; vew = C.ew; vm = C.m; vd1 = C.d1;
       gDet = dC;
     }
     // scattered enlarged tubercles on the upper flanks, the neck and the outer limbs

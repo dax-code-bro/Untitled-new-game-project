@@ -4,6 +4,48 @@ Owner paths: `scenes/lib/creatures/`, `scenes/lookdev/creatures-*.js` (+ creatur
 README.md in this folder is the full description of how the models are built; this file is
 only the state of the work.
 
+## REALISM ROUND 2 - session 10 (2026-11-05, short budgeted session)
+Stills (draft) under `scratchpad/eng1/creatures/r2s10/`: before = `../r2s9/v1/X3-15_040.png` (session 9 committed code),
+after = `v1/X3-15_040.png`, crop sheet `x315_before_v1.png` (crop x620-940 y80-320 x2, before | after);
+debug tints `dbg/` + `dbg_sheet.png` (R = |m.N| cell point off the surface, G = q, B = d1 > 0.55; old metric) and
+`dbg2/` + `dbg2_sheet.png` (R = |m.N| in the new metric, G = FINE level, B = q); side views of Charcoal `walk` t 1.2
+`walk/f1.png` (left flank, view 0) + `walk/f2.png` (right flank, view 1), `walk_pair.png`, `walk_crops_x315full.png`.
+Done (code):
+- CONFIRMED (dbg): the X3-15 shards in the lower right were sliver/cap sections of 3D Voronoi cells whose point
+  lies well off the head surface (|m.N| > ~0.45 cell; q ~ 1 over the whole section -> flat, straight-edged, own value).
+- glsl.js dkVor3: new globals `dkVorN` (unit normal, set by the caller) and `dkVorKn` (default 0 = unchanged for every
+  other caller): the metric is stretched along the normal (`rm += dkVorKn * (r.N) N`, gradient updated), so off-surface
+  cell points lose their territory to their neighbours; continuous because N is smooth. DKV3 gets `m` (offset to the
+  own point, in the metric) and `d1` (for debug / later use) - additive fields only.
+- materials.js: `dkVorN = normalize(vRestN); dkVorKn = clamp(headVar * 2.2) * isHead` (Charcoal head only, kn 1 = 2x).
+- creatures-dev.js: view index `Math.round(t)` -> `Math.floor(t + 1e-6)` (as the header documents: view i for
+  t in [i, i+1)). That was the session-9 "both views the same" bug (t 0.5 and 1.5 both rounded to view 1); integer
+  t (the documented --fps 1 workflow) picks the same view as before. creatures-dev.json restored (hatchling).
+RESULTS (looked at): X3-15 - the lower-right/lower-left shard triangles are gone (plates meet in ordinary seams);
+plates a bit larger. dbg2 shows only a few tiny slivers left. REMAINING shards (upper middle of the crop) are a
+DIFFERENT cause: coarse/fine LEVEL CLIPPING - where a coarse cell that splits (C.id2 >= fsub) meets one that does
+not, the fine plates are cut by the straight coarse Voronoi face (fine fragments without their rim) and the big
+coarse plate keeps a long straight edge; with headDome 12 + per-plate value it reads as a big angular slab.
+Walk side views (real side views now, lit from behind-ish): wing folded along the forearm, wrist down in front,
+hind knee CLEAN (no membrane stretching or spike at the knee). Two other tells: (a) a long thin flat dark "blade"
+running back from the belly toward the tail base on both sides (folded finger tips / trailing edge sticking out
+past the body silhouette); (b) on the RIGHT flank a pale grey angular membrane piece (bow-tie shape) poking out at
+the shoulder/elbow - membrane through the body or a fold flap catching the light; smaller on the left.
+- npm test: 49 tests, 48 pass, 0 fail, 1 skipped. Style frames / creatures lookdev NOT re-rendered (budget).
+NEXT (exact):
+1. X3-15 level clipping: decide the split per FINE cell, not per pixel: in materials.js (head, headVar on) always
+   evaluate F, take its cell point (add `V.cp = ip + g + o` to dkVor3, lattice coords), map it into the coarse lattice
+   (`(F.cp - l0 * 7.31) * gA / gC + (l0 + 1.0) * 7.31`), query the coarse cell there (a nearest-point-only loop is
+   enough) and show F iff that coarse cell splits OR the pixel's coarse cell splits (fine plates then stay whole; the
+   non-split coarse plate is cut along fine-cell edges, reads as overlapping them). Check with the dbg2 tint again.
+2. Walk tells: creatures-dev.json `{ name: charcoal, quality: standard, face: -60, pose: { name: walk, t: 1.2 } }`,
+   views cam [+-0.95, 0.14, 0.05] target [0, 0.07, 0.05] fov 34; render with
+   `render.mjs scenes/lookdev/creatures-dev.js --still --time 0 / 1` (NOT --fps/--seconds: that writes an mp4).
+   Find (a) the trailing finger-tip blade (wing.js fold: tip of the last fingers past the hip?) and (b) the right
+   flank grey membrane flap at the elbow (memFold / drape at the folded elbow).
+3. Re-render style frames + creatures lookdev at draft (not done since session 3).
+4. Injured-rider level bar still; X3-02 grey; session 2 items 4-5 (Leaf/Starlight memFoldOcc, contacts, gait).
+
 ## REALISM ROUND 2 - session 9 (2026-11-04, short budgeted session)
 Stills (draft) under `scratchpad/eng1/creatures/r2s9/`: `before/X3-15_040.png`, `v1/X3-15_040.png` (= committed code),
 crop sheets (crop x620-940 y80-320 x2, before | after) `x315_before_v1.png`; `v2`/`v3`/`v4` = rejected experiments

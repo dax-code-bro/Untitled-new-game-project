@@ -94,7 +94,7 @@ export async function setup(ctx) {
 
 export function update(t, ctx) {
   const views = cfg.views;
-  const vi = Math.max(0, Math.min(views.length - 1, Math.round(t)));
+  const vi = Math.max(0, Math.min(views.length - 1, Math.floor(t + 1e-6)));   // (r2 s10) floor, as documented: round sent t 0.5 and 1.5 both to view 1
   const v = views[vi];
   C.forEach(({ c, cc }, i) => {
     const po = (v.poses && v.poses[i]) || cc.pose || { name: 'stand' };
