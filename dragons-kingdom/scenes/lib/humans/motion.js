@@ -1318,6 +1318,63 @@ export function gestureNow(ch, name, o = {}, w = 1, t = 0, dt = 0) {
   return res;
 }
 
+/**
+ * The 'lean' posture (weight on one leg, resting on a long-handled tool) on a character already posed
+ * by someone else - the shot director's poseHuman (root, standing legs, its own spine bow): the same
+ * posture applyBody gives a performer's P.posture('lean'), pure in t. w 0..1 (smoothed like the
+ * performer's envelope). o: { stance: 'R' | 'L', bowDone: radians of forward spine bend already on
+ * spine01-04 (the director's lean bow) - the spine is brought to the performer's 0.12 rad + breath }.
+ * Pelvis 4 cm (x h/1.75) over the stance foot, 1.2 cm down, 2 cm back, free hip dropped 0.07 rad,
+ * tipped 0.05 rad; the feet stay where they stand, the free foot 11 cm forward / 3.5 cm out, toe out;
+ * chest back over the stance hip; head up 0.16 rad. Call before gestureNow(ch, 'tool', ...).
+ */
+export function leanNow(ch, w = 1, t = 0, o = {}) {
+  const k = smooth(clamp01(w));
+  const rootB = ch.bone('root');
+  if (k <= 0.001 || !rootB || !ch.bone('foot.L') || !ch.bone('foot.R')) return null;
+  const S = { ch, rig: bodyRig(ch), seed: hashStr(ch.id + ':body:') };
+  const rig = S.rig, sc = rig.height / 1.75;
+  ch.root.updateMatrixWorld(true);
+  const rq = ch.root.getWorldQuaternion(new THREE.Quaternion());
+  const fwd = new THREE.Vector3(0, 0, 1).applyQuaternion(rq).setY(0).normalize();
+  const left = new THREE.Vector3(fwd.z, 0, -fwd.x);
+  const yaw0 = Math.atan2(fwd.x, fwd.z);
+  const sg = o.stance === 'L' ? 1 : -1;                // +left toward the stance side
+  // feet: where they stand now; the free one a little forward and out, toe out
+  const feet = {};
+  for (const sd of ['L', 'R']) {
+    const F = { pos: wpos(ch.bone(`foot.${sd}`), new THREE.Vector3()), pitch: 0, yaw: yaw0 + rig[`footYaw${sd}`], toeFlat: 1, stance: true, P: null, q: 0 };
+    if ((sd === 'L' ? 1 : -1) !== sg) {
+      F.pos.addScaledVector(fwd, 0.11 * sc * k).addScaledVector(left, -sg * 0.035 * k);
+      F.yaw += -sg * 0.12 * k;
+    }
+    feet[sd] = F;
+  }
+  // pelvis over the stance foot (world space: the root bone's parent may be turned)
+  const pw = wpos(rootB, new THREE.Vector3()).addScaledVector(left, sg * 0.04 * sc * k).addScaledVector(fwd, -0.02 * k);
+  pw.y -= 0.012 * k;
+  rootB.parent.updateMatrixWorld(true);
+  rootB.position.copy(rootB.parent.worldToLocal(pw));
+  ch.root.updateMatrixWorld(true);
+  rotateWorld(rootB, _q.setFromAxisAngle(left, 0.05 * k));
+  rotateWorld(rootB, _q.setFromAxisAngle(fwd, sg * 0.07 * k));       // the free hip drops
+  ch.root.updateMatrixWorld(true);
+  reachDrop(S, feet, gaitParams(0.45, rig.height));
+  solveLegs(S, feet);
+  ch.root.updateMatrixWorld(true);
+  // spine: to the performer's bend (the director's own bow taken back), the chest back over the stance hip
+  const bend = k * (0.12 + 0.012 * Math.sin(2 * Math.PI * 0.21 * t + 1.3)) - (o.bowDone || 0);
+  const latBend = -sg * 0.05 * k;
+  for (const [n, wt] of [['spine04', 0.25], ['spine03', 0.3], ['spine02', 0.3], ['spine01', 0.15]]) {
+    const b = ch.bone(n); if (!b) continue;
+    rotateWorld(b, _q.setFromAxisAngle(left, bend * wt));
+    rotateWorld(b, _q.setFromAxisAngle(fwd, latBend * wt));
+    ch.root.updateMatrixWorld(true);
+  }
+  for (const [n, wt] of [['neck01', 0.5], ['head', 0.5]]) { const b = ch.bone(n); if (b) { rotateWorld(b, _q.setFromAxisAngle(left, -0.16 * k * wt)); ch.root.updateMatrixWorld(true); } }
+  return { feet, k };
+}
+
 function solveArm(ch, sd, tg, w) {
   if (!tg.hand || w <= 0.001) return;
   const pole = tg.pole || wpos(ch.bone(`upperarm01.${sd}`), new THREE.Vector3()).add(new THREE.Vector3(0, -0.5, 0));

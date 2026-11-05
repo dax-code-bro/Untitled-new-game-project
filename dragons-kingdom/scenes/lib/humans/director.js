@@ -16,7 +16,7 @@
 // built-ins. The planted-foot gait needs the blocking as a function of time - see README.md "Director".
 import { loadPerformanceData, directorFace } from './perform.js';
 import * as THREE from 'three';
-import { gestureNow, legsNow, createBody } from './motion.js';
+import { gestureNow, legsNow, createBody, leanNow } from './motion.js';
 
 let enabled = true;
 let registered = null;
@@ -66,7 +66,8 @@ export function registerDirectorHooks(opts = {}) {
  *   support    { side, at | grip }             handsTo    { at | to, spread, palm } both hands
  *   raiseHand  { side } a small raised hand (stop / wait)
  *   gesture    { side, dur } a talking hand    shove      { side | 'both', at | to, dur } a push
- *   gesture    { name: 'tool', prop: 'hoe' | 'spade' | 'rake' | 'staff', stance } both hands on a tool's top
+ *   gesture    { name: 'tool', prop: 'hoe' | 'spade' | 'rake' | 'staff', stance, posture } both hands on a tool's
+ *              top AND the performer's whole 'lean' posture (motion.js leanNow; posture: false = hands + prop only)
  * Targets given as names ('remi.head', a mark) are resolved by the stage's env.point at t.
  */
 const pt = (env, at, t) => {
@@ -104,7 +105,19 @@ export const OVERLAYS = {
   raiseHand: overlayHook('raiseHand', (o) => sides(o).map((sd) => ['raiseHand', { ...o, side: sd }])),
   // (o.name 'tool': both hands stacked on a long-handled tool - motion.js GESTURES.tool { prop: 'hoe', stance,
   // length, ahead, tilt }; pair it with the 'lean' posture act for the bend)
-  gesture: overlayHook('gesture', (o) => (o.name === 'tool' ? [['tool', { ...o }]] : sides(o).map((sd) => ['explain', { beat: o.dur ?? 1.0, ...o, side: sd }]))),
+  // The tool gesture also gives the body the performer's whole 'lean' posture (motion.js leanNow: pelvis
+  // over the stance foot, free foot forward and out, free hip down, spine to the performer's bend - the
+  // blocking's own lean bow taken back -, head up); o.posture false = the hands and prop alone.
+  gesture: (ch, st, t, env) => {
+    for (const ov of st?.overlays || []) {
+      if (ov.name !== 'gesture' || !(ov.w > 0.001)) continue;
+      const o = ov.o || {};
+      if (o.name === 'tool') {
+        if (o.posture !== false) leanOnce(ch, ov.w, t, { stance: o.stance, bowDone: (st.posture?.lean || 0) * 0.5 * 0.55 });
+        gestureNow(ch, 'tool', { ...o }, ov.w, t, ov.dt ?? 0);
+      } else for (const sd of sides(o)) gestureNow(ch, 'explain', { beat: o.dur ?? 1.0, ...o, side: sd }, ov.w, t, ov.dt ?? 0);
+    }
+  },
   shove: overlayHook('shove', (o, t, env) => {
     const at = pt(env, o.at ?? o.to, t);
     return sides(o, 'both').map((sd) => ['shove', { ...o, side: sd, at: at ? (at.isVector3 ? at.clone() : new THREE.Vector3(...at)) : null }]);
@@ -112,6 +125,15 @@ export const OVERLAYS = {
   // (not 'carry': the director carries things - linen, a bowl - with forearms forward; the performance
   // carry is a seat for a child, used through perform.js carry())
 };
+// poseHuman calls the 'gesture' hook once per gesture overlay (each call poses them all): the lean moves
+// the pelvis relatively, so it is applied once per pose - skipped while the root bone still holds the
+// pose it left (ch.update() resets the bones every frame, so a new frame always differs)
+function leanOnce(ch, w, t, o) {
+  const rb = ch.bone('root');
+  const m = ch._leanMark;
+  if (rb && m && m.p.equals(rb.position) && m.q.equals(rb.quaternion)) return;
+  if (leanNow(ch, w, t, o) && rb) ch._leanMark = { p: rb.position.clone(), q: rb.quaternion.clone() };
+}
 function atPoint(env, o, t) {
   const at = pt(env, o.at ?? o.to, t);
   if (!at) return null;

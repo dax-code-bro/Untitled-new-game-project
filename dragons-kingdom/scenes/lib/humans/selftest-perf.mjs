@@ -611,6 +611,33 @@ else {
     const okLean = m.lo > 2 && m.lo < 4.5 && m.loDy < 0 && m.loDy > -7 && m.hiDy > 0 && m.hiDy < 5 && m.hiAx < 5 && m.pelvisX < -1.5 && m.chest > 18 && m3.wr.distanceTo(m.wr) < 1e-6 && m2.wr.distanceTo(m.wr) < 0.02;
     ok(okLean, `lean on a tool: lower palm ${m.lo} cm from the shaft, ${m.loDy} cm below its end; upper palm ${m.hiDy} cm over it (${m.hiAx} cm off the axis); pelvis ${m.pelvisX} cm toward the stance foot; shaft ${m.chest} cm from spine02; wrist drift over 2.3 s ${(m2.wr.distanceTo(m.wr) * 100).toFixed(2)} cm`);
   }
+  // the same lean through the shot director (X4-06's acts: the blocking's 'lean' + the 'tool' gesture):
+  // the whole posture, not the bend alone - pelvis over the stance foot (as the performer's, within 1 cm),
+  // the free (left) ankle forward, the stance ankle where it stood, the spine bend near the performer's;
+  // pure in t (the same t twice -> the same pose)
+  {
+    const actions = await import('../director/actions.js');
+    const { actorState } = await import('../director/blocking.js');
+    await (await import('./director.js')).registerDirectorHooks().catch(() => []);
+    const { OVERLAYS } = await import('./director.js');
+    actions.registerHumanAction('gesture', OVERLAYS.gesture);
+    const ch = load('crowd03');
+    const env = { mark: () => null, point: () => null, ground: () => 0 };
+    const acts = [[0, 'lean', { to: 0.6, dur: 0.01 }], [0, 'gesture', { name: 'tool', prop: 'hoe', stance: 'R' }]];
+    const W = (n) => ch.root.worldToLocal(ch.bone(n).getWorldPosition(new THREE.Vector3()));      // in the body's own frame (+z forward)
+    const pose = (t) => { const st = actorState({ at: [0, 0], face: 0, acts }, t, env); actions.poseHuman(ch, st, t, env, { shot: 'X4-test' }); ch.root.updateMatrixWorld(true);
+      return { pel: W('root'), aL: W('foot.L'), aR: W('foot.R'), sp: W('neck01'), wr: W('wrist.R') }; };
+    const rest = (() => { ch.update(0, {}); ch.root.position.set(0, 0, 0); ch.root.rotation.set(0, 0, 0); ch.root.updateMatrixWorld(true); return { aL: W('foot.L'), aR: W('foot.R'), pel: W('root') }; })();
+    const a = pose(4), b = pose(4);
+    const { createBody } = await import('./motion.js');
+    const ch2 = load('crowd03'); const body = createBody(ch2); body.place(0, 0, 0);
+    body.posture('lean', -5, { in: 0.1, hold: 99, stance: 'R', tool: false }); body.apply(4); ch2.root.updateMatrixWorld(true);
+    const perfPel = ch2.bone('root').getWorldPosition(new THREE.Vector3()), perfNeck = ch2.bone('neck01').getWorldPosition(new THREE.Vector3());
+    const m = { pelX: +((a.pel.x - rest.pel.x) * 100).toFixed(1), perfX: +((perfPel.x - rest.pel.x) * 100).toFixed(1), freeFwd: +((a.aL.z - rest.aL.z) * 100).toFixed(1),
+      stance: +(a.aR.distanceTo(rest.aR) * 100).toFixed(1), neckZ: +((a.sp.z - rest.pel.z) * 100).toFixed(1), perfNeckZ: +((perfNeck.z - rest.pel.z) * 100).toFixed(1), pure: a.wr.distanceTo(b.wr) };
+    ok(m.pelX < -2.5 && Math.abs(m.pelX - m.perfX) < 1 && m.freeFwd > 7 && m.stance < 1 && Math.abs(m.neckZ - m.perfNeckZ) < 3 && m.pure < 1e-6,
+      `director lean (X4-06 acts): pelvis ${m.pelX} cm to the stance side (performer ${m.perfX}); free ankle ${m.freeFwd} cm forward; stance ankle moved ${m.stance} cm; neck ${m.neckZ} cm ahead of the hips (performer ${m.perfNeckZ}); same t twice ${m.pure.toExponential(1)} m`);
+  }
   // worn props never follow a hand: no belt / buckle / purse vertex keeps an arm or hand weight
   {
     let bad = 0;

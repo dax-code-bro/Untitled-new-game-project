@@ -1128,3 +1128,44 @@ NEXT (look, in order):
 2. 2i NEXT 1 still open: rebuild abby_ride_injured, fall_ride, scout_ride with the sleeve/skirt pools.
 3. Fingertip pad bulge (postfix.py build-time tip fattening) - not started (budget).
 4. 2i NEXT 2 (1C-16 coat skirt flat panel) and 2h NEXT 3.
+
+
+## perf s12 (2026-11-05, short session) - X4-06: the director's lean gets the whole posture; kirtle back
+Done (motion.js, director.js, selftest-perf.mjs):
+1. motion.js leanNow(ch, w, t, { stance, bowDone }) (exported, pure in t): the performer's 'lean' posture
+   (applyBody's numbers) on a body someone else already posed - pelvis 4 cm (x h/1.75) over the stance
+   foot, 1.2 cm down, 2 cm back, tipped 0.05 rad, free hip down 0.07 rad (world-space moves: the root bone's
+   parent may be turned); feet kept where they stand, the free foot 11 cm forward / 3.5 cm out, toe out
+   0.12 rad (reachDrop + solveLegs as the performer); spine brought to the performer's 0.12 rad + breath
+   (bowDone = the bend already applied is taken back), chest back over the stance hip 0.05, head up 0.16.
+2. humans/director.js: the 'gesture' overlay with name 'tool' now calls leanNow (weight = the overlay's
+   envelope, bowDone = the blocking's lean x 0.5 x 0.55 - actions.js's own lean bow) before the hands;
+   o.posture false = hands + prop only (old behaviour). poseHuman calls the gesture hook once per gesture
+   overlay, so leanOnce() applies the (relative) pelvis move once per pose (skips while the root bone still
+   holds the pose it left; ch.update() resets it each frame). API unchanged: X4-06's acts as they are
+   ([0,'lean',{to:0.6,dur:0.01}], [0,'gesture',{name:'tool',prop:'hoe',stance:'R'}], [0.5,'look',...])
+   now give the weight-on-one-leg posture. NO director change needed (the spec comment "Director 'lean'
+   bends only the spine; one-leg weight needs the performer" is out of date - director may delete it).
+3. selftest 'director lean (X4-06 acts)' (crowd03 through poseHuman): pelvis -3.5 cm to the stance side
+   (performer -3.9), free ankle +9.7 cm forward, stance ankle 0 cm moved, neck 16.5 cm ahead of the hips
+   (performer 16.4), same t twice identical.
+Kirtle back (LOOK 2j KNOWN): probe scratch eng1/perf12 -> humans/cache/_probe_back.mjs (crowd05; GAR=apron):
+   body verts on the back at / through the kirtle (gap < 2 mm), 40-56 cm over the pelvis bone (shoulder
+   blades): drape (idle, no posture) 40 / 185, max 1.4 cm; old director pose 46; bow only 47; hands only 37;
+   new lean 47 - SAME max 1.4 cm in every pose: the spine / shoulder-blade print is the BUILD (kirtle drape
+   too tight on the upper back), not the pose. No open kirtle edges on the lower back. The dark spot at the
+   small of the back is GONE in the new pose (draft): it was a fold of the old bend (0.165 rad spine bow,
+   no lateral shift) - the new pose has 0.12 rad + the hip shift.
+   REQUEST humans-look: crowd05 kirtle back - the body (shoulder blades, spine ridge) sits within 2 mm of /
+   up to 1.4 cm through the kirtle already in the DRAPE pose, 40-56 cm above the root bone; more ease on
+   the back panel / a hide_under ring over the upper back (body verts 40-56 cm over the pelvis), then check
+   X4-06@0.6 draft.
+Images (scratch eng1/perf12/): before/X4-06_043.png, after/X4-06_043.png, X4-06_043_before_after.png,
+   X4-06_farmer_before_after.png (crop x3, left before). RESULT: from behind at 50 mm she now stands on her
+   right leg - the right hip juts out, the skirt falls from it in a long diagonal fold, the shoulders sit
+   back over that hip: a resting worker, not a stiff upright figure. Back print unchanged (build).
+KNOWN: at her left waist (screen left, from behind) a brown patch shows under the arm - her bare left
+   forearm/hand on the hoe top, now uncovered by the torso's shift; reads as an arm at draft but check at
+   final. The hoe shaft reads only as a thin pale line from this angle.
+Checked: selftest-perf all passed; npm test 48 pass / 0 fail / 1 skipped.
+NEXT (perf, in order): s11 NEXT 1 (1C-16 pinky still), 3 (REQUEST props: real hoe), 4 (remi_ride thumb).
