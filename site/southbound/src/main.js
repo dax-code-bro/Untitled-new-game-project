@@ -249,7 +249,10 @@ async function createGame(progress) {
   const baseRatio = () => {
     const dpr = window.devicePixelRatio || 1;
     if (settings.resolution === 'native') return Math.min(dpr, q.maxPixelRatio);
-    return clamp(+settings.resolution / innerHeight, 0.5, 4);
+    // a chosen resolution is a ceiling, never more pixels than the screen has (picking "4K" on a
+    // 1080p screen, or in a small window, drew 4-16x the pixels on every preset: ~2 FPS);
+    // only Cinematic supersamples on purpose
+    return clamp(+settings.resolution / innerHeight, 0.5, q.cine ? Math.max(dpr, q.maxPixelRatio) : dpr);
   };
   const fpState = { boost: false };
   const applySize = () => {
@@ -1059,12 +1062,17 @@ async function createGame(progress) {
     guard.low = 0; guard.next = now + 5000;
     if (S.fps < 8 && guard.level < 3) { // a slide show: take everything off at once
       water.setReflections?.(false); CAR_VIS_R *= 0.65;
+      if (baseRatio() > 1.01) { settings.resolution = 'native'; q.maxPixelRatio = Math.min(q.maxPixelRatio, 1); saveSettings(settings); applySize(); }
       if (post) { post = null; renderer.toneMapping = THREE.CustomToneMapping; }
       renderer.shadowMap.enabled = false;
       guard.level = 3;
     }
     guard.level++;
-    if (guard.level === 1) { water.setReflections?.(false); CAR_VIS_R *= 0.65; }
+    if (guard.level === 1) {
+      water.setReflections?.(false); CAR_VIS_R *= 0.65;
+      // more pixels than the screen (or a high-DPI screen at full density): back to one pixel per pixel
+      if (baseRatio() > 1.01) { settings.resolution = 'native'; q.maxPixelRatio = Math.min(q.maxPixelRatio, 1); saveSettings(settings); applySize(); }
+    }
     else if (guard.level === 2 && post) { post = null; renderer.toneMapping = THREE.CustomToneMapping; }
     else if (guard.level === 3 || (guard.level === 2 && !post)) { renderer.shadowMap.enabled = false; if (guard.level === 2) guard.level = 3; }
     else if (guard.level >= 4) { if (veg.cover?.grass) { veg.cover.grass.visible = false; veg.cover.flowers.visible = false; } dynScale = Math.min(dynScale, 0.6); applySize(); }
