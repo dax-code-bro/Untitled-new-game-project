@@ -85,7 +85,7 @@ export async function build(ctx, { spec } = {}) {
     const boulders = 2.2 * Math.max(0, N.fbm(x * 0.08, z * 0.08, 3) + 0.1) * (1 - smooth(0, 30, off));
     const ripples = 0.25 * N.fbm(x * 0.06 + 3, z * 0.06, 3) + 1.4 * N.fbm(x * 0.006, z * 0.006 - 2, 3);
     const open = Math.max(shelf + boulders + ripples - 0.5, -70);
-    const basin = Math.max(-3 - 0.04 * off, -14) + 0.3 * ripples;
+    const basin = Math.max(-2 - 0.25 * off, -16) + 0.3 * ripples;   // s21: a dredged stone harbour, deep a few m off the quay
     return open + (basin - open) * inBay(z);
   };
   const H = (x, z) => {
@@ -103,7 +103,7 @@ export async function build(ctx, { spec } = {}) {
   sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.3;
   scene.add(sun, sun.target);
 
-  const ocean = createOcean(ctx, { windSpeed: 6, windDirection: 200, swell: 0.45, choppiness: 1.1, seed: 9, depth: 40, mipFilter: 'trilinear', roughness: 0.05, turbidity: 0.05, foamThreshold: 0.72, shoreFoam: 0.8, shoreFoamWidth: 1.4, surf: 0.6 });
+  const ocean = createOcean(ctx, { windSpeed: 6, windDirection: 200, swell: 0.45, choppiness: 1.1, seed: 9, depth: 40, mipFilter: 'trilinear', roughness: 0.05, turbidity: 0.08, absorption: [0.55, 0.2, 0.24], foamThreshold: 0.72, shoreFoam: 0.8, shoreFoamWidth: 1.4, surf: 0.6 });
   scene.add(ocean.mesh);
 
   const land = heightfield({
@@ -114,14 +114,15 @@ export async function build(ctx, { spec } = {}) {
       const steep = smooth(0.4, 0.75, 1 - n[1]);
       const under = 1 - smooth(-1.2, 1.2, y);
       const turf = (1 - steep) * smooth(2, 8, y);
-      const weed = under * smooth(0.05, 0.35, N.fbm(x * 0.012 + 7, z * 0.012, 3)) * 0.8;
+      const bay = inBay(z) * smooth(-1, -4, y);                    // s21: the basin floor is silt / weed, not pale sand
+      const weed = under * Math.max(smooth(0.05, 0.35, N.fbm(x * 0.012 + 7, z * 0.012, 3)) * 0.8, 0.95 * bay);
       const sand = (1 - steep) * under * (1 - weed);
       const scree = (1 - steep) * (1 - under) * (1 - turf);
       return [Math.max(steep, scree * 0.5, weed), turf, sand, scree * 0.5];
     },
     color: (x, z) => {
       const p = N.fbm(x * 0.012 + 4, z * 0.012, 3), q = N.fbm(x * 0.05, z * 0.05 + 7, 2);
-      const v = 0.75 + 0.5 * p + 0.15 * q;
+      const v = (0.75 + 0.5 * p + 0.15 * q) * (1 - 0.6 * inBay(z) * smooth(1, 12, x - coastX(z)));   // s21: dark basin floor
       return [v * (1.02 + 0.05 * q), v, v * 0.96];
     },
   });
@@ -147,6 +148,8 @@ export async function build(ctx, { spec } = {}) {
       const s = (2 + Math.pow(r(), 2.2) * 6) / (name === 'rock_moss_set_01' ? 0.8 : 1.3);
       rocks[name].push({ p: [x, y - 0.5, z], s: [s, s * (0.7 + r() * 0.5), s], r: r() * 6.28, tilt: [(r() - 0.5) * 0.3, (r() - 0.5) * 0.3] });
     } }
+  // the OUTER ROCKS (X4-20 horizon, X6 continuity): two stacks leaning close, far out SSE
+  rocks.rock_moss_set_02.push({ p: [690, -4, 3190], s: [14, 30, 12], r: 0.6, tilt: [0.08, 0.05] }, { p: [716, -4, 3212], s: [11, 24, 10], r: 2.1, tilt: [-0.1, 0.04] });
   for (const [n, list] of Object.entries(rocks)) if (list.length) scene.add(rk.instance(n, list));
 
   // ---- the harbour town (architecture library) ----
@@ -160,10 +163,18 @@ export async function build(ctx, { spec } = {}) {
     for (let s = 0; s < W.length - 1; s++) {
       const a = W[s], b = W[s + 1], dx = b[0] - a[0], dz = b[2] - a[2], len = Math.hypot(dx, dz);
       const X = [dx / len, 0, dz / len], Z = [-X[2], 0, X[0]];
+      // s21: an irregular top line - each block its own height (settled / heaved), setback and a slight twist;
+      // the parapet stones vary in height with the odd one missing; the base reaches the -16 m basin floor
       for (let u = 0; u < len;) {
         const l = Math.min(rr.range(3.2, 4.6), len - u), c = [a[0] + X[0] * (u + l / 2), 0, a[2] + X[2] * (u + l / 2)];
-        block(kit.get('stoneQuay'), frame([c[0], -4.6, c[2]], X, [0, 1, 0], Z), l - 0.05, 16, 6.5, { r: 0.12, seg: [1.5, 2, 2], seed: rr(), noise: 0.03, nf: 0.6, chip: 0.06 });
-        block(kit.get('stoneQuay'), frame([c[0] - Z[0] * 2.7, 4.0, c[2] - Z[2] * 2.7], X, [0, 1, 0], Z), l - 0.08, 1.2, 1.1, { r: 0.08, seg: 1, seed: rr(), noise: 0.02, nf: 1 });
+        const dh = rr() < 0.12 ? rr.range(-1.1, -0.6) : rr.range(-0.45, 0.3), set = rr.sym(0.45), tw = rr.sym(0.035);
+        const Xb = [X[0] * Math.cos(tw) - X[2] * Math.sin(tw), 0, X[2] * Math.cos(tw) + X[0] * Math.sin(tw)], Zb = [-Xb[2], 0, Xb[0]];
+        const top = 3.4 + dh, hgt = 22 + dh;
+        block(kit.get('stoneQuay'), frame([c[0] + Z[0] * set, top - hgt / 2, c[2] + Z[2] * set], Xb, [0, 1, 0], Zb), l - 0.05, hgt, 6.5 + rr.sym(0.4), { r: 0.12, seg: [1.5, 2, 2], seed: rr(), noise: 0.03, nf: 0.6, chip: 0.06 });
+        if (rr() > 0.08) {
+          const ph = rr.range(0.9, 1.35), ptop = 3.4 + Math.max(dh, -0.3) + ph;
+          block(kit.get('stoneQuay'), frame([c[0] - Z[0] * (2.7 - set * 0.5), ptop - ph / 2, c[2] - Z[2] * (2.7 - set * 0.5)], Xb, [0, 1, 0], Zb), l - 0.08 - rr.range(0, 0.4), ph, 1.1, { r: 0.08, seg: 1, seed: rr(), noise: 0.02, nf: 1 });
+        }
         u += l;
       }
     } }

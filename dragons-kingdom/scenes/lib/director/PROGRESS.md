@@ -3,6 +3,65 @@
 Owner paths: `scenes/lib/director/`, `episodes/s01e01/final/scenes/`, `episodes/s01e01/final/cut/`.
 How it works: `README.md` in this folder. Latest state first.
 
+## Session 21 (2026-11-05, short budgeted session: VERDOR_AERIAL re-stage + set look - STILLS only)
+
+Shot ids, lengths, line cue times UNCHANGED (X4-20 still exactly 5 s; X4-03 Charcoal = CHAR_FLY, no phase / tOffset:
+beats 0.16 / 1.76 / 3.36 s as told to sound - only his root path moved). No 1C act touched.
+Scratch: `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/director/s21/`
+(round 1 `*.png`, round 2 `r2/*.png`, previs sheets `previs/`, contact sheet `sheet.jpg`).
+- BUG FOUND: X4-02 / X4-11 / X4-14 used ease `'ease'` (not a valid ease: linear, in, out, inOut, smooth, smoother,
+  sine, hold) - the render threw; selftest / build-shots --check / previs do NOT catch it. Now `'inOut'`.
+  (Worth a check in build-shots --check: REQUEST to self.)
+- Set (sets/verdor-aerial.js): basin floor `max(-2 - 0.25 off, -16)` (deep a few m off the quay), basin floor splat
+  = weed/silt (no pale sand) and vertex colour darkened 60 % in the bay; ocean absorption [0.55, 0.2, 0.24],
+  turbidity 0.08 (was default clear-coastal, turbidity 0.05) -> the basin reads dark blue-grey in X4-01/03 (no
+  turquoise). Breakwater: each block its own top (-0.45..+0.3 m, 12 % settled -0.6..-1.1), setback +-0.45 m, twist
+  +-2 deg, base down to -18.6 (reaches the -16 floor); parapet stones 0.9-1.35 m, 8 % missing. Reads as a stepped,
+  slightly broken line now (subtle at distance). OUTER ROCKS: two scaled rock_moss_set_02 stacks at [690, 3190] /
+  [716, 3212] (X4-20 horizon) - draft read: two pale blocky stones; the X6 set should replace them with real stacks.
+- X4-06: farmer at [146.5, 1843.5] (~10.7 m), look [317, 18, 1675] (-2 deg), face [146, 1790] (north: back
+  three-quarter, the hoe on his right reads), pair lowered to y 32-34 (Leaf 300->303, Charcoal 322->325).
+- X4-03: LOW STATIC 24 mm (35 mm cannot hold roofs + quay + a high dragon) pos [178, 25, 1640] (terrace-2 street,
+  just over the terrace-1 ridges) look [300, 9.5, 1580]; Charcoal root [330, 36, 1560] -> [322, 36, 1624].
+- X4-01: was 180 mm framing ~60 m (breakwater end + sea only). Now 24 mm; r2 still (look [411, 44, 1444] -> [441, 44,
+  1544]) showed the pair small at the left, the breakwater lower right, the Santa Maria at the right edge, mostly open
+  sea, turquoise shore shallows bottom left (outside the basin). Then (NOT re-stilled) aim 2 deg right / 6 deg down:
+  look [402, 0, 1454] -> [432, 0, 1554] - the pair enter at the left edge, harbour + town lower centre-right.
+- X4-20: camera ~700 m back/inland on the line outer rocks -> pair: pos [45, 110, 1686] -> [73, 110, 1761], look
+  [357, 63.5, 2313] -> [385, 63.5, 2388], 160 mm; cast added (it had none): Leaf [361, 55, 2302] -> [389, 55, 2378],
+  Charcoal [394, 57, 2307] -> [422, 57, 2383], yaw 160, LEAF_FLY / CHAR_FLY. Keys end at 5 s (length unchanged).
+- X4-02 / X4-11: re-staged from their stills but NOT re-stilled (budget): X4-02 Leaf drops early and skims ~7 m
+  outside the wall (root [362, 40, 1500] -> [372, 16, 1525] -> [395, 14, 1562]), frame dist 110 rise 2, Leaf at
+  [0, 0.3], 70 mm; X4-11 100 mm, look at the midpoint of the pair ([461, 47, 1708] -> [472, 60, 1764]).
+  Stills LOOKED AT (draft):
+  - X4-06@0.6 (r2): farmer back three-quarter left of centre, full figure head to feet, hands on the shaft at chest,
+    the hoe shaft + blade on his right reads; Leaf small upper centre-right (good), Charcoal upper right, big, his
+    upstroke wingtips break the TOP edge. Lean barely reads (perf: bend-only). Head still reads BALD.
+  - X4-03@0.5 (r2): roofs + chimneys foreground, the quay apron with bollards, the Santa Maria moored (hull + masts),
+    the breakwater across the basin (stepped top), dark harbour water, Charcoal top right (whole). READY.
+  - X4-20@0.5 (r1): Charcoal left (big, seaward), Leaf centre, the two outer rocks right, a green headland lower right,
+    all sea behind (no sky at 160 mm from 110 m). Charcoal's left wingtip touches the left edge. READY (rocks = stand-in).
+  - X4-14@0.5 (r2): the palace whole, pale stone, centred on its hill; terraces as stripes; the chamber opening not
+    distinguishable at draft; town only a corner bottom left. READY at draft.
+  - X4-01@0.5: r1 (180 mm) WRONG (breakwater end + sea only); r2 (24 mm) see the X4-01 line above - re-aimed after it.
+  - X4-02@0.5 (r2, before the re-stage): Leaf + Abby read big centre, sea only - no wall. X4-11@0.5 (r2, before the
+    re-stage): Charcoal fills the top (broken edge), Leaf a sliver bottom left.
+- Verify: director selftest 20/20; build-shots --check clean (slate warnings only). npm test not run.
+- NEXT (exact, in order):
+  1. Still the two unverified re-stages: `node scenes/lib/director/tools/still.mjs X4-01@0.5 X4-02@0.5 X4-11@0.5 --preset draft --out <scratch>/eng1/director/s22`
+     (X4-01: harbour + town in, pair entering left? X4-02: wall top along the frame bottom? X4-11: Charcoal's
+     wings inside the top at 0.1?).
+  2. X4-06 if the owner wants Charcoal's wingtips inside: Charcoal root x 345-350, y 28 (further, lower); farmer hair: humans.
+  3. Videos (owner/background, ~10 min/shot here), once 1. looks right:
+     `node scenes/lib/director/tools/render-shots.mjs --only X4-01,X4-02,X4-03,X4-06,X4-11,X4-14,X4-20 --force --work <scratch>/eng1/director/work1B`
+     (ready now: `--only X4-03,X4-06,X4-14,X4-20`). Still pending from s17-19: `--only 1C-16`,
+     `--only 1C-10,1C-13,1C-14,1C-19`, `--only 1C-07,1C-08,1C-09,1C-11,1C-12,1C-15,1C-17,1C-18`, `--only 1C-04,1C-06,X3-10`.
+  4. Wire the `plans` shots as their requests land (X4-08 call, X4-10 lookout duck + masthead mark, X4-12 'pat',
+     X4-13 school cast); then VERDOR_HARBOR (X4-04/05/07/09) on the same MAP; OUTER_ROCKS (real stacks).
+- REQUESTS: humans - crowd05 still reads BALD in X4-06 (draft, r2); the hoe lean barely reads from back three-quarter
+  (a visible weight shift / one-leg rest would sell "leaning"). props - a real hoe (perf s11). creatures - X4-08 flight
+  `call` (s17). nature - outer-rock stacks for X4-20 / X6 (two stacks leaning close) to replace the scaled kit rocks.
+
 ## Session 20 (2026-11-05, short budgeted session: 1C-16 pinky check, X4-06 farmer acts, VERDOR_AERIAL wired - STILLS only)
 
 Shot ids, lengths, line cue times UNCHANGED (X4-20 still 5 s; X4-03 Charcoal = CHAR_FLY, no phase / tOffset: beats
