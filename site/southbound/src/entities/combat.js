@@ -65,8 +65,8 @@ export class Combat {
     scene.add(this.flash);
     this.tracerMat = new THREE.LineBasicMaterial({ color: 0xffe2a0, transparent: true, opacity: 0.9 });
     this.puffGeo = new THREE.SphereGeometry(0.06, 6, 4);
-    this.dustMat = new THREE.MeshBasicMaterial({ color: 0xb8ab90, transparent: true });
-    this.bloodMat = new THREE.MeshBasicMaterial({ color: 0x6a0606, transparent: true });
+    this.dustMat = new THREE.MeshLambertMaterial({ color: 0xb8ab90, transparent: true }); // lit: unlit dust and blood glowed at night
+    this.bloodMat = new THREE.MeshLambertMaterial({ color: 0x6a0606, transparent: true });
     this.sparkMat = new THREE.MeshBasicMaterial({ color: 0xffd080, transparent: true });
   }
 

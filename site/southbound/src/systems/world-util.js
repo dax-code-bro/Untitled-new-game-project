@@ -35,7 +35,7 @@ export function spawnParked(game, type, x, z, heading = 0, up = null) {
   const v = new Vehicle(game.lib, type);
   v.pos.set(x, game.hm.height(x, z) + 0.05, z);
   v.heading = heading;
-  v.night = game.sky.night;
+  v.night = 0; // parked: lights off
   if (up) game.applyUpgrades(v, up);
   v.sync(0);
   game.scene.add(v.group);

@@ -38,6 +38,8 @@ function asphalt(ctx, w, h, rnd) {
   }
 }
 
+export const TOWN_WALK = 3; // Mill Creek's sidewalk width (lawns behind it)
+
 export function createRoads(graph, hm, quality, scene, collision, surf) {
   const rnd = mulberry32(77);
   const group = new THREE.Group();
@@ -65,10 +67,26 @@ export function createRoads(graph, hm, quality, scene, collision, surf) {
   const stTex = canvasTex(256, 512, (ctx, w, h) => {
     base(ctx, w, h);
     ctx.fillStyle = '#e0a51c';
-    ctx.fillRect(w * 0.49, 0, w * 0.02, h * 0.5);
+    ctx.fillRect(w * 0.494, 0, w * 0.012, h * 0.5);
     ctx.fillStyle = '#dcdcd4';
     ctx.fillRect(w * 0.06, 0, w * 0.012, h);
     ctx.fillRect(w * 0.928, 0, w * 0.012, h);
+    wear(ctx, w, h);
+  }, an);
+  // city streets (16 m): a lane each way inside double yellow, and a parking lane along each curb
+  // behind a white line, with a tick between stalls
+  const ctTex = canvasTex(512, 512, (ctx, w, h) => {
+    base(ctx, w, h);
+    const m = w / 16; // pixels per metre across
+    ctx.fillStyle = '#e0a51c';
+    ctx.fillRect(w / 2 - 0.22 * m, 0, 0.12 * m, h);
+    ctx.fillRect(w / 2 + 0.1 * m, 0, 0.12 * m, h);
+    ctx.fillStyle = '#dcdcd4';
+    for (const sd of [-1, 1]) {
+      const x = w / 2 + sd * 5.2 * m;
+      ctx.fillRect(x - 0.06 * m, 0, 0.12 * m, h);
+      for (const v of [0, 0.5]) ctx.fillRect(sd > 0 ? x : x - 0.7 * m, v * h, 0.7 * m, 0.1 * (h / 16));
+    }
     wear(ctx, w, h);
   }, an);
   const ixTex = canvasTex(256, 256, (ctx, w, h) => {
@@ -94,7 +112,9 @@ export function createRoads(graph, hm, quality, scene, collision, surf) {
       sh.uniforms.uWet = worldUniforms.uWet; sh.uniforms.uRain = worldUniforms.uRain; sh.uniforms.uTime = worldUniforms.uTime;
       Object.assign(sh.uniforms, reflUniforms);
       sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vRW;')
-        .replace('#include <begin_vertex>', '#include <begin_vertex>\nvRW = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+        // world position (intersection tiles and parking lots are instanced: include the instance transform,
+        // or every tile samples the same metre of asphalt blown up to 16 m)
+        .replace('#include <begin_vertex>', '#include <begin_vertex>\n#ifdef USE_INSTANCING\nvRW = (modelMatrix * instanceMatrix * vec4(transformed, 1.0)).xyz;\n#else\nvRW = (modelMatrix * vec4(transformed, 1.0)).xyz;\n#endif');
       sh.fragmentShader = sh.fragmentShader.replace('#include <common>', `#include <common>
 varying vec3 vRW; uniform sampler2D tAsph; uniform sampler2D tAsphN; uniform sampler2D tAsphR; uniform sampler2D tAsphAO; float sbPaint;
 uniform sampler2D tRoadC; uniform float uLanes; float sbWear;
@@ -152,7 +172,8 @@ float sbVN(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f)
           {
             vec3 nt = texture2D(tAsphN, auv).xyz * 2.0 - 1.0;
             nt.xy *= (1.0 - sbPaint * 0.6) * (1.0 - sbPud);
-            if (uRain > 0.02) nt.xy += sbRipple(vRW.xz) * uRain * (0.15 + sbPud * 0.6);
+            // drops ring the standing water; on plain wet asphalt they barely show
+            if (uRain > 0.02) nt.xy += sbRipple(vRW.xz) * uRain * (0.025 + sbPud * 0.45);
             vec3 nw = normalize(vec3(nt.x, max(nt.z, 0.2), nt.y));
             normal = normalize((viewMatrix * vec4(nw, 0.0)).xyz);
             sbRN = nw;
@@ -160,7 +181,8 @@ float sbVN(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f)
         .replace('#include <opaque_fragment>', `
           if (uReflectOn > 0.5 && uWet > 0.02 && abs(vRW.y - uReflY) < 0.8) {
             vec4 rp = uReflMatrix * vec4(vRW, 1.0);
-            vec2 ruv = rp.xy / rp.w + sbRN.xz * (0.05 - sbPud * 0.04);
+            // a slight ripple from the asphalt grain; much more and the reflection breaks up into blobs
+            vec2 ruv = rp.xy / rp.w + sbRN.xz * (0.012 - sbPud * 0.008);
             // wet asphalt smears reflections into vertical streaks; puddles stay sharp
             float sm = 0.012 * (1.0 - sbPud);
             vec3 refl = texture2D(tReflect, clamp(ruv, 0.001, 0.999)).rgb * 0.36
@@ -175,7 +197,7 @@ float sbVN(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f)
     m.transparent = false;
     return m;
   };
-  const hwMat = roadMat(hwTex, 4), stMat = roadMat(stTex, 2);
+  const hwMat = roadMat(hwTex, 4), stMat = roadMat(stTex, 2), ctMat = roadMat(ctTex, 2);
   const ixMat = roadMat(ixTex, 0);
 
   const ribbon = (pts, ys, width, trimStart, trimEnd, lift) => {
@@ -205,14 +227,14 @@ float sbVN(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f)
   };
 
   const lights = [];
-  const hwGeos = [], stGeos = [];
+  const hwGeos = [], stGeos = [], ctGeos = [];
   for (const e of graph.edges) {
     const isHw = e.kind === 'highway';
     // Street ribbons stop short of intersections; intersections get their own tile.
     const gridTrim = (id) => (id[0] === 'c' ? CITY.street / 2 : id[0] === 't' ? TOWN.street / 2 : 0);
     const g = ribbon(e.pts, e.ys, e.width, gridTrim(e.a), gridTrim(e.b), 0.1);
     if (collision && collision.addRoad) collision.addRoad(e.pts, e.ys, e.width, !!e.lane);
-    (isHw ? hwGeos : stGeos).push(g);
+    (isHw ? hwGeos : e.width >= 14 ? ctGeos : stGeos).push(g);
     // street lights every ~40 m on alternating sides
     const step = isHw ? 6 : 5;
     for (let i = 2; i < e.pts.length - 1; i += step) {
@@ -248,6 +270,7 @@ float sbVN(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f)
   const stMesh = new THREE.Mesh(merge(stGeos), stMat);
   hwMesh.receiveShadow = stMesh.receiveShadow = true;
   group.add(hwMesh, stMesh);
+  if (ctGeos.length) { const ctMesh = new THREE.Mesh(merge(ctGeos), ctMat); ctMesh.receiveShadow = true; group.add(ctMesh); }
 
   // Intersection tiles for street grids
   const ixGeo = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
@@ -266,8 +289,13 @@ float sbVN(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f)
   const slabs = [];
   for (const G of [CITY, TOWN]) {
     for (let i = 0; i < G.nx; i++) for (let j = 0; j < G.nz; j++) {
-      const x = G.x0 + i * G.pitch + G.pitch / 2, z = G.z0 + j * G.pitch + G.pitch / 2;
-      slabs.push({ x, z, w: G.pitch - G.street, y: G.height });
+      const x = G.x0 + i * G.pitch + G.pitch / 2, z = G.z0 + j * G.pitch + G.pitch / 2, W = G.pitch - G.street;
+      if (G === TOWN) {
+        // a small town: a sidewalk along the streets and lawns behind it, not a paved block
+        const r = TOWN_WALK;
+        slabs.push({ x, z: z - W / 2 + r / 2, w: W, d: r, y: G.height }, { x, z: z + W / 2 - r / 2, w: W, d: r, y: G.height },
+          { x: x - W / 2 + r / 2, z, w: r, d: W - 2 * r, y: G.height }, { x: x + W / 2 - r / 2, z, w: r, d: W - 2 * r, y: G.height });
+      } else slabs.push({ x, z, w: W, d: W, y: G.height });
     }
   }
   const slabMat = new THREE.MeshStandardMaterial({ color: 0x9a968f, roughness: 0.9 });
@@ -306,7 +334,7 @@ float sbH2(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); 
     slabMat.customProgramCacheKey = () => 'sbslab';
   }
   const slab = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0), slabMat, slabs.length);
-  slabs.forEach((b, i) => { m4.compose(p.set(b.x, b.y - 0.1, b.z), q.identity(), s.set(b.w, 0.32, b.w)); slab.setMatrixAt(i, m4); });
+  slabs.forEach((b, i) => { m4.compose(p.set(b.x, b.y - 0.1, b.z), q.identity(), s.set(b.w, 0.32, b.d)); slab.setMatrixAt(i, m4); });
   slab.receiveShadow = true;
   group.add(slab);
   // A curb rim (darker, slightly taller ring) gives blocks a crisp edge
@@ -326,7 +354,7 @@ float sbH2(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); 
     curbMat.customProgramCacheKey = () => 'sbcurb';
   }
   const curb = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0), curbMat, slabs.length);
-  slabs.forEach((b, i) => { m4.compose(p.set(b.x, b.y - 0.12, b.z), q.identity(), s.set(b.w + 0.4, 0.3, b.w + 0.4)); curb.setMatrixAt(i, m4); });
+  slabs.forEach((b, i) => { m4.compose(p.set(b.x, b.y - 0.12, b.z), q.identity(), s.set(b.w + 0.4, 0.3, b.d + 0.4)); curb.setMatrixAt(i, m4); });
   group.add(curb);
 
   // Bridges: deck, side walls, pillars
@@ -437,6 +465,98 @@ float sbH2(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); 
   scene.add(group);
   return {
     group, lights,
+    // park blocks: a ring of pavement round a mown lawn crossed by two paths, with benches
+    // (the block was a solid paved slab with trees growing out of it)
+    parkify(blocks) {
+      // parking-lot blocks: asphalt with painted stalls inside the pavement ring (they were bare paving)
+      const lots = blocks.filter((b) => b.type === 'parking');
+      this.lotStalls = [];
+      if (lots.length) {
+        const W = CITY.pitch - CITY.street, ring = 3.5, I = W - ring * 2, ppm = 14;
+        // rows across the lot: [start, depth, facing] - stalls 2.7 m wide, 5.5 m deep, 7 m aisles
+        const rows = [];
+        let z = 1.0;
+        rows.push([z, 1]); z += 5.5;                                                                  // a row along the edge
+        while (z + 7 + 11 <= I - 1) { z += 7; rows.push([z, -1]); z += 5.5; rows.push([z, 1]); z += 5.5; } // aisle, then a double row
+        if (z + 7 + 5.5 <= I - 1) { z += 7; rows.push([z, -1]); z += 5.5; }
+        const lotTex = canvasTex(Math.round(I * ppm), Math.round(I * ppm), (ctx, w, h) => {
+          base(ctx, w, h);
+          ctx.fillStyle = '#dcdcd4';
+          for (const [z0] of rows) {
+            ctx.fillRect(0.6 * ppm, z0 * ppm, (I - 1.2) * ppm, 0.1 * ppm); // the end line of the row
+            ctx.fillRect(0.6 * ppm, (z0 + 5.5) * ppm, (I - 1.2) * ppm, 0.1 * ppm);
+            for (let x = 0.6; x <= I - 0.6; x += 2.7) ctx.fillRect(x * ppm, z0 * ppm, 0.1 * ppm, 5.5 * ppm);
+          }
+          wear(ctx, w, h);
+        }, an);
+        const lotMat = roadMat(lotTex, 0);
+        const g = new THREE.PlaneGeometry(I, I).rotateX(-Math.PI / 2);
+        const lm = new THREE.InstancedMesh(g, lotMat, lots.length);
+        lots.forEach((b, i) => {
+          lm.setMatrixAt(i, m4.compose(p.set(b.cx, CITY.height + 0.225, b.cz), q.identity(), s.set(1, 1, 1)));
+          for (const [z0, f] of rows) for (let x = 0.6 + 1.35; x < I - 0.6; x += 2.7) {
+            this.lotStalls.push({ x: b.cx - I / 2 + x, z: b.cz - I / 2 + z0 + 2.75, y: CITY.height + 0.22, heading: f > 0 ? 0 : Math.PI });
+          }
+        });
+        lm.receiveShadow = true;
+        group.add(lm);
+      }
+      const parks = blocks.filter((b) => b.type === 'park');
+      if (!parks.length) return [];
+      if (collision) collision.parks = new Set(parks.map((b) => b.i + ',' + b.j));
+      const W = CITY.pitch - CITY.street, ring = 3.5, path = 3, y = CITY.height;
+      const pieces = [];
+      for (const b of parks) {
+        const k = b.i * CITY.nz + b.j;
+        // hide the full slab and its curb box
+        slab.setMatrixAt(k, m4.makeScale(0, 0, 0)); curb.setMatrixAt(k, m4.makeScale(0, 0, 0));
+        // the pavement ring (with its curb) and the two paths across the lawn
+        for (const [cx, cz, w, d, top] of [
+          [b.cx, b.cz - W / 2 + ring / 2, W, ring, 0.22], [b.cx, b.cz + W / 2 - ring / 2, W, ring, 0.22],
+          [b.cx - W / 2 + ring / 2, b.cz, ring, W - ring * 2, 0.22], [b.cx + W / 2 - ring / 2, b.cz, ring, W - ring * 2, 0.22],
+          [b.cx, b.cz, path, W - ring * 2, 0.08], [b.cx - (W - ring * 2) / 4 - path / 4, b.cz, (W - ring * 2) / 2 - path / 2, path, 0.08], [b.cx + (W - ring * 2) / 4 + path / 4, b.cz, (W - ring * 2) / 2 - path / 2, path, 0.08],
+        ]) pieces.push({ cx, cz, w, d, top });
+        // lawn instead of paving in the splat (grass grows, the terrain shows its grass)
+        const n = hm.n, cell = hm.cell, half = hm.half;
+        const i0 = Math.ceil((b.cx - W / 2 + ring + half) / cell), i1 = Math.floor((b.cx + W / 2 - ring + half) / cell);
+        const j0 = Math.ceil((b.cz - W / 2 + ring + half) / cell), j1 = Math.floor((b.cz + W / 2 - ring + half) / cell);
+        for (let jj = j0; jj <= j1; jj++) for (let ii = i0; ii <= i1; ii++) {
+          const x = -half + ii * cell, z = -half + jj * cell;
+          // the paths are slabs over the lawn (the grass keeps off them by its own exact mask)
+          const kk = (jj * n + ii) * 4; hm.splat[kk + 3] = 0; hm.splat[kk + 2] = 0;
+        }
+      }
+      slab.instanceMatrix.needsUpdate = true; curb.instanceMatrix.needsUpdate = true;
+      if (worldUniforms.uSplatTex.value) worldUniforms.uSplatTex.value.needsUpdate = true;
+      const pm = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0), slabMat, pieces.length);
+      const cm = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0), curbMat, pieces.length);
+      pieces.forEach((pc, i) => {
+        pm.setMatrixAt(i, m4.compose(p.set(pc.cx, y - 0.1, pc.cz), q.identity(), s.set(pc.w, pc.top + 0.1, pc.d)));
+        cm.setMatrixAt(i, pc.top > 0.1 ? m4.compose(p.set(pc.cx, y - 0.12, pc.cz), q.identity(), s.set(pc.w + 0.2, 0.3, pc.d + 0.2)) : m4.makeScale(0, 0, 0));
+      });
+      pm.receiveShadow = cm.receiveShadow = true;
+      group.add(pm, cm);
+      // park benches facing the paths
+      const benches = [];
+      for (const b of parks) for (const [dx, dz, ry] of [[-14, 2.4, Math.PI], [14, 2.4, Math.PI], [-24, -2.4, 0], [24, -2.4, 0], [2.4, -14, -Math.PI / 2], [-2.4, 16, Math.PI / 2]]) benches.push([b.cx + dx, b.cz + dz, ry]);
+      const wood = new THREE.MeshStandardMaterial({ color: 0x6b4a30, roughness: 0.8 }), iron = new THREE.MeshStandardMaterial({ color: 0x23262a, roughness: 0.5, metalness: 0.7 });
+      const seat = new THREE.InstancedMesh(new THREE.BoxGeometry(1.8, 0.06, 0.45).translate(0, 0.45, 0), wood, benches.length);
+      const back = new THREE.InstancedMesh(new THREE.BoxGeometry(1.8, 0.4, 0.05).translate(0, 0.72, -0.22), wood, benches.length);
+      const legs = new THREE.InstancedMesh(new THREE.BoxGeometry(0.06, 0.45, 0.45).translate(-0.8, 0.225, 0).toNonIndexed(), iron, benches.length * 2);
+      const qq = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0);
+      benches.forEach(([x, z, ry], i) => {
+        qq.setFromAxisAngle(up, ry);
+        seat.setMatrixAt(i, m4.compose(p.set(x, y, z), qq, s.set(1, 1, 1)));
+        back.setMatrixAt(i, m4);
+        legs.setMatrixAt(i * 2, m4);
+        const ox = Math.cos(ry) * 1.6, oz = -Math.sin(ry) * 1.6;
+        legs.setMatrixAt(i * 2 + 1, m4.compose(p.set(x + ox, y, z + oz), qq, s.set(1, 1, 1)));
+        const ax = Math.abs(Math.cos(ry)) > 0.5 ? 0.92 : 0.3, az = ax > 0.5 ? 0.3 : 0.92, mx = x + ox / 2, mz = z + oz / 2;
+        if (collision) collision.addBox(mx - ax, mz - az, mx + ax, mz + az, y, y + 0.5, null);
+      });
+      for (const m of [seat, back, legs]) { m.castShadow = m.receiveShadow = true; m.userData.hitStatic = true; m.userData.surf = 'wood'; group.add(m); }
+      return parks.map((b) => ({ cx: b.cx, cz: b.cz, W, ring }));
+    },
     update(night) { headMat.emissiveIntensity = night * 6; poolMat.opacity = night * 0.55 * (1 - worldUniforms.uWet.value * 0.3); pools.visible = night > 0.02;
       streakMat.uniforms.uOpacity.value = night * worldUniforms.uWet.value; streaks.visible = streakMat.uniforms.uOpacity.value > 0.01; },
   };

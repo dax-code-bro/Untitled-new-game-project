@@ -193,6 +193,8 @@ export function installWorldEvents(game) {
         const d = Math.hypot(player.pos.x - t.x, player.pos.z - t.z);
         const alive = t.members.filter((p) => p.mode !== 'dead' && peds.list.includes(p));
         if (d < 120 && !alive.length && game.sky.day >= t.respawnDay && S.mode === 'foot') { t.members = []; t.hostile = false; t.warned = 0; t.cleared = false; spawnTurf(t); continue; }
+        // members taken out of the world because you walked off (not killed): they just went home
+        if (!alive.length && t.members.length && t.members.some((p) => p.mode !== 'dead' && !peds.list.includes(p))) { t.members = []; t.hostile = false; t.warned = 0; continue; }
         if (!alive.length) { if (t.members.length && !t.cleared) { t.cleared = true; t.respawnDay = game.sky.day + 3; P.rivals[t.R.id] = (P.rivals[t.R.id] || 0) + 1; hud.toast(`You cleared ${t.R.name} off their turf. They'll be back.`, 3.5); career.saveSoon(); } continue; }
         t.cleared = false;
         if (t.hostile) continue;

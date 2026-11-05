@@ -51,7 +51,7 @@ async (opts) => {
   await run('hitbox: animal', async () => {
     const pp = G.player.pos;
     for (const sp of Object.keys(G.hunting.species)) {
-      const a = G.hunting.spawn(sp, pp.x + 20, pp.z + 20);
+      const a = G.hunting.spawn(sp, pp.x - 20, pp.z + 20); // out on the open lot (the kerb east of the spawn has parked cars)
       if (!a) { report.notes.push(`animal ${sp} model not loaded yet`); continue; }
       a.mode = 'graze'; a.update(0.01, G.hm, G.player, { noise: 1, bite() {} }); a.group.updateMatrixWorld(true);
       const c = a.center();

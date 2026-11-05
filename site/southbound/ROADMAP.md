@@ -140,6 +140,31 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 - [x] Loading screen with in-game art, tips and progress
 - [x] Fewer touch buttons: ◎ interact replaces the car button; map, phone, arsenal, free cam moved to pause
 
+## Phase 1.15 — Visual error sweep (62 problems, ~1,000 broken spots, all fixed)
+
+A placement audit (every building, tree, fence, prop, facade piece and shop measured against
+the terrain, roads, water and each other) plus 60+ screenshots across the map, day and night,
+rain and storm, interiors, first person and in cars. Highlights:
+- [x] Buildings: no gap under the low corner (walls run into a concrete foundation), none on a
+      road, inside another or buried to the eaves; shopfronts only on walls that face a street
+- [x] ~700 rooftop units and water tanks were inside the upper blocks of set-back towers;
+      awnings, porches and steps no longer poke into the next building
+- [x] Trees: none on highways, in shops, through porches or on the walking line; street trees
+      back in kerb-edge pits
+- [x] Fences step down slopes in panels and never cross roads or buildings
+- [x] Streets: double yellow, parking lanes with stalls, parked cars, meters and hydrants;
+      parking-lot blocks with painted stalls; parks with lawns, paths and benches; mown yards
+      round every building; Mill Creek gets sidewalks and lawns instead of solid paving
+- [x] Port yard paved; asphalt runway with edge stripes; a real hangar (with collision)
+- [x] Glass: shop windows no longer pale panels (interior light levels, canyon reflections,
+      a distance fallback using the wall colour), no lit-looking blinds by day, warm/cool lit
+      offices at night; intersections no longer blurry (instance transform missing)
+- [x] Rain ripples only in puddles; wet reflections not broken up into blobs
+- [x] Night: parked cars' lights off; decals, blood and runway paint no longer glow
+- [x] Interiors: painted drywall, lights off by day, windows dark at night
+- [x] Warehouses get loading doors, skylights and vents; shops get forecourts
+- [x] Gang turf no longer "cleared" just by walking away
+
 ## Phase 1.14 — Port Calvera fades out on every side
 
 - [x] Residential streets run out of the north and east edges of the city (between the

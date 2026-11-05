@@ -8,6 +8,7 @@ import { installFishing } from './fishing.js';
 import { installJobs } from './jobs.js';
 import { installMissions } from './missions.js';
 import { installPhone } from './phone.js';
+import { installKerbside } from './kerbside.js';
 
 export function installSystems(game) {
   const list = [];
@@ -29,6 +30,7 @@ export function installSystems(game) {
   add('jobs', installJobs(game));
   add('missions', installMissions(game));
   add('phoneSys', installPhone(game));
+  add('kerbside', installKerbside(game));
   return {
     list,
     // systems may return a prompt; `free` says whether F is still unclaimed this frame

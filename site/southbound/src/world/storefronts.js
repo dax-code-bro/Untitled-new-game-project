@@ -168,7 +168,7 @@ export function dressStorefront(g, st, { W, D, H, t, box, M, hide }) {
     const pane = new THREE.Mesh(new THREE.BoxGeometry(0.86, 2.3, 0.02), glassM); pane.position.set(-s * 0.45, 1.2, 0); leaf.add(pane);
     for (const [w, h, x, y] of [[0.9, 0.06, -s * 0.45, 2.37], [0.9, 0.12, -s * 0.45, 0.06], [0.05, 2.4, -s * 0.03, 1.2], [0.05, 2.4, -s * 0.87, 1.2]]) { const f = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.05), frameM); f.position.set(x, y, 0); leaf.add(f); }
     const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.5, 6), M(0xc0c4c8, 0.3, 0.9)); bar.position.set(-s * 0.75, 1.1, 0.06); leaf.add(bar);
-    if (s < 0) { const hp = new THREE.Mesh(new THREE.PlaneGeometry(0.22, 0.28), new THREE.MeshBasicMaterial({ map: hoursTex(st.hours || 'Mon–Sat 8–8|Sunday 10–6'), transparent: true })); hp.position.set(-s * 0.45, 1.45, 0.02); leaf.add(hp); }
+    if (s < 0) { const hp = new THREE.Mesh(new THREE.PlaneGeometry(0.22, 0.28), new THREE.MeshStandardMaterial({ map: hoursTex(st.hours || 'Mon–Sat 8–8|Sunday 10–6'), transparent: true, roughness: 0.6 })); hp.position.set(-s * 0.45, 1.45, 0.02); leaf.add(hp); }
     leaf.traverse((o) => { if (o.isMesh) o.userData.noHit = true; });
     leaves.push({ pivot, s });
   }

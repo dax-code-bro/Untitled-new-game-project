@@ -135,6 +135,7 @@ export function buildShop(game, r, st) {
     if (nr && nr.dist < Math.hypot(hw, hd) + (nr.edge.width || 8) / 2 + 0.5) blocked = true;
     if (blocked || Math.max(...ys) - Math.min(...ys) > 2 || Math.min(...ys) < hm.waterLevel(cx, cz) + 0.4) continue;
     (game.shopSites || (game.shopSites = [])).push([Math.round(cx), Math.round(cz)]); // where every shop ended up (QA)
+    game.veg?.clearRect?.(cx - 15, cz - 15, cx + 15, cz + 15); // no tree growing through the shop, its porch or its forecourt
     const y = Math.max(...ys) + 0.06;
     const g = new THREE.Group();
     g.position.set(cx, y, cz);
@@ -145,6 +146,10 @@ export function buildShop(game, r, st) {
     wood.userData.surf = 'wood';
     const box = (w, h, d, x, yy, z, m, hit = true) => { const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); b.position.set(x, yy, z); b.castShadow = b.receiveShadow = true; if (hit) b.userData.hitStatic = true; g.add(b); return b; };
     box(W, 1, D + 2.4, 0, -0.5, 1.2, floor);
+    // a concrete forecourt out to the road's edge: somewhere to park (vehicles stood on the grass)
+    const fd = nr ? Math.max(0, Math.min(7.1, nr.dist - D / 2 - 2.4 - (nr.edge.width || 8) / 2 - 0.3)) : 5;
+    // laid on the ground itself (a raised slab stood out of a slope like a plinth)
+    const forecourt = fd > 0.5 ? new THREE.Mesh(new THREE.PlaneGeometry(W + 6, fd, 8, 4).rotateX(-Math.PI / 2), M(0x8f8c86, 0.92)) : null;
     const parts = { back: [], sides: [], roof: [], awning: [], front: [] };
     parts.back.push(box(W + 2 * t, H, t, 0, H / 2, -D / 2, wall)); // back
     parts.sides.push(box(t, H, D, -W / 2, H / 2, 0, wall), box(t, H, D, W / 2, H / 2, 0, wall)); // sides
@@ -203,6 +208,15 @@ export function buildShop(game, r, st) {
     wb(-2.6, -D / 2 + 2.25, 2.6, -D / 2 + 2.95, y - 1, y + 1.0); // counter
     { const p0 = new THREE.Vector3(-W / 2, 0, -D / 2).applyMatrix4(g.matrixWorld), p1 = new THREE.Vector3(W / 2, 0, D / 2 + 2.4).applyMatrix4(g.matrixWorld);
       collision.addBox(Math.min(p0.x, p1.x), Math.min(p0.z, p1.z), Math.max(p0.x, p1.x), Math.max(p0.z, p1.z), y - 2, y - 0.06, { walkable: true }); }
+    if (forecourt) {
+      const P = forecourt.geometry.attributes.position, v = new THREE.Vector3();
+      for (let k = 0; k < P.count; k++) {
+        v.set(P.getX(k), 0, P.getZ(k) + D / 2 + 2.4 + fd / 2).applyMatrix4(g.matrixWorld);
+        P.setXYZ(k, v.x, hm.height(v.x, v.z) + 0.04, v.z);
+      }
+      forecourt.geometry.computeVertexNormals(); forecourt.receiveShadow = true; forecourt.userData.surf = 'concrete';
+      scene.add(forecourt);
+    }
     const L = (lx, lz) => new THREE.Vector3(lx, 0, lz).applyMatrix4(g.matrixWorld);
     const keeper = L(0, -D / 2 + 1.7); keeper.y = y;
     const counter = L(0, -D / 2 + 3.6);
@@ -210,7 +224,7 @@ export function buildShop(game, r, st) {
     const lampAt = L(0, -0.5); lampAt.y = y + H - 0.5;
     (game.shopLamps = game.shopLamps || []).push(lampAt);
     (game.shopDoors = game.shopDoors || []).push({ leaves: front.leaves, sign: front.sign, id: st.id, x: doorAt.x, z: doorAt.z, a: 0 });
-    return { g, y, keeper, keeperFace: g.rotation.y, counter: { x: counter.x, z: counter.z } };
+    return { g, y, keeper, keeperFace: g.rotation.y, counter: { x: counter.x, z: counter.z }, forecourt: fd };
   }
   return null;
 }

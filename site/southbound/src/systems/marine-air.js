@@ -48,7 +48,26 @@ export function installMarineAir(game) {
 
   // ---- runway markings + hangar
   {
-    const y = AIRFIELD.height + 0.06, white = new THREE.MeshBasicMaterial({ color: 0xdedcd2 });
+    // the runway and apron: photo-scanned asphalt with white edge stripes (it was a flat grey plane)
+    const A = game.surf && game.surf.asphalt && game.surf.asphalt.real ? game.surf.asphalt : null;
+    const asphalt = A ? new THREE.MeshStandardMaterial({ map: A.color, normalMap: A.normal || null, roughnessMap: A.rough || null, aoMap: A.ao || null, color: 0xd8d8d8, roughness: 1 })
+      : new THREE.MeshStandardMaterial({ color: 0x3a3b3d, roughness: 0.95 });
+    const strip = (x0, x1, z0, z1) => {
+      const g = new THREE.PlaneGeometry(x1 - x0, z1 - z0).rotateX(-Math.PI / 2);
+      const uv = g.attributes.uv; for (let k = 0; k < uv.count; k++) uv.setXY(k, uv.getX(k) * (x1 - x0) / 4, uv.getY(k) * (z1 - z0) / 4);
+      g.setAttribute('uv1', uv.clone());
+      const m = new THREE.Mesh(g, asphalt); m.position.set((x0 + x1) / 2, AIRFIELD.height + 0.03, (z0 + z1) / 2); m.receiveShadow = true; m.userData.surf = 'asphalt'; scene.add(m);
+    };
+    strip(AIRFIELD.x0, AIRFIELD.x1, AIRFIELD.z - AIRFIELD.w / 2, AIRFIELD.z + AIRFIELD.w / 2);
+    strip(AIRFIELD.x1 - 120, AIRFIELD.x1, AIRFIELD.z - 60, AIRFIELD.z - AIRFIELD.w / 2);
+    const edgeM = new THREE.MeshStandardMaterial({ color: 0xe2e0d8, roughness: 0.7 });
+    for (const sd of [-1, 1]) {
+      const e = new THREE.Mesh(new THREE.BoxGeometry(AIRFIELD.x1 - AIRFIELD.x0 - 8, 0.03, 0.9), edgeM);
+      e.position.set((AIRFIELD.x0 + AIRFIELD.x1) / 2, AIRFIELD.height + 0.05, AIRFIELD.z + sd * (AIRFIELD.w / 2 - 1.2)); e.receiveShadow = true; scene.add(e);
+    }
+  }
+  {
+    const y = AIRFIELD.height + 0.06, white = new THREE.MeshStandardMaterial({ color: 0xdedcd2, roughness: 0.7 }); // lit like the runway (unlit paint glowed at night)
     const dash = new THREE.InstancedMesh(new THREE.BoxGeometry(14, 0.04, 0.6), white, 40);
     const m4 = new THREE.Matrix4();
     let n = 0;
@@ -56,12 +75,40 @@ export function installMarineAir(game) {
     for (let k = -5; k <= 5; k++) for (const x of [AIRFIELD.x0 + 14, AIRFIELD.x1 - 14]) if (n < 40 && k !== 0) { m4.compose(new THREE.Vector3(x, y, AIRFIELD.z + k * 2.6), new THREE.Quaternion(), new THREE.Vector3(1.4, 1, 1.6)); dash.setMatrixAt(n++, m4); }
     dash.count = n;
     scene.add(dash);
-    const hangar = new THREE.Mesh(new THREE.BoxGeometry(40, 12, 28), new THREE.MeshStandardMaterial({ color: 0x8a8c88, roughness: 0.6, metalness: 0.5 }));
-    hangar.position.set(AIRFIELD.x1 - 60, AIRFIELD.height + 6, AIRFIELD.z - 80);
+    // the hangar: steel walls, an arched roof and big sliding doors facing the runway
+    const hMat = new THREE.MeshStandardMaterial({ color: 0x8a8c88, roughness: 0.6, metalness: 0.5 });
+    // walls run down to the lowest corner of the ground under it (no gap on the slope)
+    const hx0 = AIRFIELD.x1 - 60, hz0 = AIRFIELD.z - 80;
+    const hLow = Math.min(AIRFIELD.height, ...[[-20, -14], [20, -14], [-20, 14], [20, 14]].map(([a, c]) => game.hm.height(hx0 + a, hz0 + c))) - 0.15;
+    const hangar = new THREE.Mesh(new THREE.BoxGeometry(40, 12 + (AIRFIELD.height - hLow), 28), hMat);
+    hangar.position.set(hx0, (AIRFIELD.height + 12 + hLow) / 2, hz0);
     hangar.castShadow = hangar.receiveShadow = true;
     hangar.userData.hitStatic = true; hangar.userData.surf = 'metal';
     scene.add(hangar);
-    game.collision.addBox?.(hangar.position.x, hangar.position.z, 20, 14);
+    {
+      const roof = new THREE.Mesh(new THREE.CylinderGeometry(20.3, 20.3, 28.6, 28, 1, false, Math.PI / 2, Math.PI).rotateX(Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x6f7472, roughness: 0.5, metalness: 0.6 }));
+      roof.scale.set(1, 0.3, 1);
+      roof.position.set(hangar.position.x, AIRFIELD.height + 12, hangar.position.z);
+      roof.castShadow = roof.receiveShadow = true; roof.userData.hitStatic = true; roof.userData.surf = 'metal';
+      scene.add(roof);
+      const dMat = new THREE.MeshStandardMaterial({ color: 0x5d6461, roughness: 0.55, metalness: 0.55 });
+      const seamMat = new THREE.MeshStandardMaterial({ color: 0x3a3f3d, roughness: 0.7, metalness: 0.4 });
+      const fz = hangar.position.z + 14.08;
+      for (let k = 0; k < 4; k++) {
+        const door = new THREE.Mesh(new THREE.BoxGeometry(8.9, 10.2, 0.16), dMat);
+        door.position.set(hangar.position.x - 13.5 + k * 9, AIRFIELD.height + 5.1, fz + (k % 2) * 0.18);
+        door.castShadow = true; door.receiveShadow = true; door.userData.hitStatic = true; door.userData.surf = 'metal';
+        scene.add(door);
+        for (let r = 1; r < 9; r++) { const rib = new THREE.Mesh(new THREE.BoxGeometry(0.08, 10.2, 0.05), seamMat); rib.position.set(door.position.x - 4.45 + r, door.position.y, door.position.z + 0.1); scene.add(rib); }
+      }
+      const track = new THREE.Mesh(new THREE.BoxGeometry(40.4, 0.5, 0.5), seamMat);
+      track.position.set(hangar.position.x, AIRFIELD.height + 10.45, fz + 0.2); scene.add(track);
+      // an apron of concrete out to the taxiway
+      const apron = new THREE.Mesh(new THREE.BoxGeometry(44, 0.2, 30), new THREE.MeshStandardMaterial({ color: 0x8d8b85, roughness: 0.92 }));
+      apron.position.set(hangar.position.x, AIRFIELD.height - 0.02, hangar.position.z + 29); apron.receiveShadow = true; scene.add(apron);
+    }
+    game.collision.addBox(hangar.position.x - 20, hangar.position.z - 14, hangar.position.x + 20, hangar.position.z + 14, AIRFIELD.height - 1, AIRFIELD.height + 12, null);
+    game.veg?.clearRect?.(hangar.position.x - 26, hangar.position.z - 20, hangar.position.x + 26, hangar.position.z + 20);
   }
   const airSpawn = { x: AIRFIELD.x1 - 90, z: AIRFIELD.z, h: -Math.PI / 2 };
   const heliPad = { x: AIRFIELD.x1 - 40, z: AIRFIELD.z - 40, h: -Math.PI / 2 };

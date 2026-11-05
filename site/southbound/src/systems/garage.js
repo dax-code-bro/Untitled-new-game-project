@@ -128,6 +128,7 @@ function buildWorkshop(game, r, name) {
     const ys = [[-1, -1], [1, -1], [-1, 1], [1, 1]].map(([a, b]) => hm.height(cx + a * hw, cz + b * hd));
     if (blocked || Math.max(...ys) - Math.min(...ys) > 1.5 || Math.min(...ys) < hm.waterLevel(cx, cz) + 0.5) continue;
     const y = Math.max(...ys) + 0.05;
+    game.veg?.clearRect?.(cx - hw - 3, cz - hd - 3, cx + hw + 3, cz + hd + 3);
     const g = new THREE.Group();
     g.position.set(cx, y, cz);
     g.rotation.y = Math.atan2(-nx, -nz); // open side (+z local) faces the road

@@ -11,10 +11,10 @@ import { loadOpen, loaded, instance, Q, K } from '../assets/open.js';
 // h: model height (m); clips: [idle, walk, run, eat, death, attack]
 const QC = ['AnimalArmature|Idle', 'AnimalArmature|Walk', 'AnimalArmature|Gallop', 'AnimalArmature|Eating', 'AnimalArmature|Death', 'AnimalArmature|Attack_Headbutt'];
 export const SPECIES = {
-  deer: { name: 'White-tailed doe', model: Q('animals_pack', 'Deer'), h: 1.45, hp: 50, speed: 11, wary: 70, pelt: 90, clips: QC, regions: ['Redgrass Plains', 'Pinewood Hollow', 'Calvera River', 'Bayou Verde'] },
-  stag: { name: 'White-tailed buck', model: Q('animals_pack', 'Stag'), h: 1.85, hp: 70, speed: 11, wary: 80, pelt: 160, clips: QC, regions: ['Redgrass Plains', 'Pinewood Hollow', 'Calvera River'] },
+  deer: { name: 'White-tailed doe', model: Q('animals_pack', 'Deer'), h: 1.45, hp: 50, speed: 11, wary: 70, pelt: 90, clips: QC, regions: ['Redgrass Plains', 'Pinewood Hollow', 'Calvera River', 'Calvera County', 'Bayou Verde'] },
+  stag: { name: 'White-tailed buck', model: Q('animals_pack', 'Stag'), h: 1.85, hp: 70, speed: 11, wary: 80, pelt: 160, clips: QC, regions: ['Redgrass Plains', 'Pinewood Hollow', 'Calvera River', 'Calvera County'] },
   coyote: { name: 'Coyote', model: Q('animals_pack', 'Wolf'), h: 0.85, hp: 35, speed: 12, wary: 55, pelt: 60, aggro: 0.25, dmg: 8, clips: ['AnimalArmature|Idle', 'AnimalArmature|Walk', 'AnimalArmature|Gallop', 'AnimalArmature|Eating', 'AnimalArmature|Death', 'AnimalArmature|Attack'], regions: ['Redgrass Plains', 'Sierra Norte', 'Pinewood Hollow'] },
-  fox: { name: 'Red fox', model: K('Fox'), h: 0.55, hp: 20, speed: 10, wary: 40, pelt: 75, clips: ['Survey', 'Walk', 'Run', 'Survey', null, null], regions: ['Pinewood Hollow', 'Calvera River', 'Mill Creek', 'Bayou Verde'] },
+  fox: { name: 'Red fox', model: K('Fox'), h: 0.55, hp: 20, speed: 10, wary: 40, pelt: 75, clips: ['Survey', 'Walk', 'Run', 'Survey', null, null], regions: ['Pinewood Hollow', 'Calvera River', 'Calvera County', 'Mill Creek', 'Bayou Verde'] },
   horse: { name: 'Wild mustang', model: Q('animals_pack', 'Horse'), h: 2.2, hp: 120, speed: 14, wary: 60, pelt: 0, protected: true, clips: QC, regions: ['Redgrass Plains', 'Sierra Norte'] },
   cow: { name: 'Longhorn cow', model: Q('animals_pack', 'Cow'), h: 1.7, hp: 140, speed: 6, wary: 12, pelt: 0, protected: true, clips: QC, regions: ['Redgrass Plains'], herd: true },
   bull: { name: 'Longhorn bull', model: Q('animals_pack', 'Bull'), h: 1.85, hp: 200, speed: 9, wary: 18, pelt: 0, protected: true, aggro: 0.6, dmg: 25, clips: QC, regions: ['Redgrass Plains'], herd: true, rare: true },
