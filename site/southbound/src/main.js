@@ -157,7 +157,7 @@ async function createGame(progress) {
   createPowerLines(scene, graph, hm, collision, q);
   progress(0.84, 'Growing Pinewood Hollow');
   await nextFrame();
-  const veg = await createVegetation(hm, q, scene, collision, city.cityBlocks, (p) => progress(0.84 + p * 0.07, 'Growing forests'), surf, settings.grass === false ? 0 : 1);
+  const veg = await createVegetation(hm, q, scene, collision, city.cityBlocks, (p) => progress(0.84 + p * 0.07, 'Growing forests'), surf, settings.grass === true ? 1 : 0); // 3D grass blades only if switched on (the scanned ground looks better)
   addSidewalkColliders(collision, parks);
   veg.cover?.setLawns?.(city.buildings); // yards and lots round every building are mown
   veg.cover?.setParks?.(parks); // and no grass on the park paths

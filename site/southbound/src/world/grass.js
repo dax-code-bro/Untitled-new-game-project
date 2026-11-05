@@ -292,11 +292,15 @@ function makeField(surf, hn, count, R, blades, flower, seed, quality) {
 
 export function createGroundCover(hm, quality, scene, surf, density = 1) {
   const P = PRESET[quality.label] || PRESET.Medium;
-  if (density <= 0) return { update() {} };
-  const tufts = Math.round(P.tufts * density);
-  const grass = makeField(surf, hm.n, tufts, P.R, P.blades, false, 7, quality);
-  const flowers = makeField(surf, hm.n, Math.round(tufts / 7), P.R * 0.85, 3, true, 11, quality);
-  scene.add(grass, flowers);
+  // density 0: no 3D blades or flowers (the photo-scanned ground on its own); the scattered
+  // pebbles, the push and the lawn/park masks still work, so nothing else has to care
+  let grass = null, flowers = null;
+  if (density > 0) {
+    const tufts = Math.round(P.tufts * density);
+    grass = makeField(surf, hm.n, tufts, P.R, P.blades, false, 7, quality);
+    flowers = makeField(surf, hm.n, Math.round(tufts / 7), P.R * 0.85, 3, true, 11, quality);
+    scene.add(grass, flowers);
+  }
   return {
     grass, flowers,
     update(cam, sunDir, sunCol, weather) {
