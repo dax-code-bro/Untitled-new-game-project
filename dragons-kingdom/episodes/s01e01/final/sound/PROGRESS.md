@@ -1,5 +1,46 @@
 # Sound track: progress (for the next session)
 
+## State (2026-11-05, session 9: X4 wired shots (director s20) - timings, beds, M9 pre-lap; short budgeted session)
+
+- **Timings**: regenerated `cut/edl-1C.json` compared with the s18 one (94a0308): every X4 / X5-01 `rec_in` and length
+  is unchanged (X4-01 91.5, X4-02 98.5, X4-03 102.5, X4-06 116.5, X4-11 140.0, X4-14 155.5, X4-20 184.5 / 5.0 s). Spots
+  are keyed by shot id, so nothing needed re-timing. The 7 wired shots now have `kind: 3d` -> they joined the program
+  region (0-106.5, 116.5-119.5, 140-143.5, 155.5-160.5, 184.5-189.5 s: 123 s).
+- **Beds** (`beds.json`): VERDOR_AERIAL -> new **`harbour_air`** (-22, duck 7: flight air like `flight_wind` with other
+  seeds so the 1C-19 -> X4-01 crossfade does not sum correlated noise, plus a far sea wash 90-700 Hz below); shot
+  override X4-06 -> new **`terrace_farm`** (-25, duck 6: bright gusting grass/crop band 1.1-7.5 kHz, low wind, far
+  wash). `vista_wind_sea` is no longer used in 1C.
+- **Spots** (`fx/spots.json`, new recipes in `fx/synth.mjs`: `lark` = quick FM sine chirps 2.6-5.6 kHz in phrases,
+  `bleat` = sawtooth at ~300-420 Hz with 6-8 Hz tremolo through "eh" formants): X4-06 lark (0.15 s, -34, L) + goat bleat
+  (1.35 s, -35, far L); the farmer only turns his head (spec `look` at 0.5 s) -> no hoe / tool / cloth sound. X4-11 Leaf
+  climbing (`wingbeat_light` 0.05 every 1.25, -29) + Charcoal (`wingbeat` 0.16 every 1.6, -32), same phase model as 1C.
+  X4-14 one far gull (-41), otherwise wind (shot list "Wind"). X4-01/02/03 rows unchanged. X4-20 air only + M9.
+- **M9** (`music/scores.mjs` `coastPre` = `coast` shifted +0.5 beat; `cues.json` sync now **beat 0.5 = X4-20**): the pad
+  starts 0.375 s before the cut (expression 40 -> 72 in half a beat, -> 82 by beat 2), the harp's first pluck stays on
+  the cut, D add9 still at 4.7 s. Measured on the cue alone (`scratchpad/eng1/sound/s9/M9-alone-0-1.5s-wave-v2.png`,
+  log scale): swell from 0.03 s, harp step at 0.38 s, flute at 0.57 s. (A 0 -> 82 ramp was tried first: the pre-lap was
+  inaudible, `M9-alone-0-1.5s-wave.png`.) In the mix the pre-lap pad sits under the wind (not visible on the spectrogram).
+- **1C re-mix** `final/audio/cuts/1C/DragonsKingdom_S01E01_draft-cut_1C_sound.mp4`: program (123 s) **-17.2 LUFS**
+  (whole cut -19.6), TP -1.6 dBTP, LRA 9.9, AAC -17.2 / -1.6, min dialogue margin 12.5 LU, **PASS** (the +2 dB master
+  cap binds: dialogue-anchored), sha256 23a2af2494a61955. Per region: 0-91.5 s -16.7 (as before), X4-01..03 -19.3,
+  X4-06 -22.9, X4-20 -16.8. The program fell 0.5 LU because the new X4 shots are wind-only passages (raising the X4 beds
+  1 dB moved it only 0.1). Seen: `s9/X4-06-mix-spec-v2.png` (grass band in the shot, lark dots 3.4-7 kHz at 1.3-3.7 s,
+  faint bleat lines 0.7 / 1.6 kHz at ~2.4-2.9 s), `s9/M9-onset-mix-spec-v2.png`, `s9/1C19-X4-01-mix-spec.png` (wind
+  continuous over the 91.5 s cut, no level step; M8 D add9 fading, far gulls). NOT listened to by a person.
+
+## Next steps (in order)
+
+1. **Listen** (PC): X4-06 (116.5-119.5: is the lark/goat too faint / too "nature documentary"?; knobs: row `gain_db`),
+   X4-11 beats (-29 / -32) under the wind, M9 onset (184.1-185 s), and the s8 items (X4-03 beats, Leaf's stroke).
+2. **Program loudness -17.2 vs -16**: the dialogue cap (+2 dB master) binds; the X4 aerial passages are quiet by design.
+   If -16 is wanted for 1C as a whole: raise score in X4 (e.g. M8 tail / a cue over X4-01..03) rather than the wind,
+   or accept -17 for this cut (decide when X4 is complete: X4-04/05/07..10/12/13/15..19 are still slates).
+3. When the director renders X4 shots: check the X4-11 / X4-06 beat phase on frames (s6 recipe), X4-03 (s8 item 2),
+   X4-20 length vs M9 (change tempo, not notes), and that X4-06's farmer does not move the hoe (else add `knock`/`cloth`).
+4. s7/s8 items still stand (VO REQUESTS: crew rhythm call X4-05, lookout laugh X4-10, instructor + Abby X4-13, recorded
+   walla; flight_wind level for 1D/1E; M6 basses check; Cling square bed + festival music; VSCO 2 CE; per-line voice
+   treatment; episode-timeline mix).
+
 ## State (2026-11-04, session 8: X4-03 wingbeats + M9 coast cue; short budgeted session)
 
 - **X4-03** (director s18: Charcoal now FLAPS, `CHAR_FLY()` CHAR_HZ 0.625): `fx/spots.json` new row `wingbeat` at 0.16 s,

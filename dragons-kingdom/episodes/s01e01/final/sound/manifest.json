@@ -15,7 +15,7 @@
   },
   {
    "id": "beds-procedural",
-   "what": "Ambience beds sea_shore, sea_open, vista_wind_sea, grounds_wind, corridor_stone, room_sea_window, chamber_hush (sound/beds.json)",
+   "what": "Ambience beds sea_shore, sea_open, vista_wind_sea, grounds_wind, corridor_stone, room_sea_window, chamber_hush, flight_wind, harbour_quay, harbour_air, terrace_farm (sound/beds.json)",
    "origin": "synthesised by sound/mix.mjs from seeded noise generators in FFmpeg (anoisesrc, aevalsrc) and filters; no recording, sample or download",
    "licence": "the project's own work (no third-party material)",
    "credit": "Sound design line in credits.txt",
@@ -39,7 +39,7 @@
   },
   {
    "id": "fx-procedural",
-   "what": "Spot effects (footsteps on stone/straw/timber/turf, cloth, rig chains, buckles, leather, door, latch, knocks, egg scratch, shell ticks/cracks/creaks/breaks, dragon and hatchling breaths, weight shifts, wingbeats, wind through grass, snorts, pipe taps, stair runners; s7 harbour set: gulls (FM yelps), ship's bell (inharmonic partials), fish slaps, rope strain, net drips, dragon calls, wordless crowd walla from formant-filtered glottal pulse trains): sound/fx/synth.mjs recipes placed by sound/fx/spots.json",
+   "what": "Spot effects (footsteps on stone/straw/timber/turf, cloth, rig chains, buckles, leather, door, latch, knocks, egg scratch, shell ticks/cracks/creaks/breaks, dragon and hatchling breaths, weight shifts, wingbeats, wind through grass, snorts, pipe taps, stair runners; s7 harbour set: gulls (FM yelps), ship's bell (inharmonic partials), fish slaps, rope strain, net drips, dragon calls, wordless crowd walla from formant-filtered glottal pulse trains; s9 terrace farm: a lark's chirp song (FM sine chirps), a goat bleat (formant-filtered sawtooth with tremolo)): sound/fx/synth.mjs recipes placed by sound/fx/spots.json",
    "origin": "synthesised in JavaScript by sound/fx/synth.mjs (seeded PRNG noise, impulse trains, decaying partials, biquad filters) and reverberated by sound/fx/fx.mjs (Freeverb-style algorithm, own code); no recording, sample or download",
    "licence": "the project's own work (no third-party material)",
    "credit": "Sound design line in credits.txt",

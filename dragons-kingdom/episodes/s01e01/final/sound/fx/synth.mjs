@@ -303,6 +303,35 @@ export const SOUNDS = {
     }
     return chain(x, ['hp', 450], ['lp', lerp(9000, 2600, far)]);
   },
+  lark(r, p) { // (s9) a distant skylark-like song over the terraces: a run of quick pure chirps (2.6-5.6 kHz), each a fast
+    // up/down FM sweep 30-90 ms with 8-30 ms gaps, in phrases; `dur` s of song, `far` 0..1 dulls / thins it
+    const d = p.dur ?? 2.5, far = p.far ?? 0.6, x = buf(d + 0.2);
+    let t0 = rr(r, 0, 0.05);
+    while (t0 < d) {
+      const nd = rr(r, 0.03, 0.09), f0 = rr(r, 2600, 5600), sw = rr(r, -0.35, 0.35), y = buf(nd);
+      let ph = 0;
+      for (let i = 0; i < y.length; i++) {
+        const u = i / y.length, f = f0 * (1 + sw * Math.sin(Math.PI * u)) * (1 + 0.04 * Math.sin(2 * Math.PI * 70 * u * nd));
+        ph += f / SR; y[i] = Math.sin(6.283185307 * ph) * Math.sin(Math.PI * u) ** 1.5;
+      }
+      const phrase = 0.55 + 0.45 * Math.sin(2 * Math.PI * t0 / rr(r, 0.9, 1.4));
+      mix(x, y, t0, phrase * rr(r, 0.5, 1)); t0 += nd + rr(r, 0.008, 0.03) + (r() < 0.06 ? rr(r, 0.12, 0.25) : 0);
+    }
+    return chain(x, ['hp', 1800], ['lp', lerp(9000, 4500, far)]);
+  },
+  bleat(r, p) { // (s9) a goat/sheep "meh-eh-eh" off on the terraces: glottal pulse (sawtooth) at ~300-420 Hz with a 6-8 Hz
+    // tremolo + vibrato, through "eh" formants (650 / 1700 / 2600 Hz), falling slightly; `far` 0..1 dulls it
+    const d = p.dur ?? rr(r, 0.6, 0.85), far = p.far ?? 0.6, f0 = p.f0 ?? rr(r, 300, 420), tr = rr(r, 6, 8), y = buf(d);
+    let ph = 0;
+    for (let i = 0; i < y.length; i++) {
+      const t = i / SR, u = t / d, w = Math.sin(2 * Math.PI * tr * t);
+      ph += f0 * (1 - 0.12 * u) * (1 + 0.025 * w) / SR;
+      y[i] = (2 * (ph % 1) - 1) * (0.65 + 0.35 * w) * Math.min(1, t / 0.04) * Math.pow(1 - u, 0.6) * (1 + 0.15 * (2 * r() - 1));
+    }
+    const x = buf(d + 0.1);
+    mix(x, bq(Float32Array.from(y), 'bp', 650, 3), 0, 1); mix(x, bq(Float32Array.from(y), 'bp', 1700, 4), 0, 0.7); mix(x, bq(Float32Array.from(y), 'bp', 2600, 5), 0, 0.3);
+    return chain(x, ['hp', 200], ['lp', lerp(6000, 2200, far)]);
+  },
   boat_bell(r, p) { // a small bronze ship's bell struck n times `every` s apart: hum + inharmonic strike partials (beating), clapper tick
     const n = p.n ?? 2, ev = p.every ?? 0.42, f = p.f ?? 880, far = p.far ?? 0.5, x = buf((n - 1) * ev + 3.2);
     const P = [[0.5, 2.6, 0.45], [1, 1.6, 1], [1.19, 1.2, 0.6], [1.5, 0.9, 0.45], [2, 0.7, 0.5], [2.66, 0.45, 0.3], [3.18, 0.3, 0.22], [4.1, 0.18, 0.12]];

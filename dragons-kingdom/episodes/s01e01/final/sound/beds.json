@@ -10,16 +10,36 @@
   "PALACE_CORRIDOR": "corridor_stone",
   "ALEXANDRIA_ROOM": "room_sea_window",
   "SKY_OFF_VERDOR": "flight_wind",
-  "VERDOR_AERIAL": "vista_wind_sea",
+  "VERDOR_AERIAL": "harbour_air",
   "VERDOR_HARBOR": "harbour_quay",
   "OUTER_ROCKS": "sea_shore",
   "CLING_SQUARE": "grounds_wind"
  },
- "shots": {},
+ "shots": { "X4-06": "terrace_farm" },
  "default_bed": "chamber_hush",
  "crossfade_s": 0.5,
  "start_fade_s": 1.5,
  "beds": {
+  "harbour_air": {
+   "what": "(s9) X4 aerial over Verdor harbour / town / coast (VERDOR_AERIAL wired shots X4-01/02/03/11/14/20): flight air like flight_wind but a touch softer (cameras on camera ships, not on the riders), slow gusts, a faint high edge, and a far sea wash below (surf on the harbour wall and the coast). Gulls / bell / beats are SPOT effects. Synthesised noise only; different seeds from flight_wind so the 1C-19 -> X4-01 crossfade does not sum correlated noise.",
+   "target_lufs": -22, "duck_db": 7,
+   "layers": [
+     { "noise": "brown", "seed": 1701, "stereo": true, "hp": 25, "lp": 300, "gain_db": 0, "env": "pow(0.7+0.2*sin(2*PI*t/7.9)+0.1*sin(2*PI*t/3.3+0.4),2)" },
+     { "noise": "pink", "seed": 1721, "stereo": true, "bp": [700, 0.5], "gain_db": -6, "env": "0.35+0.65*pow(0.5+0.5*sin(2*PI*t/10.3+0.6),3)*(0.7+0.3*sin(2*PI*t/2.6))" },
+     { "noise": "pink", "seed": 1741, "stereo": true, "bp": [2400, 1.5], "gain_db": -20, "env": "0.3+0.7*pow(0.5+0.5*sin(2*PI*t/10.3+0.3),4)" },
+     { "noise": "brown", "seed": 1761, "stereo": true, "hp": 90, "lp": 700, "gain_db": -11, "env": "pow(max(0.15,0.55+0.45*sin(2*PI*t/6.1)+0.2*sin(2*PI*t/3.7+1.2)),2)" }
+   ]
+  },
+  "terrace_farm": {
+   "what": "(s9) X4-06 terrace farm on the slope south-west of the town: wind moving through crops and long grass in soft gusts (bright band), a low steady wind, the town and sea a faint far wash below. Birdsong (lark) and a goat bleat are SPOT effects in fx/spots.json. Synthesised noise only.",
+   "target_lufs": -25, "duck_db": 6,
+   "layers": [
+     { "noise": "pink", "seed": 1801, "stereo": true, "hp": 1100, "lp": 7500, "gain_db": -3, "env": "0.25+0.75*pow(0.5+0.5*sin(2*PI*t/5.3+0.9),2)*(0.6+0.4*sin(2*PI*t/1.9+0.3))" },
+     { "noise": "pink", "seed": 1821, "stereo": true, "bp": [600, 1.0], "gain_db": -9, "env": "0.4+0.6*pow(0.5+0.5*sin(2*PI*t/8.1+1.7),2)" },
+     { "noise": "brown", "seed": 1841, "stereo": true, "hp": 30, "lp": 250, "gain_db": -12, "env": "pow(0.6+0.4*sin(2*PI*t/9.3),2)" },
+     { "noise": "pink", "seed": 1861, "stereo": true, "bp": [350, 0.8], "gain_db": -20, "env": "0.7+0.3*sin(2*PI*t/6.7)" }
+   ]
+  },
   "harbour_quay": {
    "what": "X4 Verdor harbour / quayside market (VERDOR_HARBOR): small waves slapping the quay stones under the boats, wet splashes, hull and rigging creaks (knocks of wood on wood), a light breeze, and a faint far crowd wash (filtered noise; lowered 8 / 7 dB in s7: as the talk layer it read as hiss - the talk is now the `walla` spot recipe per harbour shot, itself a placeholder until recorded crew/market walla exists). Gulls, the boat bell, fish slaps and the crew call are SPOT effects, not bed. Synthesised noise only.",
    "target_lufs": -24, "duck_db": 8,

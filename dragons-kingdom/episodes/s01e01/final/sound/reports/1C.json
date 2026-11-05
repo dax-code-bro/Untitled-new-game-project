@@ -42,11 +42,11 @@
  },
  "result": {
   "mix": "episodes/s01e01/final/audio/cuts/1C/mix.wav",
-  "I": -17.3,
-  "I_full": -20.1,
+  "I": -17.2,
+  "I_full": -19.6,
   "TP": -1.6,
-  "LRA": 12.5,
-  "sha256": "25f6e61359fa1b7c723b889c171a11f1c25e3a14f4e9e176d0fec69525eef47e",
+  "LRA": 9.9,
+  "sha256": "23a2af2494a6195504e8011873ac8bfb4a414899a1b72741f60cad2395cde53a",
   "master_gain_db": 2,
   "limiter_ceiling_dbfs": -1.6,
   "dialogue_gain_db": 11.4,
@@ -57,10 +57,10 @@
  "muxed": {
   "file": "episodes/s01e01/final/audio/cuts/1C/DragonsKingdom_S01E01_draft-cut_1C_sound.mp4",
   "duration_s": 382,
-  "aac_I": -17.3,
-  "aac_I_full": -20.1,
+  "aac_I": -17.2,
+  "aac_I_full": -19.6,
   "aac_TP": -1.6,
-  "bytes": 48365840
+  "bytes": 48364515
  },
  "beds": {
   "grounds_wind": {
@@ -73,15 +73,20 @@
    "raw_lufs_60s": -25.8,
    "duck_db": 7
   },
-  "vista_wind_sea": {
-   "target_lufs": -27,
-   "raw_lufs_60s": -28.2,
-   "duck_db": 6
+  "harbour_air": {
+   "target_lufs": -22,
+   "raw_lufs_60s": -25.5,
+   "duck_db": 7
   },
   "harbour_quay": {
    "target_lufs": -24,
    "raw_lufs_60s": -23.4,
    "duck_db": 8
+  },
+  "terrace_farm": {
+   "target_lufs": -25,
+   "raw_lufs_60s": -29.8,
+   "duck_db": 6
   },
   "sea_shore": {
    "target_lufs": -23,
@@ -132,15 +137,15 @@
   {
    "id": "M9 coast",
    "score": "coast",
-   "start_s": 184.5,
+   "start_s": 184.125,
    "end_s": 190.1,
-   "sync": "beat 0 = X4-20 +0 s",
+   "sync": "beat 0.5 = X4-20 +0 s",
    "raw_lufs": -28,
    "target_lufs": -21,
    "gain_db": 7,
    "duck_db": 10,
    "fade_out_s": 1,
-   "render_sha256": "cd9610d993b2221b1aa67801964e563ec734e4bc27bfd98b9a8f73169e571fc0"
+   "render_sha256": "4f4577431db48f80e22ed268b93dba878458d9c79b97e6ef467863eb81f157c7"
   }
  ],
  "music_not_in_cut": [
@@ -153,7 +158,7 @@
  "music_cue_sheet": "episodes/s01e01/final/sound/music/cues.json",
  "fx": {
   "spot_sheet": "episodes/s01e01/final/sound/fx/spots.json",
-  "events": 150,
+  "events": 158,
   "peak_dbfs": -4.1,
   "spaces": [
    "air",
@@ -161,26 +166,28 @@
    "open",
    "stone_wall"
   ],
-  "sha256": "383e492f42b59bf453297a39b386480cbeb2b36c1ece636fd539ef3b4e61b2c4",
+  "sha256": "a48af1c93dd9e90a2151d8ca29a864d32d5a41a9193b2db53e6bf81a2661c192",
   "spot_rows_not_in_cut": 134,
   "by_sound": {
    "claws_turf": 1,
-   "wingbeat": 37,
+   "wingbeat": 39,
    "wind_grass": 4,
    "leather": 4,
    "breath": 1,
    "hide_rub": 1,
    "weight_shift": 2,
    "step_stone": 9,
-   "wingbeat_light": 59,
+   "wingbeat_light": 62,
    "air_rush": 9,
    "snort": 1,
-   "gull": 5,
+   "gull": 6,
    "boat_bell": 1,
    "walla": 5,
    "fish_slap": 1,
    "rope_strain": 3,
    "net_drip": 1,
+   "lark": 1,
+   "bleat": 1,
    "dragon_call": 2,
    "rope_creak": 2,
    "knock": 2
@@ -204,7 +211,7 @@
    "shots": "1C-07..1C-19 (13)"
   },
   {
-   "bed": "vista_wind_sea",
+   "bed": "harbour_air",
    "from_s": 91.5,
    "to_s": 106.5,
    "xf_in_s": 0.5,
@@ -220,7 +227,7 @@
    "shots": "X4-04..X4-05 (2)"
   },
   {
-   "bed": "vista_wind_sea",
+   "bed": "terrace_farm",
    "from_s": 116.5,
    "to_s": 119.5,
    "xf_in_s": 0.5,
@@ -236,7 +243,7 @@
    "shots": "X4-07..X4-07 (1)"
   },
   {
-   "bed": "vista_wind_sea",
+   "bed": "harbour_air",
    "from_s": 124.5,
    "to_s": 128,
    "xf_in_s": 0.5,
@@ -252,7 +259,7 @@
    "shots": "X4-09..X4-09 (1)"
   },
   {
-   "bed": "vista_wind_sea",
+   "bed": "harbour_air",
    "from_s": 133,
    "to_s": 189.5,
    "xf_in_s": 0.5,

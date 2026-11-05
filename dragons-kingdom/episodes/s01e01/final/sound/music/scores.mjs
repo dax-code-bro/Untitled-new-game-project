@@ -290,5 +290,16 @@ const coast = {
   ],
 };
 
-export const SCORES = { dawn_theme: dawn, title_sting: sting, hatching, riding_grounds: grounds, ready, takeoff, sky_glimpse: skyGlimpse, light_theme: lightTheme, coast };
+// (s9) the pad starts half a beat early (0.375 s pre-lap into X4-19, from expression 0) so the cue does not start
+// cold on the cut; everything else is shifted by +0.5 beat and the cue's sync is beat 0.5 = X4-20 (cues.json), so the
+// harp's first pluck stays on the cut and the closing D add9 stays at 4.7 s into the shot.
+const shiftScore = (sc, db) => ({ ...sc, length_beats: sc.length_beats + db, parts: sc.parts.map((p) => ({ ...p,
+  notes: p.notes.map(([b, ...r]) => [b + db, ...r]), ...(p.ramps ? { ramps: p.ramps.map(([b0, b1, ...r]) => [b0 + db, b1 + db, ...r]) } : {}) })) });
+const coastPre = shiftScore(coast, 0.5);
+coastPre.parts[0].notes = coastPre.parts[0].notes.map((n) => (n[0] === 0.5 ? [0, n[1] + 0.5, n[2], n[3]] : n));
+// (s9) measured: a 0 -> 82 expression ramp left the pre-lap inaudible (first sound = the harp on the cut); start the
+// swell at 40 so the slow string-pad attack is already audible under the harp's first pluck.
+coastPre.parts[0].ramps.splice(0, 1, [0, 0.5, 11, 40, 72], [0.5, 2, 11, 72, 82]);
+
+export const SCORES = { dawn_theme: dawn, title_sting: sting, hatching, riding_grounds: grounds, ready, takeoff, sky_glimpse: skyGlimpse, light_theme: lightTheme, coast: coastPre };
 
