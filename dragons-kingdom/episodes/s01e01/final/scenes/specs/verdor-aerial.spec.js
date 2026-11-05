@@ -112,28 +112,33 @@ export default {
       notes: 'the shadow lands ~100 m west of him (sun 102/31): check it crosses the quay at 0.3-0.6 of the shot; Charcoal beats (shot list sound: deep slow beats overhead)',
     },
     'X4-06': {
-      staging: '50 mm STATIC on the terrace farm: a farmer rests on a hoe (foreground left, back three-quarter, face turned away), watches the riders pass high over the town (background right), unimpressed.',
-      // (s21: camera ~10.7 m behind-left of him on terrace 3 (ground ~25.1), aim bearing 45 / 2 deg DOWN (super35 50 mm
-      // holds only +-8 deg vertically): he sits ~7.6 deg left of centre, feet to head ~-7..+2 deg; the pair lowered to
-      // y 32-34 over the harbour (s21 still: Charcoal at y 40 broke the top edge) so they sit ~3 deg above centre; he faces
-      // NORTH ([146, 1790]: ~35 deg left of the lens axis) so the hoe and hands in front of him read in back three-quarter, Leaf ~3.5 / Charcoal ~9 deg right, ~220 m out. Director 'lean' bends only the spine;
-      // one-leg weight needs the performer (legs: 'planted') - not needed at 50 mm, the kirtle hides the legs.)
+      staging: '50 mm STATIC on the terrace farm: a farmer (a woman) rests on a hoe (foreground left, back three-quarter, face turned away), watches the riders pass high over the town (background right), unimpressed.',
+      // (s21: camera ~10.7 m behind-left of her on terrace 3 (ground ~25.1), aim bearing 45 / 2 deg DOWN (super35 50 mm
+      // holds only +-8 deg vertically): she sits ~7.6 deg left of centre, feet to head ~-7..+2 deg; the pair lowered to
+      // y 32-34 over the harbour (s21 still: Charcoal at y 40 broke the top edge) so they sit ~3 deg above centre; she faces
+      // NORTH ([146, 1790]: ~35 deg left of the lens axis) so the hoe and hands in front of her read in back three-quarter.
+      // The farmer (crowd05) is a WOMAN (humans look 2j). s23: Charcoal's upstroke wingtips broke the TOP edge at 0.6 ->
+      // he flies further out on the same bearing and lower (root [344, 28, 1668] -> [347, 28, 1716], ~255 m): previs
+      // (0.64, 0.35) at 0.6, still inside at 0.95; Leaf unchanged (0.30, 0.54).)
       cam: { rig: 'static', pos: [140, 26.8, 1852], look: [317, 18, 1675], mm: 50, fstop: 5.6, focus: 'farmer.head' },
       set: { shadowAt: [200, 25, 1780], shadowExtent: 160 },
       cast: {
         farmer: { at: [146.5, 1843.5], face: [146, 1790], acts: [[0, 'lean', { to: 0.6, dur: 0.01 }], [0, 'gesture', { name: 'tool', prop: 'hoe', stance: 'R' }], [0.5, 'look', { at: 'leaf.chest', amount: 0.7 }]] },
         leaf: { tack: true, root: [[0, [300, 34, 1680]], [3, [303, 34, 1728], 'linear']], yawKeys: 177, acts: LEAF_FLY() },
-        charcoal: { tack: true, root: [[0, [322, 32, 1690]], [3, [325, 32, 1738], 'linear']], yawKeys: 177, acts: CHAR_FLY() },
+        charcoal: { tack: true, root: [[0, [344, 28, 1668]], [3, [347, 28, 1716], 'linear']], yawKeys: 177, acts: CHAR_FLY() },
         abbyR: {}, remiR: {},
       },
       notes: 'perf s11 acts (humans/PROGRESS.md); hoe = humans tools.js stand-in until props has a real one',
     },
     'X4-11': {
-      staging: 'WIDE 100 mm (s21; was 160) from inland: Leaf climbs back to Charcoal\'s level on his usual side (inland, a little behind), near enough for talk.',
-      // (s21 still: at 160 mm Charcoal filled the top and broke the edge, Leaf a sliver bottom left. NOT RE-STILLED:
-      // 100 mm aimed at the midpoint between them - both ~3 deg either side of centre.)
-      cam: { rig: 'follow', pos: [[0, [120, 120, 1690]], [3.5, [128, 122, 1746], 'linear']], look: [[0, [461, 47, 1708]], [3.5, [472, 60, 1764], 'linear']], mm: 100, fstop: 8, focus: 'leaf.chest' },
-      cast: { leaf: { tack: true, root: [[0, [440, 34, 1700]], [3.5, [452, 61, 1756], 'inOut']], yawKeys: 172, acts: LEAF_FLY() }, charcoal: { tack: true, root: [[0, [482, 60, 1716]], [3.5, [492, 60, 1772], 'linear']], yawKeys: 172, acts: CHAR_FLY() }, abbyR: {}, remiR: {} },
+      staging: 'WIDE 85 mm (s23; s21 100, was 160) from inland: Leaf climbs back to Charcoal\'s level on his usual side (inland, a little behind), near enough for talk.',
+      // (s21 still: at 160 mm Charcoal filled the top and broke the edge, Leaf a sliver bottom left. s22 still (100 mm,
+      // camera y 120): Charcoal still clipped at the TOP, Leaf low - the high camera stacked them (he is 40 m further).
+      // s23: camera down to y 95-97 (sea still fills the top: ~2 deg down at the frame top), 85 mm, Leaf's climb 47 -> 58
+      // (was 34 -> 61), Charcoal 58, look keyed on the pair's midpoint + a little: previs heads Leaf (-0.19, -0.41) ->
+      // (0.03, -0.20) -> (-0.02, -0.13), Charcoal (0.24, 0.17) -> (0.24, 0.06).)
+      cam: { rig: 'follow', pos: [[0, [120, 95, 1690]], [3.5, [128, 97, 1746], 'linear']], look: [[0, [461, 57, 1708]], [1.75, [466.5, 59, 1736], 'linear'], [3.5, [472, 61, 1764], 'linear']], mm: 85, fstop: 8, focus: 'leaf.chest' },
+      cast: { leaf: { tack: true, root: [[0, [440, 47, 1700]], [3.5, [452, 58, 1756], 'inOut']], yawKeys: 172, acts: LEAF_FLY() }, charcoal: { tack: true, root: [[0, [482, 58, 1716]], [3.5, [492, 58, 1772], 'linear']], yawKeys: 172, acts: CHAR_FLY() }, abbyR: {}, remiR: {} },
     },
     'X4-14': {
       staging: 'AERIAL 35 mm: beyond the town, on its high ground, the palace - weathered pale stone, practical; the birthing chamber\'s high opening a dark shape near the top of the east face.',
@@ -143,7 +148,9 @@ export default {
     'X4-20': {
       staging: 'EXTREME WIDE 160 mm aerial travel from ~700 m behind / inland (s21: on the line from the outer rocks through the pair, so both read in one long-lens frame): they leave the harbour behind and follow the coast SSE toward its far end, Charcoal left (seaward), Leaf right; the outer rocks small near the horizon right.',
       cam: { rig: 'follow', pos: [[0, [45, 110, 1686]], [5, [73, 110, 1761], 'linear']], look: [[0, [357, 63.5, 2313]], [5, [385, 63.5, 2388], 'linear']], mm: 160, fstop: 8, focus: 'leaf.chest' },
-      cast: { leaf: { tack: true, root: [[0, [361, 55, 2302]], [5, [389, 55, 2378], 'linear']], yawKeys: 160, acts: LEAF_FLY() }, charcoal: { tack: true, root: [[0, [394, 57, 2307]], [5, [422, 57, 2383], 'linear']], yawKeys: 160, acts: CHAR_FLY() }, abbyR: {}, remiR: {} },
+      // (s23: Charcoal's left wingtip broke the LEFT edge on upstrokes -> 9 m toward Leaf across the lens axis: previs
+      // x -0.62 -> -0.42. Length stays exactly 5 s (score sync).)
+      cast: { leaf: { tack: true, root: [[0, [361, 55, 2302]], [5, [389, 55, 2378], 'linear']], yawKeys: 160, acts: LEAF_FLY() }, charcoal: { tack: true, root: [[0, [384, 57, 2312]], [5, [412, 57, 2388], 'linear']], yawKeys: 160, acts: CHAR_FLY() }, abbyR: {}, remiR: {} },
       notes: 'outer rocks: nature/rocks kit stacks at [700, 0, 3200] (X6 continuity: two stacks leaning close, mist on the seaward side)',
     },
   },

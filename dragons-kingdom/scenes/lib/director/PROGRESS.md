@@ -3,6 +3,49 @@
 Owner paths: `scenes/lib/director/`, `episodes/s01e01/final/scenes/`, `episodes/s01e01/final/cut/`.
 How it works: `README.md` in this folder. Latest state first.
 
+## Session 23 (2026-11-05, short budgeted session: VERDOR_AERIAL frame edges + cold shallows - STILLS only)
+
+Shot ids, lengths, line cue times UNCHANGED (X4-20 still exactly 5 s; X4-03 untouched: CHAR_FLY, no phase / tOffset).
+No 1C act touched. (s22 = the stills X4-01/02/11 at `.../eng1/director/s22/`, no code change.)
+Scratch: `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/director/s23/`
+(`X4-01_084.png X4-06_043.png X4-11_042.png X4-20_072.png`, labelled contact sheet `sheet.jpg`).
+- X4-06: the farmer crowd05 is a WOMAN (humans look 2j) - spec comments + PROGRESS fixed (her). Perf d5056a7 makes the
+  'tool' gesture give the full lean posture in director shots -> the old "director 'lean' bends only the spine" comment
+  deleted; acts unchanged. Charcoal further out on the same bearing and lower: root [344, 28, 1668] -> [347, 28, 1716]
+  (was [322, 32, 1690] -> [325, 32, 1738]); previs (0.64, 0.35) at 0.6, still inside at 0.95.
+- X4-11: s22 still had Charcoal clipped at the top, Leaf low (the y-120 camera stacked them - he is 40 m further).
+  Now camera y 95-97, 85 mm, look keyed on the pair midpoint ([461, 57, 1708] / [466.5, 59, 1736] / [472, 61, 1764]),
+  Leaf climbs 47 -> 58 (was 34 -> 61), Charcoal at 58 (was 60).
+- X4-20: Charcoal 9 m toward Leaf across the lens axis: root [384, 57, 2312] -> [412, 57, 2388] (previs x -0.62 -> -0.42).
+- Set: the open shore (outside the basin) drops 2.5 m in its first 40 m, underwater splat below ~1 m = weed/dark
+  stone, vertex colour darkened up to 60 % with depth (as the basin) -> no pale sand ledge under the shallows.
+  Stills LOOKED AT (draft):
+  - X4-01@0.5: pair top left (Charcoal whole, Leaf a green speck below), breakwater centre, quay apron + houses + Santa
+    Maria right, dark blue basin. Bottom-left shore shallows: the bright pale-sand turquoise is GONE, but a dark TEAL-GREEN
+    band remains (the water's own tint: absorption [0.55, 0.2, 0.24] lets green through more than blue). Acceptable-ish;
+    see NEXT 2.
+  - X4-06@0.6: the woman in the kirtle back three-quarter left, the kerchief now reads (not bald), hoe shaft across her
+    front; Leaf small centre-right, Charcoal upper right, wings up, WHOLE (tips ~15 px inside the top, right wing ~50 px
+    inside the right edge). Background is sea + breakwater (no town - as before). READY.
+  - X4-11@0.5: Charcoal upper centre-right, upstroke wings inside the top (~20 px), Leaf lower centre-left - a balanced
+    diagonal, sea behind (haze at the very top). READY.
+  - X4-20@0.6: Charcoal left, whole (left wingtip ~80 px inside), Leaf centre, the two outer stand-in rocks right, a green
+    headland bottom right. READY (rocks = stand-in).
+- Verify: director selftest 20/20; build-shots --check clean (slate warnings only). npm test not run.
+- NEXT (exact, in order):
+  1. Videos (owner/background, ~10 min/shot here):
+     `node scenes/lib/director/tools/render-shots.mjs --only X4-03,X4-06,X4-11,X4-14,X4-20 --force --work <scratch>/eng1/director/work1B`
+     then X4-01 / X4-02 once 2. / 3. are settled: `--only X4-01,X4-02`. Still pending from s17-19: `--only 1C-16`,
+     `--only 1C-10,1C-13,1C-14,1C-19`, `--only 1C-07,1C-08,1C-09,1C-11,1C-12,1C-15,1C-17,1C-18`, `--only 1C-04,1C-06,X3-10`.
+  2. X4-01 if the owner still reads the teal: in sets/verdor-aerial.js createOcean absorption [0.55, 0.2, 0.24] ->
+     [0.55, 0.26, 0.22] (blue-grey, less green) - affects the basin too, so re-still X4-01 + X4-03 together.
+  3. X4-02 (s22 still: Leaf + Abby big centre over open sea, the wall only a sliver at the bottom edge): lower the lens /
+     aim down so the wall top runs along the frame bottom third, then re-still.
+  4. Wire the `plans` shots as requests land (X4-08 call, X4-10 lookout, X4-12 'pat', X4-13 school cast); VERDOR_HARBOR;
+     OUTER_ROCKS (real stacks).
+- REQUESTS: props - a real hoe (perf s11). creatures - X4-08 flight `call` (s17). nature - outer-rock stacks for X4-20 / X6
+  (two stacks leaning close) to replace the scaled kit rocks. (humans: crowd05 bald - resolved by look 2j, seen in X4-06.)
+
 ## Session 21 (2026-11-05, short budgeted session: VERDOR_AERIAL re-stage + set look - STILLS only)
 
 Shot ids, lengths, line cue times UNCHANGED (X4-20 still exactly 5 s; X4-03 Charcoal = CHAR_FLY, no phase / tOffset:
@@ -20,7 +63,7 @@ Scratch: `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-
   slightly broken line now (subtle at distance). OUTER ROCKS: two scaled rock_moss_set_02 stacks at [690, 3190] /
   [716, 3212] (X4-20 horizon) - draft read: two pale blocky stones; the X6 set should replace them with real stacks.
 - X4-06: farmer at [146.5, 1843.5] (~10.7 m), look [317, 18, 1675] (-2 deg), face [146, 1790] (north: back
-  three-quarter, the hoe on his right reads), pair lowered to y 32-34 (Leaf 300->303, Charcoal 322->325).
+  three-quarter, the hoe on her right reads), pair lowered to y 32-34 (Leaf 300->303, Charcoal 322->325).
 - X4-03: LOW STATIC 24 mm (35 mm cannot hold roofs + quay + a high dragon) pos [178, 25, 1640] (terrace-2 street,
   just over the terrace-1 ridges) look [300, 9.5, 1580]; Charcoal root [330, 36, 1560] -> [322, 36, 1624].
 - X4-01: was 180 mm framing ~60 m (breakwater end + sea only). Now 24 mm; r2 still (look [411, 44, 1444] -> [441, 44,
@@ -35,7 +78,7 @@ Scratch: `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-
   [0, 0.3], 70 mm; X4-11 100 mm, look at the midpoint of the pair ([461, 47, 1708] -> [472, 60, 1764]).
   Stills LOOKED AT (draft):
   - X4-06@0.6 (r2): farmer back three-quarter left of centre, full figure head to feet, hands on the shaft at chest,
-    the hoe shaft + blade on his right reads; Leaf small upper centre-right (good), Charcoal upper right, big, his
+    the hoe shaft + blade on her right reads; Leaf small upper centre-right (good), Charcoal upper right, big, his
     upstroke wingtips break the TOP edge. Lean barely reads (perf: bend-only). Head still reads BALD.
   - X4-03@0.5 (r2): roofs + chimneys foreground, the quay apron with bollards, the Santa Maria moored (hull + masts),
     the breakwater across the basin (stepped top), dark harbour water, Charcoal top right (whole). READY.
@@ -93,7 +136,7 @@ Scratch: `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-
     reads tropical turquoise (shallow pale sand floor -3..-14 m: darken / deepen it, e.g. basin -6 - 0.05 off, or
     weed splat), the breakwater top reads as one straight ruler-edged band.
   - X4-06@0.6: the farmer reads as a figure seen from behind, but TOO BIG / too close (6 m at 50 mm, head to waist),
-    the hoe and hands below the frame, and his head reads BALD (crowd05 hair at draft? -> check with humans); Leaf small
+    the hoe and hands below the frame, and her head reads BALD (crowd05 hair at draft? -> check with humans); Leaf small
     top right (good), Charcoal out of frame right; the town is below the frame bottom (camera on terrace 3 looking 3 deg
     up sees only the sea, the breakwater and the horizon).
 - Verify: director selftest 20/20; build-shots clean (only slate warnings). npm test not run (no shared code touched).

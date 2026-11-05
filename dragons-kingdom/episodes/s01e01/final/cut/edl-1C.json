@@ -1032,11 +1032,11 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 4.8,
-    "k4_cpu_s_per_frame": 63.94,
+    "draft_s_per_frame": 16.96,
+    "k4_cpu_s_per_frame": 226.11,
     "k4_gpu_s_per_frame": null,
-    "draft_minutes": 13.43,
-    "k4_cpu_hours": 2.98,
+    "draft_minutes": 47.48,
+    "k4_cpu_hours": 10.55,
     "k4_gpu_hours": null,
     "factors": {
      "people": 1.48,
@@ -1046,7 +1046,7 @@
      "move": 1.08,
      "total": 1.6
     },
-    "basis": "ESTIMATE: unknown set, generic; x 1.6 for the shot's content"
+    "basis": "MEASURED draft 16.96 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
    },
    "staging": "EXTREME WIDE: 24 mm (s21; was 180 mm) from a camera ship high and inland over the north shore, slow travel: the coast bends, the harbour opens below - curved wall, pale quay, boats on the slipway, nets on frames; the pair enter LEFT, Leaf near/behind, Charcoal right/ahead.",
    "deviation": null,
@@ -1078,11 +1078,11 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 4.02,
-    "k4_cpu_s_per_frame": 53.57,
+    "draft_s_per_frame": 15.24,
+    "k4_cpu_s_per_frame": 203.2,
     "k4_gpu_s_per_frame": null,
-    "draft_minutes": 6.43,
-    "k4_cpu_hours": 1.43,
+    "draft_minutes": 24.38,
+    "k4_cpu_hours": 5.42,
     "k4_gpu_hours": null,
     "factors": {
      "people": 1.24,
@@ -1092,7 +1092,7 @@
      "move": 1.08,
      "total": 1.34
     },
-    "basis": "ESTIMATE: unknown set, generic; x 1.34 for the shot's content"
+    "basis": "MEASURED draft 15.24 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
    },
    "staging": "WIDE: 70 mm (s21; was 150) air-to-air from inland: Leaf drops to ~14 m and flies along the harbour wall (wall in the foreground, the bay beyond), wingtip shadow on the stones.",
    "deviation": null,
@@ -1124,11 +1124,11 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 3.72,
-    "k4_cpu_s_per_frame": 49.6,
+    "draft_s_per_frame": 17.69,
+    "k4_cpu_s_per_frame": 235.84,
     "k4_gpu_s_per_frame": null,
-    "draft_minutes": 5.95,
-    "k4_cpu_hours": 1.32,
+    "draft_minutes": 28.3,
+    "k4_cpu_hours": 6.29,
     "k4_gpu_hours": null,
     "factors": {
      "people": 1.24,
@@ -1138,7 +1138,7 @@
      "move": 1,
      "total": 1.24
     },
-    "basis": "ESTIMATE: unknown set, generic; x 1.24 for the shot's content"
+    "basis": "MEASURED draft 17.69 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
    },
    "staging": "LOW STATIC 24 mm at the town roofs (s21 restage: a 35 mm frame cannot hold roofs, quay and a high dragon): from the terrace-2 street just over the terrace-1 ridges, looking east-north-east down the slope - roofs in the foreground, the quay apron and the Santa Maria beyond, the breakwater and the sea; Charcoal crosses high over the harbour (top, left to right) and his shadow slides over the apron toward the town.",
    "deviation": null,
@@ -1222,11 +1222,11 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 4.8,
-    "k4_cpu_s_per_frame": 64,
+    "draft_s_per_frame": 22.44,
+    "k4_cpu_s_per_frame": 299.17,
     "k4_gpu_s_per_frame": null,
-    "draft_minutes": 5.76,
-    "k4_cpu_hours": 1.28,
+    "draft_minutes": 26.93,
+    "k4_cpu_hours": 5.98,
     "k4_gpu_hours": null,
     "factors": {
      "people": 1.6,
@@ -1236,9 +1236,9 @@
      "move": 1,
      "total": 1.6
     },
-    "basis": "ESTIMATE: unknown set, generic; x 1.6 for the shot's content"
+    "basis": "MEASURED draft 22.44 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
    },
-   "staging": "50 mm STATIC on the terrace farm: a farmer rests on a hoe (foreground left, back three-quarter, face turned away), watches the riders pass high over the town (background right), unimpressed.",
+   "staging": "50 mm STATIC on the terrace farm: a farmer (a woman) rests on a hoe (foreground left, back three-quarter, face turned away), watches the riders pass high over the town (background right), unimpressed.",
    "deviation": null,
    "action": "On a terraced hillside, a farmer leans on a tool and watches the royal riders pass, not especially impressed.",
    "need": {
@@ -1388,7 +1388,7 @@
     },
     "basis": "ESTIMATE: unknown set, generic; x 1.6 for the shot's content"
    },
-   "staging": "WIDE 100 mm (s21; was 160) from inland: Leaf climbs back to Charcoal's level on his usual side (inland, a little behind), near enough for talk.",
+   "staging": "WIDE 85 mm (s23; s21 100, was 160) from inland: Leaf climbs back to Charcoal's level on his usual side (inland, a little behind), near enough for talk.",
    "deviation": null,
    "action": "Leaf climbs back up to Charcoal's level, on his usual side, near enough for talk over the wind.",
    "need": {
@@ -1470,11 +1470,11 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 3.24,
-    "k4_cpu_s_per_frame": 43.2,
+    "draft_s_per_frame": 14.31,
+    "k4_cpu_s_per_frame": 190.73,
     "k4_gpu_s_per_frame": null,
-    "draft_minutes": 6.48,
-    "k4_cpu_hours": 1.44,
+    "draft_minutes": 28.61,
+    "k4_cpu_hours": 6.36,
     "k4_gpu_hours": null,
     "factors": {
      "people": 1,
@@ -1484,7 +1484,7 @@
      "move": 1.08,
      "total": 1.08
     },
-    "basis": "ESTIMATE: unknown set, generic; x 1.08 for the shot's content"
+    "basis": "MEASURED draft 14.31 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
    },
    "staging": "AERIAL 35 mm: beyond the town, on its high ground, the palace - weathered pale stone, practical; the birthing chamber's high opening a dark shape near the top of the east face.",
    "deviation": null,
@@ -1646,11 +1646,11 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 4.8,
-    "k4_cpu_s_per_frame": 63.94,
+    "draft_s_per_frame": 16.3,
+    "k4_cpu_s_per_frame": 217.29,
     "k4_gpu_s_per_frame": null,
-    "draft_minutes": 9.59,
-    "k4_cpu_hours": 2.13,
+    "draft_minutes": 32.59,
+    "k4_cpu_hours": 7.24,
     "k4_gpu_hours": null,
     "factors": {
      "people": 1.48,
@@ -1660,7 +1660,7 @@
      "move": 1.08,
      "total": 1.6
     },
-    "basis": "ESTIMATE: unknown set, generic; x 1.6 for the shot's content"
+    "basis": "MEASURED draft 16.3 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
    },
    "staging": "EXTREME WIDE 160 mm aerial travel from ~700 m behind / inland (s21: on the line from the outer rocks through the pair, so both read in one long-lens frame): they leave the harbour behind and follow the coast SSE toward its far end, Charcoal left (seaward), Leaf right; the outer rocks small near the horizon right.",
    "deviation": null,
