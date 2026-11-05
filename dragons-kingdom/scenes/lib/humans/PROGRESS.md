@@ -958,3 +958,143 @@ NEXT (look, in order):
 3. Right cuff shows a small light-green ragged fringe (inner side / backface of the hem) and the coat's split
    hem at lower right reads jagged at draft; check cloth.js back-face colour and the hem's solidify.
 4. Older list (2g NEXT 2-5).
+
+## perf s10 (rider grip: thumb wrap on, fingertips tucked) - short session
+Done (ridergrip.js, rig.js handShape, selftest-perf.mjs; API unchanged, new keys optional, pure in t):
+- BAR_GRIP.thumbWrap = 1 (look 2h moved the coat cuffs off the hand bones: coat move 0.00 cm).
+- FOUND: the rig's bone +y does NOT run along the bones (finger3-2 +y . bone dir = -0.79, thumb -0.41),
+  so wrapThumb's tip (and the s9 "tip" estimates) were wrong - the thumb tip was aimed with a bogus
+  lever and stood 4.8 cm out behind the bar. New export `fingerTip(ch, f, sd, fallback)`: the last
+  phalanx's direction = the child offset of the joint before it, read in the last bone's frame, length
+  0.95 x the middle phalanx (checked against CPU-skinned fingertip vertices: within 2 mm on the four
+  fingers, 7 mm on the thumb; probe saved at scratch eng1/perf10/_probe_tips.mjs - copy into
+  humans/cache/ to run, `node scenes/lib/humans/cache/_probe_tips.mjs abby_ride,remi_ride`).
+- `tuckTip()`: after the wrap fit each finger's last phalanx (a leaf, nothing else moves) is aimed so
+  its END lies at bar radius + tipPad x palm length (BAR_GRIP.tipPad 0.05) from the axis, on round the
+  curl (front -> under -> rider's side) - closed-form circle/circle solve, no iteration. A fixed
+  `shape.dip` (number or per finger; handShape now honours it, default 0.75 as before) skips it.
+- Wrap radius: BAR_GRIP.wrap 0.08 (PIP/DIP line at bar radius + 0.08 x palm; was hard-coded 0.1).
+- selftest rider grip: thumb's last joint AND tip within 4 cm of the axis on the rider's side (tip fwd < 0);
+  fingertip ends within 1.2 cm of the bar surface, none > 0.5 cm in front of the axis, none > 2.8 cm below.
+  Values (skinned probe, cross-section fwd/up cm from the bar axis, bar r 1.7): abby_ride.R tips
+  f2 (-1.9,-1.0) f3 (-2.0,-0.1) f4 (-1.9,-1.0) f5 (-1.0,-2.2), thumb tip (-1.0,-2.4); before: f4 (-2.5,-2.3),
+  f5 (-0.5,-2.9) (the pinky hung 1.2 cm under the bar's lower edge), thumb tip (-4.7,-0.4).
+  Selftest: abby out 0.4 / fwd -0.5 / low -2.1, thumb 2.6 + tip 2.9 cm; remi 0.6 / -0.8 / -2.2, thumb
+  2.6 + tip 3.9 cm; abby_ride_injured.R 0.4 / -1.1 / -1.9, thumb 2.5 + tip 2.7; injured LEFT unmoved 0.2 cm.
+Checked: selftest-perf all passed; npm test 48 pass / 0 fail / 1 skipped.
+Images (scratch eng1/perf10/): before/1C-16_036.png (pixel-identical to look9/after = HEAD c388c00),
+after/1C-16_036.png (director still 1C-16@0.5 draft), 1C-16_grip_before_after.png (left before, right
+after), 1C-16_grip_crop.png (2x hands, top before / bottom after).
+RESULT at 1C-16 draft: SUBTLE. Sleeves / coat do not move with the thumb wrap on (as the probe said). The
+small pink tips that peeked out at the outer edges of each hand (index / little finger) are smaller; the
+rounded lobes still showing under the bar's lower edge are the middle phalanges / DIP joints curling
+under (r 2.3-2.5 cm from the axis + ~0.7 cm of finger), not the tips - that is what a real overhand grip
+shows from a high front camera. The thumb is behind the bar from this lens (expected, see s9 NEXT 3).
+
+NEXT (perf, in order):
+1. If 1C-16 still reads "pointy": the lobes are MakeHuman's tapered finger ends at draft (look track: pad
+   bulge / tip fattening on rebuild, PROGRESS look 2g NEXT 2) - not more curl: the PIP/DIP line is already
+   at bar r + 0.08 palm (tighter = fingers into the leather). REQUEST director: 1C-16 camera a little lower
+   and more to the side, or an over-shoulder insert to show the thumb wrap.
+2. The little finger's PIP sits 1.4 cm from the axis (bar r 1.7: ~0.3 cm into the bar; pre-existing, its
+   knuckle is low in the palm's arch). Fix: let the pinky's base joint curl less / tilt the hand's ulnar
+   side up (orientHand roll), check in the probe.
+3. remi_ride thumb tip 3.9 cm from the axis (limit 4): wrapThumb's R uses + 0.1 palm; his thumb is long -
+   aim the distal at R scaled by thumb length if a test or a shot needs it.
+4. Not done (budget): farmer "lean on a tool" posture for X4-06 (motion.js postures: crouch / kneel / cower
+   / hunch / crawl / brace). Plan: posture 'lean' with o.tool (prop in both hands, butt planted ~0.35 m in
+   front of the lead foot, hands stacked at chest height, weight on the tool: hips back, spine01-03 flexed
+   ~12 deg, head up), hands from rig twoBoneIK onto the shaft points; pure in t like the others.
+
+## LOOK round 2i (2026-11-04, short session) - rider sleeve / skirt weights at build time, Abby's ride cuffs
+FIXED (build code; rebuilt abby_ride and remi_ride only):
+1. garments.py `Dresser.garment_pools()` + `transfer(..., pools=)` (simulate() uses it for every garment
+   without its own weights): each garment vertex is skinned from the k nearest body vertices of its pool.
+   Forearm sleeve vertices (upper garment `region` = arm, nearer the forearm segment than the upper arm)
+   -> only that arm's uarm/farm/hand body vertices; upper sleeve -> all (armhole blend); every other vertex
+   -> no farm/hand vertices, and below the armpits (y < upperarm01 - 8 cm) no arm vertices at all (the
+   seated elbows sit at the hips: a first rebuild with only "no forearm" gave the skirt upper-arm / elbow
+   weights, 2.9x stretch). This is the lasting form of loader.js lapOffSleeve (still there; a no-op-ish
+   safety net for unrebuilt caches). A loader-only "sleeve underside -> forearm" pass was tried and dropped:
+   in remi_ride the skirt under the forearm is IN the sleeve tube and edge-connected to it, so the flood
+   pulled the skirt up (max stretch 5.5 -> 7.9x).
+2. characters.py abby_ride coat: sleeve_frac 0.97 -> 1.1, stack 0.035 -> 0.02. Cuff hem (p98 along the
+   forearm, past the wrist joint): -2.9 / -3.1 cm -> +1.5 / +1.5 cm (rest and grip identical: the sleeve is
+   rigid on the forearm; the gap was the cut, not the grip).
+Measured (probe: CPU-skinned coat, rider grip @0.7, edges >= 3 mm, posed / bind length):
+   remi_ride  coat verts with an edge > 1.5x: 136 -> 22, max 5.54x -> 2.31x (all remaining on lowerarm/wrist
+              at the cuff: wrist bend); abby_ride 40 -> 34, max 2.49x -> 2.39x.
+   remi_ride L coat cuff still ends +6.5 cm past the wrist (was +5.9; R -2.2): his left cuff hangs long.
+Checked: selftest-perf all passed; npm test 48 pass / 0 fail / 1 skipped.
+Images (scratch eng1/look10/): before/, after/ (director stills 1C-16@0.5, 1C-18@0.5 draft),
+1C-16_036_before_after.png, 1C-18_036_before_after.png, 1C-18_crop_before_after.png (left before).
+Probe: eng1/look10/probe.mjs (CUFF=1 for cuff ends; CDIR=<dir> to read another cache dir).
+RESULT: 1C-16 - Abby's coat cuffs now reach the wrist crease on both hands, no bare forearm band. 1C-18 -
+Remi's spiky dark sleeve shreds above the hands are gone; sleeves end cleanly at the wrists.
+NOTE: build-caches now reports 46 of 48 humans "made by older code" (garments.py changed); they still load
+and render as before. Rebuild them when convenient (riders first: abby_ride_injured, fall_ride, scout_ride
+have the same lap/sleeve weight problem; standing builds change little).
+
+NEXT (look, in order):
+1. Rebuild abby_ride_injured (and fall_ride, scout_ride) with the pools: `node pc/build-caches.mjs --only
+   humans --humans abby_ride_injured,fall_ride,scout_ride --force` (~7 min each for Abby), then probe + stills.
+   abby_ride_injured keeps sleeve_frac 0.97 (its R cuff is already +2.9 cm past the wrist).
+2. 1C-16 after: the coat skirt at frame left reads as one long flat panel with a vertical fold edge from the
+   lap up toward the right hand (new sim drape) - check at final quality before acting.
+3. Fingertip pad bulge (postfix.py build-time tip fattening) - not started (budget).
+4. 2h NEXT 3 (right cuff light-green fringe / jagged split hem) and older list.
+
+## perf s11 (lean on a tool for X4-06, little-finger PIP clear of the grab bar) - short session
+Done (motion.js, tools.js (new), director.js, ridergrip.js, selftest-perf.mjs, lookdev humans-anim-tool.js):
+1. POSTURE 'lean' (motion.js, pure in t): weight on o.stance ('R' default): pelvis 4 cm (x h/1.75) over the
+   stance foot, free hip down 0.07 rad, chest back over the stance hip; the free foot 11 cm forward and 3.5 cm
+   out, toe a little out; pelvis 2 cm back and tipped 0.05 rad; spine ~0.12 rad forward with a slow breath
+   (0.21 Hz, +-0.012 rad) on top of the idle; head up 0.16 rad; the standing weight-shift noise x0.25.
+   Arms: new GESTURES.tool - the shaft stands o.ahead 0.6 m (x h/1.75) in front of the root, 5 cm to the
+   stance side, tipped o.tilt 12 deg back toward the body, o.length 1.2 m (x h/1.75); the LOWER hand (o.lower,
+   default the stance side) in a handshake grip round the shaft just under its end, knuckles forward; the
+   other hand over the end and the lower fist, palm down, fingers curled down over its knuckles.
+   o.tool.prop 'hoe' | 'spade' | 'rake' | 'staff' -> a procedural STAND-IN (tools.js toolProp: ash shaft,
+   iron blade; made once, hung on ch.root, placed along the shaft every frame) or o.tool.object (any
+   Object3D, local +y up the shaft, origin on the ground). o.tool false = the body alone.
+   Performer / body:  P.posture('lean', t0, { stance: 'R', tool: { prop: 'hoe' }, hold, in, out })
+   Director (blocking acts; the director's own 'lean' posture gives the bend, the overlay the hands + prop):
+     acts: [[0, 'lean', { to: 0.6, dur: 0.01 }], [0, 'gesture', { name: 'tool', prop: 'hoe', stance: 'R' }],
+            [0.5, 'look', { at: 'leaf.chest', amount: 0.7 }]]
+   (humans/director.js: the 'gesture' overlay with name 'tool' runs GESTURES.tool; other names stay 'explain'.)
+   Measured (crowd05, t 4): lower palm 3.2 cm from the shaft axis (r 1.7), 3.6-3.9 cm under its end; upper
+   palm 2.4-2.6 cm over the end, 0.5 cm off the axis; pelvis 3.9 cm toward the stance foot; shaft 26 cm from
+   spine02 (chestFront 15.6). New selftest 'lean on a tool' (crowd03) checks these + purity.
+   Images (scratch eng1/perf11/): tool_v0/v2/v4.png (first pass: spine 0.2 rad - read as an old woman's
+   stoop; flat upper fingers sticking out past the shaft), tool2_v1/v2/v4.png (after: three-quarter, side,
+   hands close-up). RESULT: reads as a farmer resting on a hoe - upright, slight lean, both hands stacked on
+   the top, the lower fist round the shaft, the upper hand cupped over it. The stance is hidden by the
+   kirtle (crowd05); the hoe blade is out of frame in these views (its shadow shows it).
+2. ridergrip.js clearJoint(): the little finger's knuckle sits on the bar's front-top (1.76 cm from the
+   axis), so its PIP was 1.4 cm from the axis (bar r 1.7: inside). Now every finger's proximal phalanx
+   swings out until its PIP is >= bar r + BAR_GRIP.jointPad (0.06) x palm from the axis; a finger moved so
+   closes its middle phalanx until the DIP is back on that radius; DIPs of all fingers kept out the same way;
+   tuckTip as before. Pinky PIP 1.4 -> 2.2 cm (abby_ride, _injured.R), 2.4 (remi_ride); other fingers
+   unchanged. Trade-off: the pinky's tip now ends under the bar's FRONT half (fwd +0.8 / +0.7 / +0.2 cm,
+   2.0-2.2 cm below the axis) instead of wrapping to the rider's side through the leather - geometry: with
+   its knuckle that far forward a clear 3-joint pinky cannot reach further round. selftest: index/middle/ring
+   tips < 0.5 cm forward (now -1.6 / -2.1 / -1.9), the little finger < 1.2; NEW limit: no PIP/DIP centre
+   within bar r + 0.4 cm of the axis (min now 2.2 cm).
+3. creatures s8 (injured LEVEL bar in the selftest): already done in perf s10 (selftest builds the bar from
+   the right palm mirrored across the root bone in the rider root's frame, exactly as rider.js addGrip; the
+   free right hand is held to the same limits as the two-handed builds). Nothing to add; values above.
+Checked: selftest-perf all passed; npm test 48 pass / 0 fail / 1 skipped.
+Probe: scratch eng1/perf11/_probe_lean.mjs (copy to humans/cache/, `node scenes/lib/humans/cache/_probe_lean.mjs
+crowd05 4`; STANCE=L).
+
+NEXT (perf, in order):
+1. 1C-16 draft still (director, @0.5) to look at the pinky change: the little fingertip now under the bar's
+   front half - if it reads as a pink point under the front edge, lift the hand's ulnar side instead
+   (orientHand roll about the fingers so the pinky knuckle moves back over the bar; then jointPad can stay).
+2. X4-06 in the director: the blocking's 'lean' only bends the spine (actions.js bow); the weight-on-one-leg
+   pelvis comes only through createBody / perform.js. REQUEST director: for X4-06 either pose the farmer
+   through the performer (legs: 'planted' + the 'lean' posture) or accept the bend-only body (MS 50 mm, the
+   kirtle hides the legs). The spec's act [0, 'stand', { prop: 'hoe', lean: 0.6 }] must become the acts above.
+3. REQUEST props: a real hoe (worn ash shaft ~1.25 m, forged blade on a gooseneck) for the props library;
+   tools.js toolProp is a stand-in (local frame documented there: origin on the ground, +y up the shaft).
+4. remi_ride thumb tip 3.9 cm (limit 4) - s10 NEXT 3 still open.

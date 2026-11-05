@@ -1,5 +1,37 @@
 # Sound track: progress (for the next session)
 
+## State (2026-11-04, session 8: X4-03 wingbeats + M9 coast cue; short budgeted session)
+
+- **X4-03** (director s18: Charcoal now FLAPS, `CHAR_FLY()` CHAR_HZ 0.625): `fx/spots.json` new row `wingbeat` at 0.16 s,
+  `repeat` n 3 every 1.6 s (0.16 / 1.76 / 3.36 s, recipe peak ~0.3 s later), -22 dB, dur 1.7, pan 0.4 -> -0.2 with the
+  shadow (same as the air rush), seed 40062. The `air_rush` row stays under it, lowered -32 -> -34. Seen
+  (`scratchpad/eng1/sound/s8/X4-03-mix-spec.png`, `X4-03-fx-wave.png`, window 102.0-107.0 s, shot starts 102.5): three
+  low-end beat blobs at ~102.9 / 104.5 / 106.1 s = predicted peaks 102.96 / 104.56 / 106.16. X4-03 is still a slate.
+- **M9 coast** (`coast` in `music/scores.mjs`, cue in `music/cues.json`): X4-20 "Wind; the light theme". ONE sync
+  point: beat 0 = X4-20 (184.5 s in the 1C cut). 80 bpm so M8's whole 8-beat light theme fits the 5 s shot: flute +
+  violins an octave below from beat 0.25, harmonised D - D/F# - G - A - D as in M8 1C-19, harp eighths, pad; no basses
+  or horn (lighter, moving). Closing D add9 on beat 6.25 (4.7 s); `end_by` X5-01 +0.6 s, fade 1.0 s (over the hard cut
+  to Cling). target -21, duck 10. Nothing in X4-19 (Remi caught). Seen (`s8/X4-20-music-spec.png`,
+  `X4-20-music-wave.png`, `X4-20-mix-spec.png`, 183.5-191.5 s): theme notes A D E F# A B A F# D at the written beats,
+  the D at ~189.2 s, music gone by 190.1.
+- **1C re-mix** `final/audio/cuts/1C/DragonsKingdom_S01E01_draft-cut_1C_sound.mp4`: program (0-91.5 s) **-16.7 LUFS**
+  (whole cut -20.1), TP -1.6 dBTP, LRA 9.9, AAC -16.7 / -1.6, min dialogue margin 12.5 LU (want >= 10), **PASS**,
+  mix sha256 25f6e61359fa1b7c. 19 rendered 1C shots; X4/X5/X6 slates (outside the program region). Dialogue unchanged
+  -> ASR not re-run. NOT listened to by a person.
+
+## Next steps (in order)
+
+1. **Listen** on the PC: 1C 28-95 s (Leaf's stroke, s7 item 1), X4-03 (102.5-106.5 s: are three heavy beats + air rush
+   too loud for "stays high"? knob: row `gain_db` -22), M9 at 184.5-190 s (level -21 under the wind; the cue starts on
+   the cut with harp + pad - if it reads abrupt, add a 0.3 s `fade_in` or start the pad ramp at beat -0.5).
+2. When the director renders X4-03 (VERDOR_AERIAL builder not started yet), confirm the beat phase on frames (s6
+   recipe: contact strip, wing level on the downstroke at ~0.46 s for CHAR_HZ 0.625); re-time `at` if the act has a
+   `phase`/`tOffset`. When X4-20 exists, check M9 against the picture length (5 s / 120 frames now); if the shot
+   changes length, change the tempo (beat 6.25 should land ~0.3 s before the cut) rather than the notes.
+3. Items from session 7 below (X4 picture checks, VO REQUESTS for crew/lookout/instructor/walla) still stand.
+4. Earlier items still stand (flight_wind level for 1D/1E, M6 basses re-render check, Cling square bed + diegetic
+   festival music, VSCO 2 CE via sfizz, per-line voice treatment, episode-timeline mix).
+
 ## State (2026-11-03, session 7: X4 harbour spots + 1C wingbeat that reads as a wing)
 
 - **Leaf's `wingbeat_light` rebuilt** (`fx/synth.mjs`). The s6 version (0.62 s whoosh) was measured with

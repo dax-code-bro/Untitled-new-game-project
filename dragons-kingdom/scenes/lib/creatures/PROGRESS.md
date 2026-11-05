@@ -4,6 +4,41 @@ Owner paths: `scenes/lib/creatures/`, `scenes/lookdev/creatures-*.js` (+ creatur
 README.md in this folder is the full description of how the models are built; this file is
 only the state of the work.
 
+## REALISM ROUND 2 - session 9 (2026-11-04, short budgeted session)
+Stills (draft) under `scratchpad/eng1/creatures/r2s9/`: `before/X3-15_040.png`, `v1/X3-15_040.png` (= committed code),
+crop sheets (crop x620-940 y80-320 x2, before | after) `x315_before_v1.png`; `v2`/`v3`/`v4` = rejected experiments
+(see below); `walk_pair.png` (creatures-dev, charcoal `walk` t 1.2 - came out as a FRONT view, see NEXT 2).
+Done (code):
+- glsl.js dkVor3: also tracks d3 (third-nearest distance) and returns `V.ew = smoothstep(0, 0.16, d3 - d2)`, the
+  confidence of the per-edge values e/up (they jump along the straight line inside a cell where the second-nearest
+  cell switches). New struct field only - every other caller unchanged.
+- materials.js head block (headVar, Charcoal): abut / deep / overlap are multiplied by `vew` (fade to a plain seam
+  at the switch lines) and the overlap band is a smoothstep, not a step; the s7 per-plate tilt fades over the rim
+  band `* (1 - 0.6 rimM)`.
+RESULTS (looked at): the many small hard wedge facets at plate corners/rims are gone or softened (the head reads
+softer and more continuous). NOT fixed: a few LARGE dark/light flat polygons with long straight edges (upper middle
+and lower right of the crop, lower left of the frame). Experiments that did NOT change them (reverted):
+v2 = generic tiltJ x0.3 on the head + coarse-plate tilt x0.5 (223 px changed: tilt is not the cause);
+v3 = skin shadowSide BackSide (identical: not shadow-map acne); v4 = groove + drop of fine plates clipped by a
+whole coarse neighbour (C.id2 >= fsub split edge) - changed them but made the upper dark polygon bigger/blockier.
+DIAGNOSIS (best guess, unverified): they are SLIVER sections of the 3D Voronoi - the surface grazes a big cell near
+its corner/edge, so the section is a long thin triangle; with headDome 12 (flat top) and per-plate value 0.5..1.2
+(`col *= 0.5 + 0.7 * plateJ`) it reads as a flat shard of a different value.
+- npm test: 49 tests, 48 pass, 0 fail, 1 skipped, exit 0. Style frames / creatures lookdev NOT re-rendered (budget).
+NEXT (exact):
+1. X3-15 slivers: debug-tint first (in the head block: `col = vec3(d1 > 0.55, vq, 0)` with d1 = distance to the own
+   3D centre in cell units - add `V.d1 = d1` to DKV3), still X3-15@0.48, confirm the shards are high-d1 sections.
+   If so: on high d1 (sliver) merge into the neighbour - use c2's plateJ (`dkH33(c2 + 7.7)`), fade the seam
+   between them (cav * (1 - sliverM)), and drop the per-plate value jitter toward the mean; maybe headDome 12 -> 9
+   only on sliverM. Do NOT lower headDome globally (more cobbles - session 8 note).
+2. Membrane-at-knee side view still: creatures-dev.json `{ name: charcoal, face: 90 (or -90), pose: { name: "walk",
+   t: 1.2 } }` (there is no `walkLow` pose - `walk` is the low walk); with face 0 and cam [1.15,0.12,0] /
+   [0,0.12,1.15] BOTH views rendered the same FRONT view (time 0.5 and 1.5 via render.mjs --still): check how
+   creatures-dev.js applies `face` / rotationY / cam offsets (line ~128) before choosing the cam. The front view
+   shows wings folded along the forelimbs, wrists down, no spike or stretched membrane (small in frame).
+3. Re-render style frames + creatures lookdev at draft (not done since session 3).
+4. Injured-rider level bar still; X3-02 grey; session 2 items 4-5 (Leaf/Starlight memFoldOcc, contacts, gait).
+
 ## REALISM ROUND 2 - session 8 (2026-11-03, short budgeted session)
 Stills (draft) under `scratchpad/eng1/creatures/r2s8/`: `v2/X3-15_040.png` (final; `v1/` = without the seam offset),
 crop sheet `x315_s7_s8v2.png` (crop x620-940 y80-320 x2: session 7 | now), `leaf_call_pair.png` + `leaf_call_head.png`

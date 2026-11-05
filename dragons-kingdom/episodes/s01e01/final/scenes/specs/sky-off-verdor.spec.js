@@ -192,7 +192,12 @@ export default {
       // az 102): the bar and the knuckles in profile, a thumb on her side of the bar can show later. still s18/r1 (from
       // 214, 1.5 m, rise 0.55): hands good, but a neck-crest plate covered ~40 % of the frame left -> from 226 (46 deg off
       // the centre line: the crest slides out of frame left), 1.45 m, rise 0.75 (~27 deg down: the line of sight clears it).)
-      cam: { rig: 'follow', frame: { subjects: [['abbyR.hand.R', [-0.32, 0.02]], ['abbyR.hand.L', [0.32, 0.02]]], from: 226, dist: 1.45, rise: 0.75, track: true }, mm: 100, fstop: 4, focus: 'abbyR.hand.R' },
+      // (s19: the s18 DRIFT was the solve, not the dragon: two subjects at the SAME screen height can only be held from
+      // square-on to the bar, so the soft dist + `from` pulled against them (r1 without dist went straight ahead, frontal).
+      // Now ONE subject (her right WRIST, exact: dist + from + rise) - the left hand lands ~+0.3 by geometry, every frame;
+      // and the follow rig's aerial shake (pos +-9 cm at 0.3 = ~0.4 screen units at 100 mm) cut to 0.06. Lower (rise
+      // 0.22, ~9 deg down) and from 234: the thumb tips show under the bar; wing upstroke (1.25 s) only in the soft bg.)
+      cam: { rig: 'follow', frame: { subjects: [['abbyR.hand.R', [-0.22, 0.22]]], from: 234, dist: 1.45, rise: 0.22, track: true }, mm: 100, fstop: 5.6, focus: 'abbyR.hand.R', focusOffset: 0.05, shake: { kind: 'aerial', amount: 0.06 } },
       // (s18 r2: her coat SLEEVES read as stiff boards in a 3/4 view (humans cloth) -> hands larger (+-0.32) push them to the
       // frame edges; sun-lit backs of the hands at p95 ~233 -> exposure trim -0.25 for this insert only)
       exposure: -0.25,

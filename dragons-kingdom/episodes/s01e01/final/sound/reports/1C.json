@@ -27,10 +27,10 @@
  "result": {
   "mix": "episodes/s01e01/final/audio/cuts/1C/mix.wav",
   "I": -16.7,
-  "I_full": -20.2,
+  "I_full": -20.1,
   "TP": -1.6,
   "LRA": 9.9,
-  "sha256": "3aef5291e6939491618e522dc38cb7780f6653fca981edc7c515fdcf7a4e67e1",
+  "sha256": "25f6e61359fa1b7c723b889c171a11f1c25e3a14f4e9e176d0fec69525eef47e",
   "master_gain_db": 2,
   "limiter_ceiling_dbfs": -1.6,
   "dialogue_gain_db": 11.4,
@@ -42,9 +42,9 @@
   "file": "episodes/s01e01/final/audio/cuts/1C/DragonsKingdom_S01E01_draft-cut_1C_sound.mp4",
   "duration_s": 382,
   "aac_I": -16.7,
-  "aac_I_full": -20.2,
+  "aac_I_full": -20.1,
   "aac_TP": -1.6,
-  "bytes": 47886179
+  "bytes": 48366855
  },
  "beds": {
   "grounds_wind": {
@@ -112,6 +112,19 @@
    "duck_db": 10,
    "fade_out_s": 3.5,
    "render_sha256": "5e8083d2a2b3b85d90b40b608af1fd88f498648c53565a0546738be65036bb0a"
+  },
+  {
+   "id": "M9 coast",
+   "score": "coast",
+   "start_s": 184.5,
+   "end_s": 190.1,
+   "sync": "beat 0 = X4-20 +0 s",
+   "raw_lufs": -28,
+   "target_lufs": -21,
+   "gain_db": 7,
+   "duck_db": 10,
+   "fade_out_s": 1,
+   "render_sha256": "cd9610d993b2221b1aa67801964e563ec734e4bc27bfd98b9a8f73169e571fc0"
   }
  ],
  "music_not_in_cut": [
@@ -124,7 +137,7 @@
  "music_cue_sheet": "episodes/s01e01/final/sound/music/cues.json",
  "fx": {
   "spot_sheet": "episodes/s01e01/final/sound/fx/spots.json",
-  "events": 147,
+  "events": 150,
   "peak_dbfs": -4.1,
   "spaces": [
    "air",
@@ -132,11 +145,11 @@
    "open",
    "stone_wall"
   ],
-  "sha256": "3e6102fe46ef0e38489dba0ce7bfc2692f11c6c3640a3318f59b05e7c5728f5f",
+  "sha256": "383e492f42b59bf453297a39b386480cbeb2b36c1ece636fd539ef3b4e61b2c4",
   "spot_rows_not_in_cut": 134,
   "by_sound": {
    "claws_turf": 1,
-   "wingbeat": 34,
+   "wingbeat": 37,
    "wind_grass": 4,
    "leather": 4,
    "breath": 1,

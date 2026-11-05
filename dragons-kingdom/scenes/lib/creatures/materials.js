@@ -374,7 +374,7 @@ void dkSkin(inout vec3 albedo) {
   fsub = mix(fsub, 0.42, uHeadLk2.z * isHead * (1.0 - peri));
   float gA = L * exp2(l0), gC = gA * 2.0;
   float fwr = length(fwidth(vRest));
-  float vh = 0.0, vcav = 0.0, vcr = 0.0, vid = 0.0, ve = 0.5, vup = 0.0, vq = 0.0; vec3 vg = vec3(0.0);
+  float vh = 0.0, vcav = 0.0, vcr = 0.0, vid = 0.0, ve = 0.5, vup = 0.0, vq = 0.0, vew = 1.0; vec3 vg = vec3(0.0);
   float gDet = 1.0;
   float tiltJ = uSkin3.z + uHeadLk.w * isHead;
   // (r2 s8) X3-15 "broken slate": on the head plates (headVar, Charcoal) the border distance is a softer
@@ -388,10 +388,10 @@ void dkSkin(inout vec3 albedo) {
     if (C.id2 >= fsub) {
       DKV3 F = dkVor3(vRest / gA + l0 * 7.31, Tr, an, tilt, dome, groove, uScl2.x);
       float dF = 1.0 - smoothstep(0.35, 0.9, fwr / gA);
-      vh = F.h * gA * dF; vg = (F.g + tiltJ * (vec3(F.id, F.id2, fract(F.id * 7.13 + F.id2)) - 0.5) * 2.2) * dF; vcav = F.cav * dF; vcr = F.crown * dF; vid = F.id; ve = F.e; vup = F.up; vq = F.q * dF;
+      vh = F.h * gA * dF; vg = (F.g + tiltJ * (vec3(F.id, F.id2, fract(F.id * 7.13 + F.id2)) - 0.5) * 2.2) * dF; vcav = F.cav * dF; vcr = F.crown * dF; vid = F.id; ve = F.e; vup = F.up; vq = F.q * dF; vew = F.ew;
       gDet = dF;
     } else {
-      vh = C.h * gC * dC; vg = (C.g + tiltJ * (vec3(C.id, C.id2, fract(C.id * 7.13 + C.id2)) - 0.5) * 2.2) * dC; vcav = C.cav * dC; vcr = C.crown * dC; vid = C.id; ve = C.e; vup = C.up; vq = C.q * dC;
+      vh = C.h * gC * dC; vg = (C.g + tiltJ * (vec3(C.id, C.id2, fract(C.id * 7.13 + C.id2)) - 0.5) * 2.2) * dC; vcav = C.cav * dC; vcr = C.crown * dC; vid = C.id; ve = C.e; vup = C.up; vq = C.q * dC; vew = C.ew;
       gDet = dC;
     }
     // scattered enlarged tubercles on the upper flanks, the neck and the outer limbs
@@ -449,9 +449,12 @@ void dkSkin(inout vec3 albedo) {
       browM = (1.0 - smoothstep(1.4, 3.2, length(er) / uEyeC.w)) * smoothstep(-0.3, 0.7, er.y / uEyeC.w);
     }
     float cav0 = vcav;
-    float abut = 1.0 - smoothstep(0.26, 0.4, ve);
-    float deep = smoothstep(0.86, 0.97, ve);
-    float ovl = step(0.4, ve) * (1.0 - step(mix(0.62, 0.84, browM), ve));
+    // (r2 s9) X3-15 "shards": e/up switch along straight lines inside a plate (second-nearest cell
+    // changes), so every per-edge effect is faded to a plain seam there (vew) and the overlap is a
+    // smooth band, not a step - no more long triangular light/dark planes on the big plates
+    float abut = (1.0 - smoothstep(0.26, 0.4, ve)) * vew;
+    float deep = smoothstep(0.86, 0.97, ve) * vew;
+    float ovl = smoothstep(0.4, 0.45, ve) * (1.0 - smoothstep(mix(0.57, 0.79, browM), mix(0.62, 0.84, browM), ve)) * vew;
     float top = ovl * step(0.0, vup), under = ovl * (1.0 - step(0.0, vup));
     float sm = mix(mix(0.55, 0.06, abut), 1.6, deep);   // the plain seam is narrow and faint too
     sm = mix(sm, 0.12, top);
@@ -464,7 +467,8 @@ void dkSkin(inout vec3 albedo) {
     vg *= 1.0 - hv1 * rimM * clamp(0.45 + 0.35 * abut + 0.35 * top - 0.6 * deep - 0.6 * under, 0.0, 0.92);
     // (r2 s7) each plate sits at its own slight tilt (a constant gradient per cell: the plate catches
     // the key a little more or less as a whole), so neighbours never share one flat plane like paving
-    vg += hv1 * (vec3(plateJ, plateJ2, fract(plateJ * 5.31 + plateJ2 * 2.7)) - 0.5) * 0.6 * (1.0 - 0.5 * deep);
+    // (r2 s9) the tilt fades out over the rim band so a tilted plate stays a dome, not a flat facet
+    vg += hv1 * (vec3(plateJ, plateJ2, fract(plateJ * 5.31 + plateJ2 * 2.7)) - 0.5) * 0.6 * (1.0 - 0.5 * deep) * (1.0 - 0.6 * rimM);
     vcav = max(vcav, hv1 * under * rimM * 0.75);
     vh += hv1 * top * cav0 * gA * 0.25;
     vcr = max(vcr, hv1 * top * cav0 * 0.9);
