@@ -1,6 +1,6 @@
 {
  "title": "Dragon's Kingdom S01E01 - draft cut: 1C",
- "made_at": "2026-11-04T11:38",
+ "made_at": "2026-11-05T02:48",
  "shots_dir": "$DK_DIRECTOR_WORK/shots",
  "size": "960x540",
  "fps": 24,
@@ -123,7 +123,7 @@
    "job": "1C-07",
    "scene": "1C",
    "kind": "3d",
-   "source": "rendered 2026-11-04T02:43",
+   "source": "rendered 2026-11-05T01:46",
    "frames": 60,
    "rec_in": 672,
    "trans": [
@@ -142,7 +142,7 @@
    "job": "1C-08",
    "scene": "1C",
    "kind": "3d",
-   "source": "rendered 2026-11-04T02:46",
+   "source": "rendered 2026-11-05T01:49",
    "frames": 120,
    "rec_in": 732,
    "trans": [
@@ -161,7 +161,7 @@
    "job": "1C-09",
    "scene": "1C",
    "kind": "3d",
-   "source": "rendered 2026-11-04T02:53",
+   "source": "rendered 2026-11-05T01:54",
    "frames": 96,
    "rec_in": 852,
    "trans": [
@@ -183,7 +183,7 @@
    "job": "1C-10",
    "scene": "1C",
    "kind": "3d",
-   "source": "rendered 2026-11-04T03:01",
+   "source": "rendered 2026-11-05T02:01",
    "frames": 144,
    "rec_in": 948,
    "trans": [
@@ -202,7 +202,7 @@
    "job": "1C-11",
    "scene": "1C",
    "kind": "3d",
-   "source": "rendered 2026-11-04T03:07",
+   "source": "rendered 2026-11-05T02:06",
    "frames": 120,
    "rec_in": 1092,
    "trans": [
@@ -221,7 +221,7 @@
    "job": "1C-12",
    "scene": "1C",
    "kind": "3d",
-   "source": "rendered 2026-11-04T03:10",
+   "source": "rendered 2026-11-05T02:08",
    "frames": 96,
    "rec_in": 1212,
    "trans": [
@@ -240,7 +240,7 @@
    "job": "1C-13",
    "scene": "1C",
    "kind": "3d",
-   "source": "rendered 2026-11-04T03:23",
+   "source": "rendered 2026-11-05T02:19",
    "frames": 144,
    "rec_in": 1308,
    "trans": [
@@ -259,7 +259,7 @@
    "job": "1C-14",
    "scene": "1C",
    "kind": "3d",
-   "source": "rendered 2026-11-04T03:24",
+   "source": "rendered 2026-11-05T02:20",
    "frames": 120,
    "rec_in": 1452,
    "trans": [
@@ -281,7 +281,7 @@
    "job": "1C-15",
    "scene": "1C",
    "kind": "3d",
-   "source": "rendered 2026-11-04T03:46",
+   "source": "rendered 2026-11-05T02:38",
    "frames": 216,
    "rec_in": 1572,
    "trans": [
@@ -300,7 +300,7 @@
    "job": "1C-16",
    "scene": "1C",
    "kind": "3d",
-   "source": "rendered 2026-11-04T11:38",
+   "source": "rendered 2026-11-05T02:27",
    "frames": 72,
    "rec_in": 1788,
    "trans": [
@@ -319,7 +319,7 @@
    "job": "1C-17",
    "scene": "1C",
    "kind": "3d",
-   "source": "rendered 2026-11-04T03:34",
+   "source": "rendered 2026-11-05T02:36",
    "frames": 72,
    "rec_in": 1860,
    "trans": [
@@ -338,7 +338,7 @@
    "job": "1C-18",
    "scene": "1C",
    "kind": "3d",
-   "source": "rendered 2026-11-04T03:40",
+   "source": "rendered 2026-11-05T02:40",
    "frames": 72,
    "rec_in": 1932,
    "trans": [
@@ -357,7 +357,7 @@
    "job": "1C-19",
    "scene": "1C",
    "kind": "3d",
-   "source": "rendered 2026-11-04T03:53",
+   "source": "rendered 2026-11-05T02:48",
    "frames": 192,
    "rec_in": 2004,
    "trans": [
@@ -375,7 +375,7 @@
   {
    "job": "X4-01",
    "scene": "1C",
-   "kind": "missing",
+   "kind": "3d",
    "source": "slate",
    "frames": 168,
    "rec_in": 2196,
@@ -394,7 +394,7 @@
   {
    "job": "X4-02",
    "scene": "1C",
-   "kind": "missing",
+   "kind": "3d",
    "source": "slate",
    "frames": 96,
    "rec_in": 2364,
@@ -413,7 +413,7 @@
   {
    "job": "X4-03",
    "scene": "1C",
-   "kind": "missing",
+   "kind": "3d",
    "source": "slate",
    "frames": 96,
    "rec_in": 2460,
@@ -470,7 +470,7 @@
   {
    "job": "X4-06",
    "scene": "1C",
-   "kind": "missing",
+   "kind": "3d",
    "source": "slate",
    "frames": 72,
    "rec_in": 2796,
@@ -565,7 +565,7 @@
   {
    "job": "X4-11",
    "scene": "1C",
-   "kind": "missing",
+   "kind": "3d",
    "source": "slate",
    "frames": 84,
    "rec_in": 3360,
@@ -622,7 +622,7 @@
   {
    "job": "X4-14",
    "scene": "1C",
-   "kind": "missing",
+   "kind": "3d",
    "source": "slate",
    "frames": 120,
    "rec_in": 3732,
@@ -736,7 +736,7 @@
   {
    "job": "X4-20",
    "scene": "1C",
-   "kind": "missing",
+   "kind": "3d",
    "source": "slate",
    "frames": 120,
    "rec_in": 4428,
@@ -1598,7 +1598,7 @@
   "frames": 9168,
   "duration_s": 382,
   "size_mb": 34.6,
-  "assembled_s": 48
+  "assembled_s": 27
  },
  "summary": {
   "rendered": 19,

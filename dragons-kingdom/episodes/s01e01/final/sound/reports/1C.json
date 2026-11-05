@@ -18,18 +18,34 @@
   "windows_s": [
    [
     0,
-    91.5
+    106.5
+   ],
+   [
+    116.5,
+    119.5
+   ],
+   [
+    140,
+    143.5
+   ],
+   [
+    155.5,
+    160.5
+   ],
+   [
+    184.5,
+    189.5
    ]
   ],
-  "seconds": 91.5,
+  "seconds": 123,
   "note": "I/LRA measured over these windows (shots with a picture spec); I_full = whole cut incl. slates"
  },
  "result": {
   "mix": "episodes/s01e01/final/audio/cuts/1C/mix.wav",
-  "I": -16.7,
+  "I": -17.3,
   "I_full": -20.1,
   "TP": -1.6,
-  "LRA": 9.9,
+  "LRA": 12.5,
   "sha256": "25f6e61359fa1b7c723b889c171a11f1c25e3a14f4e9e176d0fec69525eef47e",
   "master_gain_db": 2,
   "limiter_ceiling_dbfs": -1.6,
@@ -41,10 +57,10 @@
  "muxed": {
   "file": "episodes/s01e01/final/audio/cuts/1C/DragonsKingdom_S01E01_draft-cut_1C_sound.mp4",
   "duration_s": 382,
-  "aac_I": -16.7,
+  "aac_I": -17.3,
   "aac_I_full": -20.1,
   "aac_TP": -1.6,
-  "bytes": 48366855
+  "bytes": 48365840
  },
  "beds": {
   "grounds_wind": {
