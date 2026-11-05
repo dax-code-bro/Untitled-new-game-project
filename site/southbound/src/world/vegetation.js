@@ -330,6 +330,22 @@ export async function createVegetation(hm, quality, scene, collision, cityBlocks
 
   // ---- rocks (scanned, from the ez-tree demo assets)
   const rockMeshes = [], scatterParts = [];
+  const ROCK_CAP = { Phone: 120, Low: 180, Medium: 260, High: 360, Ultra: 520 }[quality.label] || 260;
+  const ROCK_R = { Phone: 110, Low: 140, Medium: 180, High: 230, Ultra: 300 }[quality.label] || 180;
+  const rockCam = new THREE.Vector3(1e9, 0, 0);
+  // fill each rock mesh with the rocks near the camera (big ones further out than pebbles)
+  function refreshRocks(cam) {
+    for (const im of rockMeshes) {
+      let n = 0;
+      for (const r of im.userData.spots) {
+        const d = Math.hypot(r.x - cam.x, r.z - cam.z), reach = ROCK_R * Math.min(1, 0.45 + r.k * 0.5);
+        if (d > reach || n >= im.instanceMatrix.count) continue;
+        im.setMatrixAt(n++, r.m);
+      }
+      im.count = n; im.instanceMatrix.needsUpdate = true;
+      im.computeBoundingSphere();
+    }
+  }
   try {
     const rocks = await Promise.all(['rock1', 'rock2', 'rock3'].map((r) => gltf.loadAsync(`${BASE}${r}.glb`)));
     const spots = [[], [], []];
@@ -355,18 +371,29 @@ export async function createVegetation(hm, quality, scene, collision, cityBlocks
       const rb = new THREE.Box3(); geos.forEach((g) => { g.computeBoundingBox(); rb.union(g.boundingBox); });
       const rs = 1 / Math.max(1e-3, rb.max.x - rb.min.x, rb.max.z - rb.min.z);
       geos.forEach((g) => g.scale(rs, rs, rs));
+      // the scanned rocks are ~1,500 triangles each: only the ones round the camera are drawn
+      // (all ~2,800 of them, map-wide and in every shadow pass, were most of the frame's triangles)
+      const e = new THREE.Euler();
+      spots[i].forEach((r) => { e.set(r.tilt, r.r, r.tilt * 0.5); r.m = new THREE.Matrix4().compose(new THREE.Vector3(r.x, r.y, r.z), new THREE.Quaternion().setFromEuler(e), new THREE.Vector3(r.k, r.k, r.k)); });
       for (const [gi, o] of src.entries()) {
-        const im = new THREE.InstancedMesh(geos[gi], o.material, spots[i].length);
-        const e = new THREE.Euler();
-        spots[i].forEach((r, j) => {
-          e.set(r.tilt, r.r, r.tilt * 0.5);
-          m4.compose(p.set(r.x, r.y, r.z), q.setFromEuler(e), s.set(r.k, r.k, r.k));
-          im.setMatrixAt(j, m4);
-        });
+        const im = new THREE.InstancedMesh(geos[gi], o.material, Math.max(1, Math.min(spots[i].length, ROCK_CAP)));
+        im.count = 0; im.frustumCulled = false;
+        im.userData.spots = spots[i];
         im.castShadow = quality.shadows >= 2; im.receiveShadow = true;
-        im.computeBoundingSphere();
         im.userData.noReflect = true; im.userData.hitStatic = true; im.userData.surf = 'stone'; scene.add(im); rockMeshes.push(im);
-        scatterParts.push({ geo: geos[gi], mat: o.material });
+      }
+      // pebbles scattered round the player: a low-poly stone, not the full scan
+      if (i === 0) for (let v = 0; v < 3; v++) {
+        const pg = new THREE.IcosahedronGeometry(0.5, 1);
+        const P = pg.attributes.position, pr = mulberry32(77 + v);
+        const bump = new Map();
+        for (let k = 0; k < P.count; k++) {
+          const key = `${P.getX(k).toFixed(3)},${P.getY(k).toFixed(3)},${P.getZ(k).toFixed(3)}`;
+          if (!bump.has(key)) bump.set(key, 0.78 + pr() * 0.35);
+          const f = bump.get(key); P.setXYZ(k, P.getX(k) * f, P.getY(k) * f * 0.62, P.getZ(k) * f);
+        }
+        pg.computeVertexNormals();
+        scatterParts.push({ geo: pg, mat: src[0].material });
       }
     });
   } catch (e) { console.warn('rocks unavailable', e); }
@@ -425,7 +452,7 @@ export async function createVegetation(hm, quality, scene, collision, cityBlocks
     update(cam, drawDistance) {
       refreshT -= 1 / 60;
       if (refreshT <= 0 || cam.distanceToSquared(camPrev) > 64) { refreshNear(cam); refreshT = 0.3; camPrev.copy(cam); }
-      for (const m of rockMeshes) m.visible = true;
+      if (cam.distanceToSquared(rockCam) > 225) { refreshRocks(cam); rockCam.copy(cam); }
       for (const m of impMeshes) m.material.uniforms.uNear.value = Q.near;
       void drawDistance;
     },

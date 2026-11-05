@@ -140,6 +140,21 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 - [x] Loading screen with in-game art, tips and progress
 - [x] Fewer touch buttons: ◎ interact replaces the car button; map, phone, arsenal, free cam moved to pause
 
+## Phase 1.16 — Frame rate
+
+- [x] Rocks: every boulder on the map (~2,800 scans at ~1,500 triangles) was drawn every frame and
+      again into the shadow map; now only the ones near the camera are drawn, and the pebbles
+      round the player are low-poly (22M -> 8.8M triangles a frame downtown on High)
+- [x] The water mirror (a second render of the whole scene) ran almost everywhere: its "near
+      water" test was true anywhere under 60 m altitude; now only within sight of the lake/Gulf
+- [x] Cars past a few hundred metres aren't drawn; cabins (seats, dash) only up close
+- [x] Performance guard (with adaptive resolution on): if the frame rate stays under 24, turn
+      off reflections, then post effects, then shadows, then grass/resolution; next launch starts
+      one preset lower
+- [x] Software rendering (hardware acceleration off) is detected and explained on the menu and
+      in game, with the steps to turn it on
+- [x] Menu title no longer cut off on short or narrow windows
+
 ## Phase 1.15 — Visual error sweep (62 problems, ~1,000 broken spots, all fixed)
 
 A placement audit (every building, tree, fence, prop, facade piece and shop measured against

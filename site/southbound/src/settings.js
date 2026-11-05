@@ -83,8 +83,16 @@ export function detectGPU() {
   else if (/rtx|rx\s*(7\d\d\d|6[6-8]\d\d)|arc\s*a7|radeon pro/.test(n)) preset = 'high';
   else if (/apple m\d (pro|max|ultra)/.test(n)) preset = 'high';
   else if (/gtx|rx\s*[45]\d\d|apple m\d|radeon rx/.test(n)) preset = 'medium';
-  return { name, preset, mobile };
+  // the browser is drawing in software (hardware acceleration off, or the GPU is blocklisted):
+  // nothing in the game's settings can get past a few frames a second like that
+  const software = /swiftshader|llvmpipe|software|basic render|softpipe/.test(n);
+  return { name, preset, mobile, software };
 }
+
+export const SOFTWARE_HINT = 'Your browser is drawing the game without your graphics card, so it can only manage a few frames a second. ' +
+  'Turn hardware acceleration on: Chrome / Edge: Settings › System › "Use graphics acceleration when available", then Relaunch. ' +
+  'Firefox: Settings › General › Performance › "Use hardware acceleration when available", then restart. ' +
+  'On a laptop, also set the browser to "High performance" in Windows Settings › Display › Graphics.';
 
 const KEY = 'southbound.settings.v1';
 
