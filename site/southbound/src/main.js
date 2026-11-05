@@ -249,7 +249,10 @@ async function createGame(progress) {
   const baseRatio = () => {
     const dpr = window.devicePixelRatio || 1;
     if (settings.resolution === 'native') return Math.min(dpr, q.maxPixelRatio);
-    return clamp(+settings.resolution / innerHeight, 0.5, 4);
+    // a chosen resolution is a ceiling, never more pixels than the screen has (picking "4K" on a
+    // 1080p screen, or in a small window, drew 4-16x the pixels on every preset: ~2 FPS);
+    // only Cinematic supersamples on purpose
+    return clamp(+settings.resolution / innerHeight, 0.5, q.cine ? Math.max(dpr, q.maxPixelRatio) : dpr);
   };
   const fpState = { boost: false };
   const applySize = () => {
@@ -601,7 +604,10 @@ async function createGame(progress) {
     // fps tracking (real frame time, before clamping)
     S.frames++; S.fpsTimer += dt;
     if (S.fpsTimer >= 0.5) { S.fps = S.frames / S.fpsTimer; S.frames = 0; S.fpsTimer = 0; }
+    const t0 = performance.now();
     tick(Math.min(dt, 0.05));
+    // how long the game's own code took this frame (simulation + handing the frame to the GPU)
+    S.cpuMs = (S.cpuMs || 0) * 0.9 + (performance.now() - t0) * 0.1;
   }
 
   function tick(dt) {
@@ -968,7 +974,7 @@ async function createGame(progress) {
       ammo: combat.drawn ? (combat.reloading > 0 ? 'RELOADING' : combat.dual && combat.offhand && combat.offhand !== combat.weapon ? `${combat.ammo[combat.weapon].clip} · ${combat.ammo[combat.offhand].clip} / ${combat.ammo[combat.weapon].reserve}` : `${combat.ammo[combat.weapon].clip} / ${combat.ammo[combat.weapon].reserve}`) : '',
       weaponName: combat.def.name,
       aiming: S.mode === 'foot' && player.aiming && armed, hitMarker: S.hitMarker,
-      fpsText: `${Math.round(S.fps)} FPS · ${q.label} · ${renderer.domElement.width}×${renderer.domElement.height}\n${stats.drawCalls} draws · ${(stats.tris / 1e6).toFixed(2)}M tris`,
+      fpsText: `${Math.round(S.fps)} FPS · ${q.label} · ${renderer.domElement.width}×${renderer.domElement.height}\n${stats.drawCalls} draws · ${(stats.tris / 1e6).toFixed(2)}M tris\n${diagLine()}`,
     });
     S.hitMarker = false;
   }
@@ -1038,6 +1044,14 @@ async function createGame(progress) {
   // and remember a lighter preset for next time. Steps: water/wet-street mirror and far cars;
   // post-processing; shadows; grass and resolution.
   const guard = { level: 0, low: 0, next: performance.now() + 12000 };
+  // a third line on the FPS readout that says where the time goes: the game's code (CPU) or
+  // drawing (GPU), and which graphics device the browser is actually using
+  const GPU_NAME = (() => { try { const g = detectGPU(); return (g.name || '?').replace(/^ANGLE \(|\)$/g, '').replace(/Direct3D.*$|vs_.*$|\(0x[0-9A-F]+\)/gi, '').replace(/\s+/g, ' ').trim().slice(0, 56); } catch (e) { return '?'; } })();
+  function diagLine() {
+    const frameMs = 1000 / Math.max(S.fps, 0.1), cpu = S.cpuMs || 0;
+    const where = SOFTWARE ? 'NO GPU: software rendering' : frameMs > cpu * 2.2 + 8 ? 'GPU-bound' : 'CPU-bound';
+    return `CPU ${cpu.toFixed(0)} ms of ${frameMs.toFixed(0)} ms · ${where} · ${GPU_NAME}`;
+  }
   const SOFTWARE = (() => { try { return detectGPU().software; } catch (e) { return false; } })();
   function perfGuard() {
     const now = performance.now();
@@ -1046,14 +1060,25 @@ async function createGame(progress) {
     if (S.fps >= 24) { guard.low = 0; return; }
     if (++guard.low < 3) return; // six seconds in a row
     guard.low = 0; guard.next = now + 5000;
+    if (S.fps < 8 && guard.level < 3) { // a slide show: take everything off at once
+      water.setReflections?.(false); CAR_VIS_R *= 0.65;
+      if (baseRatio() > 1.01) { settings.resolution = 'native'; q.maxPixelRatio = Math.min(q.maxPixelRatio, 1); saveSettings(settings); applySize(); }
+      if (post) { post = null; renderer.toneMapping = THREE.CustomToneMapping; }
+      renderer.shadowMap.enabled = false;
+      guard.level = 3;
+    }
     guard.level++;
-    if (guard.level === 1) { water.setReflections?.(false); CAR_VIS_R *= 0.65; }
+    if (guard.level === 1) {
+      water.setReflections?.(false); CAR_VIS_R *= 0.65;
+      // more pixels than the screen (or a high-DPI screen at full density): back to one pixel per pixel
+      if (baseRatio() > 1.01) { settings.resolution = 'native'; q.maxPixelRatio = Math.min(q.maxPixelRatio, 1); saveSettings(settings); applySize(); }
+    }
     else if (guard.level === 2 && post) { post = null; renderer.toneMapping = THREE.CustomToneMapping; }
     else if (guard.level === 3 || (guard.level === 2 && !post)) { renderer.shadowMap.enabled = false; if (guard.level === 2) guard.level = 3; }
     else if (guard.level >= 4) { if (veg.cover?.grass) { veg.cover.grass.visible = false; veg.cover.flowers.visible = false; } dynScale = Math.min(dynScale, 0.6); applySize(); }
     // next time, start one preset lighter
     const order = ['phone', 'low', 'medium', 'high', 'ultra', 'cinematic'], i = order.indexOf(settings.preset);
-    if (guard.level === 2 && i > 1) { settings.preset = order[i - 1]; saveSettings(settings); }
+    if (guard.level >= 2 && !guard.saved && i > 1) { guard.saved = true; settings.preset = order[i - 1]; saveSettings(settings); }
     if (guard.level >= 3 && SOFTWARE) { hud.toast(SOFTWARE_HINT, 14); return; }
     hud.toast(`Low frame rate: graphics turned down (${['', 'reflections', 'effects', 'shadows', 'grass + resolution'][guard.level]} off). ${guard.level >= 2 && i > 1 ? `Next time it starts on ${PRESETS[settings.preset].label}. ` : ''}Settings > Graphics to change.`, 5);
   }

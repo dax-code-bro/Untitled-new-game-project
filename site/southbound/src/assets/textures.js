@@ -58,7 +58,7 @@ export async function loadSurfaces(renderer, quality, progress = () => {}) {
   let done = 0;
   await Promise.all(jobs.map(([key, name, k]) => loader.loadAsync(`assets/textures/${name}_${k}.ktx2`).then((t) => {
     t.wrapS = t.wrapT = THREE.RepeatWrapping;
-    t.anisotropy = Math.min(16, renderer.capabilities.getMaxAnisotropy());
+    t.anisotropy = Math.min(quality.anisotropy || 4, renderer.capabilities.getMaxAnisotropy()); // the preset's level (it was 16x everywhere)
     t.colorSpace = k === 'color' || k === 'emit' ? THREE.SRGBColorSpace : THREE.NoColorSpace;
     out[key][k] = t;
     if (k === 'color') out[key].real = true;
