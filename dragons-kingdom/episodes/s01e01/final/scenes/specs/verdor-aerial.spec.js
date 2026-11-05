@@ -1,7 +1,8 @@
-// Shot specs - VERDOR_AERIAL: scene 1C, X4-01 .. X4-20 minus the ground shots (session 17: FIRST PASS - geography,
-// staging and camera PLANS only; NOT WIRED: there is no `VERDOR_AERIAL` entry in scenes/lib/director/registry.js and
-// no builder scenes/lib/director/sets/verdor-aerial.js yet, so build-shots.mjs ignores this file. Wire both before
-// any previs (see scenes/lib/director/PROGRESS.md session 17 for the exact steps).
+// Shot specs - VERDOR_AERIAL: scene 1C, X4-01 .. X4-20 minus the ground shots. Session 17: first-pass plan; session
+// 20: WIRED - registry entry + builder scenes/lib/director/sets/verdor-aerial.js (it reads `map` below). Only the shots
+// in `shots` are wired (X4-01/02/03/06/11/14/20); the rest wait in `plans` (requests / dialogue / previs pending).
+// NOTE (s20): the MAP numbers below supersede the s17 prose where they differ (harbour wall rooted at [275, 1440],
+// Santa Maria at x 267, terraced town: ground = 2.6 + 7.5 * terrace index, terraces 25 m apart west of x 230).
 //
 // The ground-level X4 shots (X4-04, X4-05, X4-07, X4-09) are set VERDOR_HARBOR (their own spec / builder later); they
 // share the SAME map below so the dragons' shadows / the harbour layout match across the cut.
@@ -55,15 +56,18 @@ const CHAR_FLY = (o = {}) => [[0, 'flight', { hz: CHAR_HZ, amp: 0.68, ...o }]];
 const CHAR_GLIDE = (o = {}) => [[0, 'glide', { bank: 0.03, dihedral: 0.08, droop: 0.06, ...o }]];
 
 export const MAP = {
-  harbourWall: [[300, 0, 1480], [350, 0, 1500], [390, 0, 1560], [400, 0, 1640]],
+  // (s20: the numbers the builder sets/verdor-aerial.js reads - quayX / apronY / terrace / palace / harbourWall / santaMaria / quay)
+  quayX: 262, apronY: 2.6,
+  terrace: { x0: 230, slope: 0.3, step: 7.5 },          // town + farm ground: flat terraces every 7.5 m up, 25 m apart west of x 230
+  harbourWall: [[275, 0, 1440], [340, 0, 1482], [385, 0, 1552], [400, 0, 1630]],   // rooted on the north shore, opening SE
   quay: { from: [262, 0, 1560], to: [262, 0, 1700], faces: 'east', top: 2.8 },
   slipway: { at: [265, 0, 1715], dir: 'east', len: 26 },
-  santaMaria: { at: [272, 0, 1585], heading: 0, mastTop: 28 },
-  town: { x: [120, 255], z: [1480, 1780], groundAt: (x) => 3 + (255 - x) * 0.29 },   // 3 m at the quay -> ~42 m at x 120
-  marketStreet: { x: 235, z: [1520, 1740], y: 8 },
+  santaMaria: { at: [267, 0, 1590], heading: 0, mastTop: 28 },
+  town: { x: [110, 230], z: [1480, 1790] },             // houses: one row per terrace (terrace i flat at y 2.6 + 7.5 i)
+  marketStreet: { x: 197, z: [1520, 1740], y: 10.1 },   // in front of the terrace-1 row
   palace: { ground: [60, 58, 1430], chamberOpening: [84, 76, 1430], faces: 'east' },
-  terraceFarm: [150, 34, 1840],
-  schoolField: { centre: [190, 38, 1960], size: [120, 70] },
+  terraceFarm: [146, 25.1, 1846],                       // terrace 3, south of the houses
+  schoolField: { centre: [120, 36, 1985], size: [120, 70] },
 };
 // formation times of each X4 shot's first frame (shot list lengths, X4-04/05/07/09 are on the ground but the clock
 // runs on through them so the aerials stay continuous)
@@ -72,12 +76,12 @@ const T = { 'X4-01': 62, 'X4-02': 69, 'X4-03': 73, 'X4-06': 87, 'X4-08': 95, 'X4
 
 export default {
   set: 'VERDOR_AERIAL',
-  wired: false,                                          // build-shots ignores it until the registry entry exists
   cast: {
     leaf: { kind: 'creature', id: 'leaf', quality: 'standard' },
     charcoal: { kind: 'creature', id: 'charcoal' },
     remiR: { kind: 'human', id: 'remi_ride', ride: 'charcoal', outfit: 'remi', role: 'REMI' },
     abbyR: { kind: 'human', id: 'abby_ride', ride: 'leaf', outfit: 'abby', role: 'ABBY' },
+    farmer: { kind: 'human', id: 'crowd05' },                         // X4-06 (perf s11 lean-on-a-hoe)
   },
   map: MAP,
   shots: {
@@ -101,11 +105,39 @@ export default {
       notes: 'the shadow lands ~100 m west of him (sun 102/31): check it crosses the quay at 0.3-0.6 of the shot; Charcoal beats (shot list sound: deep slow beats overhead)',
     },
     'X4-06': {
-      staging: '50 mm STATIC on the terrace farm: a farmer leans on a tool (foreground left, face soft/turned), watches the riders pass high over the town (background right), unimpressed.',
-      cam: { rig: 'static', pos: [140, 35.6, 1852], look: [300, 70, 1700], mm: 50, fstop: 5.6, focus: 'farmer.head' },
-      cast: { farmer: { kind: 'human', id: 'crowd05', outfit: 'farmer', mark: [146, 34, 1846], acts: [[0, 'stand', { prop: 'hoe', lean: 0.6 }], [0.5, 'look', { at: 'leaf.chest', amount: 0.7 }]] } },
-      notes: 'REQUEST humans: lean-on-tool posture (hoe / spade) if not in the gesture set',
+      staging: '50 mm STATIC on the terrace farm: a farmer rests on a hoe (foreground left, back three-quarter, face turned away), watches the riders pass high over the town (background right), unimpressed.',
+      // (s20: camera 6 m behind-left of him on terrace 3 (ground ~25.1), aim bearing 45 / 3 deg up: he sits left of
+      // centre, the pair ~7 deg right of centre and ~5 deg up, 250 m out. Director 'lean' bends only the spine;
+      // one-leg weight needs the performer (legs: 'planted') - not needed at 50 mm, the kirtle hides the legs.)
+      cam: { rig: 'static', pos: [140, 26.8, 1852], look: [317, 40, 1675], mm: 50, fstop: 5.6, focus: 'farmer.head' },
+      set: { shadowAt: [200, 25, 1780], shadowExtent: 160 },
+      cast: {
+        farmer: { at: [143.7, 1847.3], face: 45, acts: [[0, 'lean', { to: 0.6, dur: 0.01 }], [0, 'gesture', { name: 'tool', prop: 'hoe', stance: 'R' }], [0.5, 'look', { at: 'leaf.chest', amount: 0.7 }]] },
+        leaf: { tack: true, root: [[0, [330, 64, 1700]], [3, [333, 64, 1748], 'linear']], yawKeys: 177, acts: LEAF_FLY() },
+        charcoal: { tack: true, root: [[0, [368, 62, 1716]], [3, [371, 62, 1764], 'linear']], yawKeys: 177, acts: CHAR_FLY() },
+        abbyR: {}, remiR: {},
+      },
+      notes: 'perf s11 acts (humans/PROGRESS.md); hoe = humans tools.js stand-in until props has a real one',
     },
+    'X4-11': {
+      staging: 'WIDE 160 mm from inland: Leaf climbs back to Charcoal\'s level on his usual side (inland, a little behind), near enough for talk.',
+      cam: { rig: 'follow', pos: [[0, [120, 120, 1690]], [3.5, [128, 122, 1746], 'linear']], look: [[0, [470, 55, 1720]], [3.5, [478, 58, 1776], 'linear']], mm: 160, fstop: 8, focus: 'leaf.chest' },
+      cast: { leaf: { tack: true, root: [[0, [440, 34, 1700]], [3.5, [452, 61, 1756], 'ease']], yawKeys: 172, acts: LEAF_FLY() }, charcoal: { tack: true, root: [[0, [482, 60, 1716]], [3.5, [492, 60, 1772], 'linear']], yawKeys: 172, acts: CHAR_FLY() }, abbyR: {}, remiR: {} },
+    },
+    'X4-14': {
+      staging: 'AERIAL 35 mm: beyond the town, on its high ground, the palace - weathered pale stone, practical; the birthing chamber\'s high opening a dark shape near the top of the east face.',
+      cam: { rig: 'follow', pos: [[0, [330, 95, 1520]], [5, [325, 92, 1480], 'ease']], look: [[0, [70, 70, 1430]], [5, [70, 70, 1430], 'ease']], mm: 35, fstop: 8, focus: [70, 70, 1430] },
+      notes: 'builder: architecture/verdor.js palace() at MAP.palace.ground, lod far; chamber opening = interiors.birthingChamber window aligned east',
+    },
+    'X4-20': {
+      staging: 'EXTREME WIDE 160 mm aerial travel: they leave the harbour behind and follow the coast SSE toward its far end; the outer rocks small on the horizon right.',
+      cam: { rig: 'follow', pos: [[0, [180, 150, 2050]], [5, [200, 150, 2130], 'linear']], look: [[0, [470, 55, 2200]], [5, [490, 55, 2280], 'linear']], mm: 160, fstop: 8, focus: 'leaf.chest' },
+      notes: 'outer rocks: nature/rocks kit stacks at [700, 0, 3200] (X6 continuity: two stacks leaning close, mist on the seaward side)',
+    },
+  },
+  // NOT WIRED yet (build-shots reads only `shots`): these stay slates in edl-1C until each is checked in previs /
+  // stills and its requests are met; move an entry up into `shots` to wire it.
+  plans: {
     'X4-08': {
       staging: 'MEDIUM 120 mm air-to-air off Leaf\'s right: Leaf gives a quick bright call (mouth open, head up); hold; the quay dragon\'s answer is OFF (sound). Charcoal does not call.',
       cam: { rig: 'follow', frame: { subjects: [['leaf.head', [-0.1, 0.1]]], from: 250, dist: 26, rise: 2, track: true }, mm: 120, fstop: 4, focus: 'leaf.head' },
@@ -122,11 +154,6 @@ export default {
       },
       notes: 'mast clearance: Leaf\'s right wingtip must stay >= 4 m from the mast at the beat\'s full extension (check every 6th frame)',
     },
-    'X4-11': {
-      staging: 'WIDE 160 mm from inland: Leaf climbs back to Charcoal\'s level on his usual side (inland, a little behind), near enough for talk.',
-      cam: { rig: 'follow', pos: [[0, [120, 120, 1690]], [3.5, [128, 122, 1746], 'linear']], look: [[0, [470, 55, 1720]], [3.5, [478, 58, 1776], 'linear']], mm: 160, fstop: 8, focus: 'leaf.chest' },
-      cast: { leaf: { tack: true, root: [[0, [440, 34, 1700]], [3.5, [452, 61, 1756], 'ease']], yawKeys: 172, acts: LEAF_FLY() }, charcoal: { tack: true, root: [[0, [482, 60, 1716]], [3.5, [492, 60, 1772], 'linear']], yawKeys: 172, acts: CHAR_FLY() }, abbyR: {}, remiR: {} },
-    },
     'X4-12': {
       staging: 'MEDIUM 50 mm on Abby (Remi\'s line X4-02 "They wave at you." OFF/over): she pretends not to hear and pats Leaf\'s neck; face three-quarter.',
       cam: { rig: 'follow', frame: { subjects: [['abbyR.head', [-0.1, 0.15]], ['abbyR.hand.R', [0.15, -0.3]]], from: 215, dist: 4.5, rise: 0.6, track: true }, mm: 50, fstop: 4, focus: 'abbyR.head' },
@@ -137,11 +164,6 @@ export default {
       staging: 'AERIAL 35 mm looking down on the school field from ~90 m: young riders on small dragons, an INSTRUCTOR; one wobbling takeoff, one rider clinging on with both arms; the pair\'s shadows cross the field.',
       cam: { rig: 'follow', pos: [[0, [170, 130, 1900]], [8, [180, 130, 1990], 'linear']], look: [[0, [190, 38, 1950]], [8, [195, 38, 1985], 'linear']], mm: 35, fstop: 8, focus: [190, 38, 1960] },
       notes: 'cast: 3-4 small dragons (scout / grown-hatchling presets, low stance), 4 young riders (crowd kit, teen builds - NO child content beyond riding lessons), 1 instructor; acts: takeoff (wobble), sit, walk',
-    },
-    'X4-14': {
-      staging: 'AERIAL 35 mm: beyond the town, on its high ground, the palace - weathered pale stone, practical; the birthing chamber\'s high opening a dark shape near the top of the east face.',
-      cam: { rig: 'follow', pos: [[0, [330, 95, 1520]], [5, [325, 92, 1480], 'ease']], look: [[0, [70, 70, 1430]], [5, [70, 70, 1430], 'ease']], mm: 35, fstop: 8, focus: [70, 70, 1430] },
-      notes: 'builder: architecture/verdor.js palace() at MAP.palace.ground, lod far; chamber opening = interiors.birthingChamber window aligned east',
     },
     'X4-15': {
       staging: 'POV 300 mm-equivalent from Remi\'s eyeline: Alexandria standing in the chamber opening, watching them pass (face too small to need lip-sync; still, unreadable); REVERSE 85 mm on Remi lifting a hand.',
@@ -167,11 +189,6 @@ export default {
       staging: 'CLOSE 85 mm on Remi: he does not answer; looks away from the town toward the sea (screen right), like someone caught.',
       cam: { rig: 'follow', frame: { subjects: [['remiR.head', [0.2, 0.1]]], from: 205, dist: 7, rise: 0.8, track: true }, mm: 85, fstop: 4, focus: 'remiR.head' },
       notes: 'remiR look: [0] at town (down-left) -> [1.2] at sea (east), blend 0.6',
-    },
-    'X4-20': {
-      staging: 'EXTREME WIDE 160 mm aerial travel: they leave the harbour behind and follow the coast SSE toward its far end; the outer rocks small on the horizon right.',
-      cam: { rig: 'follow', pos: [[0, [180, 150, 2050]], [5, [200, 150, 2130], 'linear']], look: [[0, [470, 55, 2200]], [5, [490, 55, 2280], 'linear']], mm: 160, fstop: 8, focus: 'leaf.chest' },
-      notes: 'outer rocks: nature/rocks kit stacks at [700, 0, 3200] (X6 continuity: two stacks leaning close, mist on the seaward side)',
     },
   },
 };

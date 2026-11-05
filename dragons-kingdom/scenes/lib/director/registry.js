@@ -69,6 +69,12 @@ export const SETS = {
     from: 'style frame F3 (scenes/lookdev/style-f3-flight.js) moved into the VERDOR frame; sun = the grounds\' (1B/1C continuity)',
     continuity: { '1C': { sun: sunDir(102, 31), tod: 'morning (continuous from 1B)', exposure: 1.1 } },
   },
+  VERDOR_AERIAL: {
+    file: 'verdor-aerial.js', builder: 'verdor-aerial', frame: 'VERDOR',
+    libs: ['dk/ocean.js (the grounds\' sea)', 'scenes/lib/sets/terrain.js (SKY_OFF_VERDOR\'s coast pulled into the harbour bay, terraced town ground)', 'scenes/lib/architecture/verdor.js (harbor: quay + warehouses, palace) + house.js (terrace rows)', 'scenes/lib/props/santa-maria.js (the Santa Maria at the quay)', 'scenes/lib/creatures (Leaf, Charcoal)', 'scenes/lib/humans (remi_ride, abby_ride, crowd05 farmer)', 'runtime/cinematic (physical sky, sea mist banks, cloud shadows)'],
+    from: 'SKY_OFF_VERDOR continued south to the harbour town (spec MAP, session 17 plan)',
+    continuity: { '1C': { sun: sunDir(102, 31), tod: 'morning (continuous from 1B)', exposure: 1.1 } },
+  },
   BIRTHING_CHAMBER: {
     file: 'birthing-chamber.js', builder: 'birthing-chamber', frame: 'VERDOR',
     libs: ['scenes/lib/architecture/interiors.js (birthingChamber, nest, lamps)', 'scenes/lib/props/verdor.js (the egg: closed / cracked / opened)', 'scenes/lib/creatures (hatchling)', 'scenes/lib/humans (alexandria, attendant, abby, remi, young attendant = messenger)', 'runtime/cinematic (dust in the window shaft)'],

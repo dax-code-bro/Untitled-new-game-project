@@ -3,6 +3,58 @@
 Owner paths: `scenes/lib/director/`, `episodes/s01e01/final/scenes/`, `episodes/s01e01/final/cut/`.
 How it works: `README.md` in this folder. Latest state first.
 
+## Session 20 (2026-11-05, short budgeted session: 1C-16 pinky check, X4-06 farmer acts, VERDOR_AERIAL wired - STILLS only)
+
+Shot ids, lengths, line cue times UNCHANGED (X4-20 still 5 s; X4-03 Charcoal = CHAR_FLY, no phase / tOffset: beats
+0.16 / 1.76 / 3.36 s as told to sound). No 1C act touched.
+Scratch: `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/director/s20/` (r1/1C-16_036.png, x4/X4-06_043.png, x4/X4-03_048.png; contact sheet `sheet.jpg`).
+- (1) 1C-16@0.5 after perf 6747c26 (little-finger PIP out of the bar), LOOKED AT: both hands still read as GRIPPING -
+  knuckles over the bar, fingers wrapped down the front, both hands centred; sleeves read as cloth. The near (right)
+  hand's fingertips show as small pink points under the bar's front edge (the pinky tip the perf notes predicted);
+  readable as fingertips at draft, not as a defect. If the owner flags it: perf's own fallback (lift the hand's ulnar
+  side, orientHand roll) - no director change.
+- (2) X4-06 farmer: acts are now perf s11's `[[0,'lean',{to:0.6,dur:0.01}],[0,'gesture',{name:'tool',prop:'hoe',stance:'R'}],
+  [0.5,'look',{at:'leaf.chest',amount:0.7}]]`; the old spec also had an invalid `mark:` key (blocking uses `at: [x, z]`):
+  now `at: [143.7, 1847.3], face: 45`; crowd05 added to spec.cast; Leaf + Charcoal + riders added (they are the look
+  target and the background). Bend-only lean accepted (50 mm).
+- (3) VERDOR_AERIAL WIRED: `registry.js` entry (frame VERDOR, continuity 1C sunDir(102, 31), exposure 1.1) +
+  `sets/verdor-aerial.js` (builder) + scene `final/scenes/verdor-aerial.js` + table `verdor-aerial.shots.json`.
+  Builder: SKY_OFF_VERDOR's coast / sea / sky / rocks, the coast pulled in to the quay line x 262 (z 1480-1760) with a
+  low headland at z 1885 and a -3..-14 m basin; architecture harbor() rotated sea-axis -> east (L 140, warehouses,
+  hinterland 22, lod low); breakwater of big stoneQuay blocks + parapet along MAP.harbourWall; props santaMaria at
+  [267, 0, 1590] bow north; terraced town ground (flat terraces every 7.5 m up / 25 m west of x 230, ~45 deg risers),
+  one row of lod-low houses per terrace (5 rows, z 1480-1790, quay apron left open); palace() lod far on a levelled
+  hilltop [60, 58, 1430]. The spec's `map` is the single source (the builder reads it). Spec: only X4-01/02/03/06/11/
+  14/20 are in `shots` (wired); X4-08/10/12/13/15/16/17/18/19 moved to `plans` (slates in edl-1C) - requests / lines /
+  two set-ups pending. edl-1C regenerated (7 X4 shots now 3D).
+  Stills LOOKED AT (first build, draft):
+  - X4-03@0.5: from above the town looking ENE we see the quay (bottom left), the Santa Maria moored at its north end
+    (reads well: masts, castles, hull), the breakwater across the top with its shadow, the basin. WRONG: no roofs
+    (the town is under / behind the camera), Charcoal OUT of frame (he is ~24 deg above the aim at y 62), the basin
+    reads tropical turquoise (shallow pale sand floor -3..-14 m: darken / deepen it, e.g. basin -6 - 0.05 off, or
+    weed splat), the breakwater top reads as one straight ruler-edged band.
+  - X4-06@0.6: the farmer reads as a figure seen from behind, but TOO BIG / too close (6 m at 50 mm, head to waist),
+    the hoe and hands below the frame, and his head reads BALD (crowd05 hair at draft? -> check with humans); Leaf small
+    top right (good), Charcoal out of frame right; the town is below the frame bottom (camera on terrace 3 looking 3 deg
+    up sees only the sea, the breakwater and the horizon).
+- Verify: director selftest 20/20; build-shots clean (only slate warnings). npm test not run (no shared code touched).
+- NEXT (exact, in order):
+  1. X4-06 re-stage: farmer ~10 m from the lens (`at: [146.5, 1843.5]` keeps the bearing), aim pitch ~-2 deg
+     (`look: [317, 18, 1675]`), Charcoal nearer the town (root x 340-345 / y 58) so both dragons sit in the upper
+     right; check the hoe + hands in frame. Re-still `node scenes/lib/director/tools/still.mjs X4-06@0.6 --preset draft --out <scratch>/eng1/director/s21`.
+  2. X4-03 re-stage: the shot list wants roofs below + Charcoal high; a 35 mm frame holds only ~22 deg vertically, so
+     put the camera LOW at the roofs looking up-ENE (e.g. pos [205, 20, 1700] just over the terrace-1 ridges, look
+     [330, 45, 1600]) with Charcoal ~10 deg up, his shadow crossing the terrace-0 roofs / apron. previs first:
+     `node scenes/lib/director/tools/previs.mjs --set VERDOR_AERIAL --at 0.1,0.5,0.9`. Keep CHAR_FLY unchanged (sound).
+  3. Basin colour (above), breakwater irregularity (vary block height / setback), then stills of X4-01, X4-14, X4-20.
+  4. Videos only after the stills look right (owner/background, ~10 min/shot here):
+     `node scenes/lib/director/tools/render-shots.mjs --only X4-01,X4-02,X4-03,X4-06,X4-11,X4-14,X4-20 --force --work <scratch>/eng1/director/work1B`
+     Still pending from s17-19: `--only 1C-16`, `--only 1C-10,1C-13,1C-14,1C-19`, `--only 1C-07,1C-08,1C-09,1C-11,1C-12,1C-15,1C-17,1C-18`, `--only 1C-04,1C-06,X3-10`.
+  5. Wire the `plans` shots as their requests land (X4-08 creatures `call`, X4-10 lookout duck + masthead mark,
+     X4-12 'pat' gesture, X4-13 school cast); then VERDOR_HARBOR (X4-04/05/07/09) on the same MAP; OUTER_ROCKS.
+- REQUESTS: humans - crowd05 reads bald in X4-06 (draft): hair missing or very short? (check before the video).
+  props - a real hoe (perf s11 request stands). creatures - X4-08 flight `call` channel (s17 request stands).
+
 ## Session 19 (2026-11-04, short budgeted session: 1C-16 drift fix + lower side angle after c388c00 / 85332fd - STILLS only)
 
 Shot ids, lengths, line cue times UNCHANGED (1C-16 still 3 s at T 35, no lines). No flight act touched (sound: nothing changed).
