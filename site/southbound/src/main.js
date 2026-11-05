@@ -1,6 +1,6 @@
 // SOUTHBOUND — boot, world build, game loop.
 import * as THREE from 'three';
-import { loadSettings, saveSettings, resolveQuality, PRESETS } from './settings.js';
+import { loadSettings, saveSettings, resolveQuality, PRESETS, detectGPU, SOFTWARE_HINT } from './settings.js';
 import { setupMenu, setupSettingsPanel } from './ui/menu.js';
 import { buildRoadGraph, CITY, TOWN, regionAt } from './world/layout.js';
 import { Heightmap } from './world/heightmap.js';
@@ -175,6 +175,7 @@ async function createGame(progress) {
   player.pos.set(spawn.x, collision.surface(spawn.x, spawn.z, 50), spawn.z);
   player.heading = Math.PI / 2;
   const parked = [];
+  let CAR_VIS_R = { Phone: 170, Low: 210, Medium: 260, High: 320, Ultra: 400, Cinematic: 520 }[q.label] || 300;
   const myCar = new Vehicle(lib, lib.cars.concept ? 'concept' : 'sedan-sports');
   // parked at the kerb of the street on the city's west edge (not out on the grass)
   myCar.pos.set(CITY.x0 - 6.6, CITY.height + 0.1, CITY.z0 + 3 * CITY.pitch + 19); // past the crossing, not in it
@@ -799,6 +800,24 @@ async function createGame(progress) {
       focus.copy(v.pos);
     }
     for (const p of parked) { p.night = p.lightsOn ? sky.night : 0; p.sync(dt); } // parked: engine off, lights off
+    // vehicle level of detail: a car is ~100k triangles; past a few hundred metres it is a few pixels
+    // tall, so it isn't drawn, and its cabin (seats, dash, wheel) only shows up close (the far ones
+    // were over half of every frame's triangles)
+    if ((S.lodT = (S.lodT || 0) - dt) <= 0) {
+      S.lodT = 0.25;
+      const cp = camera.position, R2 = CAR_VIS_R * CAR_VIS_R;
+      const lod = (v) => {
+        if (!v || !v.group) return;
+        const gu = v.group.userData, mine = v === S.vehicle || v === S.entering?.v;
+        const d2 = mine ? 0 : v.group.position.distanceToSquared(cp);
+        if (d2 > R2) { if (v.group.visible) { v.group.visible = false; gu.lodHidden = true; } }
+        else if (gu.lodHidden) { v.group.visible = true; gu.lodHidden = false; }
+        if (v.cab && v.setClear) v.setClear(mine || d2 < 45 * 45);
+      };
+      for (const v of parked) lod(v);
+      for (const c of traffic.cars) lod(c.v);
+      for (const c of police.cars || []) lod(c.v);
+    }
     if (S.doorClose) { const dc = S.doorClose; dc.t += dt; dc.door.rotation.y = dc.door.userData.open * Math.max(0, 1 - dc.t / 0.5) * (dc.t < 0.15 ? 1 : 1); if (dc.t > 0.5) S.doorClose = null; }
     if (!S.dead) {
       const ip = interact.update(dt, focus, S.mode === 'car', S.mode === 'foot' && a.enter && !prompt, S.vehicle ? S.vehicle.speed : 0);
@@ -930,6 +949,7 @@ async function createGame(progress) {
     // resize before drawing: resizing the canvas clears it, and a cleared canvas left
     // on screen is a black frame (this was the flicker during the first seconds)
     dynamicResolution(dt);
+    perfGuard();
     if (!S.skipRender) render(); // tests can step the simulation without drawing
     hud.update(dt, {
       pos: mapPos, yaw: rig.yaw, heading: S.mode === 'car' ? S.vehicle.heading : player.heading,
@@ -1013,6 +1033,31 @@ async function createGame(progress) {
   }
 
   // Lower resolution when the frame rate drops below target, raise it back when there is headroom.
+  // Performance guard: if the frame rate stays very low (a laptop or integrated GPU on a preset
+  // made for a gaming card), turn the costliest things down while you play, one step at a time,
+  // and remember a lighter preset for next time. Steps: water/wet-street mirror and far cars;
+  // post-processing; shadows; grass and resolution.
+  const guard = { level: 0, low: 0, next: performance.now() + 12000 };
+  const SOFTWARE = (() => { try { return detectGPU().software; } catch (e) { return false; } })();
+  function perfGuard() {
+    const now = performance.now();
+    if (!settings.dynamicRes || now < guard.next || S.paused || S.indoors || guard.level >= 4) return; // part of adaptive quality
+    guard.next = now + 2000;
+    if (S.fps >= 24) { guard.low = 0; return; }
+    if (++guard.low < 3) return; // six seconds in a row
+    guard.low = 0; guard.next = now + 5000;
+    guard.level++;
+    if (guard.level === 1) { water.setReflections?.(false); CAR_VIS_R *= 0.65; }
+    else if (guard.level === 2 && post) { post = null; renderer.toneMapping = THREE.CustomToneMapping; }
+    else if (guard.level === 3 || (guard.level === 2 && !post)) { renderer.shadowMap.enabled = false; if (guard.level === 2) guard.level = 3; }
+    else if (guard.level >= 4) { if (veg.cover?.grass) { veg.cover.grass.visible = false; veg.cover.flowers.visible = false; } dynScale = Math.min(dynScale, 0.6); applySize(); }
+    // next time, start one preset lighter
+    const order = ['phone', 'low', 'medium', 'high', 'ultra', 'cinematic'], i = order.indexOf(settings.preset);
+    if (guard.level === 2 && i > 1) { settings.preset = order[i - 1]; saveSettings(settings); }
+    if (guard.level >= 3 && SOFTWARE) { hud.toast(SOFTWARE_HINT, 14); return; }
+    hud.toast(`Low frame rate: graphics turned down (${['', 'reflections', 'effects', 'shadows', 'grass + resolution'][guard.level]} off). ${guard.level >= 2 && i > 1 ? `Next time it starts on ${PRESETS[settings.preset].label}. ` : ''}Settings > Graphics to change.`, 5);
+  }
+
   function dynamicResolution(dt) {
     if (!settings.dynamicRes) { if (dynScale !== 1) { dynScale = 1; applySize(); } return; }
     S.resTimer += dt;

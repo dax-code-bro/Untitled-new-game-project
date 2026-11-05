@@ -18,7 +18,9 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .overlay { background: rgba(0, 0, 0, 0.55); backdrop-filter: blur(6px); align-items: center; justify-content: center; z-index: 40; }
 
 /* ---------- menu */
-#menu { align-items: center; justify-content: center; overflow-y: auto; }
+/* centred, but on a short window the top can still be scrolled to (plain centring cut the title off) */
+#menu { align-items: safe center; justify-content: center; overflow-y: auto; }
+#menu > .menu-inner { margin-block: auto; }
 .menu-bg { position: fixed; inset: 0; background:
   radial-gradient(ellipse at 50% 120%, rgba(242,163,58,0.95) 0%, rgba(226,87,43,0.75) 28%, rgba(76,28,40,0.9) 55%, #120d0a 85%),
   #120d0a; }
@@ -27,7 +29,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   repeating-linear-gradient(90deg, #0b0807 0 22px, transparent 22px 30px, #0b0807 30px 70px, transparent 70px 76px, #0b0807 76px 96px, transparent 96px 140px);
   clip-path: polygon(0 60%, 4% 55%, 6% 20%, 9% 20%, 10% 45%, 14% 40%, 15% 5%, 19% 5%, 20% 35%, 26% 50%, 30% 30%, 32% 30%, 33% 52%, 40% 60%, 48% 58%, 55% 45%, 56% 15%, 60% 15%, 61% 42%, 67% 50%, 72% 25%, 75% 25%, 76% 55%, 85% 60%, 90% 40%, 93% 40%, 94% 62%, 100% 65%, 100% 100%, 0 100%); }
 .menu-inner { position: relative; width: min(760px, 100%); padding: 32px 16px 24px; text-align: center; }
-.logo { font-family: Anton, Impact, sans-serif; font-weight: 400; font-size: clamp(54px, 13vw, 118px); letter-spacing: 0.06em; margin: 0; line-height: 0.95;
+.logo { font-family: Anton, Impact, sans-serif; font-weight: 400; font-size: clamp(40px, 9.5vw, 118px); max-width: 96vw; white-space: nowrap; letter-spacing: 0.06em; margin: 0; line-height: 0.95;
   background: linear-gradient(180deg, #fff3d6 0%, #f2a33a 55%, #c4421f 100%); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 4px 0 rgba(0,0,0,0.35)); }
 .logo.small { font-size: 56px; }
 .tag { margin: 6px 0 28px; letter-spacing: 0.32em; text-transform: uppercase; font-size: 12px; color: var(--paper); opacity: 0.85; }

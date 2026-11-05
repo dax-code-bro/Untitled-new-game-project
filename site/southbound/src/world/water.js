@@ -1,6 +1,6 @@
 // Ocean, lake and river surfaces sharing one animated water shader.
 import * as THREE from 'three';
-import { LAKE, CHANNELS, CITY, lakeRadius } from './layout.js';
+import { LAKE, CHANNELS, CITY, lakeRadius, coastZ } from './layout.js';
 import { worldUniforms } from './terrain.js';
 import { GLSL_NOISE } from '../util.js';
 
@@ -209,15 +209,21 @@ export function createWater(scene, renderer = null, quality = {}) {
   }
   scene.add(group);
   const refl = renderer && quality.reflections ? makeReflection(renderer, quality.reflections) : null;
+  let reflOff = false;
   if (refl) reflUniforms.tReflect.value = refl.texture;
   // the lake and the coast are the only water big enough to need a mirror
-  const nearBigWater = (p) => (Math.hypot(p.x - LAKE.x, p.z - LAKE.z) < LAKE.r + 1500 || p.z > 900 || p.y < 60) && p.y < 600;
+  // (it is a second render of the whole scene: only worth it within sight of the water's surface;
+  // the old test was true almost anywhere on the map and doubled the cost of every frame)
+  const nearBigWater = (p) => p.y < 600 && (Math.hypot(p.x - LAKE.x, p.z - LAKE.z) < LAKE.r + 220 + p.y * 2 || p.z > coastZ(p.x) - 220 - p.y * 2);
   // wet city streets mirror the lit windows and street lamps instead
   const inWetCity = (p) => worldUniforms.uWet.value > 0.05 && p.x > CITY.x0 - 30 && p.x < CITY.x0 + CITY.nx * CITY.pitch + 30 && p.z > CITY.z0 - 30 && p.z < CITY.z0 + CITY.nz * CITY.pitch + 30;
   return {
     group,
     update(cam) { ocean.position.x = Math.round(cam.x / 80) * 80; ocean.position.z = Math.round(cam.z / 80) * 80; },
+    // the performance guard can switch the mirror off
+    setReflections(on) { reflOff = !on; if (reflOff) reflUniforms.uReflectOn.value = 0; },
     renderReflection(scene, camera) {
+      if (reflOff) { reflUniforms.uReflectOn.value = 0; return; }
       const city = inWetCity(camera.position);
       reflUniforms.uReflY.value = city ? CITY.height + 0.08 : 0;
       reflUniforms.uReflectOn.value = refl && (city || nearBigWater(camera.position)) && refl.render(scene, camera, group) ? 1 : 0;

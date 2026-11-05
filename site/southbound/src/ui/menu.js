@@ -1,5 +1,5 @@
 // Start screen (platform + GPU selection) and the settings panel.
-import { GPU_CHOICES, PRESETS, detectGPU, saveSettings } from '../settings.js';
+import { GPU_CHOICES, PRESETS, detectGPU, saveSettings, SOFTWARE_HINT } from '../settings.js';
 
 const $ = (s) => document.querySelector(s);
 
@@ -12,6 +12,25 @@ export function setupMenu(settings, onPlay) {
     sel.appendChild(o);
   }
   $('#detected').textContent = `Detected: ${gpu.name} → recommended ${PRESETS[gpu.preset].label}`;
+  // the title never runs off the side (narrow laptop windows, or the web font not loading)
+  const fitLogo = () => document.querySelectorAll('.logo').forEach((el) => {
+    el.style.fontSize = '';
+    const box = el.parentElement ? el.parentElement.clientWidth : innerWidth;
+    let fs = parseFloat(getComputedStyle(el).fontSize);
+    for (let k = 0; k < 30 && el.scrollWidth > box && fs > 28; k++) { fs -= 4; el.style.fontSize = fs + 'px'; }
+  });
+  fitLogo(); addEventListener('resize', fitLogo); document.fonts?.ready?.then(fitLogo);
+  if (gpu.software) {
+    // say so plainly, on the first screen, before anyone waits through a slide show
+    const warn = document.createElement('p');
+    warn.className = 'swwarn';
+    warn.style.cssText = 'margin:10px 0;padding:10px 12px;border-radius:8px;background:rgba(190,60,30,0.22);border:1px solid rgba(255,120,80,0.6);color:#ffd9cc;font-size:13px;line-height:1.45;max-width:640px';
+    warn.textContent = '⚠ ' + SOFTWARE_HINT;
+    const det = $('#detected');
+    det.parentNode.insertBefore(warn, det.nextSibling);
+    // the phone path shows it too
+    const ph = document.getElementById('step-phone'); if (ph) { const w2 = warn.cloneNode(true); ph.insertBefore(w2, ph.children[1] || null); }
+  }
   const presetsEl = $('#presets');
   for (const k of ['low', 'medium', 'high', 'ultra', 'cinematic']) {
     const b = document.createElement('button');
