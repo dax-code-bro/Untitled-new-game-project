@@ -45,11 +45,11 @@ export class CollisionWorld {
     return null;
   }
   // road ribbons (drawn 0.1 m above the shaped terrain)
-  addRoad(pts, ys, width) {
+  addRoad(pts, ys, width, lane = false) {
     for (let i = 0; i < pts.length - 1; i++) {
       const a = pts[i], b = pts[i + 1], hw = width / 2;
       this._insert(Math.min(a[0], b[0]) - hw, Math.min(a[1], b[1]) - hw, Math.max(a[0], b[0]) + hw, Math.max(a[1], b[1]) + hw,
-        { t: 3, ax: a[0], az: a[1], bx: b[0], bz: b[1], ya: ys[i], yb: ys[i + 1], hw });
+        { t: 3, ax: a[0], az: a[1], bx: b[0], bz: b[1], ya: ys[i], yb: ys[i + 1], hw, lane });
     }
   }
   _insert(minX, minZ, maxX, maxZ, item) {

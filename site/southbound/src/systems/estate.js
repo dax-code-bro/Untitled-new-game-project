@@ -34,9 +34,11 @@ export function installEstate(game) {
   const order = [4, 2, 5, 3, 1, 0];
   const props = [];
   const seen = new Set();
-  for (const st of order) for (const d of doors) {
-    if (props.length >= 198) break;
-    if (d.b.style !== st || seen.has(d.i)) continue;
+  // the original 198 first (their ids are in saves), then homes in the newer outer neighbourhoods
+  const MAX = 198 + 48;
+  for (const extra of [false, true]) for (const st of order) for (const d of doors) {
+    if (props.length >= (extra ? MAX : 198)) break;
+    if (!!d.b.extra !== extra || d.b.style !== st || seen.has(d.i)) continue;
     seen.add(d.i);
     const r = rng(d.i * 977 + 13);
     const type = TYPES[st] || 'House';
@@ -47,7 +49,7 @@ export function installEstate(game) {
     const price = Math.round((area * base * (inCity ? 1.2 : 0.75) * (downtown ? 1.6 : 1) * (0.85 + r() * 0.3)) / 1000) * 1000;
     const name = type === 'House' && Math.hypot(d.b.x - LAKE.x, d.b.z - LAKE.z) < LAKE.r * 1.6 ? `Lake Arden ${['Cabin', 'Cottage', 'Lodge'][props.length % 3]}`
       : `${100 + Math.floor(r() * 4800)} ${STREETS[Math.floor(r() * STREETS.length)]}${type === 'Apartment' ? ` · Apt ${1 + Math.floor(r() * 30)}` : ''}`;
-    props.push({ id: `prop_${String(props.length + 1).padStart(3, '0')}`, door: d, type, name, price: Math.max(price, 18000), region: inCity ? 'Port Calvera' : d.b.x < TOWN.x0 + 400 && d.b.x > TOWN.x0 - 200 ? 'Mill Creek' : 'Countryside' });
+    props.push({ id: `prop_${String(props.length + 1).padStart(3, '0')}`, door: d, type, name, price: Math.max(price, 18000), region: inCity ? 'Port Calvera' : d.b.extra ? 'Calvera outskirts' : d.b.x < TOWN.x0 + 400 && d.b.x > TOWN.x0 - 200 ? 'Mill Creek' : 'Countryside' });
   }
   const propByBuilding = new Map(props.map((p) => [p.door.i, p]));
   const owned = (p) => P.properties.includes(p.id);

@@ -134,6 +134,7 @@ export function buildShop(game, r, st) {
     const nr = nearestRoad(game.graph, cx, cz);
     if (nr && nr.dist < Math.hypot(hw, hd) + (nr.edge.width || 8) / 2 + 0.5) blocked = true;
     if (blocked || Math.max(...ys) - Math.min(...ys) > 2 || Math.min(...ys) < hm.waterLevel(cx, cz) + 0.4) continue;
+    (game.shopSites || (game.shopSites = [])).push([Math.round(cx), Math.round(cz)]); // where every shop ended up (QA)
     const y = Math.max(...ys) + 0.06;
     const g = new THREE.Group();
     g.position.set(cx, y, cz);

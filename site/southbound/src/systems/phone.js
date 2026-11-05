@@ -95,7 +95,7 @@ export function installPhone(game) {
       weapons: `${game.combat.owned.length - 1} of ${Object.keys(WEAPONS).length - 2} weapons owned. Buy more from the three gunsmiths, or have one delivered through Runr.`,
       places: 'Every shop and service in Calvera, nearest first. Tap one to set your GPS. Blue road signs point the way too.',
       apps: `Runr — errands, deliveries and towing. ${couriers.length ? `${couriers.length} on the way.` : 'Nothing on the way.'}`,
-      props: `${P.properties.length} of 198 owned.`,
+      props: `${P.properties.length} of ${game.estate?.props?.length || 198} owned.`,
       jobs: 'Tap a job to set GPS to its job board.',
       story: `${P.missions.done.length} / 63 missions complete.`,
       stats: `Played ${Math.round(P.playSeconds / 60)} min.`,

@@ -92,6 +92,7 @@ export function buildRoadGraph() {
   grid(CITY, 'c', 'street');
   grid(TOWN, 't', 'street');
 
+
   const hw = (fromId, ctrl, toId) => {
     const a = nodes.get(fromId);
     const pts = smoothPath([[a.x, a.z], ...ctrl, ...(toId ? [[nodes.get(toId).x, nodes.get(toId).z]] : [])], 8);
@@ -109,6 +110,23 @@ export function buildRoadGraph() {
   hw('c0_5', [[100, 1290], [-150, 1310], [-500, 1265], [-850, 1250], [-1250, 1215], [-1700, 1120]], null);
   // Mill Creek -> forest logging road
   hw('t0_1', [[-1350, -300], [-1500, -600], [-1550, -950], [-1400, -1200]], null);
+
+  // Outer neighbourhoods north and east of Port Calvera. Residential streets run out
+  // from the city edge (between the shops on the edge strip) to an outer street, so
+  // the city fades out into walk-ups, then houses, then the poor end of town on every
+  // side, not only along the highways. (The west already has Route 9 and the Coast
+  // Highway; the south is the port.) Flagged `lane` so the older outskirts generator
+  // keeps placing exactly what it always did (saved homes stay where they are).
+  const lane = (a, b, w = 10) => { const e = addEdge(a, b, resample([[a.x, a.z], [b.x, b.z]], 8), 'street', w); e.lane = true; return e; };
+  const o = (id, x, z) => node('o_' + id, x, z);
+  const C = (i, j) => nodes.get(`c${i}_${j}`);
+  const zN = CITY.z0 - 170, xE = CITY.x0 + CITY.nx * CITY.pitch + 170;
+  const n1 = o('n1', C(1, 0).x, zN), n4 = o('n4', C(4, 0).x, zN), nw = o('nw', CITY.x0 - 70, zN);
+  const n6 = o('n6', C(6, 0).x, CITY.z0 - 160), n7 = o('n7', C(7, 0).x, CITY.z0 - 160), ne = o('ne', xE, CITY.z0 - 160);
+  const e1 = o('e1', xE, C(CITY.nx, 1).z), e4 = o('e4', xE, C(CITY.nx, 4).z);
+  lane(C(1, 0), n1); lane(C(4, 0), n4); lane(nw, n1); lane(n1, n4);
+  lane(C(6, 0), n6); lane(C(7, 0), n7); lane(n6, n7); lane(n7, ne);
+  lane(C(CITY.nx, 1), e1); lane(C(CITY.nx, 4), e4); lane(ne, e1); lane(e1, e4);
 
   return { nodes, edges };
 }
