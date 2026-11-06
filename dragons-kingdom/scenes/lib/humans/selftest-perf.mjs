@@ -638,6 +638,31 @@ else {
     ok(m.pelX < -2.5 && Math.abs(m.pelX - m.perfX) < 1 && m.freeFwd > 7 && m.stance < 1 && Math.abs(m.neckZ - m.perfNeckZ) < 3 && m.pure < 1e-6,
       `director lean (X4-06 acts): pelvis ${m.pelX} cm to the stance side (performer ${m.perfX}); free ankle ${m.freeFwd} cm forward; stance ankle moved ${m.stance} cm; neck ${m.neckZ} cm ahead of the hips (performer ${m.perfNeckZ}); same t twice ${m.pure.toExponential(1)} m`);
   }
+  // a soft hand resting on a body (rig.js restHand, director s26 F4): palm onto the point (within 1.5 cm), facing
+  // it, the fingers together (index-little tips much closer than the build's drape fan), every tip settled onto
+  // the surface (not hovering a claw over it, not through it), pure (the same call twice -> the same pose)
+  {
+    const { restHand, handFrame } = await import('./rig.js');
+    const ch = load('alexandria');
+    const W = (n) => ch.bone(n).getWorldPosition(new THREE.Vector3());
+    const tipOf = (f, sd) => { const b2 = ch.bone(`finger${f}-2.${sd}`), b3 = ch.bone(`finger${f}-3.${sd}`); const h = W(`finger${f}-3.${sd}`), L = h.distanceTo(W(`finger${f}-2.${sd}`));
+      return h.addScaledVector(b3.position.clone().normalize().applyQuaternion(b3.getWorldQuaternion(new THREE.Quaternion())), 0.95 * L); };
+    const fan = (sd) => tipOf(2, sd).distanceTo(tipOf(5, sd)) * 100;
+    const at = new THREE.Vector3(-0.15, 0.92, 0.27), n = new THREE.Vector3(0, 0.95, -0.3).normalize();
+    const go = () => { ch.update(1, {}); ch.root.position.set(0, 0, 0); ch.root.rotation.set(0, 0, 0); ch.root.updateMatrixWorld(true);
+      return restHand(ch, 'R', { at, normal: n, fingers: [0.35, 0, 1], radius: 0.11 }); };
+    ch.update(1, {}); ch.root.updateMatrixWorld(true);
+    const fan0 = fan('R');
+    const r = go();
+    const hf = handFrame(ch, 'R');
+    const pc = hf.wrist.clone().lerp(W('finger3-1.R'), 0.45).addScaledVector(hf.palm, 0.012);
+    const ctr = at.clone().addScaledVector(n, -0.11), d = pc.clone().sub(at);
+    const m = { off: +(d.clone().addScaledVector(n, -d.dot(n)).length() * 100).toFixed(1), hgt: +(d.dot(n) * 100).toFixed(1), face: +(-hf.palm.dot(n)).toFixed(2), fan: +fan('R').toFixed(1), fan0: +fan0.toFixed(1),
+      tips: [2, 3, 4, 5].map((f) => +((tipOf(f, 'R').distanceTo(ctr) - 0.11) * 100).toFixed(1)), wr: W('wrist.R') };
+    go(); const pure = W('wrist.R').distanceTo(m.wr) + W('finger5-3.R').distanceTo((go(), W('finger5-3.R')));
+    ok(m.off < 1 && m.hgt > 0.7 && m.hgt < 1.7 && m.face > 0.85 && m.fan < m.fan0 * 0.75 && m.tips.every((h) => h > -0.6 && h < 1.6) && pure < 1e-6,
+      `resting hand (alexandria R on a 11 cm-radius flank): palm ${m.off} cm off the point, ${m.hgt} cm over it (cupped), facing it ${m.face}; index-little tips ${m.fan} cm apart (drape ${m.fan0}); tips over the surface ${m.tips.join(' / ')} cm; pure ${pure.toExponential(1)} m`);
+  }
   // worn props never follow a hand: no belt / buckle / purse vertex keeps an arm or hand weight
   {
     let bad = 0;

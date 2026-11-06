@@ -1248,3 +1248,59 @@ NEXT (look, in order):
 4. Fingertip pad bulge (postfix.py) - not started (budget). After it, ALL 48 characters need a rebuild
    (hands are on every body); hero close-ups first: abby*, remi*, then the riders.
 5. 2j NEXT 2-4 unchanged.
+
+## perf s13 (2026-11-06, short session) - a soft hand resting ON a body (director s26 REQUEST, F4)
+Done (rig.js, director.js, selftest-perf.mjs, new lookdev scenes/lookdev/humans-anim-rest.js):
+1. rig.js HAND_SHAPES.rest: fingers together (together 0.92), gently curled (more toward the little finger, soft
+   tips dip 0.55), thumb soft in (thumbIn 0.38). handShape gained an optional per-finger knuckle bend `mcp`
+   ([index..little] rad; existing shapes unchanged).
+2. rig.js restHand(ch, side, { at, normal, fingers, pole, pad, radius | surface, shape, amount, settle }) (pure: a
+   pose): forearm roll + wrist turn so the palm faces -normal, fingers along `fingers` in the surface; with `at`
+   the arm is IK'd so the palm centre sits `pad` (1.2 cm: the hollow of a resting, cupped hand) over the point;
+   then each finger bends at the knuckle (then straightens / curls on) until its tip lies on the surface - a
+   sphere of `radius` touching `at` (a flank drapes round it), a plane without one, or surface(p) -> height.
+   Returns { palm, tips }. Unreachable point -> the hand as near as the arm goes (twoBoneIK soft).
+3. director.js overlay 'restHand' { side, at, normal, fingers, radius, pad } for blocking acts (the envelope
+   eases it in). API unchanged elsewhere.
+4. selftest 'resting hand (alexandria R on a 11 cm-radius flank)': palm 0 cm off the point, 1.2 cm over it,
+   facing it 1.0; index-little tips 4.4 cm apart (drape 9.4); tips 0.6 cm (pad centre) over the surface; pure.
+LOOK (scratch eng1/perf13/): rest_1.png (before: build drape fingers - the claw, fanned 9 cm) vs rest3_0.png /
+   rest3_2.png (after: fingers together draped over an 11 cm capsule, tips on it, heel just lifted) - sheet
+   rest3_sheet.png (top before, middle after, bottom after from her right, low). F4 tests (temporary copies of the
+   style scene, NOT committed, draft t=2): f4_restA2.png = variant A below (both hands palm up, 'rest' shape),
+   f4_restB.png = variant B (far hand palm down on the hatchling via a raycast), f4_sheet.png (top: director s26
+   f4.png, A, B), f4_crop_sheet.png (crops x2). RESULT: A - both hands no longer claws: fingers together and
+   curled up round the underside, a receiving/cradling hand; B - the far hand lies palm down on the hatchling's
+   back behind the wing, fingers together draped over the far side, the back of the hand to the lens: reads as a
+   hand resting on it (raycast hit hatchling:body).
+DIRECTOR - exact calls for scenes/lookdev/style-f4-birthing-chamber.js (perf does not edit it):
+   import: `import { handShape, restHand } from '../lib/humans/rig.js';`
+   A (minimal, keeps the s26 composition, both palms up under the chest) - right after the line
+     `for (const sd of ['L', 'R']) relaxHand(alex, sd, { fingers: under, palm: up, keepFingers: true });`
+   add `for (const sd of ['L', 'R']) handShape(alex, sd, 'rest');`
+   B (the far hand palm DOWN on the hatchling, the near one cupped under the cloth) - after the same line add:
+     {
+       const farSd = aIsR ? 'L' : 'R';            // wB: the hand less toward the lens
+       const from = chest.clone().addScaledVector(near, 0.3).addScaledVector(up, 0.12).addScaledVector(fwd, -0.06);
+       const ray = new THREE.Raycaster(from, chest.clone().addScaledVector(fwd, -0.06).sub(from).normalize(), 0, 1);
+       hatch.root.traverse((m) => { if (m.isSkinnedMesh) m.computeBoundingSphere(); });
+       const hit = ray.intersectObject(hatch.root, true)[0];
+       if (hit) {
+         const nrm = hit.face.normal.clone().transformDirection(hit.object.matrixWorld);
+         if (nrm.dot(from.clone().sub(hit.point)) < 0) nrm.negate();
+         restHand(alex, farSd, { at: hit.point, normal: nrm, fingers: far.clone().addScaledVector(fwd, -0.3), radius: 0.06,
+           pole: pole.clone().addScaledVector(fwd, aIsR ? -0.25 : 0.25) });
+       }
+       handShape(alex, aIsR ? 'R' : 'L', 'rest');
+     }
+   (both before drapeCloth, which reads the hands; in B the cloth still covers only the near hand - checked at draft.
+   Move the hand along the body with the fwd offset in `from` (-0.06 = behind the shoulder); radius 0.06 = the
+   hatchling's back curvature.)
+KNOWN: palm-up hands (A, and the near hand in B): the thumb still stands off ~40 deg from the index (thumbIn 0.38
+   moved it little - the thumb's swing axis is the hand's fwd; a palm-up 'alongside' thumb wants its own
+   adduction about the palm normal). In the lookdev test (standing at a hip-height capsule) the wrist bends ~35 deg
+   up - the scene's geometry (forearm below the capsule's top), not the call. restHand's tips are reported against
+   the plane through `at` (not the sphere) in its return value.
+Checked: selftest-perf all passed; npm test 48 pass / 0 fail / 1 skipped.
+NEXT (perf, in order): 1. the thumb adduction for 'rest' palm up (above); 2. s11 NEXT 1 (1C-16 pinky still),
+   3 (REQUEST props: real hoe), 4 (remi_ride thumb).

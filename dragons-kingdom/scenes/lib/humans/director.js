@@ -17,6 +17,7 @@
 import { loadPerformanceData, directorFace } from './perform.js';
 import * as THREE from 'three';
 import { gestureNow, legsNow, createBody, leanNow } from './motion.js';
+import { restHand } from './rig.js';
 
 let enabled = true;
 let registered = null;
@@ -65,6 +66,7 @@ export function registerDirectorHooks(opts = {}) {
  *   reach      { side, at | to, offset, palm } touch      (= reach, a lighter hand)
  *   support    { side, at | grip }             handsTo    { at | to, spread, palm } both hands
  *   raiseHand  { side } a small raised hand (stop / wait)
+ *   restHand   { side, at, normal, fingers } a soft hand resting ON a body (palm onto it, fingers together)
  *   gesture    { side, dur } a talking hand    shove      { side | 'both', at | to, dur } a push
  *   gesture    { name: 'tool', prop: 'hoe' | 'spade' | 'rake' | 'staff', stance, posture } both hands on a tool's
  *              top AND the performer's whole 'lean' posture (motion.js leanNow; posture: false = hands + prop only)
@@ -103,6 +105,17 @@ export const OVERLAYS = {
     return p ? ['L', 'R'].map((sd) => ['reach', { ...o, side: sd, at: p, lateral: o.spread ?? 0.09, palm: o.palm || [0, 1, 0], shape: o.shape || 'cup' }]) : [];
   }),
   raiseHand: overlayHook('raiseHand', (o) => sides(o).map((sd) => ['raiseHand', { ...o, side: sd }])),
+  // a soft hand resting on a body (rig.js restHand: palm onto `at` along -normal, fingers together and gently
+  // curled, tips settled onto the surface): { side, at, normal, fingers, pad } - the hand eases in with the
+  // overlay's envelope
+  restHand: (ch, st, t, env) => {
+    for (const ov of st?.overlays || []) {
+      if (ov.name !== 'restHand' || !(ov.w > 0.001)) continue;
+      const o = ov.o || {};
+      const p = atPoint(env, o, t);
+      for (const sd of sides(o)) restHand(ch, sd, { ...o, at: p, amount: Math.min(1, ov.w) });
+    }
+  },
   // (o.name 'tool': both hands stacked on a long-handled tool - motion.js GESTURES.tool { prop: 'hoe', stance,
   // length, ahead, tilt }; pair it with the 'lean' posture act for the bend)
   // The tool gesture also gives the body the performer's whole 'lean' posture (motion.js leanNow: pelvis
