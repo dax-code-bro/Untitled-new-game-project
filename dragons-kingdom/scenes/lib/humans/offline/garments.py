@@ -1404,8 +1404,16 @@ def head_shell(D, g):
         rng_ = np.random.default_rng(zlib.crc32(kind.encode()))
         ph = rng_.random(3) * 6.28
         wav = np.sin(a_ * 13 + ph[0]) * 0.6 + np.sin(a_ * 7.3 + S[:, 1] * 40 + ph[1]) * 0.4
-        amp = (0.0016 if kind != 'cap' else 0.0012) * (0.3 + back) * (0.4 + 0.6 * top)
+        amp = g.get('fold_amp', 0.0016 if kind != 'cap' else 0.0012) * (0.3 + back) * (0.4 + 0.6 * top)
         S = S + nS * (amp * wav + 0.0015 * back)[:, None]
+        if g.get('knot', 0.0):
+            # (kerchief) the tie at the back: a soft bunched lump just above the back edge, so the
+            # head cloth reads as a tied kerchief from behind and not as a smooth cap (default off)
+            bk = g.get('back', 0.085)
+            da = np.abs(np.angle(np.exp(1j * (a_ - math.pi))))
+            w = np.exp(-(da / 0.38) ** 2) * np.exp(-((S[:, 1] - (ey - bk + 0.022)) / 0.022) ** 2)
+            w = w * (1 + 0.25 * np.sin(a_ * 21 + ph[2]))
+            S = S + nS * (g['knot'] * w)[:, None] + np.array([0, -0.25 * g['knot'], 0]) * w[:, None]
     if kind == 'hood':
         # wool falling from the crown: folds that run down the sides and back, deeper toward the
         # neck, bunched where the hood meets the cape; the face opening's edge turned back

@@ -540,8 +540,14 @@ def crowd():
         # (X4-06's farmer) a light linen kerchief tied higher at the back, black hair showing at the nape and
         # brow: a close brick-red kerchief on brown skin, hair all under it, read as a bald head at draft
         ('crowd05', 0.0, 0.55, 'brown', (0.45, 0.6, 0.48), {'style': 'pulled', 'color': HAIR['black'], 'count': 4000, 'loft': 0.003},
+         # (seen from behind at 11 m in X4-06) the kirtle back read flat and plastic: a pinned bodice (as the
+         # doublet) for the mid-back ripples, deeper skirt flutes for soft vertical folds, a narrower hem;
+         # the kerchief warmer natural linen (oatmeal read stark white in the sun), deeper folds + a back knot
          ('kirtle', 'ochre'), ('kerchief', 'oatmeal'), 'basket_front', dict(layer='apron', foot='shoes', ex='smile', pp={'head_yaw': 0.3},
-                                                                           kerchief={'back': 0.03, 'front': 0.05})),
+                                                                           kirtle={'bodice_pin': 0.45, 'torso_smooth': 70, 'flare': 1.45,
+                                                                                   'prefold': 0.09, 'folds': 12},
+                                                                           kerchief={'back': 0.03, 'front': 0.05, 'color': [0.28, 0.215, 0.13],
+                                                                                     'fold_amp': 0.005, 'knot': 0.02})),
         ('crowd06', 1.0, 0.78, 'light', (0.35, 0.45, 0.42), {'style': 'none', 'color': HAIR['white'], 'beard': {'count': 7000, 'length': (0.012, 0.035), 'curl': 0.4, 'color': HAIR['white'], 'clump': 0.7}},
          ('tunic', 'greybrown'), ('hood', 'russet'), 'stand', dict(belt='cord', foot='shoes', ex='smile', hem=0.32, pp={'flex': 0.22, 'head_pitch': -0.12, 'elbow': 0.4})),
         ('crowd07', 0.0, 0.3, 'olive', (0.45, 0.4, 0.45), {'style': 'braid', 'color': HAIR['darkbrown'], 'length': 0.4, 'hang': 'R', 'part': 0.004},
@@ -585,8 +591,8 @@ def crowd():
         bkw = {} if belt == 'none' else {'belt_style': belt, 'belt_color': {'cord': [0.32, 0.27, 0.19], 'sash': K.get(x.get('sash', 'brick'))}.get(belt, lc),
                                           'pouch': x.get('pouch', False)}
         if top[0] == 'kirtle':
-            out_.append(G_kirtle(K[top[1]], hem=0.05 if age > 0.2 else 0.12, sleeves='rolled' if i % 3 == 0 else 'long', seed=i,
-                                 belt=belt != 'none', **bkw))
+            out_.append(G_kirtle(K[top[1]], **dict(dict(hem=0.05 if age > 0.2 else 0.12, sleeves='rolled' if i % 3 == 0 else 'long', seed=i,
+                                                        belt=belt != 'none', **bkw), **x.get('kirtle', {}))))
         else:
             hose = ['walnut', 'greybrown', 'russet', 'darkgrey', 'walnut', 'moss'][i % 6]
             out_ += [G_hose(K[hose]), G_shirt(['linen', 'undyed', 'oatmeal'][i % 3]),

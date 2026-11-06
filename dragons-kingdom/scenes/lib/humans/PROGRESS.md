@@ -1207,3 +1207,44 @@ NEXT (look, in order):
    'kirtle' rows): spot-check one hero kirtle (characters.py ~line 327) and one crowd row at draft after it.
 3. Fingertip pad bulge (postfix.py build-time tip fattening) - still not started (budget).
 4. 2j NEXT 2-4 unchanged.
+
+## LOOK round 2l (2026-11-06, short session) - crowd05 kirtle weight + kerchief (director X4-06 note)
+Director: kirtle back smooth (2k back_env works) but flat / slightly plastic at 35 mm, no folds; hem flares a
+little wide; kerchief reads as a plain white cap.
+CHANGED (crowd05 ONLY - shared G_kirtle / G_kerchief defaults NOT changed):
+1. characters.py crowd rows: new optional row key `kirtle={...}` merged over the crowd G_kirtle args (as
+   `kerchief={...}` already was). crowd05: bodice_pin 0.45 (as G_doublet; the bodice keeps its cut shape,
+   the sim no longer crumples the mid back), torso_smooth 40 -> 70, flare 1.9 -> 1.45, prefold 0.05 -> 0.09,
+   folds 11 -> 12 (deeper, fewer skirt flutes = soft vertical folds on the back of the skirt).
+   (1st try flare 1.65 / prefold 0.075 / folds 13: hem barely narrower, flutes too faint at draft.)
+2. crowd05 kerchief colour oatmeal [0.34,0.3,0.23] -> [0.28,0.215,0.13] (unbleached natural linen; the sky
+   light on the crown turned oatmeal blue-white: sampled sRGB 142,146,141 -> 136,132,118).
+3. garments.py head_shell: new optional keys `fold_amp` (linen fold depth, default 0.0016 = unchanged) and
+   `knot` (m, default 0 = off): a bunched tie lump at the back edge of a kerchief. crowd05: fold_amp 0.005,
+   knot 0.02. Defaults unchanged, but garments.py/characters.py changed -> build-caches marks all 48
+   characters "made by older code"; only crowd05's output differs (hero G_kirtle/kerchief args untouched).
+PROBE (_probe_gap.mjs crowd05, ray gap cloth - skin, mean cm by height over root; drape | director lean):
+   before 36cm 1.80 | 40 1.50 | 44 1.43 | 48 1.45 | 52 1.20 ;  lean 32 2.44 | 36 2.03 | 40 1.48 | 44 1.38 | 48 1.55
+   after  36cm 1.69 | 40 1.62 | 44 1.55 | 48 1.29 | 52 1.00 ;  lean 32 2.76 | 36 1.89 | 40 1.58 | 44 1.45 | 48 1.39
+   0 vertices within 3 mm, 0 through, both poses.
+Rebuilt: crowd05 only. Checked: selftest-perf all passed; npm test 48 pass / 0 fail / 1 skipped.
+Images (scratch eng1/look13/): before/, after2/ (draft X4-06@0.6; after/ = 1st try), X4-06_043_before_after2.png,
+X4-06_crowd05_x3_before_after2.png (left before).
+RESULT (draft, looked): hem visibly narrower (less bell); clear soft vertical flutes on the lower back skirt;
+mid back smoother (one diagonal crease left over the right blade/waist, from the basket arm); kerchief now
+cream / natural linen instead of blue-white, still a light smooth cap shape at draft - the knot is ~2 px at
+11 m and does not read. The kirtle as a whole still reads pale cream although its dye is ochre
+[0.27,0.17,0.085] (renders sRGB ~140,124,100 in this set's sun) - the "plastic" feel is now mostly the
+even pale tone + low-frequency shading, not the shape.
+NEXT (look, in order):
+1. crowd05 tone: try a darker / more saturated dye for her ('russet' or 'brick'), or lower the wool
+   material's diffuse lift in this light; check the wool shader's sheen on a backlit pale kirtle (plastic).
+   If the kerchief must read as tied at 11 m: tails (G_kerchief has no tail panel - it read as paper flaps)
+   or a darker band at the tie; knot 0.02 is invisible at draft.
+2. If bodice_pin 0.45 + flare 1.45 hold up on crowd05 in motion, consider moving them into G_kirtle defaults
+   (EVERY kirtle wearer then changes on the next full rebuild; spot-check the hero gown, characters.py ~327,
+   which already sets its own bodice_pin 0.75 / flare 2.7).
+3. Full rebuild still pending for 2k's back_env (all kirtle wearers) - owner runs it in the background.
+4. Fingertip pad bulge (postfix.py) - not started (budget). After it, ALL 48 characters need a rebuild
+   (hands are on every body); hero close-ups first: abby*, remi*, then the riders.
+5. 2j NEXT 2-4 unchanged.
