@@ -94,13 +94,16 @@ export default {
       cast: { leaf: { tack: true, ...inForm(505, 62, 0, T['X4-01'], 7, { dx: -40 }), acts: LEAF_FLY() }, charcoal: { tack: true, ...inForm(535, 60, 16, T['X4-01'], 7, { dx: -40 }), acts: CHAR_FLY() }, abbyR: {}, remiR: {} },
     },
     'X4-02': {
-      staging: 'WIDE: 70 mm (s21; was 150) air-to-air from inland: Leaf drops to ~14 m and flies along the harbour wall (wall in the foreground, the bay beyond), wingtip shadow on the stones.',
+      staging: 'WIDE: 70 mm (s21; was 150) air-to-air from inland: Leaf drops to ~12 m (s24; was 14) and flies along the harbour wall (wall in the foreground, the bay beyond), wingtip shadow on the stones.',
       // (s21 still @0.5: Leaf + Abby read, but only sea behind - she was still 27 m up, 26 m outside the wall, and a
       // 150 mm frame 12 m above her cannot reach the wall top. NOT RE-STILLED: she now drops early and skims ~7 m
       // outside the wall, the lens 2 m above her at 70 mm with her in the upper third, so the wall top runs along the
       // frame bottom. Still it before the video.)
-      cam: { rig: 'follow', frame: { subjects: [['leaf.chest', [0, 0.3]]], from: 270, dist: 110, rise: 2, track: true }, mm: 70, fstop: 5.6, focus: 'leaf.chest' },
-      cast: { leaf: { tack: true, root: [[0, [362, 40, 1500]], [1.5, [372, 16, 1525], 'inOut'], [4, [395, 14, 1562], 'linear']], yawKeys: 155, acts: LEAF_FLY() }, abbyR: {} },
+      // s24 (s22 still: the wall only a sliver at the bottom edge - Leaf ~12 m over the wall top = 6.7 deg below her at
+      // 104 m, the 70 mm frame holds +-5.7): she skims LOWER (16/14 -> 13/11 m: ~8 m over the parapet) and the lens sits
+      // level with her (rise 2 -> 0) aimed further down (Leaf at frame y 0.3 -> 0.35): the parapet ~-0.45, wall top ~-0.55.
+      cam: { rig: 'follow', frame: { subjects: [['leaf.chest', [0, 0.35]]], from: 270, dist: 110, rise: 0, track: true }, mm: 70, fstop: 5.6, focus: 'leaf.chest' },
+      cast: { leaf: { tack: true, root: [[0, [362, 40, 1500]], [1.5, [372, 13, 1525], 'inOut'], [4, [395, 11, 1562], 'linear']], yawKeys: 155, acts: LEAF_FLY() }, abbyR: {} },
     },
     'X4-03': {
       staging: 'LOW STATIC 24 mm at the town roofs (s21 restage: a 35 mm frame cannot hold roofs, quay and a high dragon): from the terrace-2 street just over the terrace-1 ridges, looking east-north-east down the slope - roofs in the foreground, the quay apron and the Santa Maria beyond, the breakwater and the sea; Charcoal crosses high over the harbour (top, left to right) and his shadow slides over the apron toward the town.',
@@ -112,7 +115,7 @@ export default {
       notes: 'the shadow lands ~100 m west of him (sun 102/31): check it crosses the quay at 0.3-0.6 of the shot; Charcoal beats (shot list sound: deep slow beats overhead)',
     },
     'X4-06': {
-      staging: '50 mm STATIC on the terrace farm: a farmer (a woman) rests on a hoe (foreground left, back three-quarter, face turned away), watches the riders pass high over the town (background right), unimpressed.',
+      staging: '35 mm STATIC on the terrace farm (s24; was 50): a farmer (a woman) rests on a hoe (foreground left, back three-quarter, face turned away), the town\'s upper rows behind her, watches the riders pass high over the town (background right), unimpressed.',
       // (s21: camera ~10.7 m behind-left of her on terrace 3 (ground ~25.1), aim bearing 45 / 2 deg DOWN (super35 50 mm
       // holds only +-8 deg vertically): she sits ~7.6 deg left of centre, feet to head ~-7..+2 deg; the pair lowered to
       // y 32-34 over the harbour (s21 still: Charcoal at y 40 broke the top edge) so they sit ~3 deg above centre; she faces
@@ -120,12 +123,21 @@ export default {
       // The farmer (crowd05) is a WOMAN (humans look 2j). s23: Charcoal's upstroke wingtips broke the TOP edge at 0.6 ->
       // he flies further out on the same bearing and lower (root [344, 28, 1668] -> [347, 28, 1716], ~255 m): previs
       // (0.64, 0.35) at 0.6, still inside at 0.95; Leaf unchanged (0.30, 0.54).)
-      cam: { rig: 'static', pos: [140, 26.8, 1852], look: [317, 18, 1675], mm: 50, fstop: 5.6, focus: 'farmer.head' },
-      set: { shadowAt: [200, 25, 1780], shadowExtent: 160 },
+      // s24 RE-BLOCK for the town behind her: from the old bearing (45) the town lay 15-40 deg LEFT and below the terrace-3
+      // edge (eye level hides rows 0-2). Now the lens looks NNE (bearing 12, 2 deg down) along terrace 3 at 35 mm: the
+      // terrace-3 house row recedes behind her, row 4 upper left, row 2 roofs over the edge; the pair pass high over the
+      // town (staging: 'background right') at ~160-235 m, Leaf (bearing ~22) inland of Charcoal (~26), ~4-5 deg up.
+      // She stands at bearing 4 / 11 m. s24 r1 still: town reads, but the hoe hid behind her (facing -23 = 35 deg left read
+      // as straight back at 35 mm) and Charcoal's right wing broke the top-right corner -> she faces bearing -40 (52 deg
+      // left of the axis), Leaf 4 m inland (x 205 -> 201) to keep clear of his left wing. r2 still: hoe shaft reads (thin),
+      // Charcoal's right wing STILL broke the top-right corner -> pushed 1.3x further out on the same ray from the lens
+      // ([230, 38, 1640] -> [256.7, 41.4, 1575], same 48 m path): same screen spot, ~23 % smaller. NOT RE-STILLED.
+      cam: { rig: 'static', pos: [141, 26.8, 1856], look: [172.2, 21.6, 1709.3], mm: 35, fstop: 5.6, focus: 'farmer.head' },
+      set: { shadowAt: [170, 25, 1760], shadowExtent: 160 },
       cast: {
-        farmer: { at: [146.5, 1843.5], face: [146, 1790], acts: [[0, 'lean', { to: 0.6, dur: 0.01 }], [0, 'gesture', { name: 'tool', prop: 'hoe', stance: 'R' }], [0.5, 'look', { at: 'leaf.chest', amount: 0.7 }]] },
-        leaf: { tack: true, root: [[0, [300, 34, 1680]], [3, [303, 34, 1728], 'linear']], yawKeys: 177, acts: LEAF_FLY() },
-        charcoal: { tack: true, root: [[0, [344, 28, 1668]], [3, [347, 28, 1716], 'linear']], yawKeys: 177, acts: CHAR_FLY() },
+        farmer: { at: [141.8, 1845], face: [106.4, 1802.9], acts: [[0, 'lean', { to: 0.6, dur: 0.01 }], [0, 'gesture', { name: 'tool', prop: 'hoe', stance: 'R' }], [0.5, 'look', { at: 'leaf.chest', amount: 0.7 }]] },
+        leaf: { tack: true, root: [[0, [201, 38, 1660]], [3, [204, 38, 1708], 'linear']], yawKeys: 177, acts: LEAF_FLY() },
+        charcoal: { tack: true, root: [[0, [256.7, 41.4, 1575]], [3, [259.7, 41.4, 1623], 'linear']], yawKeys: 177, acts: CHAR_FLY() },
         abbyR: {}, remiR: {},
       },
       notes: 'perf s11 acts (humans/PROGRESS.md); hoe = humans tools.js stand-in until props has a real one',

@@ -3,6 +3,58 @@
 Owner paths: `scenes/lib/director/`, `episodes/s01e01/final/scenes/`, `episodes/s01e01/final/cut/`.
 How it works: `README.md` in this folder. Latest state first.
 
+## Session 24 (2026-11-06, short budgeted session: VERDOR_AERIAL water tint, X4-02 wall, X4-06 town - STILLS only)
+
+Shot ids, lengths, line cue times UNCHANGED (X4-20 still exactly 5 s, untouched). No flight act got a phase / tOffset
+(sound: Charcoal's beats 0.20 s then every 1.6 s - unchanged). No 1C act touched.
+Scratch: `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/director/s24/`
+(`X4-01_084.png X4-02_048.png X4-03_048.png X4-06_043.png`, `r2/X4-06_043.png`, `previs/`, labelled contact sheet `sheet.jpg`).
+- Set: ocean absorption [0.55, 0.2, 0.24] -> [0.55, 0.26, 0.22] (sets/verdor-aerial.js). KEPT.
+- X4-02: Leaf skims lower (root 16/14 -> 13/11 m), frame rise 2 -> 0, Leaf at frame y 0.3 -> 0.35 (the wall top sat
+  ~6.7 deg below her at 104 m, the 70 mm frame holds +-5.7: now ~8 m over the parapet). Staging text "~12 m".
+- X4-06 RE-BLOCK (town behind her): from bearing 45 the town lay 15-40 deg left and below the terrace-3 edge (eye level
+  hides rows 0-2). Now 35 mm (was 50), cam [141, 26.8, 1856] look [172.2, 21.6, 1709.3] (bearing 12, 2 deg down),
+  farmer at [141.8, 1845] facing [106.4, 1802.9] (52 deg left of the axis), the pair pass high over the town as the
+  staging says: Leaf [201, 38, 1660] -> [204, 38, 1708], Charcoal [256.7, 41.4, 1575] -> [259.7, 41.4, 1623]
+  (yaw 177, CHAR_FLY / LEAF_FLY unchanged). shadowAt [200, 25, 1780] -> [170, 25, 1760].
+  Stills LOOKED AT (draft):
+  - X4-01@0.5: pair top left (Charcoal whole, Leaf a speck under him), breakwater centre, quay apron + 2 houses + the
+    Santa Maria at the right edge, the rest open sea, dark blue. Bottom-left shore shallows: still a TEAL band but bluer
+    / less green than s23 - the new absorption helps; what is left is the shallow floor showing through (see NEXT 3).
+    Still mostly sea - the town barely in (right edge). Acceptable at draft; READY if the owner accepts the framing.
+  - X4-02@0.5: Leaf + Abby centre-upper, wings down, Abby reads as a small figure on her back; the harbour wall now
+    fills the bottom ~22 % (parapet + block tops, stepped). Sea + haze behind. READY. (Leaf's membranes read LIGHT /
+    lime green backlit here and in X4-06 - canon is dark green: creatures look note.)
+  - X4-03@0.5: roofs + chimneys foreground, a stone house left, the quay apron with bollards, the Santa Maria moored,
+    the breakwater across the basin, the basin water blue-grey with ripples (no green), Charcoal top right whole. READY.
+  - X4-06@0.6 r1: the TOWN READS: a timber-framed house upper left behind her, terraced roofs + chimneys receding right of
+    her, the palace on its hill top-left corner, sea + breakwater right. Farmer full figure left-of-centre, back view;
+    the hoe hidden behind her; Charcoal's right wing broke the top-right corner. r2 (face -40, Charcoal 4 m lower):
+    the hoe shaft now shows as a thin line on her right (still weak at draft), Leaf centre-right clear of him, Charcoal
+    STILL clipped at the top-right corner -> pushed 1.3x further out on the same ray (previs at 0.6 (0.68, 0.49), was
+    ~(0.74, 0.62)) - NOT RE-STILLED.
+  - KIRTLE back_env (crowd05, X4-06 r1 + r2): the back panel reads clean - smooth from shoulders to hem, no holes,
+    spikes or seat bulge (s23 had a slight bustle-like bulge), hem flares a little wide into a trapezoid; no folds at
+    draft (a flat, plasticky back at 35 mm). Kerchief reads as a white cap. Nothing broken.
+- Verify: director selftest 20/20; build-shots --check clean (slate warnings only). npm test not run.
+- NEXT (exact, in order):
+  1. Re-still X4-06 once: `node scenes/lib/director/tools/still.mjs X4-06@0.6 X4-06@0.95 --preset draft --out <scratch>/eng1/director/s25`
+     (Charcoal's wings inside the top-right corner? hoe readable? If the hoe is still weak: face [100, 1810] or a 40 mm lens.)
+  2. Videos (owner/background, ~10 min/shot here):
+     `node scenes/lib/director/tools/render-shots.mjs --only X4-02,X4-03,X4-11,X4-14,X4-20 --force --work <scratch>/eng1/director/work1B`
+     then `--only X4-06` after 1., `--only X4-01` once the owner accepts its framing. Still pending from s17-19:
+     `--only 1C-16`, `--only 1C-10,1C-13,1C-14,1C-19`, `--only 1C-07,1C-08,1C-09,1C-11,1C-12,1C-15,1C-17,1C-18`,
+     `--only 1C-04,1C-06,X3-10`.
+  3. X4-01 residual teal: it is the open-shore floor under the shallows (outside the basin), not the absorption now -
+     in sets/verdor-aerial.js steepen the open-shore drop (2.5 m in 40 m -> 4 m in 25 m) or darken the underwater splat
+     further; X4-01 framing could also aim ~5 deg right / down for more town.
+  4. Wire the `plans` shots as requests land (X4-08 call, X4-10 lookout, X4-12 'pat', X4-13 school cast); VERDOR_HARBOR;
+     OUTER_ROCKS (real stacks).
+- REQUESTS: creatures - Leaf's wing membranes read light / lime green when backlit (X4-02, X4-06; canon small DARK
+  green) - darker membrane albedo / less transmission. humans-look - kirtle back_env: fine (above); optional - a few
+  vertical back folds so the back panel is not flat at 35 mm. props - a real hoe (perf s11; the stand-in shaft is too
+  thin to read at 11 m / 35 mm). creatures - X4-08 flight `call` (s17). nature - outer-rock stacks for X4-20 / X6.
+
 ## Session 23 (2026-11-05, short budgeted session: VERDOR_AERIAL frame edges + cold shallows - STILLS only)
 
 Shot ids, lengths, line cue times UNCHANGED (X4-20 still exactly 5 s; X4-03 untouched: CHAR_FLY, no phase / tOffset).

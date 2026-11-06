@@ -104,7 +104,7 @@ export async function build(ctx, { spec } = {}) {
   sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.3;
   scene.add(sun, sun.target);
 
-  const ocean = createOcean(ctx, { windSpeed: 6, windDirection: 200, swell: 0.45, choppiness: 1.1, seed: 9, depth: 40, mipFilter: 'trilinear', roughness: 0.05, turbidity: 0.08, absorption: [0.55, 0.2, 0.24], foamThreshold: 0.72, shoreFoam: 0.8, shoreFoamWidth: 1.4, surf: 0.6 });
+  const ocean = createOcean(ctx, { windSpeed: 6, windDirection: 200, swell: 0.45, choppiness: 1.1, seed: 9, depth: 40, mipFilter: 'trilinear', roughness: 0.05, turbidity: 0.08, absorption: [0.55, 0.26, 0.22], foamThreshold: 0.72, shoreFoam: 0.8, shoreFoamWidth: 1.4, surf: 0.6 });
   scene.add(ocean.mesh);
 
   const land = heightfield({
