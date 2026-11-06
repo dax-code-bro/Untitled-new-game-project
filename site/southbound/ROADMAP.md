@@ -140,6 +140,19 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 - [x] Loading screen with in-game art, tips and progress
 - [x] Fewer touch buttons: ◎ interact replaces the car button; map, phone, arsenal, free cam moved to pause
 
+## Phase 1.17 — Grass
+
+- [x] The thin-blade carpet (flat green ribbons, ground showing between them) is gone
+- [x] New grass (`src/world/grasscards.js`): blades painted at load time (~240 per card: thin,
+      tapered, curving, varied muted greens, lighter midribs, darker edges, bleached tips, dry
+      blades, the odd seed head) on clumps of three crossed, splayed cards; a tight near ring and
+      a wider far ring; crisp edges at any distance; wind and parting round the player
+- [x] Only in the wild parts: meadows (in big soft fields) and all over the dry plains; never on
+      mown lawns, the city, pavement, sand, forest floor or steep rock
+- [x] No ground between blades: the terrain under the grass is darkened to its shaded depths,
+      and towards the edge the grass takes the scanned ground's colour, so there's no line
+- [x] Straw-gold on the plains; Settings › "3D grass" turns it off (photo-scanned ground only)
+
 ## Phase 1.16 — Frame rate
 
 - [x] Rocks: every boulder on the map (~2,800 scans at ~1,500 triangles) was drawn every frame and

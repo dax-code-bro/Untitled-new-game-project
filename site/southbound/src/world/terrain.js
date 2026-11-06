@@ -1,6 +1,6 @@
 // Terrain meshes (chunked for culling) + horizon ring + procedural shader.
 import * as THREE from 'three';
-import { WORLD } from './layout.js';
+import { WORLD, CITY } from './layout.js';
 import { baseHeight } from './heightmap.js';
 import { GLSL_NOISE } from '../util.js';
 
@@ -25,7 +25,30 @@ export const worldUniforms = {
   uWorldHalf: { value: WORLD.half },
   uWet: { value: 0 }, // 0 dry .. 1 soaked (weather)
   uRain: { value: 0 }, // current rain intensity (ripples)
+  // where the 3D grass grows (shared with grasscards.js so the ground under it matches)
+  uLawn: { value: (() => { const t = new THREE.DataTexture(new Uint8Array(4), 1, 1); t.needsUpdate = true; return t; })() },
+  uCityB: { value: new THREE.Vector4(CITY.x0 - 20, CITY.z0 - 20, CITY.x0 + CITY.nx * CITY.pitch + 20, CITY.z0 + CITY.nz * CITY.pitch + 20) },
+  uGrassR: { value: 0 },          // radius of the 3D grass round the camera (0 = none)
+  uGrassCam: { value: new THREE.Vector3() },
 };
+
+// The 3D grass's own mask, used by the grass and by the terrain under it: wild ground only (not
+// pavement, sand, forest floor, steep rock, mown lawns or the city), and in fields: big soft
+// patches of meadow, and all over the dry plains.
+export const GRASS_MASK_GLSL = /* glsl */ `
+float gmHash(vec2 p){ p = fract(p*vec2(123.34, 456.21)); p += dot(p, p+45.32); return fract(p.x*p.y); }
+float gmNoise(vec2 p){ vec2 i = floor(p), f = fract(p); vec2 u = f*f*(3.0-2.0*f);
+  return mix(mix(gmHash(i), gmHash(i+vec2(1,0)), u.x), mix(gmHash(i+vec2(0,1)), gmHash(i+vec2(1,1)), u.x), u.y); }
+float sbGrassMask(vec2 xz, vec4 sp, float slope) {
+  float inCity = step(uCityB.x, xz.x) * step(xz.x, uCityB.z) * step(uCityB.y, xz.y) * step(xz.y, uCityB.w);
+  float lawn = max(inCity, smoothstep(0.2, 0.8, texture(uLawn, (xz + uWorldHalf) / (2.0 * uWorldHalf)).r));
+  float wild = (1.0 - smoothstep(0.04, 0.3, sp.a)) * (1.0 - smoothstep(0.25, 0.6, sp.r)) * (1.0 - smoothstep(0.3, 0.75, sp.g))
+             * (1.0 - smoothstep(0.32, 0.6, slope)) * (1.0 - lawn);
+  float field = smoothstep(0.42, 0.58, gmNoise(xz * 0.0042) * 0.72 + gmNoise(xz * 0.019) * 0.28);
+  field = max(field, smoothstep(0.35, 0.7, sp.b));
+  return wild * field;
+}
+`;
 
 export function createTerrain(hm, quality, scene, surf) {
   const group = new THREE.Group();
@@ -142,6 +165,8 @@ function makeTerrainMaterial(quality, surf) {
       .replace('#include <common>', `#include <common>
 varying vec3 vWPos; varying vec3 vWNrm;
 uniform sampler2D uSplatTex; uniform float uWorldHalf; uniform float uNight;
+uniform sampler2D uLawn; uniform vec4 uCityB; uniform float uGrassR; uniform vec3 uGrassCam;
+${GRASS_MASK_GLSL}
 ${L.map((k) => `uniform sampler2D t_${k}C; uniform sampler2D t_${k}N;`).join('\n')}
 ${GLSL_NOISE}
 float sbRough; vec3 sbNrm; float sbFar;
@@ -197,6 +222,13 @@ vec3 layerN(sampler2D t, vec2 p, float scale){
   w /= (w.x + w.y + w.z + w.w);
   vec3 c = cG * w.x + cD * w.y + cF * w.z + cS * w.w;
   c = mix(c, cR, wR);
+  // under the 3D grass the ground is the grass's own shaded depths: a gap between blades reads
+  // as more grass in shadow, never as the bare photo of the ground
+  if (uGrassR > 0.0) {
+    float gk = sbGrassMask(vWPos.xz, sp, slope) * (1.0 - smoothstep(uGrassR * 0.72, uGrassR * 0.98, length(vWPos.xz - uGrassCam.xz)));
+    float lum = dot(c, vec3(0.333));
+    c = mix(c, mix(vec3(0.05, 0.075, 0.03), vec3(0.19, 0.16, 0.085), sp.b) * (0.75 + lum * 0.9), gk * 0.85);
+  }
   // only far away: gentle large-scale variation so hills don't look uniform
   c *= mix(1.0, 0.9 + 0.2 * sbFbm(vWPos.xz * 0.008), sbFar);
   float snow = smoothstep(190.0, 230.0, vWPos.y) * (1.0 - smoothstep(0.35, 0.6, slope));

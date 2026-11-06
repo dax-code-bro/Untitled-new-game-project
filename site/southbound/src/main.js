@@ -157,7 +157,7 @@ async function createGame(progress) {
   createPowerLines(scene, graph, hm, collision, q);
   progress(0.84, 'Growing Pinewood Hollow');
   await nextFrame();
-  const veg = await createVegetation(hm, q, scene, collision, city.cityBlocks, (p) => progress(0.84 + p * 0.07, 'Growing forests'), surf, settings.grass === false ? 0 : 1);
+  const veg = await createVegetation(hm, q, scene, collision, city.cityBlocks, (p) => progress(0.84 + p * 0.07, 'Growing forests'), surf, settings.grass === false ? 0 : 1); // dense painted-blade grass in the wild parts (off on Phone)
   addSidewalkColliders(collision, parks);
   veg.cover?.setLawns?.(city.buildings); // yards and lots round every building are mown
   veg.cover?.setParks?.(parks); // and no grass on the park paths
@@ -1075,7 +1075,7 @@ async function createGame(progress) {
     }
     else if (guard.level === 2 && post) { post = null; renderer.toneMapping = THREE.CustomToneMapping; }
     else if (guard.level === 3 || (guard.level === 2 && !post)) { renderer.shadowMap.enabled = false; if (guard.level === 2) guard.level = 3; }
-    else if (guard.level >= 4) { if (veg.cover?.grass) { veg.cover.grass.visible = false; veg.cover.flowers.visible = false; } dynScale = Math.min(dynScale, 0.6); applySize(); }
+    else if (guard.level >= 4) { veg.cover?.hideGrass?.(); dynScale = Math.min(dynScale, 0.6); applySize(); }
     // next time, start one preset lighter
     const order = ['phone', 'low', 'medium', 'high', 'ultra', 'cinematic'], i = order.indexOf(settings.preset);
     if (guard.level >= 2 && !guard.saved && i > 1) { guard.saved = true; settings.preset = order[i - 1]; saveSettings(settings); }
