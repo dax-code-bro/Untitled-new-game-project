@@ -86,8 +86,15 @@ export function detectGPU() {
   // the browser is drawing in software (hardware acceleration off, or the GPU is blocklisted):
   // nothing in the game's settings can get past a few frames a second like that
   const software = /swiftshader|llvmpipe|software|basic render|softpipe/.test(n);
-  return { name, preset, mobile, software };
+  // graphics built into the processor (most laptops): shares memory with the CPU, a fraction of a
+  // gaming card's speed. Intel Arc cards are the exception
+  const integrated = !software && (/intel/.test(n) && !/\barc\b/.test(n) || /radeon\(tm\) graphics|radeon graphics|vega \d+ graphics/.test(n));
+  return { name, preset, mobile, software, integrated };
 }
+
+const ORDER = ['phone', 'low', 'medium', 'high', 'ultra', 'cinematic'];
+// how much heavier a preset is than what this machine was recommended (0 = at or below it)
+export const presetOverReach = (preset, gpu) => Math.max(0, ORDER.indexOf(preset) - Math.max(1, ORDER.indexOf(gpu.preset)));
 
 // Ask WebGPU which graphics card the system would give a demanding page. Browsers often draw WebGL
 // on a laptop's built-in Intel/AMD graphics while a much faster NVIDIA or AMD card sits idle; the

@@ -1,5 +1,5 @@
 // Start screen (platform + GPU selection) and the settings panel.
-import { GPU_CHOICES, PRESETS, detectGPU, saveSettings, SOFTWARE_HINT, probeGPU, IDLE_CARD_HINT } from '../settings.js';
+import { GPU_CHOICES, PRESETS, detectGPU, saveSettings, SOFTWARE_HINT, probeGPU, IDLE_CARD_HINT, presetOverReach } from '../settings.js';
 
 const $ = (s) => document.querySelector(s);
 
@@ -47,8 +47,15 @@ export function setupMenu(settings, onPlay) {
     b.onclick = () => { settings.preset = k; refresh(); };
     presetsEl.appendChild(b);
   }
+  // picking a preset well above what this machine can draw: say so before the slide show
+  const pwarn = document.createElement('p');
+  pwarn.style.cssText = 'margin:8px 0 0;padding:8px 10px;border-radius:8px;background:rgba(190,140,30,0.2);border:1px solid rgba(255,200,90,0.55);color:#ffe9c4;font-size:12.5px;line-height:1.45;display:none';
+  presetsEl.parentNode.insertBefore(pwarn, presetsEl.nextSibling);
   const refresh = () => {
     presetsEl.querySelectorAll('button').forEach((b) => b.classList.toggle('sel', b.dataset.preset === settings.preset));
+    const over = presetOverReach(settings.preset, gpu);
+    pwarn.style.display = over >= 2 && !gpu.software ? '' : 'none';
+    pwarn.textContent = `⚠ ${PRESETS[settings.preset]?.label} is made for a gaming graphics card. On ${gpu.integrated ? 'built-in graphics like ' : ''}${gpu.name.replace(/^ANGLE \(|\)$/g, '').replace(/Direct3D.*$/i, '').trim()} it will run at a few frames a second. ${PRESETS[gpu.preset].label} is recommended.`;
     document.querySelectorAll('[data-platform]').forEach((b) => b.classList.toggle('sel', b.dataset.platform === settings.platform));
     $('#step-pc').classList.toggle('show', settings.platform === 'pc');
     $('#step-phone').classList.toggle('show', settings.platform === 'phone');
