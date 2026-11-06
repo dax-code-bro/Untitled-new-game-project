@@ -61,4 +61,8 @@ the fewest additions next. Be honest in reports about what is and isn't done.
 - Gotchas found the hard way: a material cloned from a shaded one carries its
   `onBeforeCompile` hook and gets shaded twice (guard declarations); vehicles you get into leave
   the `parked` list (LOD must include `S.vehicle`); `police.clear()` must not null startup
-  handlers.
+  handlers; never add a `//` comment in the middle of a one-line object or call (it swallows the
+  rest of the line: use `/* */`); check the build output says "Done" before starting a test.
+- Commit one batch at a time: if the next batch's edits are already in the tree, commit only the
+  finished batch's files (and an `index.js` without the next batch's `add(...)` line), with the
+  `game.js` that was built and QA'd for it.

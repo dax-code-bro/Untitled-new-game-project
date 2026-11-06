@@ -129,7 +129,7 @@ export function installJobs(game) {
     const from = where(def);
     // the night shift pays a quarter more
     const h = game.sky?.hour ?? 12, night = h >= 22 || h < 6;
-    job = { def, stop: 0, t: def.timer, earned: 0, base: def.pay * (1 + (lvl(def.id) - 1) * 0.15) * (night ? 1.25 : 1), night, rating: 5, hp0: null, gripeT: 0, leg: 0, count0: def.kind === 'catch' ? P.stats.fishCaught : P.stats.animals };
+    job = { def, stop: 0, t: def.timer, earned: 0, base: def.pay * (1 + (lvl(def.id) - 1) * 0.15) * (night ? 1.25 : 1) * (def.air && P.pilotLicence ? 1.15 : 1) /* a pilot's licence pays (systems/aviation.js) */, night, rating: 5, hp0: null, gripeT: 0, leg: 0, count0: def.kind === 'catch' ? P.stats.fishCaught : P.stats.animals };
     if (def.kind === 'bounty') {
       const p = roadPointAround(graph, CITY.x0 + 380, CITY.z0 + 280, 60, 380);
       job.target = game.peds.spawnAt(p.x, p.z, player.pos);

@@ -140,6 +140,33 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 - [x] Loading screen with in-game art, tips and progress
 - [x] Fewer touch buttons: ◎ interact replaces the car button; map, phone, arsenal, free cam moved to pause
 
+## Phase 1.44 — Flying, batch one (feature batch F12)
+
+In the aircraft (`src/entities/craft.js`):
+- [x] Fuel: it burns with the power you use; run dry and the engine stops (glide a plane in,
+      autorotate a helicopter down)
+- [x] Stalls: too slow in the air and the wing quits; the nose drops
+- [x] Landing gear (G) and flaps (J): the gear up is faster but a belly landing wrecks the plane;
+      flaps let you fly slower and land shorter
+- [x] The wind carries you (the real wind, the one the windsock and the hunters' arrow show) and
+      storms throw you about
+- [x] Touchdowns measured: how hard you hit and what on
+
+At the controls and at the field (`src/systems/aviation.js`):
+- [x] A flight panel: airspeed in knots, height in feet, heading, climb rate, fuel, gear, flaps
+- [x] Warnings: STALL, PULL UP, LOW FUEL, ENGINE OUT
+- [x] Damage you can see: a smoking engine when it's hurt, an engine that can quit when it's bad
+- [x] Landings rated: butter, smooth, firm, hard, belly
+- [x] The radio at Redgrass: cleared for departure (with the wind), in the pattern, welcome back
+- [x] Runway edge and threshold lights after dark; a windsock that shows the real wind
+- [x] Nav lights (red, green) and a white strobe on every aircraft near you at night
+- [x] Refuelling: stop on the fuel pad at Redgrass, or by a marina pier in a seaplane
+- [x] Flight school at Redgrass: take-off, the circuit and landing, with medals, and a pilot's
+      licence at the end (the flying jobs pay 15% more)
+- [x] Low flying over Port Calvera is against the law: under about 250 ft for long and the
+      police have your tail number
+- [x] Flight time, highest altitude and landings in your stats
+
 ## Phase 1.43 — Story missions, batch one (feature batch F11)
 
 - [x] Medals (`src/systems/missionsplus.js`): gold, silver or bronze for every mission, from three

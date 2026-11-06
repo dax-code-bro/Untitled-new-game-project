@@ -22,6 +22,7 @@ import { installPropertyPlus } from './propertyplus.js';
 import { installFoodPlus } from './foodplus.js';
 import { installCrew } from './crew.js';
 import { installMissionsPlus } from './missionsplus.js';
+import { installAviation } from './aviation.js';
 
 export function installSystems(game) {
   const list = [];
@@ -57,6 +58,7 @@ export function installSystems(game) {
   add('foodPlus', installFoodPlus(game)); // food that goes off, coffee, loyalty card, today's special
   add('crew', installCrew(game)); // the Gulf Line: loyalty, crew jobs, hideout upgrades, raids, turf
   add('missionsPlus', installMissionsPlus(game)); // medals, checkpoints, hints, contacts, replays, side jobs
+  add('aviation', installAviation(game)); // flight panel, fuel, gear, flaps, stalls, landings, radio, flight school
   return {
     list,
     // systems may return a prompt; `free` says whether F is still unclaimed this frame

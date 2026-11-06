@@ -362,6 +362,8 @@ export class Aircraft {
     this.wheels = []; this.siren = null; this.braking = false; this.airborne = false; this.drowned = false;
     this.health = 100; this.maxHealth = 100; this.impact = 0; this.night = 0; this.radius = (s.span || 3) / 2; this.rotorSpin = 0;
     this.floats = !!s.floats;
+    // (systems/aviation.js) fuel, gear, flaps, the wind, turbulence, a dead engine, touchdowns
+    this.fuel = 1; this.gearDown = true; this.flaps = 0; this.windX = 0; this.windZ = 0; this.turb = 0; this.engineOut = false; this.stall = false; this.touchdown = null;
   }
   upgrade(up = {}) {
     Object.assign(this.spec, this.base);
@@ -375,11 +377,13 @@ export class Aircraft {
     const t = this.spec, s = this.s;
     const ground = this.groundAt(hm, this.pos.x, this.pos.z);
     const steer = input.steer || 0;
+    const dead = this.fuel <= 0 || this.engineOut || this.health <= 0;
     if (this.heli) {
       // collective: Space up, Shift down; W/S tilt forward/back; A/D yaw
       const lift = (input.handbrake ? 1 : 0) - (input.nitro ? 1 : 0);
-      this.power = lerp(this.power, 1, dt * 0.5);
-      this.v3.y = lerp(this.v3.y, lift * 7 * this.power, dt * 1.5);
+      this.power = lerp(this.power, dead ? 0 : 1, dt * 0.5);
+      // no engine: autorotation, a steady descent you can still steer and flare
+      this.v3.y = dead ? lerp(this.v3.y, -4.5 + Math.max(0, lift) * 2.5, dt * 1.2) : lerp(this.v3.y, lift * 7 * this.power, dt * 1.5);
       const fwd = (input.throttle || 0) - (input.brake || 0);
       this.pitch = lerp(this.pitch, -fwd * 0.22, dt * 2);
       this.roll = lerp(this.roll, -steer * 0.15, dt * 2);
@@ -388,9 +392,12 @@ export class Aircraft {
       this.speed = sp;
     } else {
       // throttle lever, rudder/ailerons on A/D, elevator on Space (up) / Shift (down)
-      this.power = clamp(this.power + ((input.throttle || 0) - (input.brake || 0)) * dt * 0.6, 0, 1);
+      this.power = dead ? Math.max(0, this.power - dt) : clamp(this.power + ((input.throttle || 0) - (input.brake || 0)) * dt * 0.6, 0, 1);
       const air = this.pos.y - ground > 0.6;
-      const drag = 0.012 * this.speed * Math.abs(this.speed);
+      // flaps: more drag, lift at lower speed; the gear down adds drag too
+      // drag set by the aircraft's own top speed (full power holds it there); flaps add half again
+      const dragK = t.accel / (t.top * t.top) * (1 + this.flaps * 0.5) * (this.gearDown ? 1 : 0.85);
+      const drag = dragK * this.speed * Math.abs(this.speed);
       this.speed += (t.accel * this.power - drag - (air ? Math.sin(this.pitch) * 9.8 : 0)) * dt;
       if (!air && input.brake > 0 && this.power < 0.05) this.speed = Math.max(0, this.speed - 8 * dt);
       this.speed = Math.max(0, this.speed);
@@ -400,14 +407,21 @@ export class Aircraft {
       if (!air && this.pitch < 0) this.pitch = 0;
       this.roll = lerp(this.roll, air ? -steer * 0.7 : 0, dt * t.roll);
       this.heading += (air ? -this.roll * 0.55 : steer * 0.6 * clamp(this.speed / 10, 0, 1)) * dt;
-      const liftK = clamp((this.speed / s.lift) ** 2, 0, 1.6);
+      const liftSpd = s.lift * (this.flaps ? 0.82 : 1);
+      const liftK = clamp((this.speed / liftSpd) ** 2, 0, 1.6);
+      // too slow in the air: the wing stalls and the nose drops
+      this.stall = air && this.speed < liftSpd * 0.72;
+      if (this.stall) { this.pitch = Math.max(-0.6, this.pitch - dt * 0.7); this.roll += (Math.random() - 0.5) * dt * 1.5; }
       const climb = this.speed * Math.sin(this.pitch) * liftK - (1 - Math.min(liftK, 1)) * 9 * (air ? 1 : 0);
       this.v3.y = lerp(this.v3.y, climb, dt * 2);
     }
+    // fuel burns with the power; in the air the wind carries you and storms throw you about
+    if (!dead) this.fuel = Math.max(0, this.fuel - dt * (this.heli ? 0.0007 : 0.00015 + this.power * 0.0006));
+    if (this.airborne && this.turb > 0) { this.pitch += (Math.random() - 0.5) * this.turb * dt * 2; this.roll += (Math.random() - 0.5) * this.turb * dt * 3; this.v3.y += (Math.random() - 0.5) * this.turb * 18 * dt; }
     const fx = Math.sin(this.heading), fz = Math.cos(this.heading);
     const hs = this.speed * Math.cos(this.pitch);
     this.vel.set(fx * hs, fz * hs);
-    this.pos.x += this.vel.x * dt; this.pos.z += this.vel.y * dt;
+    this.pos.x += (this.vel.x + (this.airborne ? this.windX : 0)) * dt; this.pos.z += (this.vel.y + (this.airborne ? this.windZ : 0)) * dt;
     this.pos.y += this.v3.y * dt;
     const g2 = this.groundAt(hm, this.pos.x, this.pos.z);
     if (this.pos.y <= g2) {
@@ -417,6 +431,15 @@ export class Aircraft {
       this.airborne = false;
     } else this.airborne = this.pos.y - g2 > 1;
     this.alt = this.pos.y - g2;
+    // the touchdown: coming down from flight to within a hand's breadth of the ground (whatever the
+    // surface holds you at): how hard, and on what (no wheels down is a belly landing)
+    if (this._high && this.alt < 0.3) {
+      this._high = false;
+      this.touchdown = { vs: Math.min(this.v3.y, this._vs ?? 0), gear: this.gearDown || this.heli || this.floats, speed: this.speed, t: performance.now() };
+      if (!this.touchdown.gear) { this.health -= 25; this.speed *= 0.4; this.impact = 4; }
+    }
+    if (this.alt > 0.8) this._high = true;
+    this._vs = this.v3.y;
     this.pos.x = clamp(this.pos.x, -2000, 2000); this.pos.z = clamp(this.pos.z, -2000, 2000);
     this.impact = Math.max(0, this.impact - dt * 5);
   }

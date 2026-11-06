@@ -9,12 +9,13 @@ feature with the fewest additions next. Batches ship as F# (features) alternatin
 Counts are additions made in the "add to every feature" programme (F1 onwards, plus the S3/S4
 side batches where they extended a feature). The original build of each feature isn't counted.
 
-## Status (last updated: Phase 1.43, after F11)
+## Status (last updated: Phase 1.44, after F12)
 
 | # | Feature | Files | Added | Batches | Status |
 |---|---------|-------|------:|---------|--------|
 | 1 | Gangs & the hideout | gang.js, crew.js | 35 | F10 | **done (35)** |
 | 1a | Story missions | missions.js, missionsplus.js | 22 | F11 | 8 to go |
+| 1c | Aircraft & flying | craft.js, aviation.js | 20 | F12 | 10 to go |
 | 1b | Hunting | hunting.js, wilds.js | 12 | F5 | 18 to go |
 | 2 | Police & law | police.js, policeplus.js, law.js | 11 | S3, F4 | 19 to go |
 | 3 | Phone | phone.js, phoneplus.js | 10 | F6 | 20 to go |
@@ -35,7 +36,6 @@ side batches where they extended a feature). The original build of each feature 
 | 18 | Needs (sleep, food, weight) | needs.js | 1 | F9 | 29 to go |
 | 19 | Wounds & health | wounds.js | 1 | F9 | 29 to go |
 | 20 | Tools & inventory | tools.js | 1 | F2 | 29 to go |
-| 23 | Aircraft | marine-air.js, craft.js | 0 | | 30 to go |
 | 24 | Clothing & barber | clothes.js, clothing.js | 0 | | 30 to go |
 | 25 | Armory, armor & medical | armory.js | 0 | | 30 to go |
 | 26 | Gunsmiths | gunstores.js | 0 | | 30 to go |
@@ -53,7 +53,7 @@ side batches where they extended a feature). The original build of each feature 
 | 38 | Car combat | carcombat.js | 0 | | 30 to go |
 | 39 | Movement & footing | footing.js, player.js | 0 | | 30 to go |
 
-**Totals: about 162 additions across 22 features; 17 features untouched; 1 feature at 30+ (gangs).**
+**Totals: about 182 additions across 23 features; 16 features untouched; 1 feature at 30+ (gangs).**
 Brand-new features added this programme (not extensions): banking, news, contacts, cabs,
 legendary animals and fish, poaching, property market, burglaries, food spoilage, tracks in the
 ground, boat wakes, rain soak, crew jobs, hideout raids, 12 side jobs: about 26 of the 30+ asked for.
@@ -66,9 +66,9 @@ ground, boat wakes, rain soak, crew jobs, hideout raids, 12 side jobs: about 26 
 - **Story missions (F11 shipped 22; left):** mission choices with consequences, cutscene camera
   framing, accuracy rating, epilogue missions after the story, more side jobs, timed bonus
   objectives per mission, side characters returning in later side jobs.
-- **Aircraft:** fuel, stall warning, flaps, landing gear, crosswind, runway lights at night,
-  air traffic radio, flight school, crop-dusting pay by coverage, skydiving, seaplane docking,
-  helicopter winch, turbulence in storms, altimeter/heading HUD, crash damage states.
+- **Aircraft (F12 shipped 20; left):** skydiving and parachutes, crop-dusting pay by coverage,
+  helicopter winch, cockpit view, airport traffic (other planes landing), hangar rental,
+  aerobatics scoring in the stunt plane, banner towing, bird strikes, fuel trucks.
 - **Clothing & barber:** weather-appropriate clothes (cold, rain), clothes getting dirty and
   bloody, washing, outfits saved, disguises reduce recognition, beard growth styles,
   tattoos, accessories, uniforms for jobs, NPC reactions to how you dress.
