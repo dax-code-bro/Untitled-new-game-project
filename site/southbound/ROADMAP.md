@@ -140,6 +140,31 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 - [x] Loading screen with in-game art, tips and progress
 - [x] Fewer touch buttons: ◎ interact replaces the car button; map, phone, arsenal, free cam moved to pause
 
+## Phase 1.20 — Cloud shadows (graphics milestone G1)
+
+- [x] The clouds' shadows slide over the land, streets, roofs, trees, cars and people with the wind
+      (`src/core/cloudshadow.js`): every lit surface follows the sun ray up through the cloud layer
+      and reads the same cloud field the sky draws; sunlight dims, skylight stays
+- [x] The sky's clouds are anchored to the world (they pass overhead as you travel), so the shadows
+      are cast by the clouds you see; the cloud cube takes the viewer's position once per round of
+      faces (no seams) and redraws at once after a teleport
+- [x] Grass translucency and far tree impostors darken under a cloud too; weaker with a low sun or
+      overcast; off on Phone
+
+## Phase 1.19 — Lighter frames: KTX2 textures and levels of detail
+
+- [x] Wheels in three levels (they were ~20k triangles each, most of a street's triangles); a fourth,
+      coarsest car-body shell past 95 m
+- [x] Terrain tiles in three levels (index buffers over the same vertices; the skirts hide the seams)
+- [x] Near 3D trees in two levels (meshoptimizer trunk/branches, thinned and grown leaf cards)
+- [x] People, the concept car, guns and heavy open-library models: simplified versions made at load
+      (`src/core/lod.js`), swapped by size on screen
+- [x] Parking meters, hydrants and street junk: only the nearby ones are drawn (`src/core/nearinst.js`)
+- [x] KTX2 for the people, the concept car, the guns and the trees (`tools/southbound/pack-ktx2.mjs`):
+      ~260 MB of texture memory down to ~65 MB; the Unity exporter decodes KTX2
+- [x] Triangles a frame on High: forest 17.9M -> 8.6M, meadow 7.9M -> 4.2M, street 8.8M -> 5.5M,
+      downtown 4.1M -> 3.2M
+
 ## Phase 1.18 — Light, wear and footing (all-out attention to detail)
 
 - [x] Dynamic lighting (`src/core/gi.js`, Medium and up): the surroundings (ground, buildings,

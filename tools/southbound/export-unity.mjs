@@ -48,7 +48,7 @@ async function basisModule() {
 // -> { width, height, data: RGBA Uint8Array } (row 0 = top of the image, as authored)
 async function decodeKTX2(file) {
   const B = await basisModule();
-  const f = new B.KTX2File(new Uint8Array(fs.readFileSync(file)));
+  const f = new B.KTX2File(file instanceof Uint8Array ? file : new Uint8Array(fs.readFileSync(file)));
   try {
     if (!f.isValid()) throw new Error(`invalid KTX2 ${file}`);
     const width = f.getWidth(), height = f.getHeight();
@@ -153,17 +153,28 @@ async function exportModels() {
       }
       const doc = await io.read(f);
       const root = doc.getRoot();
-      // WebP -> PNG (alpha) / JPEG (opaque); Unity has no WebP decoder
+      // WebP and KTX2 (the game's GPU-compressed textures) -> PNG (alpha) / JPEG (opaque); Unity reads neither
       for (const tex of root.listTextures()) {
-        if (tex.getMimeType() !== 'image/webp') continue;
-        const img = sharp(Buffer.from(tex.getImage()));
+        const mime = tex.getMimeType();
+        if (mime !== 'image/webp' && mime !== 'image/ktx2') continue;
+        let img;
+        if (mime === 'image/ktx2') {
+          const k = await decodeKTX2(tex.getImage());
+          img = sharp(Buffer.from(k.data), { raw: { width: k.width, height: k.height, channels: 4 } });
+          const opaque = (() => { for (let i = 3; i < k.data.length; i += 4) if (k.data[i] < 250) return false; return true; })();
+          const out = opaque ? await img.removeAlpha().jpeg({ quality: 92 }).toBuffer() : await img.png({ compressionLevel: 9 }).toBuffer();
+          tex.setImage(new Uint8Array(out)).setMimeType(opaque ? 'image/jpeg' : 'image/png');
+          const uri = tex.getURI(); if (uri) tex.setURI(uri.replace(/\.ktx2$/i, opaque ? '.jpg' : '.png'));
+          continue;
+        }
+        img = sharp(Buffer.from(tex.getImage()));
         const { hasAlpha } = await img.metadata();
         const out = hasAlpha ? await img.png({ compressionLevel: 9 }).toBuffer() : await img.jpeg({ quality: 90 }).toBuffer();
         tex.setImage(new Uint8Array(out)).setMimeType(hasAlpha ? 'image/png' : 'image/jpeg');
         const uri = tex.getURI(); if (uri) tex.setURI(uri.replace(/\.webp$/i, hasAlpha ? '.png' : '.jpg'));
       }
       for (const ext of root.listExtensionsUsed()) {
-        if (ext.extensionName === EXTMeshoptCompression.EXTENSION_NAME || ext.extensionName === EXTTextureWebP.EXTENSION_NAME) ext.dispose();
+        if (ext.extensionName === EXTMeshoptCompression.EXTENSION_NAME || ext.extensionName === EXTTextureWebP.EXTENSION_NAME || ext.extensionName === 'KHR_texture_basisu') ext.dispose();
       }
       // integer (quantized) vertex data must be declared, or strict importers like glTFast refuse it
       const quantized = root.listMeshes().some((m) => m.listPrimitives().some((p) => {

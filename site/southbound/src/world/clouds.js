@@ -89,7 +89,7 @@ const CLOUD_GLSL = /* glsl */ `
 uniform sampler3D tCloudNoise;
 uniform float uCloudTime, uCover, uSkyNight;
 uniform vec3 uLightDir, uCloudSun, uCloudAmb, uGround;
-uniform vec2 uWind;
+uniform vec2 uWind, uCamOff;
 #define EARTH_R 6360000.0
 #define CL_BOT 1400.0
 #define CL_TOP 3800.0
@@ -100,7 +100,9 @@ float clFar(vec3 ro, vec3 rd, float r){ float b = dot(ro, rd); float c = dot(ro,
 float clDensity(vec3 p, bool cheap){
   float hF = (length(p) - EARTH_R - CL_BOT) / (CL_TOP - CL_BOT);
   if (hF < 0.0 || hF > 1.0) return 0.0;
-  vec3 q = p + vec3(uWind.x, 0.0, uWind.y) * uCloudTime;
+  // anchored to the world (uCamOff: where the viewer is), so they pass overhead as you travel and
+  // their shadows on the ground (core/cloudshadow.js) are cast by these very clouds
+  vec3 q = p + vec3(uCamOff.x, 0.0, uCamOff.y) + vec3(uWind.x, 0.0, uWind.y) * uCloudTime;
   // weather: where clouds can form at all (two scales, tiles every ~80 km)
   float W = texture(tCloudNoise, vec3(q.x * 0.000012, 0.31, q.z * 0.000012)).r * 0.65
           + texture(tCloudNoise, vec3(q.x * 0.00004, 0.67, q.z * 0.00004)).g * 0.35;
@@ -165,6 +167,10 @@ vec4 clMarch(vec3 rd, vec3 bg){
 }
 `;
 
+// the noise field, made once and shared with the cloud shadows
+let noiseTex = null;
+export function cloudNoise(quality) { return noiseTex || (noiseTex = makeCloudNoise(quality.key === 'phone' ? 48 : 64)); }
+
 export function createCloudSky(renderer, quality) {
   const size = { phone: 192, low: 224, medium: 320, high: 448, ultra: 640 }[quality.key] || 256;
   const steps = { phone: 16, low: 20, medium: 28, high: 40, ultra: 52 }[quality.key] || 32;
@@ -179,7 +185,7 @@ export function createCloudSky(renderer, quality) {
   u.mieCoefficient.value = 0.003;
   u.mieDirectionalG.value = 0.82;
   Object.assign(u, {
-    tCloudNoise: { value: makeCloudNoise(quality.key === 'phone' ? 48 : 64) },
+    tCloudNoise: { value: cloudNoise(quality) }, uCamOff: { value: new THREE.Vector2() },
     uCloudTime: { value: 0 }, uCover: { value: 0.52 }, uSkyNight: { value: 0 },
     uLightDir: { value: new THREE.Vector3(0, 1, 0) }, uCloudSun: { value: new THREE.Color(3, 3, 3) },
     uCloudAmb: { value: new THREE.Color(0.4, 0.45, 0.55) }, uGround: { value: new THREE.Color(0.05, 0.05, 0.04) },
@@ -206,11 +212,19 @@ export function createCloudSky(renderer, quality) {
   scene.add(cubeCam);
   cubeCam.updateMatrixWorld(true);
   let face = 0, primed = false;
+  const pendingOff = new THREE.Vector2();
 
   return {
     texture: target.texture, uniforms: u,
+    // where the viewer is: taken up at the start of each round of six faces, so no two faces of
+    // the cube ever show the clouds from different places (a seam); a big jump redraws them all
+    setViewer(x, z) {
+      pendingOff.set(x, z);
+      if (primed && pendingOff.distanceTo(u.uCamOff.value) > 300) { u.uCamOff.value.copy(pendingOff); cubeCam.update(renderer, scene); face = 0; }
+    },
     // render one face (or all six the first time)
     update() {
+      if (face === 0) u.uCamOff.value.copy(pendingOff);
       if (!primed) { cubeCam.update(renderer, scene); primed = true; return; }
       const prevTarget = renderer.getRenderTarget(), prevXr = renderer.xr.enabled;
       renderer.xr.enabled = false;

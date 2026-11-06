@@ -3,6 +3,8 @@
 // prepares them: animations are retargeted once per skeleton family.
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { prepareLODs, lodReady } from '../core/lod.js';
+import { withKTX2 } from './ktx2.js';
 import { bakeClips, UAL_TO_MH } from './retarget.js';
 import { buildCar } from './carbuilder.js';
 import { loadOpen, K } from './open.js';
@@ -103,6 +105,7 @@ function prepareConcept(scene) {
 }
 
 function tunePerson(scene) {
+  prepareLODs(scene); // ~30% and ~8% versions of the body and clothes for people further away (core/lod.js)
   scene.traverse((o) => {
     if (!o.isMesh) return;
     o.castShadow = true; o.receiveShadow = true;
@@ -114,7 +117,8 @@ function tunePerson(scene) {
 }
 
 export async function loadLibrary(quality, progress = () => {}) {
-  const loader = new GLTFLoader();
+  await lodReady;
+  const loader = withKTX2(new GLTFLoader()); // people's textures are GPU-compressed (KTX2)
   const base = 'assets/';
   const people = quality.label === 'Phone' || quality.label === 'Low' ? PEOPLE_LITE : PEOPLE_ALL;
   const carIds = BASE_CAR_IDS;

@@ -490,16 +490,22 @@ export function makeCabinDepthMaterial(u) {
 }
 
 // ------------------------------------------------------------ wheels
+// Three levels of detail. A full wheel (lathed tyre, bevelled spoked rim, barrel, hub, disc and
+// caliper) is ~20k triangles; four of them were most of a car, and most of every street's
+// triangles. Past ~10 m the medium wheel keeps the spokes with coarser curves and no bevels; past
+// ~35 m the low wheel is a tyre and a rim face, ~100 triangles.
+export const WHEEL_LOD = [0, 10, 35];
 const wheelCache = new Map();
-export function wheelGeometry(s, spokesOverride) {
-  const key = `${s.Rw}|${s.tw}|${spokesOverride ?? s.spokes}`;
+export function wheelGeometry(s, spokesOverride, level = 0) {
+  const key = `${s.Rw}|${s.tw}|${spokesOverride ?? s.spokes}|${level}`;
   if (wheelCache.has(key)) return wheelCache.get(key);
-  const g = wheelGeometryRaw({ ...s, spokes: spokesOverride ?? s.spokes });
+  const g = wheelGeometryRaw({ ...s, spokes: spokesOverride ?? s.spokes }, level);
   wheelCache.set(key, g);
   return g;
 }
-function wheelGeometryRaw(s) {
+function wheelGeometryRaw(s, level = 0) {
   const R = s.Rw, w = s.tw, rr = R * 0.68;
+  const D = [{ lathe: 48, curve: 40, bevel: 2, barrel: 40, hub: 20, disc: 36 }, { lathe: 22, curve: 10, bevel: 0, barrel: 14, hub: 8, disc: 12 }][level] || null;
   const parts = [];
   const paint = (g, col, rough, metal) => {
     g = g.index ? g.toNonIndexed() : g;
@@ -514,7 +520,17 @@ function wheelGeometryRaw(s) {
   // tyre: lathed cross-section with rounded shoulders and sidewall bulge
   const prof = [[rr - 0.005, -w / 2 + 0.01], [R - 0.06, -w / 2 - 0.006], [R - 0.022, -w / 2 + 0.008], [R - 0.004, -w / 2 + 0.035],
     [R, -w / 4], [R, w / 4], [R - 0.004, w / 2 - 0.035], [R - 0.022, w / 2 - 0.008], [R - 0.06, w / 2 + 0.006], [rr - 0.005, w / 2 - 0.01]];
-  const tyre = new THREE.LatheGeometry(prof.map(([r, y]) => new THREE.Vector2(r, y)), 48);
+  if (!D) {
+    // far away: a tyre (four profile points) and a flat rim face in the rim's colour
+    const lp = [[rr, -w / 2], [R - 0.03, -w / 2], [R, 0], [R - 0.03, w / 2], [rr, w / 2]];
+    const t = new THREE.LatheGeometry(lp.map(([r, y]) => new THREE.Vector2(r, y)), 10); t.rotateZ(-Math.PI / 2);
+    paint(t, [0.028, 0.028, 0.03], 0.88, 0);
+    const f = new THREE.CircleGeometry(rr, 10); f.rotateY(Math.PI / 2); f.translate(w / 2 - 0.03, 0, 0);
+    const rimColFar = s.spokes === 0 ? [0.32, 0.33, 0.34] : (s.spokes === 5 ? [0.08, 0.08, 0.085] : s.spokes === 14 ? [0.75, 0.62, 0.3] : [0.5, 0.51, 0.53]);
+    paint(f, rimColFar, 0.3, 1);
+    const g = mergeGeometries(parts); g.computeBoundingSphere(); return g;
+  }
+  const tyre = new THREE.LatheGeometry(prof.map(([r, y]) => new THREE.Vector2(r, y)), D.lathe);
   tyre.rotateZ(-Math.PI / 2);
   paint(tyre, [0.028, 0.028, 0.03], 0.88, 0);
   // rim face: spokes cut from a disc (extruded with bevels)
@@ -538,17 +554,17 @@ function wheelGeometryRaw(s) {
     // steel wheel: ring of round vents
     for (let i = 0; i < 8; i++) { const a = (i / 8) * Math.PI * 2, h = new THREE.Path(); h.absarc(Math.cos(a) * rr * 0.62, Math.sin(a) * rr * 0.62, rr * 0.11, 0, Math.PI * 2, true); face.holes.push(h); }
   }
-  const rim = new THREE.ExtrudeGeometry(face, { depth: 0.03, bevelEnabled: true, bevelThickness: 0.012, bevelSize: 0.008, bevelSegments: 2, curveSegments: 40 });
+  const rim = new THREE.ExtrudeGeometry(face, { depth: 0.03, bevelEnabled: D.bevel > 0, bevelThickness: 0.012, bevelSize: 0.008, bevelSegments: Math.max(1, D.bevel), curveSegments: D.curve });
   rim.rotateY(Math.PI / 2);
   rim.translate(w / 2 - 0.05, 0, 0);
   const rimCol = s.spokes === 0 ? [0.32, 0.33, 0.34] : (s.spokes === 5 ? [0.08, 0.08, 0.085] : s.spokes === 14 ? [0.75, 0.62, 0.3] : [0.62, 0.63, 0.65]);
   paint(rim, rimCol, s.spokes === 5 ? 0.35 : 0.22, 1);
   // barrel, hub, brake disc and caliper seen through the spokes
-  const barrel = new THREE.CylinderGeometry(rr, rr, w * 0.86, 40, 1, true); barrel.rotateZ(Math.PI / 2);
+  const barrel = new THREE.CylinderGeometry(rr, rr, w * 0.86, D.barrel, 1, true); barrel.rotateZ(Math.PI / 2);
   paint(barrel, [0.25, 0.25, 0.26], 0.4, 1);
-  const hub = new THREE.CylinderGeometry(rr * 0.2, rr * 0.24, 0.05, 20); hub.rotateZ(Math.PI / 2); hub.translate(w / 2 - 0.02, 0, 0);
+  const hub = new THREE.CylinderGeometry(rr * 0.2, rr * 0.24, 0.05, D.hub); hub.rotateZ(Math.PI / 2); hub.translate(w / 2 - 0.02, 0, 0);
   paint(hub, rimCol, 0.25, 1);
-  const disc = new THREE.CylinderGeometry(rr * 0.8, rr * 0.8, 0.028, 36); disc.rotateZ(Math.PI / 2); disc.translate(w * 0.05, 0, 0);
+  const disc = new THREE.CylinderGeometry(rr * 0.8, rr * 0.8, 0.028, D.disc); disc.rotateZ(Math.PI / 2); disc.translate(w * 0.05, 0, 0);
   paint(disc, [0.32, 0.31, 0.3], 0.45, 1);
   const cal = new THREE.BoxGeometry(0.05, rr * 0.42, rr * 0.3); cal.translate(w * 0.12, rr * 0.55, -rr * 0.3);
   paint(cal, s.spokes === 5 ? [0.5, 0.04, 0.02] : [0.12, 0.12, 0.12], 0.4, 0.2);
@@ -608,10 +624,14 @@ export function buildCar(type, quality) {
     body.addLevel(hi, 22);
   } else body.addLevel(hi, 0);
   body.addLevel(lo, phone ? 25 : 45);
+  // far away a car is a few dozen pixels: a coarse shell, ~1/5 of the low one, and no shadow detail lost
+  const far = new THREE.Mesh(surfaceNets(sdf, [-s.W / 2 - 0.3, 0.0, -s.L / 2 - 0.1], [s.W / 2 + 0.3, top, s.L / 2 + 0.1], Math.max(0.2, s.L / 26)), mat);
+  far.castShadow = far.receiveShadow = true; far.userData.shell = true;
+  body.addLevel(far, phone ? 60 : 95);
   body.name = 'body';
   body.material = mat; // shared by both levels
   root.add(body);
-  const wg = wheelGeometry(s);
+  const wgs = WHEEL_LOD.map((_, i) => wheelGeometry(s, undefined, i));
   const wm = getWheelMaterial();
   const wx = s.W / 2 - s.tw / 2 - 0.035;
   for (const [fz, fb] of [[s.axF, 'front'], [s.axR, 'back']]) {
@@ -620,9 +640,9 @@ export function buildCar(type, quality) {
       node.name = `wheel-${fb}-${side}`;
       node.position.set(side === 'right' ? wx : -wx, s.Rw, fz);
       if (side === 'left') node.rotation.y = Math.PI;
-      const m = new THREE.Mesh(wg, wm);
-      m.castShadow = true;
-      node.add(m);
+      const lod = new THREE.LOD();
+      wgs.forEach((g, i) => { const m = new THREE.Mesh(g, wm); m.castShadow = i < 2; m.userData.noWear = true; lod.addLevel(m, WHEEL_LOD[i], 0.1); });
+      node.add(lod);
       root.add(node);
     }
   }

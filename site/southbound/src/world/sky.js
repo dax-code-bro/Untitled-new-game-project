@@ -1,5 +1,6 @@
 // Physical sky, sun/moon lights, image-based lighting, fog, stars, day/night.
 import * as THREE from 'three';
+import { updateCloudShadows } from '../core/cloudshadow.js';
 import { createCloudSky, createSkyDome } from './clouds.js';
 import { clamp, lerp, smoothstep } from '../util.js';
 import { worldUniforms } from './terrain.js';
@@ -140,6 +141,10 @@ export function createSky(renderer, scene, quality) {
       u.uCloudSun.value.multiplyScalar(1 - W.dark * 0.55);
       u.uCloudAmb.value.multiplyScalar(1 - W.dark * 0.45);
       u.uCover.value = W.cover;
+      if (focus) clouds.setViewer(focus.x, focus.z);
+      // the same clouds' shadows on the ground (core/cloudshadow.js): weaker when the sun is low or overcast
+      updateCloudShadows(u.uWind.value.x * u.uCloudTime.value, u.uWind.value.y * u.uCloudTime.value, W.cover, sunDir,
+        0.8 * smoothstep(0.04, 0.2, sunDir.y) * (1 - smoothstep(0.75, 0.95, W.cover)) * (useMoon ? 0 : 1));
       u.uGround.value.setRGB(0.07 * day + 0.006, 0.07 * day + 0.007, 0.05 * day + 0.008);
       u.sunPosition.value.copy(sunDir);
       scene.environmentIntensity = (state.envBase ?? 0.2) * (state.envK || 1); // envK: core/gi.js, more in enclosed streets

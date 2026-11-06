@@ -4,6 +4,9 @@
 // Ground cover: photo-textured grass clumps around the player and scanned rocks.
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { loadTexture, withKTX2 } from '../assets/ktx2.js';
+import { simplified, thinCards, lodReady } from '../core/lod.js';
+import { cloudShadowUniforms, CLOUD_SHADOW_GLSL } from '../core/cloudshadow.js';
 import { WORLD, CITY, coastZ } from './layout.js';
 import { forestMask, plainsMask, bayouMask } from './heightmap.js';
 import { worldUniforms } from './terrain.js';
@@ -53,12 +56,23 @@ export const grassUniforms = {
   uFogDensity: { value: 0.0002 },
 };
 
-function texture(loader, url, srgb) {
-  const t = loader.load(url);
+// textures are preloaded (GPU-compressed KTX2 where there's a copy, else the JPEG/PNG)
+const TEX = new Map();
+function texture(_loader, url, srgb) {
+  const t = TEX.get(url);
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
   t.anisotropy = 8;
-  if (srgb) t.colorSpace = THREE.SRGBColorSpace;
   return t;
+}
+async function preloadTextures(manifest) {
+  const want = new Map();
+  for (const t of manifest.trees) {
+    for (const k of ['color', 'normal', 'roughness']) want.set(`${BASE}bark_${t.bark}_${k}.jpg`, k === 'color');
+    want.set(`${BASE}leaf_${t.leaf}.png`, true);
+    want.set(`${BASE}${t.id}_impostor.png`, true);
+  }
+  await Promise.all([...want].map(([url, srgb]) => loadTexture(url.replace(/\.(jpg|png)$/, ''), url.match(/\.(jpg|png)$/)[0], srgb)
+    .then((t) => TEX.set(url, t)).catch(() => TEX.set(url, new THREE.Texture()))));
 }
 
 // Leaves/branch tips sway; trunks stay put (sway grows with height and distance from the trunk)
@@ -85,9 +99,11 @@ function addWind(mat, strength) {
 
 export async function createVegetation(hm, quality, scene, collision, cityBlocks, progress = () => {}, surf = null, coverDensity = 1) {
   const Q = QUALITY[quality.label] || QUALITY.Medium;
-  const gltf = new GLTFLoader();
+  const gltf = withKTX2(new GLTFLoader());
   const tl = new THREE.TextureLoader();
+  await lodReady; // meshoptimizer, for the lighter mid-distance trees
   const manifest = await (await fetch(BASE + 'manifest.json')).json();
+  await preloadTextures(manifest);
 
   // ---- shared materials (one per bark type / leaf type)
   const barkMats = {}, leafMats = {};
@@ -264,15 +280,20 @@ export async function createVegetation(hm, quality, scene, collision, cityBlocks
     grid.get(key).push(i);
   });
 
-  // ---- near: full 3D trees, refreshed a few times per second
-  const nearBark = [], nearLeaves = [];
+  // ---- near: full 3D trees, refreshed a few times per second. Close up the full tree; further out
+  // (still inside the 3D radius) a lighter one: trunk and branches simplified to ~25%, 40% of the
+  // leaf cards each grown to cover the same area. A forest on High drew ~18M triangles a frame.
+  const nearBark = [], nearLeaves = [], midBark = [], midLeaves = [];
+  const NEAR_FULL = Q.near * 0.38;
   for (const v of variants) {
     const cap = v.id.startsWith('bush') ? Q.cap * 4 : Q.cap;
-    const b = new THREE.InstancedMesh(v.bark, v.barkMat, cap);
-    const l = new THREE.InstancedMesh(v.leaves, v.leafMat, cap);
-    for (const m of [b, l]) { m.count = 0; m.frustumCulled = false; m.castShadow = quality.shadows > 0; m.receiveShadow = true; scene.add(m); }
-    b.userData.hitStatic = true; b.userData.surf = 'tree'; l.userData.noHit = true; // trunks and branches stop bullets, leaves don't
-    nearBark.push(b); nearLeaves.push(l);
+    const barkMid = simplified(v.bark, 0.25, 0.02) || v.bark, leavesMid = thinCards(v.leaves, 0.4, v.id.length * 7919) || v.leaves;
+    const b = new THREE.InstancedMesh(v.bark, v.barkMat, cap), bm = new THREE.InstancedMesh(barkMid, v.barkMat, cap);
+    const l = new THREE.InstancedMesh(v.leaves, v.leafMat, cap), lm = new THREE.InstancedMesh(leavesMid, v.leafMat, cap);
+    for (const m of [b, l, bm, lm]) { m.count = 0; m.frustumCulled = false; m.castShadow = quality.shadows > 0; m.receiveShadow = true; scene.add(m); }
+    for (const m of [b, bm]) { m.userData.hitStatic = true; m.userData.surf = 'tree'; } // trunks and branches stop bullets, leaves don't
+    for (const m of [l, lm]) m.userData.noHit = true;
+    nearBark.push(b); nearLeaves.push(l); midBark.push(bm); midLeaves.push(lm);
   }
   const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(), p = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);
 
@@ -293,6 +314,7 @@ export async function createVegetation(hm, quality, scene, collision, cityBlocks
         ...grassUniforms, tImp: { value: v.imp }, uNear: { value: Q.near },
         uSize: { value: new THREE.Vector3(v.half * 2, v.half * 4, v.top - v.half * 4) },
         sbFogA: { value: fogParams.a }, sbFogB: { value: fogParams.b },
+        ...cloudShadowUniforms,
       },
       vertexShader: /* glsl */`
         attribute vec4 aInst; uniform vec3 uSize; uniform float uNear;
@@ -312,12 +334,13 @@ export async function createVegetation(hm, quality, scene, collision, cityBlocks
         uniform vec4 sbFogA; uniform vec4 sbFogB;
         varying vec2 vUv; varying vec3 vW; varying float vFade;
         ${FOG_GLSL}
+        ${CLOUD_SHADOW_GLSL}
         void main() {
           vec4 c = texture2D(tImp, vUv);
           // dithered fade into the 3D tree (no hard pop)
           float dither = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453);
           if (c.a < 0.5 || vFade < dither) discard;
-          vec3 lit = c.rgb * (uAmbient * 1.6 + uSunColor * 1.4 * (0.45 + 0.55 * max(uSunDir.y, 0.0)));
+          vec3 lit = c.rgb * (uAmbient * 1.6 + uSunColor * 1.4 * (0.45 + 0.55 * max(uSunDir.y, 0.0)) * sbCloudShade(vW));
           gl_FragColor = vec4(sbApplyFog(lit, vW, cameraPosition, uFogColor, uFogDensity, sbFogA, sbFogB), 1.0);
           #include <colorspace_fragment>
         }`,
@@ -405,7 +428,7 @@ export async function createVegetation(hm, quality, scene, collision, cityBlocks
   let refreshT = 0;
   const camPrev = new THREE.Vector3(1e9, 0, 0);
   function refreshNear(cam) {
-    const counts = variants.map(() => 0);
+    const counts = variants.map(() => 0), mids = variants.map(() => 0);
     const r = Q.near, c0x = Math.floor((cam.x - r) / CELL), c1x = Math.floor((cam.x + r) / CELL);
     const c0z = Math.floor((cam.z - r) / CELL), c1z = Math.floor((cam.z + r) / CELL);
     for (let cx = c0x; cx <= c1x; cx++) for (let cz = c0z; cz <= c1z; cz++) {
@@ -414,19 +437,21 @@ export async function createVegetation(hm, quality, scene, collision, cityBlocks
       for (const i of cell) {
         const t = inst[i];
         if (!t.k) continue; // cleared for a lot built later
-        const dx = t.x - cam.x, dz = t.z - cam.z;
-        if (dx * dx + dz * dz > r * r * 1.1) continue;
-        const n = counts[t.v];
+        const dx = t.x - cam.x, dz = t.z - cam.z, d2 = dx * dx + dz * dz;
+        if (d2 > r * r * 1.1) continue;
+        const far = d2 > NEAR_FULL * NEAR_FULL;
+        const n = far ? mids[t.v] : counts[t.v];
         if (n >= nearBark[t.v].instanceMatrix.count) continue;
         q.setFromAxisAngle(up, t.rot);
         m4.compose(p.set(t.x, t.y, t.z), q, s.set(t.k, t.k, t.k));
-        nearBark[t.v].setMatrixAt(n, m4);
-        nearLeaves[t.v].setMatrixAt(n, m4);
-        counts[t.v] = n + 1;
+        (far ? midBark : nearBark)[t.v].setMatrixAt(n, m4);
+        (far ? midLeaves : nearLeaves)[t.v].setMatrixAt(n, m4);
+        if (far) mids[t.v] = n + 1; else counts[t.v] = n + 1;
       }
     }
     variants.forEach((v, vi) => {
       for (const m of [nearBark[vi], nearLeaves[vi]]) { m.count = counts[vi]; m.instanceMatrix.needsUpdate = true; }
+      for (const m of [midBark[vi], midLeaves[vi]]) { m.count = mids[vi]; m.instanceMatrix.needsUpdate = true; }
     });
   }
 
@@ -434,7 +459,7 @@ export async function createVegetation(hm, quality, scene, collision, cityBlocks
     placed: inst.length,
     cover,
     // the trees for the local light capture (core/gi.js): the near 3D set and the far impostors
-    giMeshes: () => [...nearBark, ...nearLeaves, ...impMeshes],
+    giMeshes: () => [...nearBark, ...nearLeaves, ...midBark, ...midLeaves, ...impMeshes],
     // every tree and bush: [variant id, x, y, z, rotation, scale] (exported to the Unity project)
     list: () => inst.filter((t) => t.k).map((t) => [variants[t.v].id, t.x, t.y, t.z, t.rot, t.k]),
     // take out every tree and bush on a lot (a shop or workshop put up after the woods grew), trunks and all
