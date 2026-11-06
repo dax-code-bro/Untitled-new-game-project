@@ -157,15 +157,16 @@ export function installDust(game, opts = {}) {
       const g = scanGround(D.x, D.z).sub?.id, ok = g === 'soil' || g === 'sand' || g === 'grass';
       const env = Math.min(1, D.t / 4) * Math.min(1, (D.life - D.t) / 5) * (ok ? 1 : 0.2);
       if (D.t > D.life || Math.hypot(D.x - player.pos.x, D.z - player.pos.z) > 400) { devils.splice(i, 1); continue; }
-      D.acc += dt * 26 * env;
+      D.acc += dt * 42 * env;
       const y0 = game.hm.height(D.x, D.z), d = DUSTY[g] || DUSTY.soil;
       while (D.acc >= 1) {
         D.acc -= 1;
-        // a puff on the rim of the column, thrown round it and up: the column is the swirl
-        const a = rnd() * 6.28, rr = 0.4 + rnd() * 1.4, up = rnd();
-        puff(D.x + Math.cos(a) * rr, y0 + 0.3 + up * 2, D.z + Math.sin(a) * rr, {
-          vx: -Math.sin(a) * 3.5 * D.spin + w.x * 0.5, vz: Math.cos(a) * 3.5 * D.spin + w.z * 0.5, vy: 2.5 + up * 3,
-          size: 0.8 + up * 0.8, grow: 0.8 + up * 1.2, life: 3 + rnd() * 2, alpha: 0.34, col: d.c, drag: 0.5,
+        // a puff on the rim of the column, thrown round it and up: the column is the swirl; thick
+        // at the foot, thinning and widening as it climbs
+        const a = rnd() * 6.28, up = rnd(), rr = 0.4 + rnd() * 0.8 + up * 1.2;
+        puff(D.x + Math.cos(a) * rr, y0 + 0.3 + up * 4, D.z + Math.sin(a) * rr, {
+          vx: -Math.sin(a) * 3.5 * D.spin + w.x * 0.5, vz: Math.cos(a) * 3.5 * D.spin + w.z * 0.5, vy: 3 + up * 4,
+          size: 0.9 + up * 1.1, grow: 0.7 + up * 1.4, life: 3.5 + rnd() * 2.5, alpha: 0.6 - up * 0.25, col: d.c, drag: 0.4,
         });
       }
     }

@@ -25,6 +25,7 @@ import { installMissionsPlus } from './missionsplus.js';
 import { installAviation } from './aviation.js';
 import { installGrooming } from './grooming.js';
 import { installDust } from './dust.js';
+import { installMedical } from './medical.js';
 
 export function installSystems(game) {
   const list = [];
@@ -63,6 +64,7 @@ export function installSystems(game) {
   add('missionsPlus', installMissionsPlus(game)); // medals, checkpoints, hints, contacts, replays, side jobs
   add('aviation', installAviation(game)); // flight panel, fuel, gear, flaps, stalls, landings, radio, flight school
   add('grooming', installGrooming(game)); // dirt, blood, washing, outfits, disguises, barber styles, Saturday sale
+  add('medical', installMedical(game)); // infection, antibiotics, doctors, concussion, falls, snakebites, healing, Health tab
   return {
     list,
     // systems may return a prompt; `free` says whether F is still unclaimed this frame

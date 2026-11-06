@@ -97,10 +97,19 @@ export function installArmory(game) {
       P.plateCond = Math.max(0, P.plateCond - (stops ? 1 : 1.6) / Math.max(1, a.durability));
       player.armor = Math.round(P.plateCond * 100);
       if (P.plateCond <= 0) hud.toast('Your plates are shot through. Replace them at an armour store.', 3);
-      if (stops) { hud.toast('The plate stopped it', 1.2); game.audio?.thud?.(0.3); return amount * 0.12; }
+      if (stops) { hud.toast('The plate stopped it', 1.2); game.audio?.thud?.(0.3); game.onPlateStop?.(amount); return amount * 0.12; }
       amount *= 0.85;
     }
-    if (zone === 'head') { if (hm && hm.level >= pen) { hud.toast('Your helmet took that one', 1.4); return amount * 0.2; } return amount * 2.2; }
+    if (zone === 'head') {
+      // helmets wear out too (systems/medical.js: the condition, and a ringing head)
+      if (hm && hm.level >= pen && (P.helmCond ?? 1) > 0) {
+        P.helmCond = Math.max(0, (P.helmCond ?? 1) - 1 / Math.max(1, hm.durability || 4));
+        hud.toast(P.helmCond > 0 ? 'Your helmet took that one' : 'Your helmet took that one, and it\'s cracked through', 1.6);
+        game.onHelmetStop?.(amount);
+        return amount * 0.2;
+      }
+      return amount * 2.2;
+    }
     if (zone === 'leg') { amount *= 0.7; if (Math.random() < 0.6) { W.leg = 1; W.bleed = Math.max(W.bleed, 1); hud.toast('You\'re hit in the leg', 1.6); } }
     if (zone === 'arm') { amount *= 0.6; if (Math.random() < 0.6) { W.arm = 1; W.bleed = Math.max(W.bleed, 1); hud.toast('You\'re hit in the arm', 1.6); } }
     if (zone === 'torso' && amount > 9 && Math.random() < 0.45) W.bleed = Math.min(3, W.bleed + 1);
@@ -178,6 +187,7 @@ export function installArmory(game) {
     if (W.leg) items.push(['#9a5a22', 'Leg wound · limping']);
     if (W.arm) items.push(['#9a5a22', 'Arm wound · shaky aim']);
     if (W.numb > 0 && (W.leg || W.arm)) items.push(['#4a5a7a', 'Painkillers']);
+    items.push(...(game.medChips?.() || [])); // infection, venom, concussion, winded... (systems/medical.js)
     if (exp.vis.length && !S.indoors && S.mode === 'foot') items.push(['#7a1d1d', `Visible: ${exp.vis.map((id) => WEAPONS[id]?.name).filter(Boolean).slice(0, 2).join(', ')}`]);
     else if (exp.hid.length && S.mode === 'foot') items.push(['#2a3a2a', `Concealed: ${exp.hid.length} weapon${exp.hid.length > 1 ? 's' : ''}`]);
     const key = items.map((i) => i[1]).join('|');
@@ -190,7 +200,7 @@ export function installArmory(game) {
   const ui = new ArmorStore({ lib, career, getMoney: () => career.money, spend: (n) => career.spend(n), pause: game.pause, toast: (t) => hud.toast(t, 2.2), skinHex: 0xb98264,
     changed: () => { const before = P.gear.armor; refresh(); if (before) { /* bought new: fresh plates */ } } });
   const origAction = ui.action.bind(ui);
-  ui.action = (a, it, price) => { const was = P.gear.armor; origAction(a, it, price); if (ui.tab === 'armor' && a === 'buy' && P.gear.armor !== was) { P.plateCond = 1; refresh(); } };
+  ui.action = (a, it, price) => { const was = P.gear.armor; origAction(a, it, price); if (ui.tab === 'armor' && a === 'buy' && P.gear.armor !== was) { P.plateCond = 1; refresh(); } if (ui.tab === 'helmet' && a === 'buy') P.helmCond = 1; };
   game.armorStore = ui;
   const keepers = [];
   for (const st of STORES) {
@@ -210,6 +220,8 @@ export function installArmory(game) {
         const a = gearById('armor', P.gear.armor);
         const opts = [['I need some protection.', () => ui.show(st)]];
         if (a && a.level && P.plateCond < 1) { const cost = Math.round(a.price * 0.45 * (1 - P.plateCond) / 5) * 5 + 40; opts.push([`Replace my plates · $${cost}`, () => { if (career.spend(cost)) { P.plateCond = 1; refresh(); hud.toast('New plates fitted', 2); } }]); }
+        const hm = gearById('helmet', P.gear.helmet);
+        if (hm && (P.helmCond ?? 1) < 1) { const cost = Math.round(hm.price * 0.6 * (1 - (P.helmCond ?? 1)) / 5) * 5 + 20; opts.push([`Replace my helmet · $${cost}`, () => { if (career.spend(cost)) { P.helmCond = 1; hud.toast('A new helmet, same fit', 2); } }]); }
         opts.push(['Just looking. Bye.', () => {}]);
         game.openDialog(st.keeper, st.look.lines[(Math.random() * st.look.lines.length) | 0], opts);
       } });
@@ -261,7 +273,7 @@ export function installArmory(game) {
         if (player.health <= 0) player.health = 0;
       } else W.bleedT = 0;
       S.limp = !!W.leg && !numb;
-      combat.spreadMul = (W.arm && !numb ? 1.9 : 1) * (S.tiredSpread || 1);
+      combat.spreadMul = (W.arm && !numb ? 1.9 : 1) * (S.tiredSpread || 1) * (S.medSpread || 1);
       if (S.dead > 0) { W.leg = W.arm = W.bleed = 0; }
       // concealment
       exp = exposure();

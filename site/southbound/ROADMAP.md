@@ -140,6 +140,35 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 - [x] Loading screen with in-game art, tips and progress
 - [x] Fewer touch buttons: ◎ interact replaces the car button; map, phone, arsenal, free cam moved to pause
 
+## Phase 1.47 — Armour and medical, batch one (feature batch F14)
+
+Staying alive (`src/systems/medical.js`, with hooks in `armory.js` and `main.js`):
+- [x] Wounds left undressed for half a day get infected: a fever that tires you, shakes your aim
+      and slowly drains your health; dressings, gauze, an IFAK or a trauma bag keep a wound clean
+- [x] Antibiotics from the hospital pharmacy, taken from the phone; a course clears the infection
+- [x] Painkillers warn you as they wear off; three in a few hours and you're woozy (a shaky aim,
+      the colours swim), a fourth makes you sick
+- [x] A plate that stops a round still knocks the wind out of you: no sprinting, a shaky aim
+- [x] Helmets wear out and crack (and get replaced at the armour stores); a round your helmet
+      stops still rings your head
+- [x] The weight of a plate carrier slows your sprint, and it's hot work at midday
+- [x] Hard crashes hurt, and can concuss you: blurred, swimming vision and an unsteady aim
+- [x] Losing blood greys and darkens the world as your health runs low
+- [x] Falls hurt; a long one can break a leg (a splint, an IFAK or a doctor fixes it)
+- [x] Cottonmouths in Bayou Verde, mostly at dusk and after dark: a bite that needs antivenom
+      at the hospital (an IFAK or trauma bag slows the venom)
+- [x] Animal bites can get infected, and want rabies shots within three days
+- [x] Healing on your own: fed and rested you slowly come back to three-quarters; a night's
+      sleep or a long rest heals more
+- [x] Doctors at the Port Calvera Medical Center and the Mill Creek Clinic: treatment billed by
+      what's wrong (stitches, a broken leg, antivenom, rabies shots...), and a pharmacy
+- [x] A first-aid cabinet at the hideout: two fresh bandages a day
+- [x] Healed wounds leave scars
+- [x] The phone's Health tab: wounds, infection, venom, concussion, antibiotics, armour and
+      helmet condition, and your medical record (times shot, plates that saved you, scars,
+      hospital visits, snakebites, falls)
+- [x] Dust devils made thicker and taller (G9 follow-up)
+
 ## Phase 1.46 — Dust (graphics milestone G9)
 
 What dry ground gives up when something moves over it (`src/systems/dust.js`):

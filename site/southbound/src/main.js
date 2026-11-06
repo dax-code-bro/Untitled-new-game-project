@@ -749,6 +749,8 @@ async function createGame(progress) {
     } else if (S.mode === 'foot') {
       needs.update(dt, a);
       if (S.limp) { a.sprint = false; if (a.moveX) a.moveX *= 0.5; if (a.moveY) a.moveY *= 0.5; }
+      if (S.noSprint) a.sprint = false; // winded, concussed (systems/medical.js)
+      if (a.sprint && S.loadK < 1) { if (a.moveX) a.moveX *= S.loadK; if (a.moveY) a.moveY *= S.loadK; } // the weight of a plate carrier
       player.update(dt, a, rig.yaw, hm, collision, armed && combat.def.cat === 'pistol');
       footing.steps(player, dt);
       camera.getWorldDirection(aimDir);
