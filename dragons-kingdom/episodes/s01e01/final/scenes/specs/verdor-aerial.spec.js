@@ -90,7 +90,10 @@ export default {
       // (s21: the 180 mm frame from here held ~60 m - only the breakwater's end and sea, no pair. Now 24 mm, aim
       // bearing ~42 deg south of east / 23 deg down (r2 still at 40 / 17 was mostly open sea, the harbour cut at the
       // bottom right): the pair enter at the left edge, the harbour + town lower centre-right. NOT RE-STILLED at 45 / 23.)
-      cam: { rig: 'follow', pos: [[0, [120, 160, 1200]], [7, [150, 160, 1300], 'linear']], look: [[0, [402, 0, 1454]], [7, [432, 0, 1554], 'linear']], mm: 24, fstop: 8, focus: 'leaf.chest' },
+      // (s26: s24 still @0.5 was still mostly open sea, the town at the right edge. The camera ship now stands further
+      // back (NW) and 15 m higher, aimed ~55 deg south of east and panning right with the pair: the breakwater + quay
+      // centre-right (quay x ~0.5 at 0.5), the town's east edge at the right, the pair at the left (x -0.9 -> -0.8).)
+      cam: { rig: 'follow', pos: [[0, [90, 175, 1060]], [7, [115, 175, 1150], 'linear']], look: [[0, [380, 0, 1480]], [7, [375, 0, 1590], 'linear']], mm: 24, fstop: 8, focus: 'leaf.chest' },
       cast: { leaf: { tack: true, ...inForm(505, 62, 0, T['X4-01'], 7, { dx: -40 }), acts: LEAF_FLY() }, charcoal: { tack: true, ...inForm(535, 60, 16, T['X4-01'], 7, { dx: -40 }), acts: CHAR_FLY() }, abbyR: {}, remiR: {} },
     },
     'X4-02': {

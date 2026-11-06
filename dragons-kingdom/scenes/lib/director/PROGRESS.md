@@ -3,6 +3,66 @@
 Owner paths: `scenes/lib/director/`, `episodes/s01e01/final/scenes/`, `episodes/s01e01/final/cut/`.
 How it works: `README.md` in this folder. Latest state first.
 
+## Session 26 (2026-11-06, short budgeted session: F4 hatchling flank, VERDOR_AERIAL X4-01 reframe + open shore - STILLS only)
+
+Shot ids, lengths, line cue times UNCHANGED. No flight act got a phase / tOffset (X4-01 acts untouched: LEAF_FLY /
+CHAR_FLY). Only X4-01's camera changed in the 1C cut (edl-1C regenerated).
+Scratch: `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/director/s26/`
+(`f4_r0.png` + `f4_104_r0.png` = before, `f4_r1/r2.png` iterations, `f4.png` = final, `X4-01_084.png`, `previs/`,
+labelled contact sheet `sheet.jpg`).
+- F4 (scenes/lookdev/style-f4-birthing-chamber.js), after creatures 967509f (push-up pose): r0 @2 and CAMS 104 (h 0.2)
+  both read as a GOLD SNAKE - camera ~5 deg down, her forearms came in from the right ACROSS its hindquarters, cloth
+  + hands over the near wing; 104 is no different (0.03 m higher). Changes: CAMS 100 (= time 2) now d 2.05, h 0.62,
+  r 0.05 (~17 deg down), aimed between head and hips (`head.lerp(hip, 0.42).lerp(hands, 0.2)`; 102-106 keep the old
+  aim); the old eye-level camera kept as CAMS 106; FWD turned 35 -> 25 deg toward the lens (flank more square on);
+  her shoulders nearer the lens, further right, lower (near 0.4 / right 0.44 / up 0.12 - at right 0.32 her cheek + eye
+  entered the top-right corner, r2), so her forearms come in from the right FOREGROUND below the flank; hands forward
+  under the front of the chest / neck (fwd 0.14 / 0.07), cloth centre forward with them (fwd 0.022 -> 0.09).
+  Still LOOKED AT (draft, f4.png): the newborn now reads as a small dragon, not a snake - big head with BOTH horn
+  nubs, the near folded wing (gold membrane folds standing over the shoulder), the body and a long tail to its tip,
+  the broken shell behind; warm lamp key kept, cool window light on the far boards. Her face OUT of frame.
+  NOT yet right: (a) the near HIND LEG does not read clearly (a lump under the wing at the hip - creatures: does the
+  pushUp leg splay sideways enough from above?); (b) her right (far) hand is open with fingers splayed upward in the
+  air beside the flank - reads as a claw / startled, not tender (relaxHand keepFingers keeps the build's spread);
+  (c) the folded cloth is only over her left hand and reads as a thin ribbon/handkerchief, not a folded cloth under
+  the chest. Tenderness: lower than r2 (where her right hand cupped the flank - but her face was in frame).
+- X4-01: the camera ship stands further back (NW) and higher: pos [90,175,1060] -> [115,175,1150], look
+  [380,0,1480] -> [375,0,1590] (24 mm, aimed ~55 deg south of east, pans right with the pair). Set: the open shore
+  now drops ~4 m in its first 25 m (was 2.5 m in 40 m), weed / dark stone from ~0.6 m depth (was 1 m), open-shore
+  floor darkened up to 78 % (was 60 %).
+  Still LOOKED AT (draft @0.5): the HARBOUR READS - the breakwater centre, the pale quay apron, the Santa Maria moored
+  inside, the warehouses, ~25 town houses in terrace rows up the slope at right, the coast bending away north-east
+  (top right), sea on the left 55 %, the horizon haze top-left. Charcoal whole near the left edge (~6 % in, upper third - tight but inside; previs x -0.85 -> -0.79),
+  Leaf a green speck under him. The TEAL band is GONE: the open-shore water bottom-left is dark blue to the
+  waterline. Land at draft is a smooth green (no field / hedge texture: nature). READY for video (owner sign-off on
+  the framing).
+- X4-06 CONTINUITY (not changed): X4-03 (T 73-77) has Charcoal south-bound over the harbour basin, x 330 -> 322,
+  z 1560 -> 1624, yaw 185. X4-06 (T 87, 10 s later) has him at x 257, z 1575 -> 1623 - 65 m inland and BACK north
+  of where X4-03 left him, still yaw 177 (south) - an unexplained jump back + sideways; X4-11 (T 110) then has them
+  out over the sea again (x ~465). PROPOSED FIX: make X4-06 a declared inland LOOP - the pair bank in from the
+  harbour side and cross the town heading SW: Charcoal root [300, 41, 1600] -> [262, 41, 1640], Leaf ~50 m behind on
+  the same line, yawKeys ~225 (CHAR_FLY / LEAF_FLY with a bank if the flight act takes one; NO phase / tOffset),
+  staging 'they swing in over the town'; then previs (`previs.mjs --set VERDOR_AERIAL --only X4-06`, Charcoal inside
+  the top-right corner) and `previs.mjs --set VERDOR_AERIAL --cuts --only X4-06`, then a still. X4-04/05 are ground
+  shots between, so the turn itself is never seen - the loop reads from the yaw + screen direction (right -> left).
+- Verify: director selftest 20/20; build-shots --check clean (slate warnings only). npm test not run.
+- NEXT (exact, in order):
+  1. F4 hands (one iteration, ~2 min/still): her far (right) hand palm DOWN, resting on / cupping the flank behind
+     the wing (relaxHand with `fingers: fwd`, `palm: -up`, keepFingers false), and the cloth folded over her near
+     hand and under the chest (cloth `along` size 0.2 -> 0.26, centre near 0.055 -> 0.1). Re-still:
+     `node render/render.mjs --still scenes/lookdev/style-f4-birthing-chamber.js --time 2 --preset draft --png <scratch>/eng1/director/s27/f4.png`
+     (eye-level reference: `--time 106`). Final (owner/background): same with `--preset final --png out.png`.
+  2. X4-06 loop restage per the note above.
+  3. Videos (owner/background, ~10 min/shot here):
+     `node scenes/lib/director/tools/render-shots.mjs --only X4-01 --force --work <scratch>/eng1/director/work1B`
+     plus the s24 list (`--only X4-02,X4-03,X4-11,X4-14,X4-20`, `--only X4-06` after 2., and the pending 1C groups).
+  4. s24 NEXT 4 unchanged (plans shots, VERDOR_HARBOR, OUTER_ROCKS).
+- REQUESTS: creatures - F4 hatchling: the near hind leg should splay out sideways in pushUp so it reads from ~17 deg
+  above (now a lump under the folded wing); the near wing finger at the cloth edge (known, yours). humans - relaxHand
+  option for a soft, cupped hand on a body (the kept build finger spread reads as a claw when the hand is in the
+  open). nature - VERDOR_AERIAL land at X4-01 distance is a smooth green (fields / hedges / scrub texture would sell
+  the scale). Earlier: Leaf's light membranes (s24), real hoe (s24), X4-08 `call`, outer-rock stacks.
+
 ## Session 24 (2026-11-06, short budgeted session: VERDOR_AERIAL water tint, X4-02 wall, X4-06 town - STILLS only)
 
 Shot ids, lengths, line cue times UNCHANGED (X4-20 still exactly 5 s, untouched). No flight act got a phase / tOffset

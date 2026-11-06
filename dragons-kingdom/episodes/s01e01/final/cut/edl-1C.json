@@ -1078,11 +1078,11 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 15.24,
-    "k4_cpu_s_per_frame": 203.2,
+    "draft_s_per_frame": 11.87,
+    "k4_cpu_s_per_frame": 158.27,
     "k4_gpu_s_per_frame": null,
-    "draft_minutes": 24.38,
-    "k4_cpu_hours": 5.42,
+    "draft_minutes": 18.99,
+    "k4_cpu_hours": 4.22,
     "k4_gpu_hours": null,
     "factors": {
      "people": 1.24,
@@ -1092,7 +1092,7 @@
      "move": 1.08,
      "total": 1.34
     },
-    "basis": "MEASURED draft 15.24 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
+    "basis": "MEASURED draft 11.87 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
    },
    "staging": "WIDE: 70 mm (s21; was 150) air-to-air from inland: Leaf drops to ~12 m (s24; was 14) and flies along the harbour wall (wall in the foreground, the bay beyond), wingtip shadow on the stones.",
    "deviation": null,
@@ -1124,11 +1124,11 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 15.14,
-    "k4_cpu_s_per_frame": 201.89,
+    "draft_s_per_frame": 12.35,
+    "k4_cpu_s_per_frame": 164.69,
     "k4_gpu_s_per_frame": null,
-    "draft_minutes": 24.23,
-    "k4_cpu_hours": 5.38,
+    "draft_minutes": 19.76,
+    "k4_cpu_hours": 4.39,
     "k4_gpu_hours": null,
     "factors": {
      "people": 1.24,
@@ -1138,7 +1138,7 @@
      "move": 1,
      "total": 1.24
     },
-    "basis": "MEASURED draft 15.14 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
+    "basis": "MEASURED draft 12.35 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
    },
    "staging": "LOW STATIC 24 mm at the town roofs (s21 restage: a 35 mm frame cannot hold roofs, quay and a high dragon): from the terrace-2 street just over the terrace-1 ridges, looking east-north-east down the slope - roofs in the foreground, the quay apron and the Santa Maria beyond, the breakwater and the sea; Charcoal crosses high over the harbour (top, left to right) and his shadow slides over the apron toward the town.",
    "deviation": null,
@@ -1222,11 +1222,11 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 18.99,
-    "k4_cpu_s_per_frame": 253.2,
+    "draft_s_per_frame": 9.54,
+    "k4_cpu_s_per_frame": 127.24,
     "k4_gpu_s_per_frame": null,
-    "draft_minutes": 22.79,
-    "k4_cpu_hours": 5.06,
+    "draft_minutes": 11.45,
+    "k4_cpu_hours": 2.54,
     "k4_gpu_hours": null,
     "factors": {
      "people": 1.6,
@@ -1236,7 +1236,7 @@
      "move": 1,
      "total": 1.6
     },
-    "basis": "MEASURED draft 18.99 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
+    "basis": "MEASURED draft 9.54 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
    },
    "staging": "35 mm STATIC on the terrace farm (s24; was 50): a farmer (a woman) rests on a hoe (foreground left, back three-quarter, face turned away), the town's upper rows behind her, watches the riders pass high over the town (background right), unimpressed.",
    "deviation": null,
@@ -1372,11 +1372,11 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 22.56,
-    "k4_cpu_s_per_frame": 300.77,
+    "draft_s_per_frame": 16.65,
+    "k4_cpu_s_per_frame": 221.96,
     "k4_gpu_s_per_frame": null,
-    "draft_minutes": 31.58,
-    "k4_cpu_hours": 7.02,
+    "draft_minutes": 23.31,
+    "k4_cpu_hours": 5.18,
     "k4_gpu_hours": null,
     "factors": {
      "people": 1.48,
@@ -1386,7 +1386,7 @@
      "move": 1.08,
      "total": 1.6
     },
-    "basis": "MEASURED draft 22.56 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
+    "basis": "MEASURED draft 16.65 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
    },
    "staging": "WIDE 85 mm (s23; s21 100, was 160) from inland: Leaf climbs back to Charcoal's level on his usual side (inland, a little behind), near enough for talk.",
    "deviation": null,
@@ -1470,11 +1470,11 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 12.21,
-    "k4_cpu_s_per_frame": 162.85,
+    "draft_s_per_frame": 9.4,
+    "k4_cpu_s_per_frame": 125.39,
     "k4_gpu_s_per_frame": null,
-    "draft_minutes": 24.43,
-    "k4_cpu_hours": 5.43,
+    "draft_minutes": 18.81,
+    "k4_cpu_hours": 4.18,
     "k4_gpu_hours": null,
     "factors": {
      "people": 1,
@@ -1484,7 +1484,7 @@
      "move": 1.08,
      "total": 1.08
     },
-    "basis": "MEASURED draft 12.21 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
+    "basis": "MEASURED draft 9.4 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
    },
    "staging": "AERIAL 35 mm: beyond the town, on its high ground, the palace - weathered pale stone, practical; the birthing chamber's high opening a dark shape near the top of the east face.",
    "deviation": null,
@@ -1646,11 +1646,11 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 9.48,
-    "k4_cpu_s_per_frame": 126.37,
+    "draft_s_per_frame": 7.49,
+    "k4_cpu_s_per_frame": 99.89,
     "k4_gpu_s_per_frame": null,
-    "draft_minutes": 18.96,
-    "k4_cpu_hours": 4.21,
+    "draft_minutes": 14.98,
+    "k4_cpu_hours": 3.33,
     "k4_gpu_hours": null,
     "factors": {
      "people": 1.48,
@@ -1660,7 +1660,7 @@
      "move": 1.08,
      "total": 1.6
     },
-    "basis": "MEASURED draft 9.48 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
+    "basis": "MEASURED draft 7.49 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
    },
    "staging": "EXTREME WIDE 160 mm aerial travel from ~700 m behind / inland (s21: on the line from the outer rocks through the pair, so both read in one long-lens frame): they leave the harbour behind and follow the coast SSE toward its far end, Charcoal left (seaward), Leaf right; the outer rocks small near the horizon right.",
    "deviation": null,

@@ -342,10 +342,13 @@ const CAM_R = new THREE.Vector3(-VIEW.z, 0, VIEW.x);                 // screen r
 // (the wyvern newborn, 1 m long with a big head: its head points screen-left and a little toward
 // the lens - a three-quarter profile, so the snout, the mouth line and the near eye read; seen
 // square on, the domed newborn head foreshortens into a ball)
-const FWD = CAM_R.clone().multiplyScalar(-0.82).addScaledVector(VIEW, -0.57).normalize();
+// (s26: 35 -> 25 deg toward the lens, so its near flank - hind leg, folded wing - turns more to camera)
+const FWD = CAM_R.clone().multiplyScalar(-0.9).addScaledVector(VIEW, -0.42).normalize();
 // camera variants (--time 100..): distance from the aim point (m), lens (mm), height above the
 // head (m), sideways offset (m, + = screen right)
-const CAMS = { 100: { d: 1.85, mm: 55, h: 0.17, r: -0.12 }, 102: { d: 1.6, mm: 55, h: 0.12, r: -0.05 }, 103: { d: 2.1, mm: 55, h: 0.12, r: -0.2 }, 104: { d: 1.85, mm: 55, h: 0.2, r: -0.05 }, 105: { d: 0.8, mm: 55, h: 0.12, r: 0.0 } };
+// (s26: 100 is higher - ~17 deg down instead of ~5, a little wider, aimed between the head and the hips - so the back, the folded wing and the horn nubs read over her
+// hands, and her forearms fall below its flank in the frame; 106 = the s25 eye-level camera)
+const CAMS = { 100: { d: 2.05, mm: 55, h: 0.62, r: 0.05 }, 106: { d: 1.85, mm: 55, h: 0.17, r: -0.12 }, 102: { d: 1.6, mm: 55, h: 0.12, r: -0.05 }, 103: { d: 2.1, mm: 55, h: 0.12, r: -0.2 }, 104: { d: 1.85, mm: 55, h: 0.2, r: -0.05 }, 105: { d: 0.8, mm: 55, h: 0.12, r: 0.0 } };
 
 export function update(t, ctx) {
   const { hatch, egg, frags, alex, fcloth, NY } = S;
@@ -402,16 +405,19 @@ export function update(t, ctx) {
     const shC = new THREE.Vector3().setFromMatrixPosition(alex.bone('upperarm01.L').matrixWorld).add(new THREE.Vector3().setFromMatrixPosition(alex.bone('upperarm01.R').matrixWorld)).multiplyScalar(0.5);
     // (close and low over the nest at its right side, so her forearms come in from the right along the
     // hatchling's near side and her hands reach the bedding with the elbows bent)
-    const goal = base.clone().addScaledVector(near, 0.22).addScaledVector(CAM_R, 0.38).addScaledVector(up, 0.16);
+    // (s26: her shoulders nearer the lens and lower, so her forearms come in from the right FOREGROUND, under the
+    // hatchling's flank in the frame instead of across its hindquarters)
+    const goal = base.clone().addScaledVector(near, 0.4).addScaledVector(CAM_R, 0.44).addScaledVector(up, 0.12);
     alex.root.position.add(goal.sub(shC));
     alex.root.updateMatrixWorld(true);
   }
   // (the two hands side by side, palms up, under the front of the chest)
-  const wA = base.clone().addScaledVector(near, 0.19).addScaledVector(fwd, 0.06).addScaledVector(up, 0.02);
-  const wB = base.clone().addScaledVector(near, 0.2).addScaledVector(fwd, -0.015).addScaledVector(up, 0.02);
+  // (s26: further forward - under the front of the chest and the neck - so the hip and the near hind leg are clear)
+  const wA = base.clone().addScaledVector(near, 0.19).addScaledVector(fwd, 0.14).addScaledVector(up, 0.02);
+  const wB = base.clone().addScaledVector(near, 0.13).addScaledVector(fwd, 0.07).addScaledVector(up, 0.0);
   // her right hand is the one toward screen right
   const aIsR = wA.clone().sub(wB).dot(CAM_R) > 0;
-  const pole = base.clone().addScaledVector(near, 0.32).addScaledVector(CAM_R, 0.4).addScaledVector(up, -0.1);
+  const pole = base.clone().addScaledVector(near, 0.45).addScaledVector(CAM_R, 0.3).addScaledVector(up, -0.1);
   limbIK(alex, 'arm', aIsR ? 'R' : 'L', wA, pole.clone().addScaledVector(fwd, 0.25));
   limbIK(alex, 'arm', aIsR ? 'L' : 'R', wB, pole.clone().addScaledVector(fwd, -0.25));
   const under = near.clone().negate().addScaledVector(up, -0.1).normalize();
@@ -420,7 +426,7 @@ export function update(t, ctx) {
   // (it ends over her knuckles: the backs of her hands and her wrists show at its near edge)
   // (only a few cm past the outer hands: a heightfield cloth cannot hang, and a long drop off a hand
   // to the bed showed as stretched bands)
-  drapeCloth(fcloth, base.clone().addScaledVector(near, 0.055).addScaledVector(fwd, 0.022), near, fwd.clone().setY(0).normalize(), 0.24, 0.2, alex, S.linenY, hatch);
+  drapeCloth(fcloth, base.clone().addScaledVector(near, 0.055).addScaledVector(fwd, 0.09), near, fwd.clone().setY(0).normalize(), 0.24, 0.2, alex, S.linenY, hatch);
   const endR = base.clone().addScaledVector(near, 0.2).addScaledVector(up, 0.03);     // her hands
   lookAtPoint(alex, chest, 0.8);
   if (T0 === 2) { const wr = ['L', 'R'].map((sd) => bonePos(alex, `wrist.${sd}`)); console.warn('[f4] wrists', wr.map((w) => (w.y - base.y).toFixed(3) + '@' + w.distanceTo(wA).toFixed(2) + '/' + w.distanceTo(wB).toFixed(2)).join(' '), 'base', base.toArray().map((v) => v.toFixed(3)).join(',')); }
@@ -429,7 +435,7 @@ export function update(t, ctx) {
   // the folded cloth, the shell behind; looking along VIEW
   const cam = ctx.camera;
   const head = new THREE.Vector3().setFromMatrixPosition(hatch.bones[hatch.boneIndex.head].matrixWorld);
-  const aim = Math.round(T0) === 105 ? endR.clone() : head.clone().lerp(endR, 0.45);
+  const aim = Math.round(T0) === 105 ? endR.clone() : Math.round(T0) >= 102 ? head.clone().lerp(endR, 0.45) : head.clone().lerp(hip, 0.42).lerp(endR, 0.2);
   cam.position.copy(aim).addScaledVector(VIEW, -CV.d).addScaledVector(CAM_R, CV.r).setY(head.y + CV.h);
   cam.lookAt(aim.clone().add(new THREE.Vector3(0, 0.03, 0)));
   if (Math.round(T0) === 101) { cam.position.copy(aim).addScaledVector(VIEW, -1.6).addScaledVector(CAM_R, 0.9).add(new THREE.Vector3(0, 1.1, 0)); cam.lookAt(aim); }

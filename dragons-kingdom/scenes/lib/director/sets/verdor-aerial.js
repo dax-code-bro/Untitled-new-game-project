@@ -81,8 +81,9 @@ export async function build(ctx, { spec } = {}) {
       return cliffH * smooth(0, 12, d) + hills + 2.5 * N.fbm(x * 0.025, z * 0.025, 4) * smooth(8, 40, d);
     }
     const off = -d;
-    // s23: the open shore drops ~2.5 m in its first 40 m (no wide pale ledge: that read as tropical turquoise in X4-01)
-    const shelf = -0.011 * off - 0.000016 * off * off - 30 * smooth(450, 900, off) - 2.5 * smooth(2, 40, off);
+    // s23: the open shore drops ~2.5 m in its first 40 m (no wide pale ledge: that read as tropical turquoise in X4-01);
+    // s26: steeper - ~4 m in its first 25 m (the residual teal band in X4-01 was the shallow floor showing through)
+    const shelf = -0.011 * off - 0.000016 * off * off - 30 * smooth(450, 900, off) - 4 * smooth(2, 25, off);
     const boulders = 2.2 * Math.max(0, N.fbm(x * 0.08, z * 0.08, 3) + 0.1) * (1 - smooth(0, 30, off));
     const ripples = 0.25 * N.fbm(x * 0.06 + 3, z * 0.06, 3) + 1.4 * N.fbm(x * 0.006, z * 0.006 - 2, 3);
     const open = Math.max(shelf + boulders + ripples - 0.5, -70);
@@ -116,7 +117,7 @@ export async function build(ctx, { spec } = {}) {
       const under = 1 - smooth(-1.2, 1.2, y);
       const turf = (1 - steep) * smooth(2, 8, y);
       const bay = inBay(z) * smooth(-1, -4, y);                    // s21: the basin floor is silt / weed, not pale sand
-      const shallows = (1 - inBay(z)) * smooth(-0.6, -2.5, y);      // s23: the open shore below ~1 m is weed / dark stone too
+      const shallows = (1 - inBay(z)) * smooth(-0.4, -1.8, y);      // s23: the open shore below ~1 m is weed / dark stone too (s26: from ~0.6 m)
       const weed = under * Math.max(smooth(0.05, 0.35, N.fbm(x * 0.012 + 7, z * 0.012, 3)) * 0.8, 0.95 * bay, 0.9 * shallows);
       const sand = (1 - steep) * under * (1 - weed);
       const scree = (1 - steep) * (1 - under) * (1 - turf);
@@ -124,7 +125,7 @@ export async function build(ctx, { spec } = {}) {
     },
     color: (x, z) => {
       const p = N.fbm(x * 0.012 + 4, z * 0.012, 3), q = N.fbm(x * 0.05, z * 0.05 + 7, 2);
-      const wet = x > coastX(z) ? Math.max(0.6 * inBay(z) * smooth(1, 12, x - coastX(z)), 0.6 * smooth(-0.6, -3, H(x, z))) : 0;
+      const wet = x > coastX(z) ? Math.max(0.6 * inBay(z) * smooth(1, 12, x - coastX(z)), 0.78 * smooth(-0.4, -2.5, H(x, z))) : 0;   // s26: open-shore floor darker (0.6 -> 0.78)
       const v = (0.75 + 0.5 * p + 0.15 * q) * (1 - wet);         // s21: dark basin floor; s23: + the open shore shallows (cold, not turquoise)
       return [v * (1.02 + 0.05 * q), v, v * 0.96];
     },
