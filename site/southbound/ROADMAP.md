@@ -140,6 +140,53 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 - [x] Loading screen with in-game art, tips and progress
 - [x] Fewer touch buttons: ◎ interact replaces the car button; map, phone, arsenal, free cam moved to pause
 
+## Phase 1.42 — The Gulf Line crew, batch one (feature batch F10)
+
+Crew (`src/systems/crew.js`, on the crew's own menu at the hideout):
+- [x] Loyalty for each of the fourteen, and moods (happy, content, grumbling, angry, nervous,
+      hurting, out on a job, locked up) that come from how you treat them and what's going on
+- [x] Four skills each (driving, shooting, stealth, smarts), different for every member, that
+      grow with the work they do
+- [x] A Crew tab: everyone's mood, loyalty, skills and jobs done
+- [x] Payday every three days (their cut, by head); skip it and they grumble, then loyalty drops
+- [x] Gifts (once a day each), and a favour each per week from what you carry (fish, scrap metal,
+      game meat, a pelt, a loan they pay back with interest)
+- [x] Birthdays: Rico texts you the morning of, and a present means more that day
+- [x] The gang's respect: Unknown, Known, Respected, Feared, Legend, from jobs, raids and
+      running rivals off their turf; it unlocks the bigger upgrades and makes the paper
+- [x] Crew who stay unhappy too long take off for a couple of days
+
+Crew jobs (a Jobs tab):
+- [x] Five jobs to send people on: a smuggling run, the chop shop, a card game, collecting
+      debts, a fishing charter. The best free person for it goes; they're gone for hours of game
+      time and their skills, loyalty and the heat decide how it goes
+- [x] Their cut goes into the hideout stash and they text you how it went (cards can lose)
+- [x] Injuries (hurt crew rest, sitting, for a day) and arrests: bail them out from the crew menu,
+      or they sit three days and come home sour
+- [x] Gang heat: every job raises it, it cools a little each day, and high heat means more arrests
+
+The hideout:
+- [x] Rico's morning briefing: a tip a day (where the white buck was seen, which turf is soft,
+      where the police are doubling up)
+- [x] Talk round the fire at night: the crew rib each other
+- [x] They greet you when you get back, notice when you're hurt (Marisol) or have the police on
+      you (Jayden)
+- [x] A day and a night: some are out on errands in the afternoon; at night most sleep, while
+      Big O and Jayden keep watch and Marisol stays on call
+- [x] Three chores a day (chop firewood, haul water, mend the fence): a few dollars and the crew
+      notices
+- [x] Eight upgrades you can see: bunkhouse beds (wake fully rested and healed), an outdoor
+      kitchen (a free meal a day), a police radio, floodlights, a gate and fence, an armory rack
+      (restock every gun once a day), a watchtower and a garage bay (half-price repairs)
+- [x] A cash stash: money there is safe from muggers, arrests and hospital bills
+
+Rivals:
+- [x] Gangs you've run off their turf come for the hideout at night while you're there: four of
+      them up the road, the crew takes cover, and beating them off earns respect
+- [x] While you're away they can hit the stash (unless the gate's built; floodlights halve it)
+- [x] A Turf tab (the three gangs, how often you've hit them) and truces: a week's peace for
+      $1,500, and their turf warns you instead of shooting
+
 ## Phase 1.41 — Real grass blades (no more crossed cards)
 
 - [x] The meadow and plains grass round you is now real strands (`src/world/grasscards.js`), not

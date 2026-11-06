@@ -183,6 +183,7 @@ export function installWorldEvents(game) {
   }
 
   return {
+    turfs,
     update(dt) {
       if (reportT > 0 && (reportT -= dt) <= 0 && police.wanted === 0) { police.crime('shots'); hud.toast('Someone reported gunshots', 2.5); }
       // events
@@ -198,6 +199,7 @@ export function installWorldEvents(game) {
         if (!alive.length) { if (t.members.length && !t.cleared) { t.cleared = true; t.respawnDay = game.sky.day + 3; P.rivals[t.R.id] = (P.rivals[t.R.id] || 0) + 1; hud.toast(`You cleared ${t.R.name} off their turf. They'll be back.`, 3.5); career.saveSoon(); } continue; }
         t.cleared = false;
         if (t.hostile) continue;
+        if ((P.truce?.[t.R.id] || 0) > game.sky.day) { if (d < 30 && !t.warned) { t.warned = 1; say(t.R.name, 'We got a deal. Don\'t make us regret it.', 3); } continue; } // paid off (systems/crew.js)
         if (d < 30 && (combat.drawn || t.warned > 0 && (t.stayT = (t.stayT || 0) + dt) > 12)) { t.hostile = true; say(t.R.name, 'Light him up!', 2); for (const p of alive) p.role = 'foe'; }
         else if (d < 30 && !t.warned) { t.warned = 1; t.stayT = 0; say(t.R.name, t.R.lines[(Math.random() * t.R.lines.length) | 0], 3); }
         else if (d > 45) { t.warned = 0; t.stayT = 0; }

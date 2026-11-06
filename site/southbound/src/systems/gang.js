@@ -277,6 +277,7 @@ export function installGang(game) {
       }
       if (!mine.length) out.push({ name: 'Sell a vehicle', sub: 'park it at the hideout first', btn: '—', dis: true, run: () => {} });
     }
+    if (game.crewItems) out.push(...game.crewItems(M)); // loyalty, gifts, favours (systems/crew.js)
     if (M.service === 'gunsmith') {
       const s = P.supplies;
       const have = (k, n) => (s[k] || 0) >= n;
@@ -536,7 +537,8 @@ export function installGang(game) {
 
   const _f = new THREE.Vector3();
   return {
-    crew, HQ,
+    crew, HQ, local, groundY, svc, say,
+    get talkWith() { return talkWith; },
     get busy() { return !!pro && pro.phase === 'intro'; },
     camera: prologueCamera,
     startPrologue,
@@ -555,7 +557,7 @@ export function installGang(game) {
       }
       for (const m of crew) {
         if (m === rico && ride.st) continue;
-        m.h.root.visible = near;
+        m.h.root.visible = near && !m.away; // away on a crew job, an errand, asleep or locked up (systems/crew.js)
         if (!m.h.root.visible) continue;
         const dx = player.pos.x - m.pos.x, dz = player.pos.z - m.pos.z, d = Math.hypot(dx, dz);
         const want = d < 6 && m.pose !== 'Sitting_Idle_Loop' ? Math.atan2(dx, dz) : m.look;

@@ -20,6 +20,7 @@ import { installPhonePlus } from './phoneplus.js';
 import { installPrints } from './prints.js';
 import { installPropertyPlus } from './propertyplus.js';
 import { installFoodPlus } from './foodplus.js';
+import { installCrew } from './crew.js';
 
 export function installSystems(game) {
   const list = [];
@@ -53,6 +54,7 @@ export function installSystems(game) {
   add('wilds', installWilds(game)); // blood trails, crows, ducks, poaching, the wind
   add('prints', installPrints(game)); // boot, hoof and paw prints and tyre tracks in soft ground
   add('foodPlus', installFoodPlus(game)); // food that goes off, coffee, loyalty card, today's special
+  add('crew', installCrew(game)); // the Gulf Line: loyalty, crew jobs, hideout upgrades, raids, turf
   return {
     list,
     // systems may return a prompt; `free` says whether F is still unclaimed this frame

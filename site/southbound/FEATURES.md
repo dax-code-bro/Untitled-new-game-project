@@ -9,11 +9,12 @@ feature with the fewest additions next. Batches ship as F# (features) alternatin
 Counts are additions made in the "add to every feature" programme (F1 onwards, plus the S3/S4
 side batches where they extended a feature). The original build of each feature isn't counted.
 
-## Status (last updated: Phase 1.41, after F9 + the real-grass change)
+## Status (last updated: Phase 1.42, after F10)
 
 | # | Feature | Files | Added | Batches | Status |
 |---|---------|-------|------:|---------|--------|
-| 1 | Hunting | hunting.js, wilds.js | 12 | F5 | 18 to go |
+| 1 | Gangs & the hideout | gang.js, crew.js | 35 | F10 | **done (35)** |
+| 1b | Hunting | hunting.js, wilds.js | 12 | F5 | 18 to go |
 | 2 | Police & law | police.js, policeplus.js, law.js | 11 | S3, F4 | 19 to go |
 | 3 | Phone | phone.js, phoneplus.js | 10 | F6 | 20 to go |
 | 4 | Residents / people | population.js, residents.js, peds.js | 8 | S3, S4 | 22 to go |
@@ -33,7 +34,6 @@ side batches where they extended a feature). The original build of each feature 
 | 18 | Needs (sleep, food, weight) | needs.js | 1 | F9 | 29 to go |
 | 19 | Wounds & health | wounds.js | 1 | F9 | 29 to go |
 | 20 | Tools & inventory | tools.js | 1 | F2 | 29 to go |
-| 21 | Gangs & the hideout | gang.js | 0 | | 30 to go |
 | 22 | Story missions | missions.js | 0 | | 30 to go |
 | 23 | Aircraft | marine-air.js, craft.js | 0 | | 30 to go |
 | 24 | Clothing & barber | clothes.js, clothing.js | 0 | | 30 to go |
@@ -53,19 +53,16 @@ side batches where they extended a feature). The original build of each feature 
 | 38 | Car combat | carcombat.js | 0 | | 30 to go |
 | 39 | Movement & footing | footing.js, player.js | 0 | | 30 to go |
 
-**Totals: about 105 additions across 20 features; 19 features untouched; none at 30 yet.**
+**Totals: about 140 additions across 21 features; 18 features untouched; 1 feature at 30+ (gangs).**
 Brand-new features added this programme (not extensions): banking, news, contacts, cabs,
 legendary animals and fish, poaching, property market, burglaries, food spoilage, tracks in the
 ground, boat wakes, rain soak: about 12 of the 30+ asked for.
 
 ## Backlog: ideas per feature (take from here, strike when shipped)
 
-- **Gangs & hideout:** crew loyalty and moods, crew members with skills (driver, medic, shooter),
-  hideout upgrades (bunks, armory rack, garage, kitchen), camp chores, crew camp talk at night,
-  rival gang territory map, turf wars, protection money from businesses, crew injuries and
-  recovery, recruiting, a crew member arrested (bail him out), gang colours and vehicles,
-  safehouses, stash houses, informants, gang reputation, crew birthdays and stories, crew
-  follows you on jobs, crew horses/cars, morning briefing, payouts split, betrayal risk.
+- **Gangs & hideout (F10 shipped; left for a later batch):** protection money from businesses,
+  recruiting new members, gang colours and vehicles, safehouses, informants, a crew member
+  following you as backup, betrayal risk.
 - **Story missions:** mission replay, checkpoints, mission ratings (time, accuracy, no damage),
   optional objectives, mission choices with consequences, phone calls that start missions,
   cutscene camera framing, mission-specific vehicles, side characters returning, epilogue

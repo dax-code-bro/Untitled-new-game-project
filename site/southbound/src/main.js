@@ -568,6 +568,7 @@ async function createGame(progress) {
   game.refreshHitStatics = () => { hitStatics.length = 0; scene.traverse((o) => { if (o.userData.hitStatic) hitStatics.push(o); }); };
   installStreetLife(game);
   const worldEvents = installWorldEvents(game);
+  game.worldEvents = worldEvents;
   game.audio = audio;
   const demolition = installDemolition(game); // houses burn, the fire department comes, builders rebuild
   game.nearestRoadPoint = (x, z) => { const r = nearestRoad(x, z); if (!r) return null; const p = {}; traffic.sampleEdge(r.e, r.s, p); return p; };
