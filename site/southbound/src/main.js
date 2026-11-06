@@ -1,5 +1,6 @@
 // SOUTHBOUND — boot, world build, game loop.
 import * as THREE from 'three';
+import { scanGround } from './core/substrate.js';
 import { loadSettings, saveSettings, resolveQuality, PRESETS, detectGPU, SOFTWARE_HINT, probeGPU, IDLE_CARD_HINT } from './settings.js';
 import { installImperfections } from './core/imperfect.js';
 import { installCloudShadows, setCloudShadowBoost } from './core/cloudshadow.js';
@@ -17,6 +18,7 @@ import { createTerrain, makeWorldTextures, worldUniforms } from './world/terrain
 import { createSky } from './world/sky.js';
 import { createWeather } from './world/weather.js';
 import { createWater } from './world/water.js';
+import { createBeams } from './world/beams.js';
 import { createRoads } from './world/roads.js';
 import { createBuildings } from './world/buildings.js';
 import { createVegetation, grassUniforms } from './world/vegetation.js';
@@ -163,6 +165,8 @@ async function createGame(progress) {
   collision.terrainCell = terrain.cell; // feet follow the drawn terrain triangles, not the smoother heightmap
   const water = createWater(scene, renderer, q);
   const roads = createRoads(graph, hm, q, scene, collision, surf);
+  // lit air at night: cones under the street lamps, headlight beams (G7)
+  const beams = createBeams(scene, { lamps: roads.lights || [], quality: q.key });
   progress(0.74, 'Building Port Calvera and Mill Creek');
   await nextFrame();
   const city = createBuildings(hm, q, scene, collision, surf, graph);
@@ -499,9 +503,13 @@ async function createGame(progress) {
   game.billboards = billboards;
   const armory = installArmory(game);
   const needs = installNeeds(game);
+  game.needs = needs;
   const strays = installStrays(game);
   game.tracer = game.tracer || ((a, b) => combat.tracer(a, b));
   police.patrols = () => traffic.cars.filter((c) => c.v.patrol).map((c) => c.v);
+  // what a cruiser can't drive through; a traffic car it hits stops where it is
+  police.obstacles = () => [S.vehicle, ...traffic.cars.map((c) => c.v), ...parked, ...police.cars.map((c) => c.v)];
+  police.onCarBump = (o, sp) => { const c = traffic.cars.find((t) => t.v === o); if (c) { c.speed = 0; c.stun = Math.max(c.stun || 0, 2.5); } if (o === S.vehicle && sp > 3) { o.impact = Math.max(o.impact || 0, sp); } };
   const streetCrime = installStreetCrime(game);
   const wounds = installWounds(game);
   const auction = installAuction(game);
@@ -596,12 +604,13 @@ async function createGame(progress) {
       parked.splice(parked.indexOf(v), 1);
       // a parked car that isn't yours: that's car theft if anyone sees it
       if (!v.uid && !v.issued && !v.taken && !v.isAir && !v.isBoat) {
-        v.taken = true;
+        v.taken = true; v.stolenNow = true;
         if (police.nearPolice(60)) police.crime('carjack');
         else if (witnesses(v.pos, 30)) { if (game.reportCrime) game.reportCrime('theft', v.pos); else police.crime('theft'); }
       }
     }
     S.mode = 'car'; S.vehicle = v;
+    if (v.stolenNow) { v.stolenNow = false; game.onEnterParked?.(v); } // hot-wire it; maybe an alarm (systems/driving.js)
     combat.hideAll(); combat.holstered = true; if (wheel.open) wheel.hide(false);
     v.onHitPed = (p, killed) => { if (killed) police.crime(p.role === 'cop' ? 'copKill' : 'kill'); else police.crime('assault'); peds.panic(p.pos, 25); };
     // you sit in the driver's seat, hands on the wheel, where the glass lets people see you
@@ -815,8 +824,10 @@ async function createGame(progress) {
         if (hit) {
           player.h.play('Pistol_Shoot', 0.04, 1.6, true);
           reportHit(hit);
-          if (witnesses(player.pos, 45)) { if (game.reportCrime) game.reportCrime('shots', player.pos, hit.ped); else police.crime('shots'); } else game.onShotFired?.(player.pos);
-          peds.panic(player.pos, 45);
+          // a suppressed shot is heard only close by (systems/gunwork.js)
+          const earshot = combat.def.silent ? 10 : 45;
+          if (witnesses(player.pos, earshot)) { if (game.reportCrime) game.reportCrime('shots', player.pos, hit.ped); else police.crime('shots'); } else game.onShotFired?.(player.pos);
+          peds.panic(player.pos, earshot);
           if (hit.kind === 'vehicle' && hit.vehicle.type === 'police') police.crime('copShot');
         }
       } else if (!armed && a.firePressed && S.dead <= 0) {
@@ -843,7 +854,7 @@ async function createGame(progress) {
       for (const v of parked) { const d = v.pos.distanceTo(player.pos) - (v.isBoat || v.isAir ? v.radius * 0.8 : 0); if (d < bd) { bd = d; best = v; } }
       const tc = traffic.nearest(player.pos, bd);
       if (tc) { best = tc.v; fromTraffic = tc; }
-      if (best && !S.entering) {
+      if (best && !S.entering && !game.policePlus?.bribeHere?.()) {
         prompt = settings.isTouch ? `Tap ◎ to get in the ${best.spec.name}` : `Press F to get in the ${best.spec.name}`;
         if (a.enter) beginEnter(best, fromTraffic);
       }
@@ -851,8 +862,16 @@ async function createGame(progress) {
     } else {
       const v = S.vehicle;
       const ctl = S.auto ? autopilot(v, dt) : { throttle: a.throttle, brake: a.brake, steer: -a.moveX, handbrake: a.handbrake, nitro: a.sprint };
-      if (S.holdCar) { ctl.throttle = 0; ctl.brake = 1; ctl.nitro = false; } // someone is still getting in
+      game.driving?.control(v, ctl, dt); // fuel (systems/driving.js)
+      game.flatTyres?.(v, ctl, dt); // a stinger's shredded the tyres (systems/policeplus.js)
+      if (S.holdCar) { ctl.throttle = 0; ctl.brake = 1; ctl.nitro = false; } // someone is still getting in (or you're hot-wiring it)
       v.physics(dt, ctl, hm, collision);
+      // it gets dirty: dust and mud off the road (more in the wet), a little road film on asphalt;
+      // rain rinses the road film off
+      if (!v.isBoat && !v.isAir) {
+        const g = scanGround(v.pos.x, v.pos.z).sub?.name || '', road = /asphalt|concrete/.test(g), wet = worldUniforms.uWet.value, sp = Math.abs(v.speed || 0);
+        v.dirt = Math.min(1, Math.max(0, (v.dirt || 0) + sp * dt * (road ? 0.00004 : 0.0011 * (1 + wet * 2)) - dt * wet * (road ? 0.0015 : 0)));
+      }
       if (v.isAir) prompt = `ALT ${Math.round(v.alt)} m · ${v.heli ? 'Space/Shift up-down, W/S tilt, A/D turn' : `PWR ${Math.round(v.power * 100)}% · W/S power, Space/Shift pitch, A/D bank`}`;
       // parked cars and police cars are solid too (exact footprints). A hard hit shoves the other car
       // along (a parked car rolls a little and slews round; a tank doesn't move)
@@ -905,6 +924,7 @@ async function createGame(progress) {
         if (v.cab && v.setClear) v.setClear(mine || d2 < 45 * 45);
       };
       for (const v of parked) lod(v);
+      lod(S.vehicle); lod(S.entering?.v); // (out of the parked list once you're in it: never left hidden)
       for (const c of traffic.cars) lod(c.v);
       for (const c of police.cars || []) lod(c.v);
     }
@@ -965,7 +985,7 @@ async function createGame(progress) {
     peds.update(dt, focus, onFoot, [S.vehicle, ...police.cars.map((c) => c.v), ...traffic.cars.map((c) => c.v), ...parked], (amt) => { S.money += amt; hud.toast(`+$${amt}`, 1.2); });
     loot.update(dt);
     robbery.update(dt);
-    police.update(dt, { pos: S.indoors ? new THREE.Vector3(S.indoors.d.x, focus.y, S.indoors.d.z) : focus, inCar: S.mode === 'car', speed: S.mode === 'car' ? S.vehicle.speed : player.speed, vehicle: S.vehicle, drawn: combat.drawn && S.mode === 'foot' });
+    police.update(dt, { pos: S.indoors ? new THREE.Vector3(S.indoors.d.x, focus.y, S.indoors.d.z) : focus, inCar: S.mode === 'car', speed: S.mode === 'car' ? S.vehicle.speed : player.speed, vehicle: S.vehicle, drawn: combat.drawn && S.mode === 'foot', fired: performance.now() - (combat.firedAt || -1e9) < 2500 });
     if (player.health > 0 && player.health < 100 && S.dead <= 0) player.health = Math.min(player.maxHealth || 100, player.health + dt * (police.wanted || S.noRegen ? 0 : 0.6));
     S.dmgFlash = Math.max(0, S.dmgFlash - dt * 0.8);
     if (post) post.grade.uniforms.uDamage.value = Math.max(S.dmgFlash, player.health < 25 ? 0.35 : 0);
@@ -1004,6 +1024,13 @@ async function createGame(progress) {
     }
     water.update(camera.position);
     roads.update(sky.night);
+    if (!S.indoors) {
+      const vs = [];
+      if (S.vehicle && !S.vehicle.isBoat && !S.vehicle.isAir) vs.push({ v: S.vehicle });
+      for (const c of traffic.cars) vs.push({ v: c.v });
+      for (const c of police.cars) vs.push({ v: c.v, police: true });
+      beams.update(dt, camera.position, sky.night, Math.min(1, (weather.fog - 1) * 0.6 + weather.rain * 0.6), vs);
+    } else if (beams.lampMesh) beams.lampMesh.visible = beams.beamMesh.visible = false;
     scene.fog.density = 1.25 / Math.max(dd, 400) * (1 + sky.night * 0.5) * weather.fog * (0.6 + 0.4 * Math.max(sky.night, weather.dark));
     grassUniforms.uSunDir.value.copy(sky.sunDir);
     grassUniforms.uSunColor.value.copy(sky.sun.color).multiplyScalar(sky.sun.intensity * 0.35);
@@ -1277,10 +1304,10 @@ async function createGame(progress) {
     renderNow() { render(); },
     skipRender(b) { S.skipRender = !!b; },
     // Advance the game by exactly n fixed steps (used to capture smooth video on slow machines)
-    step(n = 1, dt = 1 / 30) { for (let i = 0; i < n; i++) tick(dt); S.fps = 1 / dt; },
+    step(n = 1, dt = 1 / 30) { S.stepping = true; for (let i = 0; i < n; i++) tick(dt); S.stepping = false; S.fps = 1 / dt; },
     toggleMap: () => hud.toggleMap(),
     showRegion: () => { hud.lastRegion = ''; hud.toastTimer = 0.001; },
-    renderer, scene, camera, debug: { hm, graph, collision, THREE, cloudShadow: setCloudShadowBoost, parked }, // THREE: tests build probe objects (mirror balls)
+    beams, renderer, scene, camera, debug: { hm, graph, collision, THREE, cloudShadow: setCloudShadowBoost, parked }, // THREE: tests build probe objects (mirror balls)
   };
   api.game = game;
   api.V3 = THREE.Vector3;

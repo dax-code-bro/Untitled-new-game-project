@@ -6,9 +6,10 @@ import { GLSL_NOISE } from '../util.js';
 
 export function makeWorldTextures(hm) {
   const n = hm.n;
-  const half = new Uint16Array(n * n);
-  for (let k = 0; k < n * n; k++) half[k] = THREE.DataUtils.toHalfFloat(hm.h[k]);
-  const heightTex = new THREE.DataTexture(half, n, n, THREE.RedFormat, THREE.HalfFloatType);
+  // red: the ground's height; green: the water's surface over it (0 where only the sea could be)
+  const half = new Uint16Array(n * n * 2);
+  for (let k = 0; k < n * n; k++) { half[k * 2] = THREE.DataUtils.toHalfFloat(hm.h[k]); half[k * 2 + 1] = THREE.DataUtils.toHalfFloat(Math.max(0, hm.wl[k])); }
+  const heightTex = new THREE.DataTexture(half, n, n, THREE.RGFormat, THREE.HalfFloatType);
   heightTex.magFilter = heightTex.minFilter = THREE.LinearFilter;
   heightTex.needsUpdate = true;
   const splatTex = new THREE.DataTexture(hm.splat, n, n, THREE.RGBAFormat, THREE.UnsignedByteType);
@@ -25,6 +26,7 @@ export const worldUniforms = {
   uWorldHalf: { value: WORLD.half },
   uWet: { value: 0 }, // 0 dry .. 1 soaked (weather)
   uRain: { value: 0 }, // current rain intensity (ripples)
+  uSunDir: { value: new THREE.Vector3(0, 1, 0) }, // towards the sun (sky.js)
   // where the 3D grass grows (shared with grasscards.js so the ground under it matches)
   uLawn: { value: (() => { const t = new THREE.DataTexture(new Uint8Array(4), 1, 1); t.needsUpdate = true; return t; })() },
   uCityB: { value: new THREE.Vector4(CITY.x0 - 20, CITY.z0 - 20, CITY.x0 + CITY.nx * CITY.pitch + 20, CITY.z0 + CITY.nz * CITY.pitch + 20) },
@@ -184,12 +186,19 @@ function makeTerrainMaterial(quality, surf) {
     shader.fragmentShader = shader.fragmentShader
       .replace('#include <common>', `#include <common>
 varying vec3 vWPos; varying vec3 vWNrm;
-uniform sampler2D uSplatTex; uniform float uWorldHalf; uniform float uNight;
+uniform sampler2D uSplatTex; uniform float uWorldHalf; uniform float uNight; uniform sampler2D uHeightTex; uniform float uTime;
 uniform sampler2D uLawn; uniform vec4 uCityB; uniform float uGrassR; uniform vec3 uGrassCam;
 ${GRASS_MASK_GLSL}
 ${L.map((k) => `uniform sampler2D t_${k}C; uniform sampler2D t_${k}N;`).join('\n')}
 ${GLSL_NOISE}
 float sbRough; vec3 sbNrm; float sbFar;
+// sunlight focused by the waves above: a bright web drifting over the bed
+float sbCaustic(vec2 p, float t){
+  float a = sbNoise(p * 0.85 + vec2(t * 0.31, t * 0.17));
+  float b = sbNoise(p * 1.37 - vec2(t * 0.23, -t * 0.29) + a * 1.4);
+  float c = sbNoise(p * 2.1 + vec2(-t * 0.2, t * 0.26) + b * 0.8);
+  return pow(1.0 - abs(a - b), 10.0) * 0.7 + pow(1.0 - abs(b - c), 14.0) * 0.5;
+}
 // Faithful sample at true scale. Far away, blend in a rotated 4x-larger
 // sample to hide repetition (never near the camera, where it would blur).
 // Two equally sharp samples (one rotated + offset) mixed by a soft noise mask:
@@ -254,8 +263,23 @@ vec3 layerN(sampler2D t, vec2 p, float scale){
   float snow = smoothstep(190.0, 230.0, vWPos.y) * (1.0 - smoothstep(0.35, 0.6, slope));
   c = mix(c, vec3(0.9, 0.92, 0.95), snow);
   c = mix(c, vec3(0.09, 0.09, 0.095), sp.a);
+  // under the water: caustics on the shallow bed; just above it: the dark, shiny wet line
+  // (on the sea it creeps up and back with the swash)
+  float wlv = texture2D(uHeightTex, clamp(wuv, 0.0, 1.0)).g, under = wlv - vWPos.y;
+  float shoreWet = 0.0;
+  if (under > 0.0) {
+    float k = smoothstep(0.0, 0.25, under) * (1.0 - smoothstep(0.8, 3.5, under)) * (1.0 - uNight) * (1.0 - uWet * 0.6) * (1.0 - sbFar);
+    // the sea is clearer than the lake, the rivers and the bayou
+    c *= 1.0 + sbCaustic(vWPos.xz, uTime) * k * (wlv < 0.01 ? 1.3 : 0.85);
+    shoreWet = 1.0 - smoothstep(0.0, 0.2, under);
+  } else if (under > -1.5) {
+    float swash = wlv < 0.01 ? 0.25 + 0.2 * sin(uTime * 0.45 + sbNoise(vWPos.xz * 0.05) * 6.0) : 0.12;
+    shoreWet = 1.0 - smoothstep(swash * 0.5, swash + 0.25, -under);
+  }
+  c *= 1.0 - shoreWet * 0.32;
   diffuseColor.rgb = c;
   sbRough = mix(0.97, 0.85, sp.a) - snow * 0.4 - wR * 0.12;
+  sbRough = mix(sbRough, 0.22, shoreWet * (1.0 - wR));
 
   vec3 nt = vec3(0.0, 0.0, 1.0);
   if (${useN}.0 > 0.5) {

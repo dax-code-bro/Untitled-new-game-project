@@ -14,8 +14,8 @@ import { regionAt } from '../world/layout.js';
 import { keyHint } from './world-util.js';
 import { locomotion } from '../entities/human.js';
 
-const PRICE = { breakin: 400, trespass: 150, theft: 300, shots: 150, assault: 250, weapon: 120, kill: 900, carjack: 300, disturbance: 80 };
-const SEVERITY = { breakin: 3, trespass: 1, theft: 2, disturbance: 1, weapon: 1, shots: 2, carjack: 2, assault: 3, robbery: 4, kill: 5 };
+const PRICE = { poaching: 200, breakin: 400, trespass: 150, theft: 300, shots: 150, assault: 250, weapon: 120, kill: 900, carjack: 300, disturbance: 80 };
+const SEVERITY = { poaching: 2, breakin: 3, trespass: 1, theft: 2, disturbance: 1, weapon: 1, shots: 2, carjack: 2, assault: 3, robbery: 4, kill: 5 };
 const pick = (a) => a[(Math.random() * a.length) | 0];
 
 export function installStreetCrime(game) {
@@ -104,7 +104,7 @@ export function installStreetCrime(game) {
     p.h.play(R.kind === 'beg' ? 'Crouch_Idle_Loop' : 'Idle_Loop', 0.25);
     if (R.t <= 0) {
       // you lowered the gun: they run, and most of them call it in
-      p.role = undefined; p.aimRx = null; p.h.post = null; p.aimCool = 30;
+      p.role = p.resident ? 'resident' : undefined; p.aimRx = null; p.h.post = null; p.aimCool = 30; // (a resident goes back to their day once they've run)
       p.mode = 'flee'; p.threat = player.pos.clone(); p.timer = 10;
       if (Math.random() < 0.7) game.reportCrime?.('weapon', p.pos, p);
     }
@@ -128,6 +128,7 @@ export function installStreetCrime(game) {
   };
   // report a crime: the police know at once if one of them saw it, otherwise
   // a witness has to call it in
+  peds.onPhoneCall = (p, at) => { if (at && p.pos.distanceTo(player.pos) < 80) game.reportCrime?.('shots', at.clone ? at.clone() : at, p); }; // they called it in
   game.reportCrime = (kind, pos, victim) => {
     if (kind === 'copShot' || kind === 'copKill' || copSees(pos)) { police.crime(kind); return 'police'; }
     const existing = witnesses.find((w) => w.p.mode !== 'dead' && w.p.pos.distanceTo(pos) < 60);

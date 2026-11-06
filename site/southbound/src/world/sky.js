@@ -123,6 +123,7 @@ export function createSky(renderer, scene, quality) {
       sky.position.copy(focus);
       // dome: crisp sun disc, moon and stars drawn over the cloud cube
       du.uSunDir.value.copy(sunDir);
+      worldUniforms.uSunDir.value.copy(sunDir);
       du.uSunDisc.value.copy(sun.color).multiplyScalar(useMoon ? 0 : 60 * day);
       du.uMoonDir.value.copy(moonDir);
       du.uMoon.value = clamp(moonDir.y * 4, 0, 1);

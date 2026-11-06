@@ -2,6 +2,7 @@
 // corners, chat, panic and flee from gunfire, get hit, flinch, die and go limp (bodies are searched: systems/loot.js).
 import * as THREE from 'three';
 import { Human, locomotion } from './human.js';
+const REACT = new Set(['cower', 'phone', 'freeze']); // (hands up when a gun's on them: systems/streetcrime.js)
 import { CITY, TOWN } from '../world/layout.js';
 import { mulberry32, wrapAngle, clamp } from '../util.js';
 
@@ -88,10 +89,31 @@ export class Peds {
   }
 
   // Everyone near `pos` runs away from it
+  // People don't all do the same thing: most run, some drop and cover their heads, some freeze for a
+  // moment, some get their phone out and call it in (then run). Each person's nerve is their own.
   panic(pos, radius = 35) {
     for (const p of this.list) {
-      if (p.mode === 'dead' || p.role === 'cop') continue;
-      if (p.pos.distanceTo(pos) < radius) { p.mode = 'flee'; p.threat = pos.clone(); p.timer = 8 + this.rnd() * 6; }
+      if (p.mode === 'dead' || p.mode === 'ko' || p.role === 'cop' || p.scripted || (p.role && p.role !== 'resident' && p.role !== 'walker')) continue;
+      if (p.pos.distanceTo(pos) >= radius) continue;
+      if (p.nerve === undefined) p.nerve = this.rnd();
+      p.threat = pos.clone();
+      const near = p.pos.distanceTo(pos) < radius * 0.5;
+      if (p.nerve < 0.55 || p.mode === 'flee') { p.mode = 'flee'; p.timer = 8 + this.rnd() * 6; }
+      else if (p.nerve < 0.75) { p.mode = 'cower'; p.timer = 4 + this.rnd() * 6; }
+      else if (p.nerve < 0.88 && !near) { p.mode = 'phone'; p.timer = 5 + this.rnd() * 3; }
+      else { p.mode = 'freeze'; p.timer = 1.2 + this.rnd() * 1.8; }
+    }
+  }
+  react(p, dt) {
+    p.timer -= dt;
+    const t = p.threat;
+    const turn = (away) => { if (!t) return; const a = Math.atan2(t.x - p.pos.x, t.z - p.pos.z) + (away ? Math.PI : 0); p.heading += wrapAngle(a - p.heading) * Math.min(1, dt * 5); };
+    if (p.mode === 'cower') { turn(true); p.h.play('Crouch_Idle_Loop', 0.15); }
+    else if (p.mode === 'phone') { turn(true); if ((p.phT = (p.phT || 0) - dt) <= 0) { p.phT = 1.8; p.h.play('Interact', 0.2, 0.6, true); } }
+    else if (p.mode === 'freeze') { turn(false); p.h.play('Idle_Loop', 0.15); }
+    if (p.timer <= 0) {
+      if (p.mode === 'phone') this.onPhoneCall?.(p, t);
+      p.mode = 'flee'; p.timer = 7 + this.rnd() * 6; if (!p.threat) p.threat = p.pos.clone();
     }
   }
 
@@ -225,7 +247,10 @@ export class Peds {
     if (p.role === 'foe') { if (this.foeThink) this.foeThink(p, dt); return; }
     if (p.role === 'hunter') { if (this.hunterThink) this.hunterThink(p, dt); return; }
     if (p.role === 'brawler') { if (this.brawlThink) this.brawlThink(p, dt); return; }
+    if (REACT.has(p.mode)) { this.react(p, dt); return; } // cowering, calling it in, frozen
     if (p.role === 'walker') { if (this.walkerThink) this.walkerThink(p, dt); return; }
+    // a resident going about their day (systems/population.js); a scare still sends them running
+    if (p.role === 'resident' && this.residentThink && p.mode !== 'flee' && p.mode !== 'return') { this.residentThink(p, dt, player); return; }
     let want = 0;
     if (p.mode === 'flee') {
       p.timer -= dt;

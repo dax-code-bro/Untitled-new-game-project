@@ -140,6 +140,257 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 - [x] Loading screen with in-game art, tips and progress
 - [x] Fewer touch buttons: ◎ interact replaces the car button; map, phone, arsenal, free cam moved to pause
 
+## Phase 1.40 — People and cars in the rain (graphics milestone G8)
+
+- [x] Soaked through (`src/entities/bodyshade.js`): out in the rain everyone gets wetter over a
+      minute or so: clothes go darker and lose their sheen, hair darker and glossy, skin glistens.
+      They dry over a few minutes when it stops (faster indoors)
+- [x] Tyre spray: cars on wet roads throw spray up behind their back wheels, more the faster they go
+- [x] Footsteps splash on wet ground
+
+## Phase 1.39 — Food and the Gulf Marts, batch one (feature batch F9)
+
+- [x] Fresh food goes off (`src/systems/foodplus.js`): a po'boy, étouffée, gumbo, catfish or boudin
+      carried for more than a day is "going off", and eating it can make you sick: you lose health,
+      can't heal for a while and feel it
+- [x] Coffee and energy drinks wake you up a bit (they help with tiredness, not only your aim)
+- [x] A loyalty card: every tenth Gulf Mart purchase is on the house
+- [x] Today's special: one thing on the menu each day at 40% off
+
+## Phase 1.38 — Property, batch one (feature batch F8)
+
+- [x] Rent (`src/systems/propertyplus.js`): houses, apartments and penthouses you own but don't live
+      in are let out, and the rent comes in every day
+- [x] Tax and upkeep every day, paid from the bank if there's money in it (else from your pocket);
+      the county texts you the day's account
+- [x] The market moves: each kind of property drifts up and down a little every day (pulled back
+      towards normal); the realtor shows what yours are worth today
+- [x] Sell anything you own (not your home) at today's value, less the agent's 6%
+- [x] Burglaries: now and then someone breaks into one of your places while you're away, and you
+      lose something; it makes the paper
+- [x] Upgrades for each place you own: a security alarm (the police come, nothing's taken), solar
+      panels (two thirds off the upkeep), a renovation (+15% value and rent)
+
+## Phase 1.37 — Light in the air at night (graphics milestone G7)
+
+- [x] Lamp light (`src/world/beams.js`): after dark a soft cone of lit air hangs under each street
+      lamp near you; thick where you look across it, fading at its edges and towards the ground
+- [x] Headlight beams: two beams ahead of every car near you (yours, the traffic's), a touch
+      down; police cars with their lights on throw red and blue
+- [x] Haze: the cones are faint on a clear night and stand out in fog, mist and rain
+- [x] Cheap enough to leave on: only the nearest lamps (re-picked twice a second) and cars near you,
+      nothing indoors or in daylight, off on the Phone preset
+
+## Phase 1.36 — Jobs, batch one (feature batch F7)
+
+- [x] Every shift is rated (`src/systems/jobs.js`): knocks and crashes in the work vehicle cost
+      stars, and riders (taxi, bus, ambulance, charter, air tours, medevac) complain out loud
+- [x] Tips: riders tip for a smooth ride, by the stars; pizza tips for pizza that's still hot (and
+      none when it's gone cold)
+- [x] The night shift (10 pm to 6 am) pays a quarter more
+- [x] Ranks in every job: Trainee, Regular, Senior, Lead, Veteran (on the job board and the phone)
+- [x] Wreck the work vehicle and you're fired, for the rest of the day
+- [x] Dispatch texts you the shift's rating; five great shifts in one job and you're employee of the
+      month (+$500, and it makes the paper)
+- [x] Work vehicles come with a full tank; the phone's Jobs tab shows rank, shifts, total earned
+      and the last rating
+
+## Phase 1.35 — Tracks in the ground (graphics milestone G6)
+
+- [x] Prints (`src/world/tracks.js`, `src/systems/prints.js`): boot prints behind you and the people
+      walking near you, cloven hooves behind deer, cattle and horses, paw prints behind coyotes and
+      foxes, and tyre tracks from every wheel of your car or truck off the road
+- [x] Only in soft ground (sand, dirt, grass, forest litter), deepest in sand and wet ground; each is
+      pressed in along the slope, with a normal map so its rim catches the light
+- [x] They fade over a few minutes, faster in the rain, so a fresh trail is a fresh trail: follow a
+      deer's prints to where it went, or your own back
+
+## Phase 1.34 — The phone, batch two (feature batch F6)
+
+- [x] Battery (`src/systems/phoneplus.js`): it runs down, faster with the screen or the light on,
+      and charges in any vehicle or indoors. Flat, the phone won't open. Shown under the phone button
+- [x] The phone's own light: no flashlight? L turns on the phone's (dimmer, and it eats the battery)
+- [x] Bank: cash on you is what a mugger, an arrest or the hospital takes a cut of. An ATM stands
+      outside every Gulf Mart: deposit and withdraw there, check the balance anywhere. A little
+      interest every day (the bank texts you)
+- [x] News: the Calvera Courier writes up robberies, killings, gunfire and poaching (some of it
+      yours) and the local goings-on, a new paper every day
+- [x] Messages: texts from people you've met, the bank, and anyone else with something to say;
+      unread ones show by the battery
+- [x] Contacts: talk to someone (F) and they give you their number. Call them and they tell you
+      where they are and what they're doing (by their day), or don't pick up if they're asleep
+- [x] Weather: what it's doing now and what's coming, and when. The weather itself now builds and
+      clears a step at a time (clear, cloudy, overcast, rain, storm): no storm out of a blue sky
+- [x] Camera: take a photo of what you see, without the HUD, saved as a PNG
+- [x] Cab: a ride to any place in the Places list ($4 + $2.60 a mile). Wait for it, fade out,
+      get dropped off; the clock moves on by the length of the ride. Not with the police after you
+
+## Phase 1.33 — Hunting and fishing, batch one (feature batch F5)
+
+- [x] The wind and your scent (`src/systems/hunting.js`): animals downwind of you smell you from much
+      further off; upwind you can get close. A small wind readout (and arrow) shows near game
+- [x] Walking softly: slow on foot and they hear you at half the distance; running, from further
+- [x] When they're about: deer and bucks at dawn and dusk, coyotes and foxes at night
+- [x] Wounded animals: hit but not killed, they run, slow as they weaken, and bleed out within a
+      minute or so, leaving a blood trail on the ground you can follow (`src/systems/wilds.js`)
+- [x] Pelt quality: one clean shot from the right calibre is perfect (★★★); more holes, or far too
+      big a gun, and the buyer pays less. Shown when you skin it and in the price
+- [x] Meat: a deer or buck gives you meat. Sell it at a trading post or have a plate cooked there
+      (it fills you up)
+- [x] Legendary animals: the Pale Buck in Pinewood Hollow, Old Scar in the Sierra Norte and Ember in
+      Bayou Verde. One of each, rarely about (likelier at their hour), bigger, warier and worth
+      hundreds. The trading posts' Rumours tab says where to look
+- [x] A hunting licence ($40 at any trading post). Without one, or killing a horse or a cow, is
+      poaching: a crime if anybody sees it
+- [x] Crows find a carcass left lying and circle over it, lifting off when you come close
+- [x] Ducks: rafts of them paddling on the lake, the rivers and the bayou; they burst off the water at
+      a shot, when you walk up, or when a boat comes through
+- [x] Fishing: bites come quicker at first and last light and in the rain, slower in the midday heat
+      or a storm, and quicker the more you've caught
+- [x] Size limits: anything under the limit goes back (it's still in your log)
+- [x] Records: beat your best for a species and it says so
+- [x] Legendary fish: Old Mossback (lake), the Ferryman (river), Gator Jaw (bayou), the Silver King
+      (sea). Rare, on a good rod, and they fight
+- [x] The line sags between rod and water and comes tight as you reel; the rod bows under the strain;
+      a hooked fish runs left and right and comes in as you win
+- [x] Fresh fish: a catch more than two days old fetches half at the market
+
+## Phase 1.32 — Water up close (graphics milestone G5)
+
+- [x] Wakes (`src/world/wakes.js`, `src/systems/splashes.js`): your boat drops a disturbance every
+      tenth of a second; the water shader turns each into a spreading ring and churned white water,
+      and together they draw the V of a real wake with a foaming trail behind the stern
+- [x] Bow spray off the hull at speed; a big splash when a car drives into the water and a bow wave
+      as it ploughs on; a helicopter low over water flattens a ring and blows spray
+- [x] Wading: you, people and animals walking through water leave rings
+- [x] Bullets stop at the water's surface and splash there (not on the bottom), with a ring
+- [x] Rain falling on lakes, rivers and the sea: rings everywhere
+- [x] Fish rising: a quiet ring now and then on calm water near you (more at dawn and dusk); the
+      bobber plops in, twitches on a bite and stirs the water while a fish fights
+- [x] Sunlight through the thin top of a wave (and a wake's crests) when you look toward the sun
+- [x] Caustics: a bright web of focused sunlight drifting over the bed of shallow water
+- [x] The wet line: the bank just above the water is dark and shiny, and on the coast it creeps up
+      and back with the swash
+
+## Phase 1.31 — Police, batch two (feature batch F4)
+
+- [x] The police helicopter (`src/systems/policeplus.js`): from three stars a Calvera PD Air Unit
+      comes up and hangs over where they think you are; it can see you from the air out in the open
+      (helping the cars find you), and after dark it lights you up with a searchlight that sweeps
+      round where you were when it loses you. It goes home when the stars drop
+- [x] Roadblocks: at three stars and up, driving, a roadblock goes up on the road ahead of you — two
+      cruisers across it, officers behind them, and a stinger. Drive over the stinger and the tyres
+      are shredded: slow, the car pulls and shimmies, until a garage repair
+- [x] Bribes: at one star, with an officer about to cuff you, offer him money (F). Some take it and
+      look the other way; some don't, and that's another star
+- [x] The radio: you only hear the police radio when they're close, or anywhere if you've bought a
+      police scanner
+
+## Phase 1.30 — Street life, batch one (feature batch F3)
+
+- [x] Pigeons (`src/systems/ambient.js`): little flocks pecking about on the downtown pavements; they
+      burst up and away when you run at them, a car goes by close or a shot's fired, and settle again
+      somewhere else half a minute later
+- [x] Umbrellas: when it rains most people out walking put one up (and drop it when they run)
+- [x] Joggers in the early morning and the evening
+- [x] People stood about on their phones
+- [x] Food carts on four downtown corners: a vendor, a cart with its awning, the Gulf Mart menu a
+      little cheaper
+
+## Phase 1.29 — Weapons, batch one (feature batch F2)
+
+- [x] Guns wear (`src/systems/gunwork.js`): a little with every shot, cheap guns faster, more in the
+      wet. A worn gun can jam — a dead click and "Jammed"; reload (R) clears it. Your guns' wear is saved
+- [x] A gun-cleaning kit (hardware store, Hunting): stand still with a worn gun and press F; a few
+      seconds crouched over it and it's like new
+- [x] Takedowns: fists up or a blade out, come up behind someone who hasn't seen you and press F.
+      Fists knock them out cold (they drop, lie there half a minute, come round and run); a blade is
+      silent and final. Anyone who sees it calls it in
+- [x] A suppressed shot is only heard close by: it scares and alerts people within ~10 m, not 45
+- [x] Police cruisers drive the roads to you (shortest route over the street grid and highways)
+      instead of steering straight at you through buildings, and a cruiser that isn't getting any
+      closer backs up and tries again
+
+## Phase 1.28 — Driving, batch one (feature batch F1)
+
+- [x] Fuel (`src/systems/driving.js`): every car has a tank that drains with the throttle and speed
+      (a full tank is ~25 minutes of hard driving); a gauge under the speedometer; run dry and the
+      engine coughs and dies. Fill up at any Gulf Mart (pull in, F), or pour in the fuel can
+- [x] Skid marks: brake hard, drift or pull the handbrake and the tyres leave black marks on the road
+      that stay (the last 700 strips)
+- [x] The horn: people in front of the car jump out of the way, and some tell you what they think
+- [x] Stealing a parked car: you hot-wire it before it starts (quicker with a lockpick set); one in
+      three has an alarm that whoops and flashes the lights, and someone calls it in
+- [x] Speeding: a patrol car that clocks you well over the limit (35 in town, 55 on country roads,
+      70 on the highway) lights up and pulls you over. Stop and you get a ticket ($50 + $5 a mph
+      over); keep going and you're wanted
+
+## Phase 1.27 — Paint, dirt and rain on the cars (graphics milestone G4)
+
+- [x] Metallic paint has flake under the clear coat: tiny mirrors at random angles that sparkle in the
+      sun up close, while the clear coat over them stays glass-smooth
+- [x] Cars get dirty: road film and dust from the sills up and mud thrown up behind the wheels, the
+      bonnet and roof only once it's really filthy; dust when it's dry, dark mud when it's wet. It
+      builds as you drive (fast off-road, slowly on asphalt), rain rinses the road film off, and
+      cars out in the world start with some of their own
+- [x] Dusty glass, except the two arcs the wipers sweep on the windscreen
+- [x] Rain stands in beads on the glass and the paint
+- [x] A car wash at Calvera Customs ($15)
+
+## Phase 1.26 — Loose ends from the list (side batch S4)
+
+- [x] Police cruisers no longer drive through traffic, parked cars, each other or yours; a traffic car
+      a cruiser hits stops where it is
+- [x] Doors you can see: walk in and a real door swings open on its hinge into a dark doorway before
+      you step through; run in and it bangs back off its stop; it swings shut behind you when you
+      come out
+- [x] Showrooms at the hunting post (every animal in the wildlife guide, and whose pelts you're
+      selling) and the fish market (your catch on the counter)
+- [x] Shops and bars with a clerk behind the counter inside (one of the residents who works there,
+      by name, when their shift's on) — and they can be held up like any store; bartenders keep
+      something under the bar more often. The police are told even if you've already left
+- [x] People react in their own ways: most run, some drop and cover their heads, some freeze for a
+      moment, some get their phone out and call it in (and the police hear about it), then run
+- [x] Point a gun at someone and their hands go up, and stay up while the gun's on them; lower it and
+      they bolt. Armed ones may draw on you instead
+
+## Phase 1.25 — The people of Calvera, and police who have to find you (side batch S3)
+
+- [x] About 3,000 residents (`src/systems/residents.js`), each with a name, an age, a home (houses
+      hold a family, apartment blocks dozens), a job and its hours (office, store, warehouse, bar,
+      or out on the road; some retired, some out of work), 3-8 friends (neighbours and workmates
+      mostly) and a favourite bar
+- [x] Everyone has a day: asleep, up, the commute, work, lunch out some days, home; evenings out at
+      the bar or round at a friend's, a walk after dinner; weekends their own. Where each of them is
+      at any moment follows from that, across the whole map, for almost nothing (~1 ms for all 3,000)
+- [x] Near you, the ones whose day has them outdoors are real people on the street
+      (`src/systems/population.js`): walking where they're actually going, block by block along the
+      sidewalks, and in through their own front door; a crowd smoking outside a bar at night
+- [x] Friends who run into each other stop and talk; walk up to anyone and say hello (F): a name, a
+      job and a line about their day
+- [x] Kill a resident and they're gone for good (saved). Twenty minutes later someone new moves into
+      their home
+- [x] Police have to find you: they track you only while they can see you (line of sight) or hear
+      you (gunfire), otherwise they drive to where you were last seen and search round it, widening
+      the search the longer you're gone; the stars cool off while they can't see you
+- [x] A gun out in front of them gets an order first ("Drop the weapon!") and a few seconds to obey
+- [x] In a gunfight one officer of each car takes cover behind it while the other works round your
+      side; a beat before they fire when they find you again
+- [x] Radio chatter: shots fired, officer hit, officer down, robbery in progress, lost visual, eyes on
+      the suspect
+
+## Phase 1.24 — Light through the leaves (graphics milestone G3)
+
+- [x] With the sun behind a tree its leaves glow: the light comes through them, yellowed, brightest
+      looking towards the sun; outer leaves glow and inner ones stay in their shade (the sun's shadow
+      map decides which)
+- [x] Canopies are darker inside: every leaf knows how deep in the crown and how low it sits
+      (baked per vertex when the trees load), and gets that much less sky and bounce light
+- [x] No two trees quite the same green, and clumps of leaves vary within a tree (greener,
+      yellower, lighter, darker)
+- [x] Far trees (impostors) glow against a low sun too
+- [x] Off on Phone; the lighter mid-distance trees get all of it
+
 ## Phase 1.23 — Doors, hold-ups and showrooms (side batch S2)
 
 - [x] No more "press F to open the door": walk into a door and you open it and go in

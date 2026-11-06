@@ -82,7 +82,7 @@ export function installNeeds(game) {
       }
       // effects
       const tired = N.energy < 25, wrecked = N.energy < 8, hungry = N.food < 25, starving = N.food < 8;
-      S.noRegen = hungry;
+      S.noRegen = hungry || (game.foodPlus?.sick || 0) > 0; // or sick from bad food (systems/foodplus.js)
       if (starving && player.health > 5) player.health -= dt * 0.25;
       if (player.health > (player.maxHealth || 100)) player.health = player.maxHealth || 100;
       // sprinting: tired or overweight people run out of breath

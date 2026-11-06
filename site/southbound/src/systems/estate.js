@@ -98,7 +98,11 @@ export function installEstate(game) {
     if (k === 'warehouse') return dice < 0.7 ? 'locked' : 'open';
     return dice < 0.7 ? 'locked' : 'open';
   };
-  const someoneHome = (d) => { const h = game.sky.hour, night = h < 7 || h > 19; return rng(d.i * 71 + Math.floor(game.sky.day))() < (night ? 0.8 : 0.4); };
+  // whoever lives there and whose day has them at home right now (systems/population.js)
+  const someoneHome = (d) => {
+    if (game.population) return game.population.atHome(d.i).length > 0;
+    const h = game.sky.hour, night = h < 7 || h > 19; return rng(d.i * 71 + Math.floor(game.sky.day))() < (night ? 0.8 : 0.4);
+  };
   function buildInterior(d) {
     const b = d.b, o = IO(d.i), r = rng(d.i * 31 + 7);
     const kind = kindOf(d); r(); r(); // keep the furniture dice where they were
@@ -284,6 +288,9 @@ export function installEstate(game) {
     if (p && owned(p)) insidePoints.push(interact.add({ x: it.o.x + 2, z: it.o.z, y: it.o.y, r: 1.3, label: () => `${keyHint(game)} change clothes`, color: 0x9fc4c0, use: () => game.openWardrobe?.() }));
     insidePoints.push(interact.add({ x: it.o.x + 1.4, z: it.o.z + it.D / 2 - 0.7, y: it.o.y, r: 0.9, label: () => `${keyHint(game)} pull the fire alarm`, color: 0xff4040, use: () => game.fireAlarm?.(inside) }));
     hud.toast(`${p ? p.name : ['Home', 'Apartment', 'Office', 'Store', 'Bar', 'Warehouse'][['home', 'apartment', 'office', 'store', 'bar', 'warehouse'].indexOf(it.kind)]}`, 2);
+    // someone working the counter in an open shop or bar (one of the residents who works there, if
+    // their shift's on); they can be held up like any store clerk (systems/robbery.js)
+    if ((it.kind === 'store' || it.kind === 'bar') && !(p && owned(p)) && lockState(d, p) === 'open') placeClerk(d, it);
   }
   // a locked door: knock, kick it in, or leave it
   function tryDoor(d, p) {
@@ -322,7 +329,8 @@ export function installEstate(game) {
     h.root.rotation.y = 0; h.play(armed ? 'Pistol_Aim_Neutral' : 'Crouch_Idle_Loop', 0);
     it.g.parent?.add(h.root);
     occ = { h, d, armed, t: 0, called: false, why };
-    hud.toast(armed ? '"I\'ve got a gun! Get out of my house!"' : why === 'breakin' ? '"Oh my God! Get out! I\'m calling 911!"' : '"Who are you?! Get out of my house!"', 3);
+    const who = game.population?.atHome(d.i)[0], name = who ? `${game.population.fullName(who)}: ` : '';
+    hud.toast(name + (armed ? '"I\'ve got a gun! Get out of my house!"' : why === 'breakin' ? '"Oh my God! Get out! I\'m calling 911!"' : '"Who are you?! Get out of my house!"'), 3);
   }
   function updateOccupant(dt) {
     if (!occ) return;
@@ -341,8 +349,39 @@ export function installEstate(game) {
       game.police?.crime(occ.why === 'breakin' ? 'breakin' : 'trespass');
     }
   }
+  // ---- the clerk behind the counter inside a shop or bar
+  let clerk = null;
+  function placeClerk(d, it) {
+    const k = d.keeper || (d.keeper = { kind: it.kind === 'bar' ? 'bar' : 'mart', st: { id: 'in' + d.i }, shop: {} });
+    if (k.taken && k.robbedDay === game.sky.day) return; // nobody behind the counter today
+    k.taken = false;
+    const worker = game.population?.town.residents.find((r) => r.alive && r.work === d.i);
+    const look = worker ? game.lib.peopleIds[worker.look % game.lib.peopleIds.length] : game.lib.peopleIds[d.i % game.lib.peopleIds.length];
+    const h = new Human(game.lib, look);
+    const bar = it.kind === 'bar';
+    h.root.position.set(it.o.x + (bar ? 0 : it.W / 2 - 2), it.o.y + 0.05, it.o.z + (bar ? -it.D / 2 + 1.3 : it.D / 2 - 3.4));
+    h.root.rotation.y = 0; h.play('Idle_Loop', 0);
+    it.g.parent?.add(h.root);
+    k.h = h; k.st.keeper = worker ? game.population.fullName(worker) : 'the clerk'; k.shop.keeperFace = 0;
+    (game.storeKeepers = game.storeKeepers || []).push(k);
+    clerk = k;
+    if (worker && Math.random() < 0.6) setTimeout(() => clerk === k && hud.toast(`${k.st.keeper}: ${bar ? '"What can I get you?"' : '"Let me know if you need anything."'}`, 2.4), 900);
+  }
+  function dropClerk() {
+    if (!clerk) return;
+    const i = game.storeKeepers.indexOf(clerk); if (i >= 0) game.storeKeepers.splice(i, 1);
+    if (!clerk.taken) clerk.h.root.parent?.remove(clerk.h.root);
+    clerk = null;
+  }
+  function updateClerk(dt) {
+    if (!clerk || clerk.taken) return;
+    const hp = clerk.h.root.position, want = Math.atan2(player.pos.x - hp.x, player.pos.z - hp.z);
+    clerk.h.root.rotation.y += Math.atan2(Math.sin(want - clerk.h.root.rotation.y), Math.cos(want - clerk.h.root.rotation.y)) * Math.min(1, dt * 3);
+    clerk.h.update(dt);
+  }
   function leave() {
     if (!inside) return;
+    dropClerk();
     const { d, it } = inside;
     scene.remove(it.g);
     for (const p of insidePoints) interact.remove(p);
@@ -353,6 +392,7 @@ export function installEstate(game) {
     player.heading = Math.atan2(d.nx, d.nz);
     if (game.rig) game.rig.yaw = player.heading;
     inside = null; game.S.indoors = null; game.weather.indoors = false;
+    if (!d.b.ruined) swingDoor(d, 'close', null); // it swings shut behind you
   }
   for (const d of doors) {
     const p = propByBuilding.get(d.i);
@@ -366,6 +406,41 @@ export function installEstate(game) {
     // only owned homes show on the map
     if (p) interact.points[interact.points.length - 1].blip = null;
   }
+  // ---------------- a door you can see swing ----------------
+  // The street doors are painted into the facades, so when one is used a real one is put over it:
+  // a dark doorway and a leaf on its hinge that swings in (slowly when you walk, banging back on
+  // its hinge when you shoulder it), and shut again behind you when you come out.
+  const swings = [];
+  const leafMat = new THREE.MeshStandardMaterial({ color: 0x3b2a1e, roughness: 0.6 });
+  const voidMat = new THREE.MeshBasicMaterial({ color: 0x050403 });
+  function swingDoor(d, mode, done) { // mode: 'open' | 'bash' | 'close'
+    const b = d.b, wx = b.x + d.nx * (b.w / 2), wz = b.z + d.nz * (b.d / 2);
+    const g = new THREE.Group();
+    g.position.set(wx + d.nx * 0.06, (b.y ?? collision.surface(d.x, d.z, 50)) + 0.02, wz + d.nz * 0.06);
+    g.rotation.y = Math.atan2(d.nx, d.nz);
+    const hole = new THREE.Mesh(new THREE.PlaneGeometry(1.0, 2.15), voidMat); hole.position.set(0, 1.075, -0.01); g.add(hole);
+    const pivot = new THREE.Group(); pivot.position.set(-0.5, 0, 0); g.add(pivot);
+    const leaf = new THREE.Mesh(new THREE.BoxGeometry(0.98, 2.1, 0.05), leafMat); leaf.position.set(0.49, 1.05, -0.03); leaf.castShadow = true; pivot.add(leaf);
+    const knob = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), new THREE.MeshStandardMaterial({ color: 0xb08d3a, metalness: 1, roughness: 0.35 })); knob.position.set(0.88, 1.0, 0.03); pivot.add(knob);
+    scene.add(g);
+    const T = mode === 'bash' ? 0.14 : 0.45;
+    swings.push({ g, pivot, t: 0, T, mode, done, life: mode === 'close' ? T + 0.3 : T + 1.2 });
+    if (mode !== 'close') game.audio?.click?.(mode === 'bash' ? 1 : 0.5);
+  }
+  function updateSwings(dt) {
+    for (let i = swings.length - 1; i >= 0; i--) {
+      const s = swings[i]; s.t += dt;
+      const k = Math.min(1, s.t / s.T);
+      let a;
+      if (s.mode === 'close') a = 1.7 * (1 - k * k);
+      else if (s.mode === 'bash') a = k < 1 ? 1.95 * k : 1.95 - Math.sin(Math.min(1, (s.t - s.T) / 0.5) * Math.PI) * 0.3 * Math.exp(-(s.t - s.T) * 3); // bangs back off the stop
+      else a = 1.7 * (1 - Math.pow(1 - k, 3));
+      s.pivot.rotation.y = a;
+      if (k >= 1 && s.done) { const f = s.done; s.done = null; f(); }
+      if (s.t > s.life) { scene.remove(s.g); s.g.traverse((o) => o.geometry?.dispose()); swings.splice(i, 1); }
+    }
+  }
+
   // ---------------- walking into a door ----------------
   // Walk into a door and you open it and go in; run into it and you shoulder it open. A locked door
   // rattles when you walk into it, and gives way after two or three running hits (a break-in, as if
@@ -393,8 +468,9 @@ export function installEstate(game) {
     const p = propByBuilding.get(hit.i), run = player.speed > 5.4, k = kindOf(hit), home = k === 'home' || k === 'apartment';
     const open = lockState(hit, p) === 'open';
     if (open) {
-      if (run) { bash(hit, false); }
-      else if (push.t > 0.18) { game.audio?.click?.(0.6); tryDoor(hit, p); } // the handle turns and you go in
+      if (push.busy) return;
+      if (run) { push.busy = true; swingDoor(hit, 'bash', () => { push.busy = false; bash(hit, false); }); }
+      else if (push.t > 0.18) { push.busy = true; swingDoor(hit, 'open', () => { push.busy = false; tryDoor(hit, p); }); } // the handle turns, the door swings, you go in
       return;
     }
     // locked
@@ -405,7 +481,7 @@ export function installEstate(game) {
       game.audio?.thud?.(1 + hit.hits * 0.15);
       if (game.rig) game.rig.shake = Math.min(1, 0.35 + hit.hits * 0.15);
       player.vel.x += hit.nx * 2.5; player.vel.z += hit.nz * 2.5; // you bounce off it
-      if (hit.hits >= sturdy(hit)) { hit.hits = 0; bash(hit, true); }
+      if (hit.hits >= sturdy(hit)) { hit.hits = 0; push.busy = true; swingDoor(hit, 'bash', () => { push.busy = false; bash(hit, true); }); }
       else hud.toast(hit.hits === 1 ? '*THUD*' : '*THUD* ...it\'s giving', 1);
       if (home && someoneHome(hit) && hit.hits === 1) setTimeout(() => !inside && hud.toast('"Hey! Who\'s out there?!"', 2.2), 500);
     } else if (push.t > 0.25 && push.rattleT <= 0) {
@@ -484,10 +560,12 @@ export function installEstate(game) {
   if (P.home) { const p = props.find((x) => x.id === P.home); if (p) game.teleport(p.door.x + p.door.nx * 1.5, p.door.z + p.door.nz * 1.5, Math.atan2(p.door.nx, p.door.nz)); }
 
   return {
-    props, doors, realtor, enter, leave, get inside() { return inside; },
+    props, doors, realtor, enter, leave, kindOf, someoneHome, get inside() { return inside; },
     update(dt = 0) {
       updateOccupant(dt);
       walkIntoDoors(dt);
+      updateSwings(dt);
+      updateClerk(dt);
       // broken doors get fixed after about a game day
       const now = game.sky.day * 24 + game.sky.hour;
       if (this._t != null) { const gh = now - this._t; if (gh > 0 && gh < 48) for (const d of doors) if (d.broken > 0) d.broken -= gh; }

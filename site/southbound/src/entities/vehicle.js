@@ -119,6 +119,7 @@ export class Vehicle {
     this.vy = 0; this.speed = 0; this.steer = 0; this.braking = false;
     this.airborne = false; this.drowned = false; this.wheelSpin = 0;
     this.lean = 0; this.impact = 0; this.health = 100; this.maxHealth = 100; this.night = 0;
+    this.dirt = Math.random() * Math.random() * 0.55; // cars out in the world aren't showroom-clean
     this.nitro = 0; this.nitroTank = 1; this.spoiler = null;
     this.radius = w / 2 + 0.1;
   }
@@ -345,6 +346,7 @@ export class Vehicle {
       const u = this.bodyMat.userData.u;
       u.uBrake.value = this.braking ? 1 : 0;
       u.uLights.value = this.night;
+      if (u.uDirt) u.uDirt.value = this.dirt || 0;
       const on = this.siren ? 1 : 0, t = performance.now() * 0.008;
       u.uSirenR.value = on * (Math.sin(t) > 0 ? 1 : 0.05);
       u.uSirenB.value = on * (Math.sin(t) > 0 ? 0.05 : 1);

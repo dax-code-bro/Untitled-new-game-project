@@ -14,6 +14,16 @@
 import * as THREE from 'three';
 
 let level = 2; // 0 off (Phone), 1 the lighting only (Low), 2 everything
+// how soaked people are (0 dry .. 1 wet through): systems/splashes.js raises it in the rain
+export const soakUniform = { value: 0 };
+const SOAK_DECL = 'uniform float uSbSoak;';
+// wet cloth goes darker and loses its sheen; wet hair darker and glossy; wet skin glistens
+// (a material cloned from a shaded one carries its hook and is shaded again: declare and apply once)
+const soak = (dark, rough, tag, w = '1.0') => `#ifndef SB_SOAKED_${tag}
+  #define SB_SOAKED_${tag}
+  material.diffuseColor *= 1.0 - uSbSoak * ${dark.toFixed(2)} * (${w}); material.roughness = mix(material.roughness, ${rough.toFixed(2)}, uSbSoak * 0.75 * (${w}));
+  #endif`;
+const addSoak = (sh) => { sh.uniforms.uSbSoak = soakUniform; if (!sh.fragmentShader.includes(SOAK_DECL)) sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\n' + SOAK_DECL); };
 export function setBodyShadeQuality(q) { level = q.label === 'Phone' ? 0 : q.label === 'Low' ? 1 : 2; }
 export const bodyShadeLevel = () => level;
 
@@ -26,6 +36,9 @@ vec3 sbHairB = vec3(0.0, 1.0, 0.0);
 #endif
 #ifdef SB_SHEEN
 float sbSheenK = 1.0;
+#endif
+#ifdef SB_LEAF
+float sbLeafAO = 1.0;
 #endif
 #ifdef SB_SHEEN
 float sbCharlie(float r, float nh) { float a = r * r, ia = 1.0 / a; float s2 = max(1.0 - nh * nh, 0.0078125); return (2.0 + ia) * pow(s2, ia * 0.5) / (2.0 * PI); }
@@ -67,6 +80,17 @@ const DIRECT = /* glsl */ `
     // the edge of the hair against the light
     float sbBack = pow(saturate(dot(geometryViewDir, -directLight.direction)), 6.0);
     reflectedLight.directDiffuse += sbBack * 0.2 * directLight.color * material.diffuseColor;
+  }
+#elif defined(SB_LEAF)
+  {
+    float sbNL = dot(geometryNormal, directLight.direction);
+    // the lit face: thin leaves scatter a little light round the edge of the lit side
+    float sbFront = saturate((sbNL + 0.12) / 1.12);
+    reflectedLight.directDiffuse += sbFront * directLight.color * BRDF_Lambert(material.diffuseColor) * mix(1.0, sbLeafAO, 0.3);
+    reflectedLight.directSpecular += saturate(sbNL) * directLight.color * BRDF_GGX(directLight.direction, geometryViewDir, geometryNormal, material) * sbLeafAO;
+    // the far face: the sun through the leaf, yellowed by it, brightest looking towards the sun
+    float sbThru = saturate(-sbNL) * 0.5 + pow(saturate(dot(geometryViewDir, -directLight.direction)), 4.0) * 0.7;
+    reflectedLight.directDiffuse += sbThru * mix(0.35, 1.0, sbLeafAO) * directLight.color * material.diffuseColor * vec3(0.85, 1.0, 0.4) * 0.5;
   }
 #else
   reflectedLight.directSpecular += irradiance * BRDF_GGX( directLight.direction, geometryViewDir, geometryNormal, material );
@@ -113,10 +137,12 @@ void sbBump(inout vec3 n, float h, float k) {
 // (entities/clothing.js). `posVar` is an object-space position varying; `skinExpr` says where it's skin.
 export function shadeSkin(sh, posVar, skinExpr) {
   if (level === 0) return;
+  addSoak(sh);
   sh.fragmentShader = sh.fragmentShader
     .replace('#include <common>', '#include <common>\n' + PORES)
     .replace('#include <lights_physical_pars_fragment>', parsChunk())
     .replace('#include <lights_fragment_begin>', `
+  ${soak(0.05, 0.28, 'SKIN')}
   sbSkinK = ${skinExpr};
   ${level >= 2 ? `{
     // pores (~1.3 mm) and the skin's fine grain (~4 mm), each fading out once a pixel is too big to
@@ -133,9 +159,10 @@ export function shadeSkin(sh, posVar, skinExpr) {
 // cloth: the sheen at grazing angles (suits, shirts, trousers)
 export function shadeCloth(sh, clothExpr = '1.0') {
   if (level === 0) return;
+  addSoak(sh);
   sh.fragmentShader = sh.fragmentShader
     .replace('#include <lights_physical_pars_fragment>', parsChunk())
-    .replace('#include <lights_fragment_begin>', `sbSheenK = ${clothExpr};\n#include <lights_fragment_begin>`);
+    .replace('#include <lights_fragment_begin>', `${soak(0.38, 0.42, 'CLOTH', clothExpr)}\nsbSheenK = ${clothExpr} * (1.0 - uSbSoak * 0.7);\n#include <lights_fragment_begin>`);
 }
 
 // A person's own materials (shared by everyone wearing the same model; clones made for recolouring
@@ -155,9 +182,11 @@ export function shadePersonMaterial(m) {
     m.defines = { ...(m.defines || {}), SB_HAIR: '' };
     m.roughness = 0.6;
     chain(m, (sh) => {
+      addSoak(sh);
       sh.fragmentShader = sh.fragmentShader
         .replace('#include <lights_physical_pars_fragment>', parsChunk())
         .replace('#include <lights_fragment_begin>', `
+  ${soak(0.3, 0.3, 'HAIR')}
   #ifdef USE_MAP
   {
     // the strand direction: which way the texture's v runs across the surface
@@ -192,4 +221,52 @@ export function shadePersonMaterial(m) {
 export function shadePerson(root) {
   if (level === 0) return;
   root.traverse((o) => { if (!o.isMesh) return; for (const m of Array.isArray(o.material) ? o.material : [o.material]) shadePersonMaterial(m); });
+}
+
+// Leaves (world/vegetation.js): light through them from behind, canopies darker inside (the per-vertex
+// aSbAO the vegetation bakes), and no two leaves quite the same green. Chained after the wind shader.
+export function shadeLeaves(m) {
+  if (level === 0 || done.has(m)) return;
+  done.add(m);
+  m.defines = { ...(m.defines || {}), SB_LEAF: '' };
+  const prevKey = m.customProgramCacheKey?.() || '';
+  chain(m, (sh) => {
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>', '#include <common>\nattribute float aSbAO; varying float vSbAO; varying vec3 vSbVar;')
+      .replace('#include <begin_vertex>', `#include <begin_vertex>
+  vSbAO = aSbAO;
+  {
+    // a shade per tree and per clump of leaves: greener, yellower, darker, lighter
+    vec3 ip = vec3(0.0);
+    #ifdef USE_INSTANCING
+    ip = instanceMatrix[3].xyz;
+    #endif
+    vec3 q = floor(position * 1.4) + ip * 0.37;
+    float h1 = fract(sin(dot(q, vec3(12.99, 78.23, 37.71))) * 43758.55), h2 = fract(sin(dot(ip.xz, vec2(4.1, 7.3))) * 9631.7);
+    vSbVar = vec3(0.86 + 0.22 * h1 + 0.06 * h2, 0.9 + 0.16 * h1, 0.8 + 0.2 * h2) * (0.92 + 0.12 * h2);
+  }`);
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', '#include <common>\nvarying float vSbAO; varying vec3 vSbVar;')
+      .replace('#include <lights_physical_pars_fragment>', parsChunk())
+      .replace('#include <map_fragment>', '#include <map_fragment>\n  diffuseColor.rgb *= vSbVar;')
+      .replace('#include <lights_fragment_begin>', 'sbLeafAO = clamp(vSbAO, 0.0, 1.0);\n#include <lights_fragment_begin>')
+      .replace('#include <lights_fragment_end>', '#include <lights_fragment_end>\n  reflectedLight.indirectDiffuse *= mix(0.6, 1.0, sbLeafAO); reflectedLight.indirectSpecular *= sbLeafAO;');
+  }, prevKey + '-leaf');
+}
+
+// a canopy's own shade, per vertex: leaves deep inside and low down get less sky
+export function bakeCanopyAO(geo) {
+  if (geo.attributes.aSbAO) return;
+  const P = geo.attributes.position, n = P.count;
+  geo.computeBoundingBox();
+  const bb = geo.boundingBox, cx = (bb.min.x + bb.max.x) / 2, cy = (bb.min.y + bb.max.y) / 2, cz = (bb.min.z + bb.max.z) / 2;
+  const rx = Math.max(0.1, (bb.max.x - bb.min.x) / 2), ry = Math.max(0.1, (bb.max.y - bb.min.y) / 2), rz = Math.max(0.1, (bb.max.z - bb.min.z) / 2);
+  const ao = new Float32Array(n);
+  const ss = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+  for (let i = 0; i < n; i++) {
+    const dx = (P.getX(i) - cx) / rx, dy = (P.getY(i) - cy) / ry, dz = (P.getZ(i) - cz) / rz;
+    const t = Math.sqrt(dx * dx + dy * dy + dz * dz), up = (P.getY(i) - bb.min.y) / (2 * ry);
+    ao[i] = (0.55 + 0.45 * ss(0.15, 0.95, t)) * (0.8 + 0.2 * up);
+  }
+  geo.setAttribute('aSbAO', new THREE.BufferAttribute(ao, 1));
 }

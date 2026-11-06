@@ -8,6 +8,7 @@
 // with real rims and brake discs. Everything is built in code at load time:
 // no download, and every model has real-world proportions.
 import * as THREE from 'three';
+import { worldUniforms } from '../world/terrain.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { cabinLayout, buildInterior, wheelGeometryCab, dialMaterials, dialGeometry } from './cabin.js';
 
@@ -291,7 +292,8 @@ function bodySDF(s) {
 // ------------------------------------------------------------ materials
 const BODY_GLSL = /* glsl */ `
 uniform vec3 uPaint, uPaint2;
-uniform float uMetal, uLights, uBrake, uSirenR, uSirenB, uLivery, uTint, uLightK, uClear, uRust;
+uniform float uMetal, uLights, uBrake, uSirenR, uSirenB, uLivery, uTint, uLightK, uClear, uRust, uDirt, uWet;
+float sbFlake = 0.0;
 uniform vec4 uCab, uCabZ, uBody, uAxle, uHead, uTail, uMisc, uBar;
 varying vec3 vCarP; varying vec3 vCarN;
 vec3 sbAlb; vec3 sbEmit; float sbRough, sbMetal, sbCoat, sbGlassK;
@@ -403,6 +405,34 @@ void sbZones(){
     }
     sbAlb *= 1.0 - g * 0.9; sbCoat *= 1.0 - g; sbRough = mix(sbRough, 0.8, g);
   }
+  // metallic paint: flakes under the clear coat, tiny mirrors at random angles (a sparkle in the sun)
+  if (paint && uMetal > 0.3) sbFlake = uMetal;
+  // dirt: road film and dust from the sills up, mud thrown up behind the wheels; the roof and bonnet
+  // only gather it once the car's really filthy. Mud when it's wet, dust when it's dry
+  if (uDirt > 0.0) {
+    float dn = sbNoise(p * 9.0) * 0.6 + sbNoise(p * 31.0) * 0.4;
+    float low = clamp(1.0 - (p.y - uBody.w) / 0.55, 0.0, 1.0);
+    float spray = clamp(1.0 - dW / (uAxle.z + 0.55), 0.0, 1.0) * step(p.y, uAxle.z * 2.2 + uBody.w);
+    float top = n.y > 0.6 ? 0.2 : 0.0;
+    float m = clamp((low * 0.9 + spray * 0.8 + top) * uDirt * 1.6 - (1.0 - dn) * 0.55, 0.0, 1.0);
+    if (sbGlassK > 0.5) {
+      // a film of dust on the glass, but not in the arcs the wipers sweep on the windscreen
+      float wipe = 0.0;
+      if (n.z > 0.15) { vec2 q = vec2(ax - 0.32, p.y - belt); wipe = step(length(q), (roof - belt) * 0.95) * step(0.0, q.y); }
+      sbAlb = mix(sbAlb, vec3(0.16, 0.14, 0.11), m * 0.6 * (1.0 - wipe)); sbRough = mix(sbRough, 0.6, m * (1.0 - wipe));
+    } else {
+      vec3 dirtC = mix(vec3(0.33, 0.28, 0.21), vec3(0.19, 0.14, 0.09), uWet);
+      sbAlb = mix(sbAlb, dirtC, m); sbRough = mix(sbRough, mix(0.9, 0.5, uWet), m); sbCoat *= 1.0 - m * 0.9; sbMetal *= 1.0 - m; sbFlake *= 1.0 - m;
+    }
+  }
+  // rain: beads of water standing on the glass and the paint
+  if (uWet > 0.05 && n.y > -0.2) {
+    vec3 c = p * 38.0; vec3 ci = floor(c); float h = sbHash(ci);
+    float rr = length(fract(c) - 0.5 - (vec3(sbHash(ci + 3.1), sbHash(ci + 7.7), sbHash(ci + 1.3)) - 0.5) * 0.4);
+    float bead = (1.0 - smoothstep(0.08 + h * 0.12, 0.12 + h * 0.14, rr)) * step(0.35, h) * uWet;
+    if (sbGlassK > 0.5) { sbAlb += vec3(0.05, 0.055, 0.06) * bead; sbRough = mix(sbRough, 0.1, bead); }
+    else { sbRough = mix(sbRough, 0.04, bead); sbCoat = max(sbCoat, bead); }
+  }
 }
 `;
 
@@ -418,6 +448,7 @@ function bodyUniforms(s) {
     uMisc: V4(s.glassBack, s.box ? 0 : 1, s.grille, s.doorR),
     uBar: V4(s.bar ? s.roof + 0.008 : 0, s.bar === 'taxi' ? 2 : 1, s.stripe || 0, s.twoTone ? 1 : 0),
     uClear: { value: 0 }, uRust: { value: s.rust || 0 },
+    uDirt: { value: 0 }, uWet: worldUniforms.uWet, // (shared: the weather's wetness)
   };
 }
 
@@ -465,6 +496,9 @@ diffuseColor.rgb = sbAlb;`
       .replace('#include <common>', '#include <common>\n' + BODY_GLSL)
       .replace('#include <color_fragment>', zones)
       .replace('#include <roughnessmap_fragment>', 'float roughnessFactor = sbRough;')
+      .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
+  if (sbFlake > 0.0) { vec3 fc = floor(vCarP * 480.0); vec3 fj = vec3(sbHash(fc), sbHash(fc + 5.3), sbHash(fc + 9.1)) - 0.5;
+    normal = normalize(normal + fj * 0.32 * sbFlake * (1.0 - smoothstep(1.5, 7.0, length(vViewPosition)))); }`)
       .replace('#include <metalnessmap_fragment>', 'float metalnessFactor = sbMetal;')
       .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += sbEmit;')
       .replace('#include <lights_physical_fragment>', '#include <lights_physical_fragment>\n#ifdef USE_CLEARCOAT\nmaterial.clearcoat *= sbCoat;\n#endif');
