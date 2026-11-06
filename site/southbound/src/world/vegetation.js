@@ -433,6 +433,8 @@ export async function createVegetation(hm, quality, scene, collision, cityBlocks
   return {
     placed: inst.length,
     cover,
+    // the trees for the local light capture (core/gi.js): the near 3D set and the far impostors
+    giMeshes: () => [...nearBark, ...nearLeaves, ...impMeshes],
     // every tree and bush: [variant id, x, y, z, rotation, scale] (exported to the Unity project)
     list: () => inst.filter((t) => t.k).map((t) => [variants[t.v].id, t.x, t.y, t.z, t.rot, t.k]),
     // take out every tree and bush on a lot (a shop or workshop put up after the woods grew), trunks and all

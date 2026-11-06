@@ -96,9 +96,12 @@ export class Player {
     const dl = Math.hypot(dx, dz);
     if (dl > 1e-3) { dx /= dl; dz /= dl; }
     this.aiming = !!a.aim && !this.swimming;
-    const top = this.swimming ? 2.2 : this.aiming ? 2.4 : a.walk ? 1.7 : a.sprint ? 7.2 : 4.4;
+    // the ground decides too (systems/footing.js): steep, slick, deep or narrow footing slows you
+    const F = this.footing && !this.swimming && dt > 0 ? this.footing.before(this, dx, dz, mag, a, dt) : null;
+    let top = this.swimming ? 2.2 : this.aiming ? 2.4 : a.walk ? 1.7 : a.sprint ? 7.2 : 4.4;
+    if (F) top = Math.min(top, Math.max(1.7, 7.2 * F.sprintCap)) * F.speed;
     const want = mag * top;
-    const accel = this.grounded || this.swimming ? 14 : 3;
+    const accel = (this.grounded || this.swimming ? 14 : 3) * (F ? F.accel : 1);
     this.vel.x += clamp(dx * want - this.vel.x, -accel * dt, accel * dt);
     this.vel.z += clamp(dz * want - this.vel.z, -accel * dt, accel * dt);
     if (this.aiming) this.heading += wrapAngle(camYaw - this.heading) * Math.min(1, dt * 18);
@@ -111,6 +114,7 @@ export class Player {
       if (!this.runJump) this.h.play('Jump_Start', 0.1, 1.5, true);
     }
     this.vel.y -= 18 * dt;
+    const px = this.pos.x, pz = this.pos.z, py = this.pos.y;
     this.pos.x += this.vel.x * dt;
     this.pos.z += this.vel.z * dt;
     this.pos.y += this.vel.y * dt;
@@ -123,6 +127,7 @@ export class Player {
       this.pushT += dt;
       if (rise > 0.4 && rise <= 2.5 && (a.jump || this.pushT > (rise > 1.3 ? 0.3 : 0.1)) && this.tryMantle(r, collision)) return this.update(0, a, camYaw, hm, collision, armed);
     } else this.pushT = 0;
+    if (F) this.footing.after(this, px, pz, py, a, dt); // stop at ledges, slip back off what's too steep
     const prevY = this.pos.y;
     const ground = collision.surface(this.pos.x, this.pos.z, this.pos.y);
     const wl = hm.waterLevel(this.pos.x, this.pos.z);

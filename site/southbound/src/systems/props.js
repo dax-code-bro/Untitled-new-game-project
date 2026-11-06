@@ -95,6 +95,7 @@ export function installProps(game) {
     const d = (defs[type] = TYPES[type]());
     const im = new THREE.InstancedMesh(d.g, mat, list.length);
     im.castShadow = true; im.receiveShadow = true; im.frustumCulled = false; im.userData.noReflect = true;
+    im.userData.substrate = { cone: 'plastic', can: 'sheet-metal', news: 'sheet-metal', crate: 'wood', barrel: 'sheet-metal', chair: 'plastic' }[type] || 'plastic'; // for the substrate scanner and the wear
     list.forEach((it, i) => { it.idx = i; it.im = im; it.d = d; });
     meshes[type] = im; scene.add(im);
   }

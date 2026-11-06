@@ -1,5 +1,5 @@
 // Start screen (platform + GPU selection) and the settings panel.
-import { GPU_CHOICES, PRESETS, detectGPU, saveSettings, SOFTWARE_HINT } from '../settings.js';
+import { GPU_CHOICES, PRESETS, detectGPU, saveSettings, SOFTWARE_HINT, probeGPU, IDLE_CARD_HINT } from '../settings.js';
 
 const $ = (s) => document.querySelector(s);
 
@@ -31,6 +31,15 @@ export function setupMenu(settings, onPlay) {
     // the phone path shows it too
     const ph = document.getElementById('step-phone'); if (ph) { const w2 = warn.cloneNode(true); ph.insertBefore(w2, ph.children[1] || null); }
   }
+  // the browser may be on the built-in graphics with a faster card sitting idle: say so up front
+  probeGPU().then((p) => {
+    if (!p.idleCard || gpu.software) return;
+    const warn = document.createElement('p');
+    warn.className = 'swwarn';
+    warn.style.cssText = 'margin:10px 0;padding:10px 12px;border-radius:8px;background:rgba(190,140,30,0.2);border:1px solid rgba(255,200,90,0.55);color:#ffeccc;font-size:13px;line-height:1.45;max-width:640px';
+    warn.textContent = '⚠ ' + IDLE_CARD_HINT(p.card);
+    const det = $('#detected'); det.parentNode.insertBefore(warn, det.nextSibling);
+  });
   const presetsEl = $('#presets');
   for (const k of ['low', 'medium', 'high', 'ultra', 'cinematic']) {
     const b = document.createElement('button');

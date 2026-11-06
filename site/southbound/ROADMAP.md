@@ -140,6 +140,38 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 - [x] Loading screen with in-game art, tips and progress
 - [x] Fewer touch buttons: ◎ interact replaces the car button; map, phone, arsenal, free cam moved to pause
 
+## Phase 1.18 — Light, wear and footing (all-out attention to detail)
+
+- [x] Dynamic lighting (`src/core/gi.js`, Medium and up): the surroundings (ground, buildings,
+      roads, water, sky, trees) are captured round the camera into a small cube, one face a frame,
+      and filtered into the reflections and ambient light, so paint, glass and metal reflect the
+      real street and the ambient takes the colour of where you are; recaptured on a timer and
+      straight away when you've moved; the ground's colour bounces up; after dark the nearest
+      street lamps are real lights, your car has a pair of headlights, gunfire lights the street
+- [x] Micro-surface imperfection on every stock PBR material (`src/core/imperfect.js`): patchy
+      roughness, hairline scratches in the highlights, dust on top faces, a faint orange-peel up
+      close; far pixels cost one noise lookup
+- [x] Substrate scanner (`src/core/substrate.js`): one table, one `scan()` for any hit, object,
+      material or patch of ground (tags, then names, then the surface's own physics, then the
+      terrain's layers); drives bullet penetration and holes, impact debris (sparks, splinters,
+      shards, grit, dirt, splashes, chips in the thing's own paint), footsteps, grip and wear.
+      Press N to see what it reads under the crosshair and underfoot
+- [x] Material-agnostic abrasion (`src/core/abrasion.js`): each mesh's real edges found once (in a
+      Web Worker), convex and concave, as exact distances; one shader wears each substrate its own
+      way (painted metal chips to steel with rust in the joints, wood pales, paint rubs through to
+      timber, plastic whitens, stone chips, glass frosts, fabric fades, leather polishes, rubber greys)
+- [x] Footsteps synthesized from each substrate's sound (strike, ring, knock, crunch, softness, wet)
+- [x] Contextual locomotion safety (`src/systems/footing.js`): stop at ledges and cliff edges
+      unless sprinting or jumping (slide along them instead); slopes limited by grip (dry rock vs
+      wet grass), slipping back off what's too steep, a careful pace down steep ground; slick
+      surfaces take acceleration and sprint away; wading slows with depth; narrow footing up high
+      is walked
+- [x] Hardware check: `probeGPU()` asks WebGPU for the high-performance adapter and warns when the
+      browser is on built-in graphics while a faster card idles; shown on the menu and in the FPS
+      readout
+- [x] `ARCHITECTURE.md`: WebGPU, GI, abrasion, KTX2/LOD streaming, workers + SharedArrayBuffer,
+      with what's done, what's next, and code
+
 ## Phase 1.17 — Grass
 
 - [x] The thin-blade carpet (flat green ribbons, ground showing between them) is gone
