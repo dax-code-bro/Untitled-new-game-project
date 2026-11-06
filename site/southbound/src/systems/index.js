@@ -24,6 +24,7 @@ import { installCrew } from './crew.js';
 import { installMissionsPlus } from './missionsplus.js';
 import { installAviation } from './aviation.js';
 import { installGrooming } from './grooming.js';
+import { installDust } from './dust.js';
 
 export function installSystems(game) {
   const list = [];
@@ -54,6 +55,7 @@ export function installSystems(game) {
   add('driving', installDriving(game)); // fuel, skid marks, the horn, hot-wiring and alarms, speeding tickets
   add('ambient', installAmbient(game)); // pigeons, umbrellas, joggers, phones, food carts
   add('splashes', installSplashes(game)); // wakes, spray, wading rings, rising fish
+  add('dust', installDust(game)); // dust off dry ground: cars, feet, hooves, aircraft, dust devils
   add('wilds', installWilds(game)); // blood trails, crows, ducks, poaching, the wind
   add('prints', installPrints(game)); // boot, hoof and paw prints and tyre tracks in soft ground
   add('foodPlus', installFoodPlus(game)); // food that goes off, coffee, loyalty card, today's special

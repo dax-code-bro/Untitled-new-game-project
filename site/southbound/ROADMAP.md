@@ -140,6 +140,23 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 - [x] Loading screen with in-game art, tips and progress
 - [x] Fewer touch buttons: ◎ interact replaces the car button; map, phone, arsenal, free cam moved to pause
 
+## Phase 1.46 — Dust (graphics milestone G9)
+
+What dry ground gives up when something moves over it (`src/systems/dust.js`):
+- [x] Cars and trucks off the pavement (dirt, sand, the forest floor, dry grass) throw a rolling
+      cloud off the back wheels that hangs, spreads and drifts off with the wind; more at speed,
+      a lot more when you slide it
+- [x] Traffic and police cars do it too, so a car on a dirt track shows from a long way off
+- [x] Running feet kick up small puffs on dry soil and sand; so do galloping mustangs and deer
+- [x] A plane's prop blast on a dry strip; a helicopter's downwash blows a ring of dust out
+      from under it
+- [x] Dust devils: on hot, clear afternoons a whirl of dust wanders across open dry ground
+- [x] Rain lays the dust: none off wet ground, and it comes back as things dry out
+- [x] Coloured by the ground it came off (pale sand, tan soil, grey-brown forest floor); lit by
+      the sun and sky (dark at night), glowing when you look through it towards a low sun
+- [x] Drawn as one instanced pool of soft puffs that face whatever camera draws them (in the
+      shader), sized by the quality preset
+
 ## Phase 1.45 — Clothes and the barber, batch one (feature batch F13)
 
 Clothes that get lived in (`src/systems/grooming.js`, the mud and blood drawn in
