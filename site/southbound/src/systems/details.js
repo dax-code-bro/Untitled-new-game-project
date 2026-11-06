@@ -54,21 +54,24 @@ export function installDetails(game) {
     bi = (bi + 1) % MAXB; brass.count = Math.min(MAXB, Math.max(brass.count, bi === 0 ? MAXB : bi));
   };
 
-  // ---------------- hair + stubble
-  const head = player.h.model.getObjectByName('head');
-  const groomMat = new THREE.MeshStandardMaterial({ color: 0x1a1410, roughness: 1, transparent: true, opacity: 0, depthWrite: false });
-  const beard = new THREE.Mesh(new THREE.SphereGeometry(0.098, 18, 10, Math.PI * 0.15, Math.PI * 0.7, Math.PI * 0.52, Math.PI * 0.3), groomMat);
-  const hairMat = groomMat.clone();
-  const hair = new THREE.Mesh(new THREE.SphereGeometry(0.103, 18, 10, 0, Math.PI * 2, 0, Math.PI * 0.42), hairMat);
-  for (const m of [beard, hair]) { m.userData.noHit = true; m.castShadow = false; player.h.root.add(m); }
-  const _h = new THREE.Vector3();
+  // ---------------- hair and facial hair
+  // (painted on the skin by the outfit shader, entities/clothing.js: stubble that grows into a beard
+  // over a week in the shape the barber left; buzzed or shaved hair hides the hair mesh; dye recolours
+  // it. The styles are chosen in the barber's chair, systems/grooming.js)
+  P.groom.style = P.groom.style || { beard: 'full', hair: 'short', dye: null };
+  if (P.groom.style.hair === 'long') P.groom.style.hair = 'short'; // (an older style, dropped)
+  const DYE = { black: 0x141110, brown: 0x4a3020, grey: 0x9a958e, blond: 0xc9a868, red: 0x7a3418 };
+  const BEARDS = { full: 0, goatee: 1, moustache: 2, stubble: 3, clean: 4 };
   const applyGroom = () => {
-    const b = Math.min(1, P.groom.beard / 7), hr = Math.min(1, P.groom.hair / 20);
-    groomMat.opacity = b * 0.85;
-    beard.scale.setScalar(1 + b * 0.18);
-    hairMat.opacity = hr * 0.9;
-    hair.scale.set(1 + hr * 0.12, 1 + hr * 0.25, 1 + hr * 0.12);
+    const st = P.groom.style, fit = game.outfitter;
+    if (!fit?.setGroom) return;
+    fit.setGroom({
+      dens: Math.min(1, P.groom.beard / 7), style: BEARDS[st.beard] ?? 0,
+      buzz: st.hair === 'buzz', shaved: st.hair === 'shaved', slick: st.hair === 'slicked',
+      beardC: st.dye ? DYE[st.dye] : 0x2c1f16, dye: st.dye ? DYE[st.dye] : null,
+    });
   };
+  game.groom = { apply: () => applyGroom(), DYE };
   applyGroom();
   game.barbers = [[CITY.x0 + 2 * CITY.pitch + 14, CITY.z0 - 6, 'Slick\'s Barbershop'], [TOWN.x0 + TOWN.pitch + 10, TOWN.z0 + TOWN.nz * TOWN.pitch + 4, 'Mill Creek Barber']];
   for (const [x, z, name] of game.barbers) {
@@ -175,7 +178,6 @@ export function installDetails(game) {
       }
       // grooming: grows with each new day
       if (game.sky.day !== P.groom.day) { const dd = Math.max(0, game.sky.day - P.groom.day); P.groom.day = game.sky.day; P.groom.hair += dd; P.groom.beard += dd; applyGroom(); }
-      if (head) { player.h.root.updateMatrixWorld(true); head.getWorldPosition(_h); player.h.root.worldToLocal(_h); beard.position.set(_h.x, _h.y + 0.01, _h.z + 0.012); hair.position.set(_h.x, _h.y + 0.07, _h.z - 0.006); }
       for (const t of game._poles || []) t.offset.y += dt * 0.25;
       // repairs: once a crack is old enough, someone comes to fix it
       const now = game.sky.day * 24 + game.sky.hour;

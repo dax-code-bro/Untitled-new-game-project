@@ -117,6 +117,11 @@ async function start() {
 
 async function createGame(progress) {
   installAtmosphere();
+  // The browser is drawing without the graphics card (hardware acceleration off, or the GPU
+  // blocklisted): whatever preset was saved, start on Low at a reduced resolution so it's at least
+  // playable, and say how to fix it (automated test browsers are left on the preset they asked for)
+  const SOFT_START = (() => { try { return detectGPU().software && !navigator.webdriver; } catch (e) { return false; } })();
+  if (SOFT_START && !['phone', 'low'].includes(settings.preset)) settings.preset = 'low';
   const q = resolveQuality(settings);
   installImperfections(q); // micro-surface wear on every PBR material (before anything compiles)
   installCloudShadows(q); // the clouds' shadows on every lit surface (core/cloudshadow.js)
@@ -749,6 +754,8 @@ async function createGame(progress) {
     } else if (S.mode === 'foot') {
       needs.update(dt, a);
       if (S.limp) { a.sprint = false; if (a.moveX) a.moveX *= 0.5; if (a.moveY) a.moveY *= 0.5; }
+      if (S.noSprint) a.sprint = false; // winded, concussed (systems/medical.js)
+      if (a.sprint && S.loadK < 1) { if (a.moveX) a.moveX *= S.loadK; if (a.moveY) a.moveY *= S.loadK; } // the weight of a plate carrier
       player.update(dt, a, rig.yaw, hm, collision, armed && combat.def.cat === 'pistol');
       footing.steps(player, dt);
       camera.getWorldDirection(aimDir);
@@ -1177,11 +1184,24 @@ async function createGame(progress) {
   const SOFTWARE = (() => { try { return detectGPU().software; } catch (e) { return false; } })();
   function perfGuard() {
     const now = performance.now();
-    if (!settings.dynamicRes || now < guard.next || S.paused || S.indoors || guard.level >= 4) return; // part of adaptive quality
+    if (now < guard.next || S.paused || S.indoors || guard.level >= 5) return;
+    // part of adaptive quality; but a slide show is rescued even with dynamic resolution off
+    if (!settings.dynamicRes && S.fps >= 8 && guard.level < 4) return;
     guard.next = now + 2000;
     if (S.fps >= 24) { guard.low = 0; return; }
     if (++guard.low < 3) return; // six seconds in a row
     guard.low = 0; guard.next = now + 5000;
+    if (guard.level >= 4) {
+      // everything's already off and it's still a slide show: the last resort. Fewer pixels, a
+      // shorter view, and start on the lightest preset next time
+      if (S.fps >= 6) return;
+      guard.level = 5;
+      dynScale = Math.min(dynScale, 0.45); applySize();
+      settings.drawDistance = Math.min(settings.drawDistance, 0.6);
+      settings.preset = SOFTWARE ? 'phone' : 'low'; saveSettings(settings);
+      hud.toast(SOFTWARE ? SOFTWARE_HINT : 'Still very slow: resolution and view distance turned right down. The game will start on Low next time. If your computer has a graphics card, make sure the browser is using it.', 14);
+      return;
+    }
     if (S.fps < 8 && guard.level < 3) { // a slide show: take everything off at once
       water.setReflections?.(false); CAR_VIS_R *= 0.65;
       if (baseRatio() > 1.01) { settings.resolution = 'native'; q.maxPixelRatio = Math.min(q.maxPixelRatio, 1); saveSettings(settings); applySize(); }
@@ -1226,6 +1246,8 @@ async function createGame(progress) {
   last = performance.now();
   $('#hud').classList.add('show');
   { const ld = $('#loading'); ld.classList.add('fadeout'); setTimeout(() => ld.classList.remove('show', 'fadeout'), 700); }
+  // no graphics card in use: fewer pixels from the first frame, and how to fix it
+  if (SOFT_START) { dynScale = 0.6; applySize(); setTimeout(() => hud.toast(SOFTWARE_HINT, 16), 1500); }
   requestAnimationFrame(frame);
 
   // debug / automation hooks (used by the playtest script)
