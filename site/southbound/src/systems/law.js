@@ -202,6 +202,7 @@ export function installLaw(g) {
       police.clear();
       S.money = Math.max(0, S.money - c.fine);
       L.bounty = 0; L.nextHunt = 0;
+      if (g.missions?.active) g.missions.fail('You were arrested');
       sky.day += c.days; sky.hour = 9.5;
       const at = g.PRECINCT;
       player.pos.set(at.x, collision.surface(at.x, at.z, 200), at.z);

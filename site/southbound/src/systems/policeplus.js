@@ -128,7 +128,7 @@ export function installPolicePlus(game) {
   function wrapRadio() {
     if (!police.onShout || police.onShout.sbWrapped) return;
     const raw = police.onShout;
-    const w = (line) => { if (police.nearPolice(90) || scannerOwned()) raw(line); };
+    const w = (line) => { if (police.nearPolice(90) || scannerOwned() || game.crew?.radioHere?.()) raw(line); };
     w.sbWrapped = true; police.onShout = w;
   }
 

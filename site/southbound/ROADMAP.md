@@ -140,6 +140,114 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 - [x] Loading screen with in-game art, tips and progress
 - [x] Fewer touch buttons: ◎ interact replaces the car button; map, phone, arsenal, free cam moved to pause
 
+## Phase 1.44 — Flying, batch one (feature batch F12)
+
+In the aircraft (`src/entities/craft.js`):
+- [x] Fuel: it burns with the power you use; run dry and the engine stops (glide a plane in,
+      autorotate a helicopter down)
+- [x] Stalls: too slow in the air and the wing quits; the nose drops
+- [x] Landing gear (G) and flaps (J): the gear up is faster but a belly landing wrecks the plane;
+      flaps let you fly slower and land shorter
+- [x] The wind carries you (the real wind, the one the windsock and the hunters' arrow show) and
+      storms throw you about
+- [x] Touchdowns measured: how hard you hit and what on
+
+At the controls and at the field (`src/systems/aviation.js`):
+- [x] A flight panel: airspeed in knots, height in feet, heading, climb rate, fuel, gear, flaps
+- [x] Warnings: STALL, PULL UP, LOW FUEL, ENGINE OUT
+- [x] Damage you can see: a smoking engine when it's hurt, an engine that can quit when it's bad
+- [x] Landings rated: butter, smooth, firm, hard, belly
+- [x] The radio at Redgrass: cleared for departure (with the wind), in the pattern, welcome back
+- [x] Runway edge and threshold lights after dark; a windsock that shows the real wind
+- [x] Nav lights (red, green) and a white strobe on every aircraft near you at night
+- [x] Refuelling: stop on the fuel pad at Redgrass, or by a marina pier in a seaplane
+- [x] Flight school at Redgrass: take-off, the circuit and landing, with medals, and a pilot's
+      licence at the end (the flying jobs pay 15% more)
+- [x] Low flying over Port Calvera is against the law: under about 250 ft for long and the
+      police have your tail number
+- [x] Flight time, highest altitude and landings in your stats
+
+## Phase 1.43 — Story missions, batch one (feature batch F11)
+
+- [x] Medals (`src/systems/missionsplus.js`): gold, silver or bronze for every mission, from three
+      things: inside the par time (worked out from the mission's own steps), little damage taken,
+      and no police on you that the mission didn't ask for. Each is +10% pay; your best is kept
+- [x] Checkpoints: fail partway and press F within 15 seconds to retry from the step you were on
+      (from the theft, if it was the delivery that went wrong), not from the top
+- [x] Hints: fail the same mission twice and you get a tip for the step that's beating you
+- [x] Failing for a reason: you died, you were arrested, the mission vehicle was wrecked
+- [x] Contacts text you when their next mission is ready, trust you more with every job (more
+      for gold), and have their own words when you finish
+- [x] Act title cards when a new act starts, the papers notice, and an ending card
+- [x] The phone's Story tab: medals and trust on every mission, GPS to the next one, replay any
+      finished mission for a better medal (a quarter of the pay), abandon the job you're on
+- [x] Gold medal milestones: 5, 15 and 30 golds pay out
+- [x] Twelve side jobs from people around Calvera (a yellow ? on the map), opening up as the story
+      goes on: a lost retriever in Pinewood Hollow, a drifting skiff, a wedding run, a crawfish
+      boil, a gator in the motel pool, a repo job, a storm chaser, night fishing, a record
+      collector, moving day, air mail and closing time at the Rusty Anchor
+
+## Phase 1.42 — The Gulf Line crew, batch one (feature batch F10)
+
+Crew (`src/systems/crew.js`, on the crew's own menu at the hideout):
+- [x] Loyalty for each of the fourteen, and moods (happy, content, grumbling, angry, nervous,
+      hurting, out on a job, locked up) that come from how you treat them and what's going on
+- [x] Four skills each (driving, shooting, stealth, smarts), different for every member, that
+      grow with the work they do
+- [x] A Crew tab: everyone's mood, loyalty, skills and jobs done
+- [x] Payday every three days (their cut, by head); skip it and they grumble, then loyalty drops
+- [x] Gifts (once a day each), and a favour each per week from what you carry (fish, scrap metal,
+      game meat, a pelt, a loan they pay back with interest)
+- [x] Birthdays: Rico texts you the morning of, and a present means more that day
+- [x] The gang's respect: Unknown, Known, Respected, Feared, Legend, from jobs, raids and
+      running rivals off their turf; it unlocks the bigger upgrades and makes the paper
+- [x] Crew who stay unhappy too long take off for a couple of days
+
+Crew jobs (a Jobs tab):
+- [x] Five jobs to send people on: a smuggling run, the chop shop, a card game, collecting
+      debts, a fishing charter. The best free person for it goes; they're gone for hours of game
+      time and their skills, loyalty and the heat decide how it goes
+- [x] Their cut goes into the hideout stash and they text you how it went (cards can lose)
+- [x] Injuries (hurt crew rest, sitting, for a day) and arrests: bail them out from the crew menu,
+      or they sit three days and come home sour
+- [x] Gang heat: every job raises it, it cools a little each day, and high heat means more arrests
+
+The hideout:
+- [x] Rico's morning briefing: a tip a day (where the white buck was seen, which turf is soft,
+      where the police are doubling up)
+- [x] Talk round the fire at night: the crew rib each other
+- [x] They greet you when you get back, notice when you're hurt (Marisol) or have the police on
+      you (Jayden)
+- [x] A day and a night: some are out on errands in the afternoon; at night most sleep, while
+      Big O and Jayden keep watch and Marisol stays on call
+- [x] Three chores a day (chop firewood, haul water, mend the fence): a few dollars and the crew
+      notices
+- [x] Eight upgrades you can see: bunkhouse beds (wake fully rested and healed), an outdoor
+      kitchen (a free meal a day), a police radio, floodlights, a gate and fence, an armory rack
+      (restock every gun once a day), a watchtower and a garage bay (half-price repairs)
+- [x] A cash stash: money there is safe from muggers, arrests and hospital bills
+
+Rivals:
+- [x] Gangs you've run off their turf come for the hideout at night while you're there: four of
+      them up the road, the crew takes cover, and beating them off earns respect
+- [x] While you're away they can hit the stash (unless the gate's built; floodlights halve it)
+- [x] A Turf tab (the three gangs, how often you've hit them) and truces: a week's peace for
+      $1,500, and their turf warns you instead of shooting
+
+## Phase 1.41 — Real grass blades (no more crossed cards)
+
+- [x] The meadow and plains grass round you is now real strands (`src/world/grasscards.js`), not
+      painted cards stood up in crosses (from above those read as flat stars). Every tuft is a
+      bunch of individual blades rooted over a small patch, each tapering to a point and leaning
+      and curling its own way, with a darker root, a pale midrib, darker edges, bleached tips on
+      some, a few dead straw blades and the odd seed stalk
+- [x] Three rings round the camera, all blades: thin and packed tight close up (5-13 mm), then
+      wider blades further apart, out to the edge of the grass, so the ground stays covered at
+      every distance. More blades per tuft on the higher presets
+- [x] Everything the cards did still works: the wind, parting round you and your vehicle, the
+      ground's own grass colour, straw on the dry plains, the lawn and path masks, light through
+      the blades from behind
+
 ## Phase 1.40 — People and cars in the rain (graphics milestone G8)
 
 - [x] Soaked through (`src/entities/bodyshade.js`): out in the rain everyone gets wetter over a
