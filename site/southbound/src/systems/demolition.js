@@ -458,8 +458,8 @@ export function installDemolition(game) {
     for (const sm of site.smoke) scene.remove(sm);
     if (site.light) site.light.intensity = 0;
     if (site.engine) scene.remove(site.engine.v.group);
-    for (const c of site.crew) { if (c.hose) scene.remove(c.hose, c.mist); scene.remove(c.h.root); }
-    for (const m of site.family) scene.remove(m.h.root);
+    for (const c of site.crew) { if (c.hose) scene.remove(c.hose, c.mist); scene.remove(c.h.root); c.h.freeGpu?.(); }
+    for (const m of site.family) { scene.remove(m.h.root); m.h.freeGpu?.(); }
     if (site.van) scene.remove(site.van.v.group);
     Object.assign(site, { flames: [], smoke: [], light: null, crew: [], family: [], engine: null, van: null, fire: 0 });
   }
@@ -476,7 +476,7 @@ export function installDemolition(game) {
     clearFire(site);
     if (site.group) { scene.remove(site.group); site.group.traverse((o) => { if (o.isMesh) o.geometry.dispose(); }); }
     if (site.shell) scene.remove(site.shell);
-    for (const w of site.workers || []) scene.remove(w.h.root);
+    for (const w of site.workers || []) { scene.remove(w.h.root); w.h.freeGpu?.(); }
     if (site.pickup) scene.remove(site.pickup.group);
     showHouse(site.bi, true);
     site.b.ruined = false; site.b.hp = 100;
@@ -500,7 +500,7 @@ export function installDemolition(game) {
       if (R) driveAlong(site.pickup, R.e, Math.max(0, Math.min(R.e.len, R.s - 9)), 1); else { site.pickup.pos.set(b.x + 8, collision.surface(b.x + 8, b.z, b.y + 3), b.z); site.pickup.sync?.(0); }
       for (const w of site.workers) w.h.root.position.set(b.x + (Math.random() - 0.5) * 4, b.y, b.z + (b.d / 2 + 3) * (site.d?.nz || 1));
     } else if (!work && site.workers) {
-      for (const w of site.workers) scene.remove(w.h.root);
+      for (const w of site.workers) { scene.remove(w.h.root); w.h.freeGpu?.(); }
       site.workers = null; scene.remove(site.pickup.group); site.pickup = null;
     }
     if (site.workers) for (const w of site.workers) {

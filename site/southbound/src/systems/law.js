@@ -197,7 +197,7 @@ export function installLaw(g) {
     } else {
       // released
       scene.remove(c.car.group); c.car.dispose?.();
-      if (cop.scripted && !peds.list.includes(cop)) scene.remove(cop.h.root);
+      if (cop.scripted && !peds.list.includes(cop)) { scene.remove(cop.h.root); cop.h.freeGpu?.(); }
       cop.scripted = false;
       police.clear();
       S.money = Math.max(0, S.money - c.fine);

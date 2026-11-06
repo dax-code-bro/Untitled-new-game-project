@@ -12,6 +12,7 @@ import { initKTX2 } from './assets/ktx2.js';
 import { setWorld as setSubstrateWorld, describe as describeSubstrate, SUBSTRATES } from './core/substrate.js';
 import { createFooting } from './systems/footing.js';
 import { setupMenu, setupSettingsPanel } from './ui/menu.js';
+import { installRecovery } from './ui/recovery.js';
 import { buildRoadGraph, CITY, TOWN, regionAt } from './world/layout.js';
 import { Heightmap } from './world/heightmap.js';
 import { createTerrain, makeWorldTextures, worldUniforms } from './world/terrain.js';
@@ -374,6 +375,10 @@ async function createGame(progress) {
     exitVehicle: () => { if (S.mode === 'car') exitVehicle(); },
     vehicle: () => S.vehicle,
   };
+  // a graphics driver reset, a preset far too heavy, a broken frame: recover and say so, instead of
+  // a frozen picture or a page that just reloads (ui/recovery.js)
+  const recovery = installRecovery({ canvas, settings, saveSettings, PRESETS, save: () => career.save(), pause: game.pause, automated: AUTOMATED });
+  game.recovery = recovery;
   // public services first, so jobs, arrests and the hospital use the real buildings
   const HOSPITAL = { x: CITY.x0 + CITY.nx * CITY.pitch + 24, z: CITY.z0 + 2 * CITY.pitch, name: 'Port Calvera Medical Center' };
   const PRECINCT = { x: CITY.x0 - 24, z: CITY.z0 + 1 * CITY.pitch, name: 'Calvera PD · Central Precinct' };
@@ -1198,18 +1203,11 @@ async function createGame(progress) {
     if (++guard.low < 3) return; // six seconds in a row
     guard.low = 0; guard.next = now + 5000;
     // a preset far heavier than this machine can draw (Ultra on a laptop's built-in graphics):
-    // turning pieces off won't save it. Save the game and come straight back on the preset that
-    // fits (once a session, so it can never loop)
-    let auto = null; try { auto = sessionStorage.getItem('sbAutoPreset'); } catch (e) { /* private mode */ }
-    if (S.fps < 4 && !AUTOMATED && !auto && presetOverReach(settings.preset, GPU_INFO) >= 1) {
-      try { sessionStorage.setItem('sbAutoPreset', '1'); } catch (e) { /* ignore */ }
-      const was = PRESETS[settings.preset]?.label, to = GPU_INFO.preset === 'phone' && !GPU_INFO.mobile ? 'low' : GPU_INFO.preset;
-      settings.preset = to; settings.dynamicRes = true; settings.resolution = 'native'; saveSettings(settings);
-      try { game.career?.save?.(); } catch (e) { /* the autosave has it anyway */ }
-      guard.level = 5;
-      hud.toast(`${was} is too heavy for ${GPU_NAME}: restarting on ${PRESETS[to].label}. Your game is saved. (Settings > Graphics to change it.)`, 8);
-      setTimeout(() => location.reload(), 3000);
-      return;
+    // turning pieces off won't save it. Ask, plainly, whether to restart on the preset that fits
+    // (once a session; a silent reload looked exactly like a crash). Kept: the steps below go on
+    if (S.fps < 4 && presetOverReach(settings.preset, GPU_INFO) >= 1) {
+      const to = GPU_INFO.preset === 'phone' && !GPU_INFO.mobile ? 'low' : GPU_INFO.preset;
+      if (recovery.offerLighter(GPU_NAME, to)) return;
     }
     if (guard.level >= 4) {
       // everything's already off and it's still a slide show: the last resort. Fewer pixels, a

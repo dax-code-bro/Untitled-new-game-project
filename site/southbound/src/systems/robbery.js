@@ -39,7 +39,7 @@ export function installRobbery(game) {
     // the clerk becomes a person in the world (who can be shot) with a shotgun
     k.taken = true;
     const pos = k.h.root.position.clone();
-    k.h.root.parent?.remove(k.h.root);
+    k.h.root.parent?.remove(k.h.root); k.h.freeGpu?.();
     for (const a of k.h.acc || []) a.visible = false; // (hats and glasses only follow the head in the shop)
     const p = peds.spawnAt(pos.x, pos.z, null, k.h);
     if (!p) return;

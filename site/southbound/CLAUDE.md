@@ -63,7 +63,9 @@ the fewest additions next. Be honest in reports about what is and isn't done.
   resets `defines` to `{STANDARD}` (copy them back, or hair/skin shading loses `SB_HAIR` etc.); vehicles you get into leave
   the `parked` list (LOD must include `S.vehicle`); `police.clear()` must not null startup
   handlers; never add a `//` comment in the middle of a one-line object or call (it swallows the
-  rest of the line: use `/* */`); check the build output says "Done" before starting a test.
+  rest of the line: use `/* */`); check the build output says "Done" before starting a test;
+  people removed from the scene must call `h.dispose()` (gone for good) or `h.freeGpu()` (may come
+  back), or their skeleton's bone texture stays on the GPU (a long session piled up hundreds).
 - Commit one batch at a time: if the next batch's edits are already in the tree, commit only the
   finished batch's files (and an `index.js` without the next batch's `add(...)` line), with the
   `game.js` that was built and QA'd for it.

@@ -194,7 +194,7 @@ export function installWounds(game) {
           if (c.p.rescuer) c.p.rescuer.rescue = null;
           c.phase = 'leave'; c.t = 0;
         }
-        if (c.phase === 'leave' && c.t > 6) { scene.remove(c.amb.group); for (const h of c.medics) scene.remove(h.root); crews.splice(i, 1); }
+        if (c.phase === 'leave' && c.t > 6) { scene.remove(c.amb.group); for (const h of c.medics) { scene.remove(h.root); h.dispose?.(); } crews.splice(i, 1); }
       }
       for (let i = drops.length - 1; i >= 0; i--) { const d = drops[i]; if ((d.t -= dt) <= 0) remove(d); }
     },
