@@ -45,14 +45,15 @@ export function installLoot(game) {
     const loot = { cash: 0, gun: null };
     if (p.gun) p.gun.visible = false; // the one in his hand: a real one is laid on the ground instead
     if (p.role === 'cop') {
-      dropGun(p.swat ? 'rifle_01' : 'pistol', p.pos, p.heading);
+      if (!p.disarmed) dropGun(p.swat ? 'rifle_01' : 'pistol', p.pos, p.heading); // (a disarmed officer's gun is already on the ground)
       if (rnd() < 0.5) loot.cash = 10 + ((rnd() * 60) | 0);
     } else {
       // a gun he had out falls from his hand; one still in his waistband is found when he's searched
-      if (p.weaponId && WEAPONS[p.weaponId]) dropGun(p.weaponId, p.pos, p.heading);
-      else if (p.carry && WEAPONS[p.carry]) loot.gun = p.carry;
+      const held = p.disarmed ? null : p.weaponId && WEAPONS[p.weaponId] ? p.weaponId : (p.gun || ['foe', 'hunter', 'mugger', 'armedciv'].includes(p.role)) ? 'pistol' : null;
+      if (held) dropGun(held, p.pos, p.heading);
+      else if (!p.disarmed && p.carry && WEAPONS[p.carry]) loot.gun = p.carry;
       if (rnd() < 0.55) loot.cash = 2 + ((rnd() * 58) | 0);
-      if (!p.weaponId && !p.carry && rnd() < 0.015) loot.gun = 'pistol'; // very rare: a pistol in a pocket
+      if (!held && !p.carry && rnd() < 0.015) loot.gun = 'pistol'; // very rare: a pistol in a pocket
     }
     return loot;
   };
