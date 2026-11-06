@@ -245,7 +245,7 @@ export const GLSL_VOR3 = /* glsl */`
 // rear rim stands above the front of the next one (imbricate overlap).
 // p: rest position / cell size. Returns height (cell units), its gradient d/dp,
 // cavity, crown (raised, rubbed), two per-scale randoms.
-struct DKV3 { float h; vec3 g; float cav; float crown; float id; float id2; float e; float up; float q; float ew; vec3 m; float d1; };
+struct DKV3 { float h; vec3 g; float cav; float crown; float id; float id2; float e; float up; float q; float ew; vec3 m; float d1; vec3 cp; float pr; vec3 gp; };
 // (r2 s6) e: a random per cell EDGE (symmetric in the two cells: the same on both sides of a seam),
 // up: +1 / -1 which of the two cells lies on top where that edge is an overlap (antisymmetric)
 float dkKeel3 = 0.0;   // keel height along each scale (set by the caller)
@@ -265,7 +265,7 @@ DKV3 dkVor3(vec3 p, vec3 T, float an, float tilt, float k, float cavW, float jit
   vec3 ip = floor(p), fp = fract(p);
   float ka = 1.0 / an - 1.0;
   float K = dkVorK;
-  float d1 = 1e9; vec3 m1 = vec3(0.0); vec3 c1 = vec3(0.0); float d2 = 1e9; vec3 c2 = vec3(0.0); float d3 = 1e9;
+  float d1 = 1e9; vec3 m1 = vec3(0.0); vec3 c1 = vec3(0.0); vec3 o1 = vec3(0.5); float d2 = 1e9; vec3 c2 = vec3(0.0); float d3 = 1e9;
   float ws = 0.0; vec3 wg = vec3(0.0); float w1 = 0.0; vec3 g1w = vec3(0.0);
   for (int kk = -1; kk <= 1; kk++) for (int j = -1; j <= 1; j++) for (int i = -1; i <= 1; i++) {
     vec3 g = vec3(float(i), float(j), float(kk));
@@ -276,7 +276,7 @@ DKV3 dkVor3(vec3 p, vec3 T, float an, float tilt, float k, float cavW, float jit
     float w = exp(-K * l);
     vec3 gl = -(rm + ka * dot(rm, T) * T + dkVorKn * dot(rm, dkVorN) * dkVorN) / l;          // grad of l w.r.t. p
     ws += w; wg += w * gl;
-    if (l < d1) { d3 = d2; d2 = d1; c2 = c1; d1 = l; m1 = rm; c1 = ip + g; w1 = w; g1w = gl; }
+    if (l < d1) { d3 = d2; d2 = d1; c2 = c1; d1 = l; m1 = rm; c1 = ip + g; o1 = o; w1 = w; g1w = gl; }
     else if (l < d2) { d3 = d2; d2 = l; c2 = ip + g; }
     else if (l < d3) { d3 = l; }
   }
@@ -319,7 +319,25 @@ DKV3 dkVor3(vec3 p, vec3 T, float an, float tilt, float k, float cavW, float jit
   V.ew = smoothstep(0.0, 0.16, d3 - d2);
   // (r2 s10) offset to the own cell point (in the cell metric, cell units) and its length
   V.m = m1; V.d1 = d1;
+  // (r2 s11) the own cell point (lattice coords, same space as p) and the bare plate profile 1 - q^k
+  // with its gradient d/dp (no tilt / amplitude): callers use them to mix octave levels per cell
+  V.cp = c1 + o1; V.pr = prof; V.gp = gprof;
   return V;
+}
+// (r2 s11) the cell (lattice id, as dkVor3's c1) nearest to p in dkVor3's metric (same T, an, jit,
+// dkVorN / dkVorKn); a cheap nearest-point-only loop for per-cell decisions across octave levels
+vec3 dkVorCell(vec3 p, vec3 T, float an, float jit) {
+  vec3 ip = floor(p), fp = fract(p);
+  float ka = 1.0 / an - 1.0;
+  float d1 = 1e9; vec3 c1 = ip;
+  for (int kk = -1; kk <= 1; kk++) for (int j = -1; j <= 1; j++) for (int i = -1; i <= 1; i++) {
+    vec3 g = vec3(float(i), float(j), float(kk));
+    vec3 r = g + 0.5 + (dkH33(ip + g) - 0.5) * jit - fp;
+    vec3 rm = r + ka * dot(r, T) * T + dkVorKn * dot(r, dkVorN) * dkVorN;
+    float l = dot(rm, rm);
+    if (l < d1) { d1 = l; c1 = ip + g; }
+  }
+  return c1;
 }
 // sparse enlarged tubercles (osteoderms) on a coarser lattice: a raised, keeled dome in
 // some of its cells (density 0..1), overriding the small scales under it

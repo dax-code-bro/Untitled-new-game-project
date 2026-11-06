@@ -389,10 +389,25 @@ void dkSkin(inout vec3 albedo) {
     // pattern is continuous where the octave index changes
     DKV3 C = dkVor3(vRest / gC + (l0 + 1.0) * 7.31, Tr, an, tilt, dome, groove, uScl2.x);
     float dC = 1.0 - smoothstep(0.35, 0.9, fwr / gC);
-    if (C.id2 >= fsub) {
-      DKV3 F = dkVor3(vRest / gA + l0 * 7.31, Tr, an, tilt, dome, groove, uScl2.x);
+    bool useF = C.id2 >= fsub;
+    DKV3 F;
+    float fragM = 0.0;
+    if (uLook3.w * isHead > 0.0) {
+      // (r2 s11) X3-15 level clipping: where a coarse plate that splits meets one that does not, the
+      // straight coarse border cut the fine plates into rimless fragments (and left the whole plate a
+      // long straight edge: an angular slab). Decide per FINE cell, by the coarse cell its own point
+      // lies in: those fine plates stay whole (the whole coarse plate is cut along their outlines and
+      // reads as tucked under them); a fine plate whose point lies in a whole coarse plate keeps only
+      // its part inside the splitting one, with a rim along the coarse border (a small complete plate)
+      F = dkVor3(vRest / gA + l0 * 7.31, Tr, an, tilt, dome, groove, uScl2.x);
+      vec3 cc = dkVorCell((F.cp - l0 * 7.31) * 0.5 + (l0 + 1.0) * 7.31, Tr, an, uScl2.x);
+      if (dkH33(cc + 7.7).z >= fsub) useF = true;
+      else if (useF) fragM = 1.0;
+    } else if (useF) F = dkVor3(vRest / gA + l0 * 7.31, Tr, an, tilt, dome, groove, uScl2.x);
+    if (useF) {
       float dF = 1.0 - smoothstep(0.35, 0.9, fwr / gA);
-      vh = F.h * gA * dF; vg = (F.g + tiltJ * (vec3(F.id, F.id2, fract(F.id * 7.13 + F.id2)) - 0.5) * 2.2) * dF; vcav = F.cav * dF; vcr = F.crown * dF; vid = F.id; ve = F.e; vup = F.up; vq = F.q * dF; vew = F.ew; vm = F.m; vd1 = F.d1;
+      float fr = mix(1.0, C.pr, fragM);
+      vh = F.h * gA * dF * fr; vg = (F.g + tiltJ * (vec3(F.id, F.id2, fract(F.id * 7.13 + F.id2)) - 0.5) * 2.2) * dF * fr + F.h * dF * fragM * C.gp * (gA / gC); vcav = max(F.cav, fragM * C.cav) * dF; vcr = F.crown * dF * fr; vid = F.id; ve = F.e; vup = F.up; vq = max(F.q, fragM * C.q) * dF; vew = F.ew; vm = F.m; vd1 = F.d1;
       gDet = dF;
     } else {
       vh = C.h * gC * dC; vg = (C.g + tiltJ * (vec3(C.id, C.id2, fract(C.id * 7.13 + C.id2)) - 0.5) * 2.2) * dC; vcav = C.cav * dC; vcr = C.crown * dC; vid = C.id; ve = C.e; vup = C.up; vq = C.q * dC; vew = C.ew; vm = C.m; vd1 = C.d1;

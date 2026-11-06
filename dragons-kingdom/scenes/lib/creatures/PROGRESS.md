@@ -4,6 +4,48 @@ Owner paths: `scenes/lib/creatures/`, `scenes/lookdev/creatures-*.js` (+ creatur
 README.md in this folder is the full description of how the models are built; this file is
 only the state of the work.
 
+## REALISM ROUND 2 - session 11 (2026-11-06, short budgeted session)
+Stills under `scratchpad/eng1/creatures/r2s11/`: X3-15 draft `before/X3-15_040.png` (= session 10 code) | `v1/X3-15_040.png`
+(this code), crop sheet `x315_before_v1.png` (crop x620-940 y80-320 x2); debug tint `dbgx/` + `x315_v1_dbg.png`
+(R = l0 odd, G = fine level shown, B = fragM). Walk (creatures-dev charcoal walk t 1.2, `--still` renders 3840x2160):
+`before/walk_f1.png`, `walk_f2.png` (session 10), `walk/f1.png` (left flank) + `walk/f2.png` (right flank; head green =
+the debug tint, ignore), sheets `walk_f1_before_after.png`, `walk_f2_before_after.png`; `dbg/nomem_0.png` (membranes
+hidden), `elbow_drape_vs_nodrape.png` (right elbow, brightened: drape on | `drapeAmt: 0`). Harnesses `fing.mjs`
+(finger joint positions per pose), `elb.mjs` (elbow / knuckle heights over a walk cycle for a pole bias).
+Done (code):
+- glsl.js: DKV3 gains `cp` (own cell point, lattice coords), `pr` / `gp` (bare profile 1 - q^k and its gradient);
+  new `dkVorCell(p, T, an, jit)` (nearest cell id in dkVor3's metric). Additive only.
+- materials.js (head, headVar > 0 only): the coarse/fine split is decided PER FINE CELL by the coarse cell its own
+  point lies in (NEXT 1 of s10). Fine plates whose point lies in a whole coarse plate keep their part inside the
+  splitting one with a rim along the coarse border (`fragM`: height x C.pr, cav/q max'd with C's).
+- poses.js plantBack: pole up bias `(o.poleUp ?? 2) * max(0, swing)`. CAUSE of the walk "blade" (a): a forward-stepped
+  wrist swung the elbow down (R elbow 3.1 m / knuckles 2.6 m vs 5.6 / 4.9 on the left at t 1.2; 1.9 m on the left at
+  t 2.4), so the folded fingers ran back along the BELLY line and stuck out past the thigh toward the tail base.
+  Now knuckles 3.9..5.2 m over the whole cycle (elb.mjs); stand: R elbow 4.5 -> 4.7, left unchanged.
+RESULTS (looked at): X3-15 - the small plates in the lower left are now whole cobbles (no rimless fragments); the
+upper-middle angular slab REMAINS. dbg tint shows why: it sits on the OCTAVE boundary (the curve where l0 changes):
+fine l0 | fine l0+1 and coarse l0+1 | coarse l0+2 do not match across it, so the l0+2 whole plates are clipped along
+that curve and abut the l0+1 plates. Walk - the low blade is GONE on both flanks; the folded fingers lie along the
+upper flank (their tips still reach a little over the tail base on the near side - as in stand, not the reported tell).
+(b) right-elbow pale membrane flap NOT fixed: drapeAmt 0 shows the raw LBS membrane balloons into big panels there;
+the drape hides most of it but a bow-tie of two flat panels stands up just above the elbow (higher now that the
+elbow is higher). It is a drape/skinning residue at the elbow, not the fold rule.
+- npm test: 49 tests, 48 pass, 0 fail, 1 skipped. creatures-dev.json restored (hatchling).
+NEXT (exact):
+1. X3-15 octave boundary: decide the level per cell there too. Option A: hysteresis - evaluate the level of a coarse
+   cell from lv at its cell point, lv(cp) ~ lv + dot(dlv/dvRest, cp*g - vRest) with dlv from a smooth attribute
+   gradient (csRaw is a vertex attribute: add its rest-space gradient as an attribute in skin.js, or approximate from
+   dFdx/dFdy - may flicker). Option B: near the boundary (|lv - round(lv)| < 0.15) force both sides to the SAME pair
+   (l0 of the lower side) on the head only. Check with the dbgx tint (`col = vec3(mod(l0,2), useF, fragM)*0.25`, put
+   right after `col *= mix(1.0, 0.5 + 0.7 * plateJ, ...)`).
+2. Walk elbow flap (b): find which membrane vertices stand up - debug tint the membrane by aWing.z (patch id) and
+   aEdge.x (distance to bone) in a side still; likely the propatagium / plagiopatagium root band skinned between
+   humerus and forearm. Options: in drape.js pin / shrink that band harder (edgeTuck-like weight on patch 0 near the
+   elbow), or blend those vertices' skin weights toward the forearm; or build a 'walk' drape variant (arm swung forward).
+3. Re-render style frames + creatures lookdev at draft (not done since session 3; poses.js change moves the stand R
+   elbow ~0.2 m).
+4. Injured-rider level bar still; X3-02 grey; session 2 items 4-5 (Leaf/Starlight memFoldOcc, contacts, gait).
+
 ## REALISM ROUND 2 - session 10 (2026-11-05, short budgeted session)
 Stills (draft) under `scratchpad/eng1/creatures/r2s10/`: before = `../r2s9/v1/X3-15_040.png` (session 9 committed code),
 after = `v1/X3-15_040.png`, crop sheet `x315_before_v1.png` (crop x620-940 y80-320 x2, before | after);
