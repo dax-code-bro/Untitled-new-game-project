@@ -6,6 +6,7 @@ import { WEAPONS, buildWeaponModel, gunModelFor, gunRel, applyFinish } from './a
 import { loaded, Q } from '../assets/open.js';
 import { raycastObjects, raycastStatic } from '../core/hits.js';
 import { HOLE } from '../world/holes.js';
+import { SUBSTRATES, scanObject, scanGround, fromSurf } from '../core/substrate.js';
 export { WEAPONS };
 
 // What a round has to get through. need: penetration (gun 1-5 plus ammo) to go
@@ -23,8 +24,27 @@ export const SURF = {
   brick: { need: 4, keep: 0.3, loss: 2, max: 0.3, thin: 0.23, hole: HOLE.brick },
   block: { need: 4, keep: 0.25, loss: 2, max: 0.3, thin: 0.2, hole: HOLE.concrete },
   floor: { need: 99, hole: HOLE.wood }, masonry: { need: 99, hole: HOLE.concrete }, stone: { need: 99, hole: HOLE.concrete }, tree: { need: 99, hole: HOLE.wood }, steel: { need: 99, hole: HOLE.metal },
+  // what the substrate scanner finds on things nobody tagged
+  plastic: { need: 0, keep: 0.85, loss: 0, max: 0.05, thin: 0.005, hole: HOLE.metal },
+  fabric: { need: 0, keep: 0.95, loss: 0, max: 0.12, thin: 0.02, hole: -1 },
+  soil: { need: 99, hole: -1 }, water: { need: 99, hole: -1 },
 };
-const surfOf = (o) => o ? (o.userData.surf || o.material?.userData?.surf || (o.parent && o.parent.userData.surf) || 'masonry') : 'masonry';
+// a tag if the object has one, else whatever the substrate scanner reads off it
+const surfOf = (o) => {
+  if (!o) return 'masonry';
+  const t = o.userData.surf || o.material?.userData?.surf || (o.parent && o.parent.userData.surf);
+  if (t) return t;
+  const pen = scanObject(o).sub.pen;
+  return SURF[pen] ? pen : 'masonry';
+};
+// what the debris of an impact looks like, per kind of substrate
+const DEBRIS = {
+  sparks: { n: 7, speed: 1.7, life: 0.22, grav: 0.6 }, splinters: { n: 6, speed: 1.0, life: 0.6, grav: 1.4 }, shards: { n: 7, speed: 1.3, life: 0.5, grav: 1.6 },
+  dust: { n: 6, speed: 1.0, life: 0.5, grav: 1 }, dirt: { n: 8, speed: 0.9, life: 0.55, grav: 1.6, up: 1.4 }, leaves: { n: 5, speed: 0.6, life: 0.9, grav: 0.35 },
+  splash: { n: 9, speed: 0.8, life: 0.45, grav: 1.5, up: 2.0 }, splat: { n: 6, speed: 0.9, life: 0.5, grav: 1.4 }, chips: { n: 5, speed: 1.1, life: 0.45, grav: 1.5 },
+};
+const PROP_SUB = { cone: 'plastic', can: 'sheet-metal', news: 'sheet-metal', crate: 'wood', barrel: 'sheet-metal', chair: 'plastic' };
+const _dc = new THREE.Color();
 const _bray = new THREE.Raycaster(); _bray.firstHitOnly = true;
 const _nm = new THREE.Matrix3(), _im = new THREE.Matrix4();
 
@@ -187,7 +207,7 @@ export class Combat {
     const hit = raycastObjects(origin, dir, maxT, objs);
     if (hit) {
       const o = hit.target;
-      best = { t: hit.distance, kind: o.kind, ped: o.ped, animal: o.animal, vehicle: o.vehicle };
+      best = { t: hit.distance, kind: o.kind, ped: o.ped, animal: o.animal, vehicle: o.vehicle, mesh: hit.object, meshFace: hit.face };
       if (o.kind === 'ped') best.head = hit.point.y - o.ped.pos.y > 1.47;
     }
     const sh = targets.statics && targets.statics.length ? raycastStatic(origin, dir, best.t, targets.statics) : null;
@@ -298,7 +318,7 @@ export class Combat {
     const am = AMMO[this.ammoType[this.weapon]] || AMMO.FMJ;
     this.audio?.gunshot(am.quiet ? 0.55 : 1, w.silent ? { ...w, silent: true, id: w.id } : w);
     this.fired = w; // the game applies recoil for this shot
-    this.flash.position.copy(muzzle); this.flash.intensity = w.silent ? 0 : 4; this.flashT = 0.05;
+    this.flash.position.copy(muzzle); this.flash.intensity = w.silent ? 0 : 14; this.flash.distance = 9; this.flashT = 0.05; // lights up walls, faces and the ground for a frame
     let first = null;
     const pellets = am.slug ? 1 : Math.round(w.pellets * (am.pellets || 1));
     const spread = (am.slug ? w.spread * 0.3 : w.spread) * (this.spreadMul || 1), range = am.slug ? w.range * 2 : w.range;
@@ -345,10 +365,12 @@ export class Combat {
     const cal = w.cat === 'shotgun' ? 0.006 : (w.pen || 1) >= 4 ? 0.011 : (w.pen || 1) >= 3 ? 0.009 : 0.012;
     for (const th of hit.through || []) {
       const S = SURF[th.surf] || SURF.masonry;
-      this.holes?.add(th.point, th.normal, th.surf === 'drywall' ? HOLE.drywall : S.hole, cal);
       const back = th.normal.clone().negate();
-      this.holes?.add(th.exit.clone().addScaledVector(back, -0.004), back, th.surf === 'drywall' || th.surf === 'frame' ? HOLE.drywallExit : S.hole, cal * 1.3);
-      this.burst(th.exit, this.dustMat, 4);
+      if (S.hole >= 0) {
+        this.holes?.add(th.point, th.normal, th.surf === 'drywall' ? HOLE.drywall : S.hole, cal);
+        this.holes?.add(th.exit.clone().addScaledVector(back, -0.004), back, th.surf === 'drywall' || th.surf === 'frame' ? HOLE.drywallExit : S.hole, cal * 1.3);
+      }
+      this.debris(th.exit, SUBSTRATES[fromSurf(th.surf)] || SUBSTRATES.concrete, null, 0.7);
       this.onWallPierced?.(th, w);
     }
     if (hit.kind === 'animal') {
@@ -377,16 +399,16 @@ export class Combat {
     } else if (hit.kind === 'vehicle') {
       const v = hit.vehicle;
       v.health -= w.damage * 0.25 * ((hit.ammo && hit.ammo.vehicle) || 1) * (hit.keep ?? 1);
-      this.burst(hit.point, this.sparkMat, 6);
+      this.impactFx(hit); // sparks off the body, glass off the windows, rubber off the tyres
       // through the glass (or thin doors, with enough penetration) to whoever is inside
       this.onVehicleHit?.(hit, w);
       if (v.health <= 0) this.onVehicleDestroyed?.(v, hit.point);
     } else if (hit.kind !== 'none') {
-      this.burst(hit.point, this.dustMat, 6);
+      this.impactFx(hit);
       if (hit.kind === 'building' && hit.normal) {
         const S = SURF[hit.surf] || SURF.masonry;
         // stopped in the wall: the entry hole (in a wall over a stud the round sits in the wood)
-        this.holes?.add(hit.point, hit.normal, hit.surf === 'frame' ? HOLE.wood : S.hole, cal * (S.hole === HOLE.concrete || S.hole === HOLE.brick ? 1.2 : 1));
+        if (S.hole >= 0) this.holes?.add(hit.point, hit.normal, hit.surf === 'frame' ? HOLE.wood : S.hole, cal * (S.hole === HOLE.concrete || S.hole === HOLE.brick ? 1.2 : 1));
       }
       if (hit.kind === 'building') this.onStaticHit?.(hit);
       if (hit.kind === 'prop') this.onPropHit?.(hit, w);
@@ -415,13 +437,55 @@ export class Combat {
     this.audio?.gunshot(2.5); this.audio?.thud(1);
   }
 
-  burst(at, mat, n) {
+  burst(at, mat, n, o = null) {
+    const sp = o?.speed ?? 1, life = o?.life ?? 0.5, up = o?.up ?? 1;
     for (let i = 0; i < n; i++) {
       const m = new THREE.Mesh(this.puffGeo, mat.clone());
+      if (o?.color) m.material.color.copy(o.color);
+      if (o?.size) m.scale.setScalar(o.size * (0.6 + Math.random() * 0.8));
       m.position.copy(at);
-      const v = new THREE.Vector3((Math.random() - 0.5) * 3, Math.random() * 2.5, (Math.random() - 0.5) * 3);
+      const v = new THREE.Vector3((Math.random() - 0.5) * 3 * sp, Math.random() * 2.5 * sp * up, (Math.random() - 0.5) * 3 * sp);
       this.scene.add(m);
-      this.fx.push({ obj: m, t: 0.5, max: 0.5, v });
+      this.fx.push({ obj: m, t: life, max: life, v, g: o?.grav ?? 1 });
+    }
+  }
+
+  // What a hit struck, read by the substrate scanner (whatever kind of thing it was):
+  // { sub, how, confidence }
+  scanHit(hit) {
+    if (!hit || hit.kind === 'none') return null;
+    const R = (id, how = 'kind', c = 0.9) => ({ sub: SUBSTRATES[id], how, confidence: c });
+    if (hit.kind === 'ped' || hit.kind === 'animal') return R('flesh');
+    if (hit.kind === 'vehicle') return hit.mesh ? scanObject(hit.mesh, hit.meshFace?.materialIndex || 0) : R('sheet-metal', 'kind', 0.6);
+    if (hit.kind === 'ground') return scanGround(hit.point.x, hit.point.z);
+    if (hit.kind === 'prop') return R(PROP_SUB[hit.prop?.type] || 'plastic', 'tag', 1);
+    if (hit.obj) return scanObject(hit.obj, hit.face?.materialIndex || 0);
+    const id = fromSurf(hit.surf);
+    return id ? R(id, 'tag', 1) : R('concrete', 'default', 0.3);
+  }
+  substrateOf(hit) { return this.scanHit(hit)?.sub || null; }
+
+  // Debris off whatever was hit: sparks off steel, splinters off wood, shards off glass, grit off
+  // stone, dirt off the ground, a splash off water. Painted things shed chips of their own colour.
+  impactFx(hit) {
+    const sub = this.substrateOf(hit);
+    hit.substrate = sub;
+    if (!sub) return;
+    const mat = hit.obj?.material || hit.mesh?.material;
+    this.debris(hit.point, sub, Array.isArray(mat) ? mat[0] : mat, 1);
+  }
+  debris(at, sub, mat, k = 1) {
+    const kind = sub.debris ? sub.debris[1] : 'chips';
+    const D = DEBRIS[kind] || DEBRIS.dust;
+    if (sub.debris) _dc.setHex(sub.debris[0]); else if (mat?.color) _dc.copy(mat.color); else _dc.setHex(0xb8ab90);
+    const n = Math.max(1, Math.round(D.n * k));
+    if (kind === 'sparks') {
+      this.burst(at, this.sparkMat, n, { speed: D.speed, life: D.life, grav: D.grav, size: 0.5 });
+      this.burst(at, this.dustMat, 2, { speed: 0.5, life: 0.5, color: _dc.setHex(0x8a8680) }); // and a puff of paint and scale
+    } else if (sub.id === 'flesh') {
+      this.burst(at, this.settings.gore ? this.bloodMat : this.dustMat, this.settings.gore ? n : 3, { speed: D.speed, life: D.life, grav: D.grav });
+    } else {
+      this.burst(at, this.dustMat, n, { speed: D.speed, life: D.life, grav: D.grav, up: D.up, color: _dc, size: kind === 'dust' || kind === 'dirt' || kind === 'splash' ? 1 : 0.55 });
     }
   }
 
@@ -444,7 +508,7 @@ export class Combat {
     for (let i = this.fx.length - 1; i >= 0; i--) {
       const f = this.fx[i];
       f.t -= dt;
-      if (f.v) { f.v.y -= 9 * dt; f.obj.position.addScaledVector(f.v, dt); }
+      if (f.v) { f.v.y -= 9 * (f.g ?? 1) * dt; f.obj.position.addScaledVector(f.v, dt); }
       f.obj.material.opacity = clamp(f.t / f.max, 0, 1);
       if (f.t <= 0) { this.scene.remove(f.obj); f.obj.material.dispose(); if (f.obj.isLine) f.obj.geometry.dispose(); this.fx.splice(i, 1); }
     }

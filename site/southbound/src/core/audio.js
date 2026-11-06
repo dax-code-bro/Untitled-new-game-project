@@ -220,6 +220,54 @@ export class GameAudio {
     const g = ctx.createGain(); g.gain.setValueAtTime(0.5 * k, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
     src.connect(f); f.connect(g); g.connect(this.sfx); src.start(t); src.stop(t + 0.05);
   }
+  // One footstep on any substrate, from its acoustic signature (core/substrate.js): a heel strike
+  // of filtered noise at the surface's pitch, a ring for metal and glass, a hollow knock for wood,
+  // grains of crunch for gravel, leaves and sand, and softness that rounds it all off on fabric,
+  // grass and mud. k: how hard (walk 0.5, run 1).
+  footstep(sub, k = 0.7, wet = 0) {
+    if (!this.ctx || !sub?.step) return;
+    const ctx = this.ctx, t = ctx.currentTime + Math.random() * 0.01;
+    const [pitch, ring, ringAmt, crunch, soft] = sub.step;
+    const vol = 0.1 * k * (1 - soft * 0.45), p = pitch * (0.9 + Math.random() * 0.2);
+    const out = ctx.createGain(); out.gain.value = 1; out.connect(this.sfx);
+    // the strike
+    const src = ctx.createBufferSource(); src.buffer = this.noiseBuf; src.playbackRate.value = 1.6 + Math.random() * 0.6;
+    const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = p; bp.Q.value = 0.8 + ringAmt * 3;
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 7000 * (1 - soft * 0.8);
+    const g = ctx.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + 0.004 + soft * 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0005, t + 0.05 + soft * 0.06);
+    src.connect(bp); bp.connect(lp); lp.connect(g); g.connect(out);
+    src.start(t, Math.random() * 1.5); src.stop(t + 0.15);
+    // metal and glass ring on; wood and hollow floors knock
+    if (ringAmt > 0.05) {
+      for (const [m, a] of [[1, 1], [2.76, 0.5], [5.4, 0.25]]) {
+        const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = p * m * (0.98 + Math.random() * 0.04);
+        const og = ctx.createGain(); og.gain.setValueAtTime(vol * ringAmt * 0.35 * a, t); og.gain.exponentialRampToValueAtTime(0.0005, t + ring * (1.2 - m * 0.12));
+        o.connect(og); og.connect(out); o.start(t); o.stop(t + ring * 1.3);
+      }
+    }
+    if (sub.wear === 3 || sub.wear === 4) {
+      const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(90, t + 0.06);
+      const og = ctx.createGain(); og.gain.setValueAtTime(vol * 0.8, t); og.gain.exponentialRampToValueAtTime(0.0005, t + 0.08);
+      o.connect(og); og.connect(out); o.start(t); o.stop(t + 0.1);
+    }
+    // gravel, leaves, sand, broken glass: a scatter of tiny grains after the strike
+    const grains = Math.round(crunch * 7);
+    for (let i = 0; i < grains; i++) {
+      const tt = t + 0.008 + Math.random() * 0.07;
+      const s2 = ctx.createBufferSource(); s2.buffer = this.noiseBuf; s2.playbackRate.value = 3;
+      const hp = ctx.createBiquadFilter(); hp.type = 'bandpass'; hp.frequency.value = p * (1.5 + Math.random() * 2.5); hp.Q.value = 2;
+      const g2 = ctx.createGain(); g2.gain.setValueAtTime(vol * 0.5 * crunch, tt); g2.gain.exponentialRampToValueAtTime(0.0005, tt + 0.012);
+      s2.connect(hp); hp.connect(g2); g2.connect(out); s2.start(tt, Math.random() * 1.5); s2.stop(tt + 0.02);
+    }
+    // wet ground: a little slap and suck on top
+    if (wet > 0.2 && sub.hardness > 0) {
+      const s3 = ctx.createBufferSource(); s3.buffer = this.noiseBuf; s3.playbackRate.value = 0.8;
+      const f3 = ctx.createBiquadFilter(); f3.type = 'bandpass'; f3.frequency.value = 1200; f3.Q.value = 1.5;
+      const g3 = ctx.createGain(); g3.gain.setValueAtTime(vol * 0.6 * wet, t + 0.01); g3.gain.exponentialRampToValueAtTime(0.0005, t + 0.12);
+      s3.connect(f3); f3.connect(g3); g3.connect(out); s3.start(t + 0.01, Math.random()); s3.stop(t + 0.14);
+    }
+  }
   thud(k) {
     const ctx = this.ctx, t = ctx.currentTime;
     const src = ctx.createBufferSource(); src.buffer = this.noiseBuf;

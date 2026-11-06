@@ -1,6 +1,11 @@
 // SOUTHBOUND — boot, world build, game loop.
 import * as THREE from 'three';
-import { loadSettings, saveSettings, resolveQuality, PRESETS, detectGPU, SOFTWARE_HINT } from './settings.js';
+import { loadSettings, saveSettings, resolveQuality, PRESETS, detectGPU, SOFTWARE_HINT, probeGPU, IDLE_CARD_HINT } from './settings.js';
+import { installImperfections } from './core/imperfect.js';
+import { createDynamicLighting } from './core/gi.js';
+import { createAbrasion } from './core/abrasion.js';
+import { setWorld as setSubstrateWorld, describe as describeSubstrate, SUBSTRATES } from './core/substrate.js';
+import { createFooting } from './systems/footing.js';
 import { setupMenu, setupSettingsPanel } from './ui/menu.js';
 import { buildRoadGraph, CITY, TOWN, regionAt } from './world/layout.js';
 import { Heightmap } from './world/heightmap.js';
@@ -105,6 +110,7 @@ async function start() {
 async function createGame(progress) {
   installAtmosphere();
   const q = resolveQuality(settings);
+  installImperfections(q); // micro-surface wear on every PBR material (before anything compiles)
   const canvas = $('#game');
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: q.aa === 'msaa', powerPreference: 'high-performance', stencil: false });
   // presets without the post chain (phone/low) get the filmic curve plus the
@@ -140,6 +146,7 @@ async function createGame(progress) {
   worldUniforms.uHeightTex.value = tex.heightTex;
   worldUniforms.uSplatTex.value = tex.splatTex;
   const collision = new CollisionWorld(hm);
+  setSubstrateWorld({ hm, grids: [CITY, TOWN], paved: (x, z) => collision.paved(x, z) }); // the substrate scanner reads the ground from here
   progress(0.62, 'Loading photo-scanned surfaces');
   const surf = await loadSurfaces(renderer, q, (p) => progress(0.62 + p * 0.04, 'Loading photo-scanned surfaces'));
   progress(0.66, 'Shaping the terrain');
@@ -194,6 +201,10 @@ async function createGame(progress) {
   const peds = new Peds(lib, q, scene, collision, settings);
   const combat = new Combat(scene, hm, collision, settings, audio);
   combat.holes = createHoles(scene); // bullet holes: drywall, brick, metal, wood, glass
+  // where your feet are decides how you move (ledges, slopes, grip, wading) and how each step sounds
+  const footing = createFooting({ hm, collision, wet: () => worldUniforms.uWet.value, indoors: () => !!S.indoors,
+    onStep: (sub, k, wet, depth) => audio.footstep(depth > 0.12 ? SUBSTRATES.water : sub, k, wet) });
+  player.footing = footing;
   const police = new Police(lib, scene, hm, collision, graph, peds, audio);
   const hud = new HUD($('#hud'), hm, graph, city.buildings, settings);
   // weapons: RDR-style wheel, holsters, per-weapon holds (IK), gun HUD silhouette
@@ -242,6 +253,12 @@ async function createGame(progress) {
   // headlight for the player's car at night
   const headlight = new THREE.SpotLight(0xfff1d6, 0, 70, 0.55, 0.5, 1.2);
   scene.add(headlight, headlight.target);
+  // light that follows where you are: the surroundings captured into the reflections and ambient,
+  // the ground's colour bounced up, real street-lamp light, headlight pairs (Medium and up)
+  const gi = createDynamicLighting({ renderer, scene, quality: q, sky, hm, lamps: roads.lights, collision,
+    roots: () => [terrain.group, roads.group, water.group, sky.sky, ...Object.values(city.meshes), city.roofMesh, ...(veg.giMeshes?.() || [])] });
+  // wear along the real edges of everything near you, per substrate (Medium and up)
+  const abrasion = createAbrasion(scene, q);
 
   // ---- resolution / post
   let post = null;
@@ -326,7 +343,7 @@ async function createGame(progress) {
   sky.hour = profile.hour; sky.day = profile.day;
   const interact = new Interactions(scene, hm);
   const game = {
-    S, scene, hm, graph, city, veg, player, combat, hud, sky, weather, career, interact, parked, lib, q, settings, camera, input, traffic, peds, police, collision, rig, surf,
+    S, scene, hm, graph, city, veg, player, combat, hud, sky, weather, career, interact, parked, lib, q, settings, camera, input, traffic, peds, police, collision, rig, surf, gi, abrasion, footing,
     pause: (b) => { S.frozen = b; },
     teleport: (x, z, heading = 0) => { api.teleport(x, z, heading); },
     enterVehicle: (v) => enterVehicle(v, null),
@@ -493,6 +510,35 @@ async function createGame(progress) {
   const props = installProps(game);
   game.props = props;
   game.onDriverKilled = (v) => { if (witnesses(v.pos, 40) || police.nearPolice(60)) police.crime(v.type === 'police' ? 'copKill' : 'kill'); peds.panic(v.pos, 30); };
+  // The substrate scanner, on screen (N): what the crosshair is on and what's underfoot, read the
+  // same way bullets, footsteps, grip and wear read them.
+  const scanner = {
+    on: false, t: 0, el: null,
+    toggle() {
+      this.on = !this.on;
+      if (!this.el) {
+        this.el = document.createElement('div');
+        Object.assign(this.el.style, { position: 'fixed', left: '50%', bottom: '22%', transform: 'translateX(-50%)', maxWidth: 'min(92vw, 760px)', padding: '6px 10px', borderRadius: '6px',
+          background: 'rgba(10,12,14,0.62)', color: '#e8e4da', font: '12px/1.45 system-ui, sans-serif', textAlign: 'center', pointerEvents: 'none', zIndex: 30, whiteSpace: 'pre-line' });
+        document.body.appendChild(this.el);
+      }
+      this.el.style.display = this.on ? 'block' : 'none';
+      if (this.on) { this.t = 0; this.el.textContent = 'Scanning...'; }
+      hud.toast(this.on ? 'Substrate scanner on (N to hide)' : 'Substrate scanner off', 1.2);
+    },
+    read() {
+      const dir = camera.getWorldDirection(new THREE.Vector3());
+      const hit = combat.trace(camera.position.clone(), dir, 80, { peds, vehicles: [...traffic.cars.map((c) => c.v), ...police.cars.map((c) => c.v), ...parked], animals: game.hunting ? game.hunting.list : [], statics: S.indoors ? indoorMeshes() : hitStatics });
+      const r = combat.scanHit(hit), wet = S.indoors ? 0 : worldUniforms.uWet.value, f = footing.state;
+      const deg = (g) => Math.round((Math.atan(Math.abs(g)) * 180) / Math.PI);
+      this.el.textContent = (r ? `${describeSubstrate(r, wet)} · ${hit.t.toFixed(1)} m` : 'Nothing within 80 m')
+        + `\nUnderfoot: ${f.sub.name} · grip ${f.grip.toFixed(2)}${f.wet > 0.05 ? ' (wet)' : ''}`
+        + (Math.abs(f.grade) > 0.1 ? ` · ${f.grade > 0 ? 'up' : 'down'} ${deg(f.grade)}°` : '') + (f.depth > 0.12 ? ` · wading ${f.depth.toFixed(1)} m` : '')
+        + (f.edge ? ' · ledge: stopped' : '') + (f.narrow ? ' · narrow footing' : '') + (f.slip > 0.2 ? ' · slipping' : '');
+    },
+  };
+  addEventListener('keydown', (e) => { if (e.code === 'KeyN' && !e.repeat && !e.target.closest?.('input, textarea')) scanner.toggle(); });
+  game.scanner = scanner;
   game.refreshHitStatics = () => { hitStatics.length = 0; scene.traverse((o) => { if (o.userData.hitStatic) hitStatics.push(o); }); };
   installStreetLife(game);
   const worldEvents = installWorldEvents(game);
@@ -672,6 +718,7 @@ async function createGame(progress) {
       needs.update(dt, a);
       if (S.limp) { a.sprint = false; if (a.moveX) a.moveX *= 0.5; if (a.moveY) a.moveY *= 0.5; }
       player.update(dt, a, rig.yaw, hm, collision, armed && combat.def.cat === 'pistol');
+      footing.steps(player, dt);
       camera.getWorldDirection(aimDir);
       // ---- weapon in the hands: pose the arms around it
       const shown = [];
@@ -925,8 +972,11 @@ async function createGame(progress) {
     grassUniforms.uFogColor.value.copy(scene.fog.color);
     grassUniforms.uFogDensity.value = scene.fog.density;
 
-    // headlight
-    if (S.vehicle && sky.night > 0.3) {
+    if (!S.indoors) gi.update(dt, focus, camera.position, S.mode === 'car' ? S.vehicle : null);
+    abrasion.update(dt, camera.position);
+    if (scanner.on && (scanner.t -= dt) <= 0) { scanner.t = 0.2; scanner.read(); }
+    // headlight (the low presets' single beam; gi.js lights a pair on Medium and up)
+    if (!gi.active && S.vehicle && sky.night > 0.3) {
       const v = S.vehicle, fx = Math.sin(v.heading), fz = Math.cos(v.heading);
       headlight.intensity = 60 * sky.night;
       headlight.position.set(v.pos.x + fx * 2.4, v.pos.y + 0.9, v.pos.z + fz * 2.4);
@@ -1047,10 +1097,13 @@ async function createGame(progress) {
   // a third line on the FPS readout that says where the time goes: the game's code (CPU) or
   // drawing (GPU), and which graphics device the browser is actually using
   const GPU_NAME = (() => { try { const g = detectGPU(); return (g.name || '?').replace(/^ANGLE \(|\)$/g, '').replace(/Direct3D.*$|vs_.*$|\(0x[0-9A-F]+\)/gi, '').replace(/\s+/g, ' ').trim().slice(0, 56); } catch (e) { return '?'; } })();
+  // what WebGPU says the fastest card is (shown when it isn't the one drawing the game)
+  let CARD = null;
+  probeGPU().then((p) => { if (p.idleCard) { CARD = p.card; hud.toast(IDLE_CARD_HINT(p.card), 12); } });
   function diagLine() {
     const frameMs = 1000 / Math.max(S.fps, 0.1), cpu = S.cpuMs || 0;
     const where = SOFTWARE ? 'NO GPU: software rendering' : frameMs > cpu * 2.2 + 8 ? 'GPU-bound' : 'CPU-bound';
-    return `CPU ${cpu.toFixed(0)} ms of ${frameMs.toFixed(0)} ms · ${where} · ${GPU_NAME}`;
+    return `CPU ${cpu.toFixed(0)} ms of ${frameMs.toFixed(0)} ms · ${where} · ${GPU_NAME}${CARD ? ` · faster card idle: ${CARD}` : ''}`;
   }
   const SOFTWARE = (() => { try { return detectGPU().software; } catch (e) { return false; } })();
   function perfGuard() {
@@ -1186,7 +1239,7 @@ async function createGame(progress) {
     step(n = 1, dt = 1 / 30) { for (let i = 0; i < n; i++) tick(dt); S.fps = 1 / dt; },
     toggleMap: () => hud.toggleMap(),
     showRegion: () => { hud.lastRegion = ''; hud.toastTimer = 0.001; },
-    renderer, scene, camera, debug: { hm, graph, collision },
+    renderer, scene, camera, debug: { hm, graph, collision, THREE }, // THREE: tests build probe objects (mirror balls)
   };
   api.game = game;
   api.V3 = THREE.Vector3;

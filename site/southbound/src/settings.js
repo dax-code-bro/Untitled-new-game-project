@@ -89,6 +89,29 @@ export function detectGPU() {
   return { name, preset, mobile, software };
 }
 
+// Ask WebGPU which graphics card the system would give a demanding page. Browsers often draw WebGL
+// on a laptop's built-in Intel/AMD graphics while a much faster NVIDIA or AMD card sits idle; the
+// WebGL name shows what we got, the high-performance adapter shows what's there. Never throws.
+export async function probeGPU() {
+  const gl = detectGPU();
+  const r = { webgl: gl.name, software: gl.software, webgpu: false, card: null, fallback: false, idleCard: false };
+  try {
+    if (!navigator.gpu) return r;
+    r.webgpu = true;
+    const ad = await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' });
+    if (!ad) return r;
+    const info = ad.info || (ad.requestAdapterInfo ? await ad.requestAdapterInfo() : {}) || {};
+    r.card = [info.vendor, info.architecture, info.description].filter(Boolean).join(' ').trim() || null;
+    r.fallback = !!(ad.isFallbackAdapter || info.isFallbackAdapter);
+    const w = String(gl.name).toLowerCase(), c = String(r.card || '').toLowerCase();
+    const builtIn = /intel|uhd|iris|radeon\(tm\) graphics|radeon graphics|vega \d/.test(w) && !/arc/.test(w);
+    r.idleCard = builtIn && /nvidia|amd|ati/.test(c) && !/intel/.test(c);
+  } catch (e) { /* no WebGPU, or the adapter wouldn't say */ }
+  return r;
+}
+export const IDLE_CARD_HINT = (card) => `Your browser is drawing the game on the computer's built-in graphics, but this PC also has a faster card (${card}). ` +
+  'Windows Settings › System › Display › Graphics › add your browser (Chrome / Edge / Firefox) › Options › "High performance", then restart the browser.';
+
 export const SOFTWARE_HINT = 'Your browser is drawing the game without your graphics card, so it can only manage a few frames a second. ' +
   'Turn hardware acceleration on: Chrome / Edge: Settings › System › "Use graphics acceleration when available", then Relaunch. ' +
   'Firefox: Settings › General › Performance › "Use hardware acceleration when available", then restart. ' +

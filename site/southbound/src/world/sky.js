@@ -62,6 +62,10 @@ export function createSky(renderer, scene, quality) {
   const state = {
     hour: 9.5, day: 1,
     sun, hemi, sky, sunDir, night: 0,
+    // core/gi.js renders the surroundings into a cube: leave the sun disc out (the sun light
+    // already draws its own highlight) and return what the capture changed afterwards
+    captureBegin() { const k = [du.uSunDisc.value.clone(), du.uStars.value]; du.uSunDisc.value.setRGB(0, 0, 0); du.uStars.value = 0; return k; },
+    captureEnd(k) { du.uSunDisc.value.copy(k[0]); du.uStars.value = k[1]; },
     update(dt, timeScale, focus) {
       // 1 game hour = 2 real minutes at timeScale 1
       state.hour += (dt * timeScale) / 120;
@@ -138,6 +142,7 @@ export function createSky(renderer, scene, quality) {
       u.uCover.value = W.cover;
       u.uGround.value.setRGB(0.07 * day + 0.006, 0.07 * day + 0.007, 0.05 * day + 0.008);
       u.sunPosition.value.copy(sunDir);
+      scene.environmentIntensity = (state.envBase ?? 0.2) * (state.envK || 1); // envK: core/gi.js, more in enclosed streets
       clouds.update();
 
       // Environment map: rebuilt from the cloud cube when the sun moves or clouds drift
@@ -147,11 +152,13 @@ export function createSky(renderer, scene, quality) {
         envTimer = quality.envEvery * 0.1; envAge = 0;
         lastEnvHour = h;
         envDome.material.uniforms.uStars.value = 0;
-        const next = pmrem.fromScene(envScene, 0.035, 0.1, 400);
-        if (envRT) envRT.dispose();
-        envRT = next;
-        scene.environment = envRT.texture;
-        scene.environmentIntensity = lerp(0.12, 0.22, day);
+        if (!state.localEnv) { // once core/gi.js captures the surroundings, that's the environment light
+          const next = pmrem.fromScene(envScene, 0.035, 0.1, 400);
+          if (envRT) envRT.dispose();
+          envRT = next;
+          scene.environment = envRT.texture;
+        }
+        state.envBase = lerp(0.12, 0.22, day);
       }
     },
   };

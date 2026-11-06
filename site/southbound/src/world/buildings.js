@@ -379,7 +379,7 @@ export function createBuildings(hm, quality, scene, collision, surf, graph = nul
       ? new THREE.MeshStandardMaterial({ map: surf.concrete.color, normalMap: surf.concrete.normal || null, color: 0xb9b6ae, roughness: 0.9 })
       : new THREE.MeshStandardMaterial({ color: 0x8d8a83, roughness: 0.92 });
     const yard = new THREE.Mesh(g, cm);
-    yard.receiveShadow = true; yard.userData.surf = 'concrete';
+    yard.receiveShadow = true; yard.userData.surf = 'concrete'; yard.userData.gi = true; // ground: part of the local light capture (core/gi.js)
     scene.add(yard);
   }
 
