@@ -80,6 +80,7 @@ export class Player {
   }
 
   update(dt, a, camYaw, hm, collision, armed) {
+    if (this.h.ragdoll) { this.h.update(dt); this.pos.copy(this.h.root.position); this.vel.set(0, 0, 0); this.speed = 0; return; } // dead: the body is physics
     if (this.mantle) {
       this.updateMantle(dt);
       this.h.update(dt);

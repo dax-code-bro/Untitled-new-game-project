@@ -393,7 +393,7 @@ export class Combat {
       const zone = { head: stopped ? 0.25 : 3, torso: stopped ? 0.1 : 1, arm: 0.55, leg: 0.6 }[part];
       const dmg = w.damage * (hit.slugDmg || 1) * am.dmg * (0.8 + Math.random() * 0.35) * fall * zone * (hit.keep ?? 1);
       hit.part = part; hit.stopped = stopped;
-      hit.killed = targets.peds.damage(pd, dmg, from, { part, stopped, side: lat > 0 ? 'R' : 'L', pen });
+      hit.killed = targets.peds.damage(pd, dmg, from, { part, stopped, side: lat > 0 ? 'R' : 'L', pen, point: hit.point, dir: hit.dir || (from ? hit.point.clone().sub(from).normalize() : null) });
       if (stopped) this.burst(hit.point, this.sparkMat, 5);
       else this.burst(hit.point, this.settings.gore ? this.bloodMat : this.dustMat, this.settings.gore ? 10 : 4);
     } else if (hit.kind === 'vehicle') {
@@ -421,7 +421,7 @@ export class Combat {
     for (const p of targets.peds.list) {
       if (p.mode === 'dead') continue;
       const d = p.pos.distanceTo(at);
-      if (d < R) targets.peds.damage(p, w.damage * (1 - d / R), from);
+      if (d < R) targets.peds.damage(p, w.damage * (1 - d / R), from, { blast: at });
     }
     for (const an of targets.animals || []) if (!an.dead && an.pos.distanceTo(at) < R) an.hurt(w.damage, w);
     for (const v of targets.vehicles) {

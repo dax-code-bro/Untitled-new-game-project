@@ -140,6 +140,25 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 - [x] Loading screen with in-game art, tips and progress
 - [x] Fewer touch buttons: ◎ interact replaces the car button; map, phone, arsenal, free cam moved to pause
 
+## Phase 1.21 — Bodies fall for real (side batch S1)
+
+- [x] Ragdolls (`src/entities/ragdoll.js`): when someone dies, physics takes over from the animation.
+      Fifteen joints with stiff bones and a braced torso fall under gravity onto the real ground,
+      slide and settle; the skeleton follows, so the character's own body crumples. No two deaths
+      look the same
+- [x] The push goes in where they were struck: a head shot snaps the head back, a leg shot takes the
+      legs out, a blast throws everyone outward, a car scoops the legs and throws the body
+- [x] Hits someone survives: the part that was hit jerks away (head, shoulder, knee), and a body shot
+      can double them over
+- [x] Run people over: a car above ~30 km/h throws and kills; slower knocks them down and back; at a
+      crawl it only pushes them aside. Parked and moving cars all count
+- [x] Your car no longer drives through police cars; a hard hit shoves a parked car and slews it round
+- [x] No more cash floating over the dead (`src/systems/loot.js`). Walk up and search the body: you
+      crouch over it and take what's there. Officers drop their sidearm (SWAT their rifle) and may
+      have a little cash; a civilian with a gun out drops it, and a hidden gun or knife is found on
+      him; anyone else may have some cash, and very rarely a pistol. A dropped gun lies on the ground
+      to be picked up
+
 ## Phase 1.20 — Cloud shadows (graphics milestone G1)
 
 - [x] The clouds' shadows slide over the land, streets, roofs, trees, cars and people with the wind

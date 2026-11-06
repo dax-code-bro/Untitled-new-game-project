@@ -1,9 +1,11 @@
 // An animated person built from a Quaternius model + retargeted clips.
 import * as THREE from 'three';
+import { Ragdoll } from './ragdoll.js';
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
 
 const ONCE = new Set(['Jump_Start', 'Jump_Land', 'Pistol_Shoot', 'Pistol_Reload', 'Punch_Jab', 'Punch_Cross', 'Hit_Chest', 'Death01', 'Interact']);
 
+const _fq = new THREE.Quaternion();
 export class Human {
   constructor(lib, id, opts = {}) {
     const t = lib.people[id] || Object.values(lib.people)[0];
@@ -66,9 +68,58 @@ export class Human {
   }
 
   update(dt) {
+    if (this.ragdoll) { this.stepRagdoll(dt); return; }
     if (this.locked > 0) this.locked -= dt;
     this.mixer.update(dt);
     if (this.post) this.post(dt); // pose tweaks on top of the clip (hands up, etc.)
+    if (this.flinchT > 0) this.applyFlinch(dt);
+  }
+
+  // Physics takes over (entities/ragdoll.js). ground(x, z, y) -> height. Returns false if this
+  // skeleton can't be ragdolled (then the death clip plays as before).
+  goLimp(ground) {
+    if (this.ragdoll) return true;
+    const r = new Ragdoll(this.model, ground);
+    if (!r.ok) return false;
+    this.rest = Object.values(r.b).map((b) => [b, b.position.clone(), b.quaternion.clone()]); // to stand up again (the player)
+    this.mixer.stopAllAction();
+    this.post = null;
+    this.ragdoll = r; this.ground = ground;
+    return true;
+  }
+  endRagdoll() {
+    if (!this.ragdoll) return;
+    for (const [b, p, q] of this.rest) { b.position.copy(p); b.quaternion.copy(q); }
+    this.ragdoll = null; this.rest = null; this.locked = 0;
+  }
+  stepRagdoll(dt) {
+    const r = this.ragdoll;
+    if (r.done) return;
+    r.step(dt);
+    // the character's root follows the body (so it's drawn and culled where it actually lies)
+    const pel = r.p.pelvis;
+    this.root.position.set(pel.x, this.ground(pel.x, pel.z, pel.y + 0.5), pel.z);
+    this.root.updateMatrixWorld(true);
+    r.pose();
+  }
+
+  // A hit someone survives: the part that was hit jerks away from the shot for a moment
+  // (head snaps back, a shoulder twists, a knee buckles), on top of whatever they're doing.
+  flinch(part, side = 'R', strength = 1) {
+    const pick = { head: ['head', 'Head', 'neck01'], torso: ['spine02', 'spine03', 'Spine1', 'Chest'], arm: [side === 'L' ? 'upperarm01L' : 'upperarm01R', side === 'L' ? 'UpperArm.L' : 'UpperArm.R'],
+      leg: [side === 'L' ? 'upperleg01L' : 'upperleg01R', side === 'L' ? 'UpperLeg.L' : 'UpperLeg.R'] }[part] || ['spine02', 'Chest'];
+    let bone = null; for (const n of pick) { bone = this.model.getObjectByName(n); if (bone) break; }
+    if (!bone) return;
+    this.flinchBone = bone; this.flinchT = 0.35; this.flinchMax = 0.35;
+    const a = (part === 'head' ? 0.55 : part === 'leg' ? 0.45 : 0.4) * strength;
+    this.flinchAxis = part === 'arm' ? new THREE.Vector3(0, side === 'L' ? 1 : -1, 0) : part === 'leg' ? new THREE.Vector3(1, 0, 0) : new THREE.Vector3(-1, 0, 0);
+    this.flinchAngle = a;
+  }
+  applyFlinch(dt) {
+    this.flinchT -= dt;
+    const k = Math.max(0, this.flinchT / this.flinchMax);
+    const e = Math.sin(Math.min(1, (1 - k) * 4) * Math.PI * 0.5) * k; // snaps out fast, eases back
+    this.flinchBone.quaternion.multiply(_fq.setFromAxisAngle(this.flinchAxis, this.flinchAngle * e));
   }
 
   dispose() { this.mixer.stopAllAction(); this.mixer.uncacheRoot(this.model); }
