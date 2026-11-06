@@ -11,6 +11,7 @@
 // gloves are recoloured on their own meshes; hats, glasses and neckwear are
 // small models riding the head and neck bones.
 import * as THREE from 'three';
+import { shadeSkin, shadeCloth, bodyShadeLevel } from './bodyshade.js';
 
 export const COLORS = [
   ['Black', 0x161616], ['Charcoal', 0x33343a], ['Slate grey', 0x5d636b], ['Heather grey', 0x9a9b9e], ['Silver', 0xc4c6c8],
@@ -288,6 +289,9 @@ function outfitMaterial(src, U, part) {
   m.name = src.name;
   const lum = { value: mapLum(src.map, src) };
   m.defines = { ...(m.defines || {}), ['OF_' + part.toUpperCase()]: '' };
+  // skin and cloth lighting (entities/bodyshade.js): the skin, and the bare arms/legs/chest the suit shows
+  const shade = bodyShadeLevel() > 0 && part !== 'shoes';
+  if (shade) Object.assign(m.defines, { SB_SKIN: '' }, part === 'suit' ? { SB_SHEEN: '' } : {});
   m.customProgramCacheKey = () => 'outfit-' + part;
   m.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, U, { uMapLum: lum });
@@ -316,6 +320,10 @@ function outfitMaterial(src, U, part) {
 #endif`)
       .replace('#include <normal_fragment_maps>', 'if (ofBare < 0.5) {\n#include <normal_fragment_maps>\n}')
       .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\n  if (ofRough >= 0.0) roughnessFactor = ofRough;');
+    if (shade) {
+      shadeSkin(sh, 'vOfP', part === 'suit' ? 'ofBare' : 'step(ofTex, -0.5)');
+      if (part === 'suit') shadeCloth(sh, '1.0 - ofBare');
+    }
   };
   m.needsUpdate = true;
   return m;

@@ -7,6 +7,7 @@
 // (repairs, towing, healing, scopes made from your supplies, buying your
 // cars...).
 import * as THREE from 'three';
+import { shadePerson } from '../entities/bodyshade.js';
 import { findHilltop, buildTrack } from '../world/hilltop.js';
 import { Human } from '../entities/human.js';
 import { CITY } from '../world/layout.js';
@@ -98,6 +99,7 @@ export function dressMember(lib, M) {
     });
     o.material = Array.isArray(o.material) ? out : out[0];
   });
+  shadePerson(h.model); // the recoloured copies get the skin/hair/cloth lighting too
   h.model.scale.set(M.w, M.h, M.w);
   h.acc = (M.acc || []).map(accessory);
   h.acc.forEach((a) => h.root.add(a));
