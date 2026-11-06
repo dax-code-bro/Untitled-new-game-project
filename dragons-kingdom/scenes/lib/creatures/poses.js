@@ -542,7 +542,10 @@ function plantBack(pb, F, side, o = {}) {
   const wp = o.at ? [o.at[0], o.at[1] + w.padDist * 0.92, o.at[2]]
     : [E0[0] + dxF + fz[0] * horiz + sd * (o.dx ?? 0), padY + (o.lift ?? 0), E0[2] + fz[2] * horiz + (o.dz ?? 0)];
   // (the wrist lands exactly where the gait puts it; the swung humerus only steers the elbow)
-  const pole = o.pole ? add(qRot(qT, [sd * o.pole[0], o.pole[1], o.pole[2]]), [0, 0.3, 0]) : scale(hDirS, d.hum);
+  // (r2 s11) a wrist stepped FORWARD swung the elbow down to the belly line (Charcoal walk: knuckles
+  // 1.9 m up instead of ~4.6, the folded fingers ran back under the flank past the hip as a thin dark
+  // blade): the pole gets an up bias with the forward swing (o.poleUp, 0 = old behaviour)
+  const pole = o.pole ? add(qRot(qT, [sd * o.pole[0], o.pole[1], o.pole[2]]), [0, 0.3, 0]) : add(scale(hDirS, d.hum), [0, (o.poleUp ?? 2) * Math.max(0, sw), 0]);
   return plantWing(pb, F, side, wp, { pole, ...(o.fold || {}) });
 }
 
