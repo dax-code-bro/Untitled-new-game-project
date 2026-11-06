@@ -46,7 +46,7 @@
   "I_full": -19.6,
   "TP": -1.6,
   "LRA": 9.9,
-  "sha256": "23a2af2494a6195504e8011873ac8bfb4a414899a1b72741f60cad2395cde53a",
+  "sha256": "b83601d4bd3478f532254f6abc9bda06341103b18c0fb7b44b8c3e6cc44ecef7",
   "master_gain_db": 2,
   "limiter_ceiling_dbfs": -1.6,
   "dialogue_gain_db": 11.4,
@@ -60,7 +60,7 @@
   "aac_I": -17.2,
   "aac_I_full": -19.6,
   "aac_TP": -1.6,
-  "bytes": 57858059
+  "bytes": 57858348
  },
  "beds": {
   "grounds_wind": {
@@ -158,7 +158,7 @@
  "music_cue_sheet": "episodes/s01e01/final/sound/music/cues.json",
  "fx": {
   "spot_sheet": "episodes/s01e01/final/sound/fx/spots.json",
-  "events": 158,
+  "events": 161,
   "peak_dbfs": -4.1,
   "spaces": [
    "air",
@@ -166,11 +166,11 @@
    "open",
    "stone_wall"
   ],
-  "sha256": "a48af1c93dd9e90a2151d8ca29a864d32d5a41a9193b2db53e6bf81a2661c192",
+  "sha256": "27d92601bdf63cf71201de36d260d6de2fcaf69741a06d72c76e1292a5dc9e01",
   "spot_rows_not_in_cut": 134,
   "by_sound": {
    "claws_turf": 1,
-   "wingbeat": 39,
+   "wingbeat": 42,
    "wind_grass": 4,
    "leather": 4,
    "breath": 1,
