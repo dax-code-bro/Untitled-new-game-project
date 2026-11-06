@@ -1,6 +1,6 @@
 {
  "title": "Dragon's Kingdom S01E01 - draft cut: 1C",
- "made_at": "2026-11-05T20:41",
+ "made_at": "2026-11-06T07:48",
  "shots_dir": "$DK_DIRECTOR_WORK/shots",
  "size": "960x540",
  "fps": 24,
@@ -395,7 +395,7 @@
    "job": "X4-02",
    "scene": "1C",
    "kind": "3d",
-   "source": "rendered 2026-11-05T09:39",
+   "source": "rendered 2026-11-06T07:13",
    "frames": 96,
    "rec_in": 2364,
    "trans": [
@@ -414,7 +414,7 @@
    "job": "X4-03",
    "scene": "1C",
    "kind": "3d",
-   "source": "rendered 2026-11-05T19:57",
+   "source": "rendered 2026-11-06T07:14",
    "frames": 96,
    "rec_in": 2460,
    "trans": [
@@ -566,7 +566,7 @@
    "job": "X4-11",
    "scene": "1C",
    "kind": "3d",
-   "source": "rendered 2026-11-05T20:27",
+   "source": "rendered 2026-11-06T07:37",
    "frames": 84,
    "rec_in": 3360,
    "trans": [
@@ -623,7 +623,7 @@
    "job": "X4-14",
    "scene": "1C",
    "kind": "3d",
-   "source": "rendered 2026-11-05T20:22",
+   "source": "rendered 2026-11-06T07:33",
    "frames": 120,
    "rec_in": 3732,
    "trans": [
@@ -737,7 +737,7 @@
    "job": "X4-20",
    "scene": "1C",
    "kind": "3d",
-   "source": "rendered 2026-11-05T20:41",
+   "source": "rendered 2026-11-06T07:48",
    "frames": 120,
    "rec_in": 4428,
    "trans": [
@@ -1597,8 +1597,8 @@
   "file": "episodes/s01e01/final/cut/DragonsKingdom_S01E01_draft-cut_1C.mp4",
   "frames": 9168,
   "duration_s": 382,
-  "size_mb": 43.6,
-  "assembled_s": 50
+  "size_mb": 43.4,
+  "assembled_s": 32
  },
  "summary": {
   "rendered": 26,
