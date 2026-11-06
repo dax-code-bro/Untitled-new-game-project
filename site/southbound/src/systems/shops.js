@@ -116,6 +116,7 @@ export function installShops(game) {
   P.wardrobe = P.wardrobe || Object.values(DEFAULT_OUTFIT).filter(Boolean);
   const skinHex = 0xb98264;
   const fit = makeOutfitter(player.h, skinHex);
+  game.outfitter = fit; // (systems/grooming.js: dirt and blood on what you wear)
   const wear = (o) => { if (fit.ok) fit.apply(o); game.refreshGear?.(); };
   wear(P.outfit);
   game.wearOutfit = wear;

@@ -59,7 +59,8 @@ the fewest additions next. Be honest in reports about what is and isn't done.
 - `S.stepping` is true inside `SB.step`; systems that skip work while `S.frozen` must allow
   stepping (`if (S.frozen && !S.stepping) return`).
 - Gotchas found the hard way: a material cloned from a shaded one carries its
-  `onBeforeCompile` hook and gets shaded twice (guard declarations); vehicles you get into leave
+  `onBeforeCompile` hook and gets shaded twice (guard declarations), and `MeshStandardMaterial.clone()`
+  resets `defines` to `{STANDARD}` (copy them back, or hair/skin shading loses `SB_HAIR` etc.); vehicles you get into leave
   the `parked` list (LOD must include `S.vehicle`); `police.clear()` must not null startup
   handlers; never add a `//` comment in the middle of a one-line object or call (it swallows the
   rest of the line: use `/* */`); check the build output says "Done" before starting a test.

@@ -311,12 +311,65 @@ function outfitMaterial(src, U, part) {
 #endif`)
     const body = part === 'suit' ? 'ofSuit(vOfP, vOfArm)' : part === 'shoes' ? 'ofShoe(vOfP)' : 'ofSkin(vOfP, diffuse)';
     sh.fragmentShader = sh.fragmentShader
-      .replace('#include <common>', `#include <common>\n${GLSL_FRAG}`)
+      .replace('#include <common>', `#include <common>\n${GLSL_FRAG}\nuniform float uOfDirt; uniform float uOfBlood; uniform vec4 uBeard; uniform vec3 uBeardC;\nfloat ofGH(vec3 p){ return fract(sin(dot(p, vec3(12.9898, 78.233, 37.719))) * 43758.5453); }\nfloat ofVN(vec3 p){ vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(mix(ofGH(i), ofGH(i + vec3(1,0,0)), f.x), mix(ofGH(i + vec3(0,1,0)), ofGH(i + vec3(1,1,0)), f.x), f.y), mix(mix(ofGH(i + vec3(0,0,1)), ofGH(i + vec3(1,0,1)), f.x), mix(ofGH(i + vec3(0,1,1)), ofGH(i + vec3(1,1,1)), f.x), f.y), f.z); }`)
       .replace('vec4 diffuseColor = vec4( diffuse, opacity );', `vec4 diffuseColor = vec4( ${body}, opacity );`)
       .replace('#include <map_fragment>', `#ifdef USE_MAP
   vec4 sampledDiffuseColor = texture2D( map, vMapUv );
   if (ofTex < 0.0) diffuseColor *= sampledDiffuseColor;
   else { float ofL = dot(sampledDiffuseColor.rgb, vec3(0.299, 0.587, 0.114)) / uMapLum; diffuseColor.rgb *= mix(1.0, clamp(ofL, 0.55, 1.35), ofTex); }
+#endif`)
+      .replace('#include <color_fragment>', `#include <color_fragment>
+#if defined(OF_SUIT) || defined(OF_SHOES)
+{
+  // mud from the ground up: shoes, then the shins, creeping past the knee as it gets worse; in
+  // blotches (body coordinates: the feet are at y = -1, the belt about 0.14, the neck about 0.73)
+  float gn = ofVN(vOfP * 11.0) * 0.65 + ofVN(vOfP * 31.0) * 0.35, gf2 = ofVN(vOfP * 90.0);
+  #ifdef OF_SHOES
+    float low = 1.0;
+  #else
+    float low = 1.0 - smoothstep(mix(-0.9, -0.3, uOfDirt), mix(-0.6, 0.1, uOfDirt), vOfP.y + (gn - 0.5) * 0.25);
+  #endif
+  float splash = smoothstep(0.72, 0.8, gn) * smoothstep(0.3, 0.8, uOfDirt) * (1.0 - smoothstep(0.2, 0.6, vOfP.y));
+  float dirt = clamp(uOfDirt * 1.25 * low * smoothstep(0.3 - low * 0.25, 0.55 - low * 0.2, gn) + splash * 0.7, 0.0, 0.85);
+  vec3 mud = mix(vec3(0.15, 0.11, 0.075), vec3(0.4, 0.32, 0.22), smoothstep(0.35, 0.75, gf2) * (1.0 - low * 0.4)); // dried, paler on top
+  diffuseColor.rgb = mix(diffuseColor.rgb, mud, dirt);
+  // blood: a few big soaked blotches on the chest and belly, near black where it's thickest
+  float chest = smoothstep(0.2, 0.32, vOfP.y) * (1.0 - smoothstep(0.66, 0.74, vOfP.y)) * (1.0 - smoothstep(0.17, 0.24, abs(vOfP.x))); // the torso, not the sleeves
+  float bn = ofVN(vOfP * vec3(7.0, 6.0, 7.0) + 3.1) * 0.75 + gf2 * 0.25;
+  float blood = chest * smoothstep(0.78 - uOfBlood * 0.42, 0.86 - uOfBlood * 0.38, bn);
+  // (dark enough to show on a red shirt too: blood on cloth reads as a dark, wet stain more than as red)
+  diffuseColor.rgb = mix(diffuseColor.rgb, mix(vec3(0.12, 0.006, 0.005), vec3(0.035, 0.003, 0.002), smoothstep(0.8 - uOfBlood * 0.3, 0.95, bn)), clamp(blood, 0.0, 0.94));
+  ofRough = blood > 0.3 ? mix(ofRough < 0.0 ? 0.8 : ofRough, 0.3, uOfBlood) : ofRough;
+}
+#endif
+#ifdef OF_SKIN
+// facial hair (systems/details.js sets it): stubble dots that thicken into a beard over a week, in
+// the shape the barber left; a buzz cut shows as stubble on the scalp. Head coordinates measured off
+// the model's profile: chin 0.72-0.77, lower lip 0.772-0.784, upper lip to 0.79, nose base 0.803,
+// nose tip 0.815, eyes 0.85, hairline 0.92; the face looks down +z
+if (uBeard.x > 0.001 || uBeard.z > 0.5) {
+  vec3 q = vOfP; float ax = abs(q.x);
+  float front = smoothstep(-0.075, -0.035, q.z) * step(0.69, q.y);
+  float lips = (1.0 - smoothstep(0.019, 0.024, ax)) * smoothstep(0.771, 0.774, q.y) * (1.0 - smoothstep(0.788, 0.791, q.y)) * step(0.02, q.z);
+  float chin = (1.0 - smoothstep(0.02, 0.028, ax)) * smoothstep(0.708, 0.72, q.y) * (1.0 - smoothstep(0.772, 0.778, q.y)) * step(-0.01, q.z);
+  float tache = (1.0 - smoothstep(0.026, 0.033, ax)) * smoothstep(0.786, 0.79, q.y) * (1.0 - smoothstep(0.799, 0.803, q.y)) * step(0.02, q.z)
+    + (1.0 - smoothstep(0.026, 0.033, ax)) * smoothstep(0.019, 0.024, ax) * smoothstep(0.772, 0.776, q.y) * (1.0 - smoothstep(0.79, 0.795, q.y)); // and down round the corners of the mouth
+  float sideK = smoothstep(0.03, 0.07, ax);
+  float jaw = front * smoothstep(0.695, 0.72, q.y) * (1.0 - smoothstep(mix(0.797, 0.84, sideK), mix(0.803, 0.85, sideK), q.y));
+  float st = uBeard.y; // 0 full, 1 goatee, 2 moustache, 3 stubble
+  float m = (st < 0.5 || (st > 2.5 && st < 3.5)) ? max(jaw, max(chin, tache)) : st < 1.5 ? max(chin, tache) : st < 2.5 ? tache : 0.0;
+  m *= 1.0 - lips;
+  float dens = (st > 2.5 && st < 3.5) ? min(uBeard.x, 0.3) : uBeard.x;
+  float dots = ofn(q.xy * 1100.0 + q.z * 400.0), strands = ofn(vec2(q.x * 1500.0, q.y * 240.0 + q.z * 600.0));
+  // a ragged edge, not a stencil
+  m *= smoothstep(0.25, 0.55, ofn(q.xy * 160.0) * 0.6 + m * 0.6);
+  float cover = m * mix(step(1.0 - dens * 1.5, dots) * 0.8, 0.82 + 0.15 * strands, smoothstep(0.35, 0.85, dens));
+  float scalp = uBeard.z * smoothstep(0.0, 0.012, q.y - mix(0.912, 0.8, smoothstep(-0.02, -0.12, q.z)))
+    * (1.0 - smoothstep(0.075, 0.09, ax) * (1.0 - smoothstep(0.865, 0.885, q.y)));
+  cover = max(cover, scalp * (0.5 + 0.3 * step(0.5, dots)));
+  diffuseColor.rgb = mix(diffuseColor.rgb, uBeardC * (0.7 + 0.55 * strands), clamp(cover, 0.0, 0.93));
+  if (cover > 0.4) ofRough = 0.88;
+}
 #endif`)
       .replace('#include <normal_fragment_maps>', 'if (ofBare < 0.5) {\n#include <normal_fragment_maps>\n}')
       .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\n  if (ofRough >= 0.0) roughnessFactor = ofRough;');
@@ -516,7 +569,9 @@ export function makeOutfitter(h, skinHex = 0xc68e6a) {
   const tone = meshes.skin && avgColor(meshes.skin.material.map, meshes.skin.material);
   const v4 = () => ({ value: new THREE.Vector4() }), col = () => ({ value: new THREE.Color() });
   const U = { uTopC: col(), uOutC: col(), uBotC: col(), uSkinC: col(), uShoeC: col(), uGloveC: col(),
-    uTop: v4(), uTop2: v4(), uOut: v4(), uOut2: v4(), uBot: v4(), uBot2: v4(), uShoe: v4(), uGlove: v4(), uOutInfTop: { value: 0 } };
+    uTop: v4(), uTop2: v4(), uOut: v4(), uOut2: v4(), uBot: v4(), uBot2: v4(), uShoe: v4(), uGlove: v4(), uOutInfTop: { value: 0 },
+    uOfDirt: { value: 0 }, uOfBlood: { value: 0 }, // what you've been through (systems/grooming.js)
+    uBeard: { value: new THREE.Vector4() }, uBeardC: col(), uDye: { value: new THREE.Vector4() } }; // facial hair, hair dye (systems/details.js)
   U.uSkinC.value.set(skinHex);
   if (tone) U.uSkinC.value.copy(tone).multiply(meshes.skin.material.color);
   for (const part of ['suit', 'shoes', 'skin']) if (meshes[part]) meshes[part].material = outfitMaterial(meshes[part].material, U, part);
@@ -529,9 +584,33 @@ export function makeOutfitter(h, skinHex = 0xc68e6a) {
     const rs = new THREE.Vector3().setFromMatrixScale(h.root.matrixWorld).x || 1;
     return _s.length() / rs;
   };
-  let headShown = true;
+  // the player's own copy of the hair and brows (the material is shared with the people library) so
+  // they can be dyed and slicked: dye takes the colour and keeps the texture's light and dark
+  for (const k of ['hair', 'eyebrows']) {
+    const mh = meshes[k]; if (!mh) continue;
+    const src = mh.material, m = src.clone(), key = (src.customProgramCacheKey?.() || k) + '-dye';
+    m.defines = { ...(src.defines || {}) }; // (MeshStandardMaterial.copy resets the defines: the hair shading needs SB_HAIR)
+    m.onBeforeCompile = function (sh, r) {
+      src.onBeforeCompile?.call(this, sh, r);
+      sh.uniforms.uDye = U.uDye;
+      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform vec4 uDye;')
+        .replace('#include <color_fragment>', '#include <color_fragment>\n  diffuseColor.rgb = mix(diffuseColor.rgb, uDye.rgb * clamp(dot(diffuseColor.rgb, vec3(0.3, 0.59, 0.11)) / 0.12, 0.3, 1.8), uDye.w);');
+    };
+    m.customProgramCacheKey = () => key;
+    mh.material = m; mh.userData.rough0 = m.roughness;
+  }
+  let headShown = true, groomHide = false, hatHides = false;
   return {
     ok: true, U, meshes,
+    setGrime(dirt, blood) { U.uOfDirt.value = dirt; U.uOfBlood.value = blood; },
+    // g: { dens 0..1, style 0 full / 1 goatee / 2 moustache / 3 stubble / 4 clean, buzz, shaved, slick, beardC, dye (hex or null) }
+    setGroom(g) {
+      U.uBeard.value.set(g.style > 3.5 ? 0 : g.dens, g.style, g.buzz ? 1 : 0, 0); U.uBeardC.value.setHex(g.beardC);
+      if (g.dye != null) { const c = new THREE.Color(g.dye); U.uDye.value.set(c.r, c.g, c.b, 1); } else U.uDye.value.w = 0;
+      for (const k of ['hair', 'eyebrows']) if (meshes[k]) { const m = meshes[k].material; m.roughness = (meshes[k].userData.rough0 ?? 0.6) * (g.slick && k === 'hair' ? 0.45 : 1); m.color.setScalar(g.slick && k === 'hair' ? 0.75 : 1); }
+      groomHide = !!(g.buzz || g.shaved);
+      if (meshes.hair) meshes.hair.visible = !groomHide && !hatHides;
+    },
     // first person: hats and glasses would sit in front of the camera
     headVisible(v) { headShown = v; for (const e of extras) if (e.userData.head) e.visible = v; },
     apply(o) {
@@ -558,7 +637,8 @@ export function makeOutfitter(h, skinHex = 0xc68e6a) {
       if (hat) { const m = buildHat(hat); m.userData.head = true; m.visible = headShown; if (attachToBone(meshes.suit, 'head', m, [0, 0.914, -0.078], mpu)) extras.push(m); }
       if (eye) { const m = buildGlasses(eye); m.userData.head = true; m.visible = headShown; if (attachToBone(meshes.suit, 'head', m, [0, 0.862, 0.038], mpu)) extras.push(m); }
       if (neck) { const m = buildNeck(neck); if (attachToBone(meshes.suit, neck.style.id === 'tie' || neck.style.id === 'bolo' ? 'spine01' : 'neck01', m, [0, neck.style.id === 'bandana' || neck.style.id === 'scarf' ? 0.68 : 0.705, -0.005], mpu)) extras.push(m); }
-      if (meshes.hair) meshes.hair.visible = !(hat && ['beanie', 'headwrap'].includes(hat.style.id));
+      hatHides = !!(hat && ['beanie', 'headwrap'].includes(hat.style.id));
+      if (meshes.hair) meshes.hair.visible = !hatHides && !groomHide;
     },
   };
 }
