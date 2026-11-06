@@ -3,6 +3,52 @@
 Owner paths: `scenes/lib/director/`, `episodes/s01e01/final/scenes/`, `episodes/s01e01/final/cut/`.
 How it works: `README.md` in this folder. Latest state first.
 
+## Session 27 (2026-11-06, short budgeted session: F4 resting hand (perf s13 variant B) + cloth, X4-06 inland loop - STILLS only)
+
+Shot ids, lengths, line cue times UNCHANGED. No flight act got a phase / tOffset (X4-06: CHAR_FLY / LEAF_FLY, beats
+unchanged for sound). No edl change needed (build-shots --check clean, slate warnings only).
+Scratch: `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/director/s27/`
+(`f4_r0.png` first pass, `f4.png` final, `X4-06_036.png` @0.5, `X4-06_068.png` @0.95, `previs/`, labelled `sheet.jpg`).
+- F4 (scenes/lookdev/style-f4-birthing-chamber.js): perf s13 variant B applied verbatim (import handShape / restHand
+  from ../lib/humans/rig.js; the far hand rests palm DOWN on its back behind the wing via the raycast + restHand, the
+  near hand handShape 'rest'). Cloth: 0.24 x 0.2 -> 0.3 x 0.3, centre near 0.055 -> 0.08 / fwd 0.09 -> 0.08, a thicker
+  rolled fold (0.011, exp -22u) + the top layer's hem as a 3.5 mm step at u 0.82; drapeCloth skips a hand whose wrist
+  is > 6.5 cm over the linen (the far hand on the back no longer tents it); hand pads r 0.05 / h 0.042 / taper 0.2
+  (were 0.045 / 0.028 / 0.5).
+  Still LOOKED AT (draft t=2): the far hand reads as a hand resting palm-down on the hatchling's back (behind the wing,
+  fingers together, back of the hand to the lens) - tender, no more claw. The cloth is now a broad white linen pad
+  under the neck/chest, rising from the bed onto her near hand (no longer a ribbon). NOT yet right: the near hand's
+  curled 'rest' fingers + palm still show ABOVE the cloth's lip (she reads as lifting the cloth's edge to its chest,
+  not cradling it ON the cloth) - the heightfield pad (wrist -> finger3 tip + h) is below the curled finger tops.
+- X4-06 (specs/verdor-aerial.spec.js): the inland loop from s26: Charcoal [300,41,1600] -> [262,41,1640], Leaf 50 m
+  behind on the same line ([334.4,40,1563.7] -> [296.4,40,1603.7]), both yaw 224 (SW). From the s24 lens (bearing 12)
+  previs had the pair at / past the right edge (x 0.87-1.1, Leaf OUT) -> the lens turns 7 deg right about the camera
+  (look [172.2,21.6,1709.3] -> [189.8,21.6,1714.2]) and the farmer + her facing turn with it (at [143.1,1845.2], face
+  [113.1,1799.1]: same screen spot, same back three-quarter). Previs: Charcoal (0.63,0.46) -> (0.50,0.52), Leaf
+  (0.72,0.39) -> (0.63,0.43), 0 flags (farmer "OUT (-0.38,-10.5)" is the previs placing her at y 0, not the terrace -
+  the still has her where she should be). `--cuts --only X4-06`: 0 cuts checked (neighbours are other sets).
+  Stills LOOKED AT (draft @0.5 / @0.95): the woman farmer foreground left, back three-quarter, the hoe across her front
+  (thin but reads), terrace houses + town rows behind her, the harbour wall + sea right; Charcoal big upper right
+  (wings inside the frame at both), Leaf a small green dragon below/behind him. The pair come in mostly TOWARD the lens
+  (heading 224 vs lens bearing 19) drifting right -> left (x 0.63 -> 0.50): reads as "they swing in over the town",
+  the screen direction is mild. READY for video.
+- Verify: director selftest 20/20; build-shots --check clean (slate warnings only). npm test not run.
+- NEXT (exact, in order):
+  1. F4 near hand under the cloth (one iteration): in drapeCloth build each pad from the wrist to the HIGHEST fingertip
+     (max y of finger1..5-3, not finger3-3 extended) with h ~0.02 above that line, or keep the near hand's fingers less
+     curled (handShape 'rest' amount ~0.5). Re-still:
+     `node render/render.mjs --still scenes/lookdev/style-f4-birthing-chamber.js --time 2 --preset draft --png <scratch>/eng1/director/s28/f4.png`
+     Final (owner/background): same with `--preset final --png out.png`.
+  2. Videos (owner/background, ~10 min/shot here):
+     `node scenes/lib/director/tools/render-shots.mjs --only X4-06 --force --work <scratch>/eng1/director/work1B`
+     `node scenes/lib/director/tools/render-shots.mjs --only X4-01 --force --work <scratch>/eng1/director/work1B`
+     plus the s24 list (`--only X4-02,X4-03,X4-11,X4-14,X4-20`) and the pending 1C groups.
+  3. s24 NEXT 4 unchanged (plans shots, VERDOR_HARBOR, OUTER_ROCKS).
+- REQUESTS: humans - palm-up 'rest' hand: the thumb stands off (your known item) and the curled fingers rise ~4+ cm
+  over the wrist->tip line (a cloth over a palm-up hand needs a flatter cupped hand, or report the finger-top height).
+  creatures - F4 near hind leg splay in pushUp (s26, still open). props - real hoe (s24). nature - field / hedge
+  texture at aerial distance (s26).
+
 ## Session 26 (2026-11-06, short budgeted session: F4 hatchling flank, VERDOR_AERIAL X4-01 reframe + open shore - STILLS only)
 
 Shot ids, lengths, line cue times UNCHANGED. No flight act got a phase / tOffset (X4-01 acts untouched: LEAF_FLY /

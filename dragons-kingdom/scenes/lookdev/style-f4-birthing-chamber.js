@@ -27,6 +27,7 @@ import { loadPBR } from '../lib/assets.js';
 import { limbIK, lookAtPoint, rotateBone, relaxHand, bonePos } from '../lib/sets/cast.js';
 import { createCreature, poses } from '../lib/creatures/index.js';
 import { loadCharacter, placeCharacter } from '../lib/humans/index.js';
+import { handShape, restHand } from '../lib/humans/rig.js';
 import { Kit, frame } from '../lib/architecture/core.js';
 import { archMaterials } from '../lib/architecture/materials.js';
 import { birthingChamber, loadArchCache, NEST } from '../lib/architecture/interiors.js';
@@ -277,8 +278,11 @@ function drapeCloth(mesh, c, across, along, w, d, ch, linenY, hatch) {
   for (const sd of ['L', 'R']) {
     const w = bp(`wrist.${sd}`), k = bp(`finger3-1.${sd}`), tip = bp(`finger3-3.${sd}`);
     if (!w || !k || !tip) continue;
+    if (w.y - linenY(w.x, w.z) > 0.065) continue;         // (s27) a hand up on the hatchling is not under the cloth
     const end = tip.clone().addScaledVector(tip.clone().sub(k), 0.35);
-    pads.push({ a: w, b: end, r: 0.045, h: 0.028 });
+    // (s27: thicker, less tapered pads - the curled 'rest' fingers of a palm-up hand rise above the old pad and
+    // poked through the cloth)
+    pads.push({ a: w, b: end, r: 0.05, h: 0.042 });
   }
   // the hatchling's chest rests on it: the cloth never comes up through the body (its belly
   // presses it to the bed) - the body's lowest points are below the cloth anyway
@@ -295,7 +299,7 @@ function drapeCloth(mesh, c, across, along, w, d, ch, linenY, hatch) {
       const abx = b.x - a.x, abz = b.z - a.z, L2 = abx * abx + abz * abz;
       const tt = Math.max(0, Math.min(1, ((p.x - a.x) * abx + (p.z - a.z) * abz) / L2));
       const dd = Math.hypot(p.x - (a.x + abx * tt), p.z - (a.z + abz * tt));
-      if (dd < r) y = Math.max(y, a.y + (b.y - a.y) * tt + h * Math.sqrt(1 - (dd / r) ** 2) * (1 - 0.5 * tt));
+      if (dd < r) y = Math.max(y, a.y + (b.y - a.y) * tt + h * Math.sqrt(1 - (dd / r) ** 2) * (1 - 0.2 * tt));
     }
     const k = j * (CU + 1) + i;
     H[k] = H0[k] = y; X.push(p.x); Z.push(p.z);
@@ -323,7 +327,8 @@ function drapeCloth(mesh, c, across, along, w, d, ch, linenY, hatch) {
     const k = j * (CU + 1) + i, u = i / CU, v = j / CV;
     // creases running out from the hands, a rolled fold along the left edge
     const crease = 0.0025 * Math.sin(v * 37 + u * 9) * Math.sin(u * 13 + 1.7) + 0.0015 * Math.sin(u * 51 - v * 23);
-    const fold = 0.006 * Math.exp(-u * 40);
+    // (s27: a two-layer folded cloth - a thick rolled fold under the chest, the top layer's hem a small step at 0.82)
+    const fold = 0.011 * Math.exp(-u * 22) + 0.0035 / (1 + Math.exp((u - 0.82) * 160));
     // (the creases fade in smoothly where the cloth lifts off the bed: a hard switch at 4 mm drew a
     // jagged contour line along the cloth's drop from her hands)
     const lifted = Math.min(1, Math.max(0, (H[k] - H0[k]) / 0.01));
@@ -422,11 +427,31 @@ export function update(t, ctx) {
   limbIK(alex, 'arm', aIsR ? 'L' : 'R', wB, pole.clone().addScaledVector(fwd, -0.25));
   const under = near.clone().negate().addScaledVector(up, -0.1).normalize();
   for (const sd of ['L', 'R']) relaxHand(alex, sd, { fingers: under, palm: up, keepFingers: true });
+  // (s27, perf s13 variant B: the far hand rests palm DOWN on its back behind the wing - fingers together, draped
+  // over the far side, found by a raycast onto the body; the near hand stays cupped palm up under the cloth in the
+  // soft 'rest' shape. The open, build-spread far hand read as a claw / startled, not tender.)
+  {
+    const farSd = aIsR ? 'L' : 'R';            // wB: the hand less toward the lens
+    const from = chest.clone().addScaledVector(near, 0.3).addScaledVector(up, 0.12).addScaledVector(fwd, -0.06);
+    const ray = new THREE.Raycaster(from, chest.clone().addScaledVector(fwd, -0.06).sub(from).normalize(), 0, 1);
+    hatch.root.traverse((m) => { if (m.isSkinnedMesh) m.computeBoundingSphere(); });
+    const hit = ray.intersectObject(hatch.root, true)[0];
+    if (hit) {
+      const nrm = hit.face.normal.clone().transformDirection(hit.object.matrixWorld);
+      if (nrm.dot(from.clone().sub(hit.point)) < 0) nrm.negate();
+      restHand(alex, farSd, { at: hit.point, normal: nrm, fingers: far.clone().addScaledVector(fwd, -0.3), radius: 0.06,
+        pole: pole.clone().addScaledVector(fwd, aIsR ? -0.25 : 0.25) });
+    }
+    handShape(alex, aIsR ? 'R' : 'L', 'rest');
+  }
   // the cloth: folded edge under the chest, the rest over her hands toward the lens
   // (it ends over her knuckles: the backs of her hands and her wrists show at its near edge)
   // (only a few cm past the outer hands: a heightfield cloth cannot hang, and a long drop off a hand
   // to the bed showed as stretched bands)
-  drapeCloth(fcloth, base.clone().addScaledVector(near, 0.055).addScaledVector(fwd, 0.09), near, fwd.clone().setY(0).normalize(), 0.24, 0.2, alex, S.linenY, hatch);
+  // (s27: a FOLDED cloth, not a ribbon over one hand: wider and deeper (0.24 x 0.2 -> 0.3 x 0.3), its centre further
+  // toward the lens (near 0.055 -> 0.08) so a broad pad of linen shows under the chest in front of the near hand, a
+  // thicker rolled fold under the chest and the top layer's hem as a step; the far hand on its back no longer lifts it)
+  drapeCloth(fcloth, base.clone().addScaledVector(near, 0.08).addScaledVector(fwd, 0.08), near, fwd.clone().setY(0).normalize(), 0.3, 0.3, alex, S.linenY, hatch);
   const endR = base.clone().addScaledVector(near, 0.2).addScaledVector(up, 0.03);     // her hands
   lookAtPoint(alex, chest, 0.8);
   if (T0 === 2) { const wr = ['L', 'R'].map((sd) => bonePos(alex, `wrist.${sd}`)); console.warn('[f4] wrists', wr.map((w) => (w.y - base.y).toFixed(3) + '@' + w.distanceTo(wA).toFixed(2) + '/' + w.distanceTo(wB).toFixed(2)).join(' '), 'base', base.toArray().map((v) => v.toFixed(3)).join(',')); }

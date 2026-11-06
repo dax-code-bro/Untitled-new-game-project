@@ -135,12 +135,19 @@ export default {
       // left of the axis), Leaf 4 m inland (x 205 -> 201) to keep clear of his left wing. r2 still: hoe shaft reads (thin),
       // Charcoal's right wing STILL broke the top-right corner -> pushed 1.3x further out on the same ray from the lens
       // ([230, 38, 1640] -> [256.7, 41.4, 1575], same 48 m path): same screen spot, ~23 % smaller. NOT RE-STILLED.
-      cam: { rig: 'static', pos: [141, 26.8, 1856], look: [172.2, 21.6, 1709.3], mm: 35, fstop: 5.6, focus: 'farmer.head' },
+      // s27 INLAND LOOP (s26 continuity fix: X4-03 left Charcoal over the harbour basin heading 185; here he was 65 m
+      // inland and back north, still heading south): the pair bank in from the harbour side and cross the town heading
+      // SOUTH-WEST (yaw 224, right -> left on screen, coming slightly toward the lens): Charcoal [300, 41, 1600] ->
+      // [262, 41, 1640], Leaf 50 m behind him on the same line (y 40). The turn itself falls in X4-04/05 (ground). From
+      // the s24 lens (bearing 12) the pair sat on / past the right edge (previs x 0.87-1.1), so the lens turns 7 deg
+      // right about the camera (bearing 19) and the farmer + her facing turn with it (same screen spot, same back
+      // three-quarter): Charcoal x ~0.6 -> 0.5, Leaf ~0.75 -> 0.65. NO phase / tOffset (sound: beats unchanged).
+      cam: { rig: 'static', pos: [141, 26.8, 1856], look: [189.8, 21.6, 1714.2], mm: 35, fstop: 5.6, focus: 'farmer.head' },
       set: { shadowAt: [170, 25, 1760], shadowExtent: 160 },
       cast: {
-        farmer: { at: [141.8, 1845], face: [106.4, 1802.9], acts: [[0, 'lean', { to: 0.6, dur: 0.01 }], [0, 'gesture', { name: 'tool', prop: 'hoe', stance: 'R' }], [0.5, 'look', { at: 'leaf.chest', amount: 0.7 }]] },
-        leaf: { tack: true, root: [[0, [201, 38, 1660]], [3, [204, 38, 1708], 'linear']], yawKeys: 177, acts: LEAF_FLY() },
-        charcoal: { tack: true, root: [[0, [256.7, 41.4, 1575]], [3, [259.7, 41.4, 1623], 'linear']], yawKeys: 177, acts: CHAR_FLY() },
+        farmer: { at: [143.1, 1845.2], face: [113.1, 1799.1], acts: [[0, 'lean', { to: 0.6, dur: 0.01 }], [0, 'gesture', { name: 'tool', prop: 'hoe', stance: 'R' }], [0.5, 'look', { at: 'leaf.chest', amount: 0.7 }]] },
+        leaf: { tack: true, root: [[0, [334.4, 40, 1563.7]], [3, [296.4, 40, 1603.7], 'linear']], yawKeys: 224, acts: LEAF_FLY() },
+        charcoal: { tack: true, root: [[0, [300, 41, 1600]], [3, [262, 41, 1640], 'linear']], yawKeys: 224, acts: CHAR_FLY() },
         abbyR: {}, remiR: {},
       },
       notes: 'perf s11 acts (humans/PROGRESS.md); hoe = humans tools.js stand-in until props has a real one',
