@@ -271,7 +271,8 @@ vec3 ofSkin(vec3 p, vec3 base){
   return base;
 }`;
 
-function mapLum(tex) {
+function mapLum(tex, mat) {
+  if (mat?.userData?.sbLum !== undefined) return mat.userData.sbLum; // measured when the texture was compressed (tools/southbound/pack-ktx2.mjs)
   try {
     const img = tex?.image; if (!img) return 0.5;
     const c = document.createElement('canvas'); c.width = c.height = 16;
@@ -285,7 +286,7 @@ function mapLum(tex) {
 function outfitMaterial(src, U, part) {
   const m = src.clone();
   m.name = src.name;
-  const lum = { value: mapLum(src.map) };
+  const lum = { value: mapLum(src.map, src) };
   m.defines = { ...(m.defines || {}), ['OF_' + part.toUpperCase()]: '' };
   m.customProgramCacheKey = () => 'outfit-' + part;
   m.onBeforeCompile = (sh) => {
@@ -332,7 +333,8 @@ function armAttribute(mesh) {
     for (let c = 0; c < 4; c++) { const w = sw.getComponent(i, c); if (w > bw) { bw = w; best = si.getComponent(i, c); } }
     arr[i] = isArm[best] ? 1 : 0;
   }
-  g.setAttribute('aArm', new THREE.BufferAttribute(arr, 1));
+  const attr = new THREE.BufferAttribute(arr, 1);
+  for (const lg of g.userData.lodSet || [g]) lg.setAttribute('aArm', attr); // every level of detail (core/lod.js) shares it
 }
 
 // ---------------------------------------------------------------- accessories
@@ -478,7 +480,8 @@ export function attachToBone(mesh, boneName, obj, at, metres) {
   return true;
 }
 
-function avgColor(tex) {
+function avgColor(tex, mat) {
+  const a = mat?.userData?.sbAvg; if (a) return new THREE.Color().setRGB(a[0], a[1], a[2]);
   try {
     const img = tex?.image; if (!img) return null;
     const c = document.createElement('canvas'); c.width = c.height = 32;
@@ -502,7 +505,7 @@ export function makeOutfitter(h, skinHex = 0xc68e6a) {
   h.model.traverse((o) => { if (o.isSkinnedMesh && o.material?.name) meshes[o.material.name] = o; });
   if (!meshes.suit) return { apply() {}, ok: false };
   armAttribute(meshes.suit);
-  const tone = meshes.skin && avgColor(meshes.skin.material.map);
+  const tone = meshes.skin && avgColor(meshes.skin.material.map, meshes.skin.material);
   const v4 = () => ({ value: new THREE.Vector4() }), col = () => ({ value: new THREE.Color() });
   const U = { uTopC: col(), uOutC: col(), uBotC: col(), uSkinC: col(), uShoeC: col(), uGloveC: col(),
     uTop: v4(), uTop2: v4(), uOut: v4(), uOut2: v4(), uBot: v4(), uBot2: v4(), uShoe: v4(), uGlove: v4(), uOutInfTop: { value: 0 } };

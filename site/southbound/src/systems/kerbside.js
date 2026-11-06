@@ -4,6 +4,7 @@
 // filled: cars are put out where you aren't looking (or still far off) and taken back in once
 // you've gone. They're ordinary parked cars, so you can break into one and drive it away.
 import * as THREE from 'three';
+import { nearInstances, NEAR_RANGE } from '../core/nearinst.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { Vehicle, randomCarType } from '../entities/vehicle.js';
 import { mulberry32 } from '../util.js';
@@ -107,9 +108,10 @@ export function installKerbside(game) {
   for (const [list, geo, rough, metal, r] of [[meters, meterGeo(), 0.45, 0.6, 0.12], [hydrants, hydrantGeo(), 0.55, 0.2, 0.2]]) {
     if (!list.length) continue;
     const im = new THREE.InstancedMesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: rough, metalness: metal }), list.length);
-    list.forEach(([x, y, z, ry], i) => { im.setMatrixAt(i, m4.compose(at.set(x, y, z), qq.setFromAxisAngle(UP, ry), one)); collision.addCircle(x, z, r); });
+    const mats = list.map(([x, y, z, ry]) => { collision.addCircle(x, z, r); return new THREE.Matrix4().compose(at.set(x, y, z), qq.setFromAxisAngle(UP, ry), one); });
     im.castShadow = q.shadows > 0; im.receiveShadow = true; im.userData.noReflect = true;
-    im.computeBoundingSphere();
+    // only the ones near the camera are drawn (core/nearinst.js): there are well over a thousand meters
+    nearInstances(im, mats, NEAR_RANGE[q.label] || 140).update(game.camera ? game.camera.position : at.set(0, 0, 0), true);
     scene.add(im);
   }
   if (!cap) return { update() {}, slots: () => 0, live: () => 0, furniture: () => [meters.length, hydrants.length] };

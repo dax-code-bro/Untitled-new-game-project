@@ -3,6 +3,7 @@
 // run-down lots on the city's edge. Open models (Quaternius Zombie Apocalypse
 // Kit, CC0) drawn as instanced meshes so hundreds cost a few draw calls.
 import * as THREE from 'three';
+import { nearInstances, NEAR_RANGE } from '../core/nearinst.js';
 import { loadOpen } from '../assets/open.js';
 import { CITY } from '../world/layout.js';
 
@@ -102,14 +103,11 @@ export function installStreetLife(game) {
       if (!g) continue;
       for (const part of partsOf(g.scene, size)) {
         const im = new THREE.InstancedMesh(part.g, part.m, list.length);
-        list.forEach((s, i) => {
-          const y = collision.surface(s.x, s.z, 200);
-          m4.compose(new THREE.Vector3(s.x, y, s.z), q.setFromAxisAngle(up, s.rot), one);
-          im.setMatrixAt(i, m4);
-        });
+        const mats = list.map((s) => new THREE.Matrix4().compose(new THREE.Vector3(s.x, collision.surface(s.x, s.z, 200), s.z), q.setFromAxisAngle(up, s.rot), one));
         im.castShadow = size > 0.8; im.receiveShadow = true;
         im.userData.hitStatic = size > 0.8; im.userData.noReflect = true;
-        im.computeBoundingSphere();
+        // scattered over the whole city: only the ones near the camera are drawn (core/nearinst.js)
+        nearInstances(im, mats, NEAR_RANGE[game.q?.label] || 140).update(game.camera ? game.camera.position : new THREE.Vector3(), true);
         scene.add(im);
       }
       if (size >= 1.2) for (const s of list) collision.addCircle(s.x, s.z, size * 0.35);

@@ -12,6 +12,7 @@
     "esbuild": "0.24.0"
   },
   "dependencies": {
+    "ktx2-encoder": "^0.6.0",
     "meshoptimizer": "^0.21.0",
     "sharp": "^0.33.5"
   }

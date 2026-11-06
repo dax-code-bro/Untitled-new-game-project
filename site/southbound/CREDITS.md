@@ -26,6 +26,7 @@ Software:
 | [postprocessing](https://github.com/pmndrs/postprocessing) 6.39 by pmndrs (`vendor/postprocessing/`): bloom, sun shafts, depth of field, AgX tone mapping, SMAA, grain | Zlib |
 | [N8AO](https://github.com/N8python/n8ao) 2.0 (`vendor/n8ao/`): ambient occlusion | ISC |
 | Basis Universal transcoder (`vendor/three/addons/libs/basis/`): KTX2 texture decoding | Apache-2.0 |
+| [meshoptimizer](https://github.com/zeux/meshoptimizer) 0.21 by Arseny Kapoulkine (`vendor/meshoptimizer/`): simplifies the heavy models into lower levels of detail at load | MIT |
 | [glTF-Transform](https://gltf-transform.dev) (asset packing, build-time only) | MIT |
 | [esbuild](https://esbuild.github.io) (bundling, build-time only) | MIT |
 
@@ -42,7 +43,7 @@ To regenerate `assets/`, see `tools/southbound/pack-assets.mjs`.
 
 ## Open-source 3D models (`assets/open/`, packed by `tools/southbound/pack-open.mjs`)
 
-From the [Khronos glTF Sample Assets](https://github.com/KhronosGroup/glTF-Sample-Assets) (textures re-encoded to WebP, meshes compressed with meshopt; Khronos logos removed):
+From the [Khronos glTF Sample Assets](https://github.com/KhronosGroup/glTF-Sample-Assets) (textures re-encoded to WebP, or to KTX2 for the concept car; meshes compressed with meshopt; Khronos logos removed):
 
 | Model | Used as | Credit / license |
 |---|---|---|

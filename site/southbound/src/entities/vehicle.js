@@ -213,8 +213,8 @@ export class Vehicle {
   setRims(spokes) {
     const spec = this.procSpec;
     if (!spec) return;
-    const g = wheelGeometry(spec, spokes);
-    for (const w of this.wheels) w.node.traverse((o) => { if (o.isMesh) o.geometry = g; });
+    // every level of detail gets the new rims (the wheel is a THREE.LOD: near, mid, far)
+    for (const w of this.wheels) w.node.traverse((o) => { if (o.isLOD) o.levels.forEach((lv, i) => { lv.object.geometry = wheelGeometry(spec, spokes, i); }); else if (o.isMesh && !o.parent?.isLOD) o.geometry = wheelGeometry(spec, spokes); });
   }
   setSpoiler(level) {
     if (this.spoiler) { this.body.remove(this.spoiler); this.spoiler = null; }

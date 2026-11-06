@@ -129,6 +129,7 @@ export function createAbrasion(scene, quality) {
   }
   function eligible(o) {
     if (!o.isMesh || o.isSkinnedMesh || o.userData.noWear || !o.geometry?.attributes?.position) return false;
+    if (o.geometry.userData.lodSet) return false; // its geometry changes with distance (core/lod.js)
     if (Array.isArray(o.material)) return false;
     if (o.geometry.attributes.sbEdge) return true;
     return triCount(o.geometry) <= MAX_TRIS && isStd(o.material);

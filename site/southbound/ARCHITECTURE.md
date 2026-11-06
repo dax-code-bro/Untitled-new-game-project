@@ -17,7 +17,8 @@ claim below that has a number was measured; nothing else is promised.
 | SSAO | **Done in WebGL2** (N8AO, a GTAO-style pass) | `src/core/post.js` |
 | PBR micro-abrasion | **Done in WebGL2**, material-agnostic: one edge/cavity bake for every mesh (in a Web Worker), one shader, wear per substrate from the substrate scanner | `src/core/abrasion.js`, `src/core/imperfect.js`, `src/core/substrate.js` |
 | Worker offload | **Started:** the abrasion bake runs in a worker (98 ms worst case on the main thread before, 7 ms after). Physics/AI still on the main thread | `src/core/abrasion.js` |
-| KTX2 textures + mesh LOD streaming | **Not done.** Recommended next (below) | — |
+| KTX2 textures | **Done.** Surfaces were already KTX2; now people, the concept car, the guns and the trees too (UASTC/ETC1S) | `tools/southbound/pack-ktx2.mjs`, `src/assets/ktx2.js` |
+| Levels of detail | **Done.** Wheels, car bodies, terrain tiles, near trees, people/car/guns (meshoptimizer at load), and only-nearby instancing for street furniture: 21-52% fewer triangles a frame | `src/core/lod.js`, `src/core/nearinst.js`, `src/world/terrain.js`, `src/assets/carbuilder.js`, `src/world/vegetation.js` |
 | WebGPU renderer | **Not done, and not recommended yet** (below) | — |
 
 ## 1. WebGPU: not yet, and why
@@ -106,36 +107,51 @@ their own bounce instead of one capture per camera position.
   timber, stress-whitens plastic, chips stone pale, frosts glass, fades fabric, polishes leather,
   greys rubber. No textures, no UVs, crisp at any distance.
 
-## 4. Streaming: KTX2 textures and mesh LOD (recommended next)
+## 4. KTX2 textures and levels of detail (shipped)
 
-This is the change most likely to help a mid-range PC: the photo-scanned surfaces are JPG/PNG,
-so every one is decoded on the main thread and lives on the GPU uncompressed (4 bytes a texel
-plus mips). As KTX2 (Basis) they stay block-compressed on the GPU, 4-8x smaller, and upload
-without a main-thread decode.
+**Textures.** The 128 photo-scanned surface maps were already KTX2. The textures inside the models
+and the tree textures were not: JPEG/PNG/WebP, decoded and held on the GPU as plain RGBA. Now
+`tools/southbound/pack-ktx2.mjs` (Basis Universal via `ktx2-encoder`) converts them:
 
-Offline, per texture (KTX-Software's `toktx`):
+| | Textures | Video memory, RGBA -> KTX2 | Files on disk |
+| --- | --- | --- | --- |
+| People (8 models) | 63, 17.3 Mpx | 88 MB -> 22 MB | 11.6 -> 16.3 MB |
+| Concept car + guns | 36, 12.5 Mpx | 63 MB -> 16 MB | 5.1 -> 10.6 MB |
+| Trees (bark, leaves, impostors) | 29 | 112 MB -> ~25 MB | 3.6 -> 5.1 MB (KTX2 copies; the originals stay for Unity) |
 
-```sh
-# colour: ETC1S is smallest; normals and roughness/height want UASTC (higher quality, linear)
-toktx --t2 --encode etc1s --clevel 4 --qlevel 192 --genmipmap  albedo.ktx2  albedo.jpg
-toktx --t2 --encode uastc --uastc_quality 2 --zcmp 18 --assign_oetf linear --genmipmap  normal.ktx2  normal.png
-```
+Colour maps are UASTC with light RDO, normal maps UASTC without it, bark colour/AO/roughness ETC1S
+(noisy, so its blockiness doesn't show) with 512-px bark normals. Sizes snap to powers of two. Each
+outfit texture's brightness and average colour, which the clothing code used to read off the pixels,
+are measured at conversion and stored in the material's extras. The rest of the open library
+(furniture, animals, interiors) stays WebP: it loads on demand, and as UASTC it would be 3-4x bigger
+to download. `src/assets/ktx2.js` holds the one shared `KTX2Loader` (workers, BC7/ASTC/ETC by GPU),
+and the tree loader falls back to the JPEG/PNG if a KTX2 copy is missing or can't be transcoded. The
+Unity exporter decodes KTX2 back to PNG/JPEG.
 
-At load (`src/assets/textures.js`), with the transcoder that ships in `vendor/three/addons/libs/basis/`:
+**Levels of detail.** Measured on High at the same spots, triangles a frame, before -> after:
 
-```js
-import { KTX2Loader } from 'three/addons/loaders/KTX2Loader.js';
-const ktx2 = new KTX2Loader().setTranscoderPath('vendor/three/addons/libs/basis/').detectSupport(renderer);
-export const loadTex = (url, srgb) => ktx2.loadAsync(url.replace(/\.(jpe?g|png)$/, '.ktx2'))
-  .then((t) => { t.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace; return t; })
-  .catch(() => new THREE.TextureLoader().loadAsync(url)); // old files still work
-```
+| Spot | Before | After |
+| --- | --- | --- |
+| Downtown street | 4.10M | 3.24M (-21%) |
+| Street at the start | 8.78M | 5.47M (-38%) |
+| Forest | 17.90M | 8.56M (-52%) |
+| Meadow | 7.86M | 4.18M (-47%) |
+| Hill above the plains | 3.32M | 2.85M (-14%) |
 
-Meshes: run the glTF models through `gltfpack -cc -tc` (meshopt geometry + KTX2 textures) and
-decode with `MeshoptDecoder`. For LOD, `gltfpack -si 0.5` / `-si 0.2` gives two simplified copies
-per model; switch with `THREE.LOD` on distance. Occlusion in WebGL2: one occlusion query per city
-block's bounding box (`ANY_SAMPLES_PASSED_CONSERVATIVE`, results read a frame late), skipping
-whole blocks hidden behind towers. A true Hi-Z pyramid needs compute, so it waits for WebGPU.
+- Car wheels were ~20k triangles each, four per car: most of every street's triangles. Three levels
+  now (full, ~1.3-3k past 10 m, 90 past 35 m), and car bodies gain a fourth, coarsest shell past 95 m.
+- Terrain tiles: three index buffers over the same vertices (every vertex, every 2nd, every 4th)
+  by distance; the skirts that already hid seams between tiles hide seams between levels too.
+- Near 3D trees: past 38% of the 3D radius a lighter tree, trunk and branches simplified to ~25% by
+  meshoptimizer, 40% of the leaf cards each grown to cover the same area.
+- People, the concept car, the guns and any other heavy model from the open library: when it loads,
+  meshoptimizer makes ~30% and ~8% versions of each heavy mesh (new index buffers over the same
+  vertices, so skinned people keep their skeletons); a manager swaps by size on screen.
+- Parking meters, hydrants and street junk (one instanced mesh each for the whole city, all drawn
+  every frame): only the ones within 80-240 m (by preset) are drawn now.
+
+Still open: block occlusion downtown (one WebGL2 occlusion query per city block, a frame late) and,
+with WebGPU, a real Hi-Z pyramid.
 
 ## 5. Workers and SharedArrayBuffer
 
@@ -193,7 +209,6 @@ acceleration" steps.
 ## Order of work, if we keep going
 
 1. Read the FPS readout on the slow PC (CPU- or GPU-bound, which card). It decides 2-4.
-2. KTX2 + meshopt for every texture and model (load time, GPU memory, upload hitches).
-3. Mesh LOD for the heaviest models; block occlusion queries downtown.
-4. Traffic and pedestrian AI into a worker with the shared pose buffer.
-5. WebGPU, material by material in TSL, when compute (GPU culling, probe GI) is the next win.
+2. Block occlusion queries downtown.
+3. Traffic and pedestrian AI into a worker with the shared pose buffer.
+4. WebGPU, material by material in TSL, when compute (GPU culling, probe GI) is the next win.

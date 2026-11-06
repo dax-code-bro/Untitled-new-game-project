@@ -4,15 +4,18 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
+import { prepareLODs } from '../core/lod.js';
+import { withKTX2, ktx2Ready } from './ktx2.js';
 
-const loader = new GLTFLoader();
+const loader = withKTX2(new GLTFLoader()); // the concept car and the guns carry GPU-compressed (KTX2) textures
 loader.setMeshoptDecoder(MeshoptDecoder);
 const cache = new Map(), ready = new Map();
 
 export function loadOpen(rel) {
   if (!cache.has(rel)) {
-    cache.set(rel, loader.loadAsync('assets/open/' + rel).then((g) => {
+    cache.set(rel, ktx2Ready.then(() => loader.loadAsync('assets/open/' + rel)).then((g) => {
       g.scene.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+      prepareLODs(g.scene); // simpler versions of the heavy meshes, for when they're far away
       ready.set(rel, g);
       return g;
     }).catch((e) => { console.warn('open model failed', rel, e.message); return null; }));

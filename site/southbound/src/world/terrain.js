@@ -54,6 +54,8 @@ export function createTerrain(hm, quality, scene, surf) {
   const group = new THREE.Group();
   group.name = 'terrain';
   const chunks = 8;
+  // terrain levels of detail: grid steps per level and where they switch (metres to the tile)
+  const LOD_STEPS = [1, 2, 4], LOD_NEAR = 260, LOD_MID = 900;
   const segs = Math.max(16, Math.round(quality.terrainSegs / chunks));
   const size = WORLD.size / chunks;
   const mat = makeTerrainMaterial(quality, surf);
@@ -72,34 +74,46 @@ export function createTerrain(hm, quality, scene, surf) {
         hm.normal(x, z, nrm);
         norm.push(nrm.x, nrm.y, nrm.z);
       }
-      for (let j = 0; j < segs; j++) for (let i = 0; i < segs; i++) {
-        const a = j * vn + i, b = a + 1, c = a + vn, d = c + 1;
-        idx.push(a, c, b, b, c, d);
-      }
-      // Skirts hide cracks between chunks and the horizon mesh
-      const edge = (list) => {
-        const base = pos.length / 3;
+      // Skirts hide cracks between chunks, between levels of detail and against the horizon mesh
+      const top = [], bot = [], left = [], right = [];
+      for (let i = 0; i < vn; i++) { top.push(i); bot.push(segs * vn + i); left.push(i * vn); right.push(i * vn + segs); }
+      const skirtBase = [];
+      for (const list of [top, bot, left, right]) {
+        skirtBase.push(pos.length / 3);
         for (const v of list) {
           pos.push(pos[v * 3], pos[v * 3 + 1] - 12, pos[v * 3 + 2]);
           norm.push(norm[v * 3], norm[v * 3 + 1], norm[v * 3 + 2]);
         }
-        for (let k = 0; k < list.length - 1; k++) {
-          const a = list[k], b = list[k + 1], c = base + k, d = base + k + 1;
-          idx.push(a, b, c, b, d, c, a, c, b, b, c, d);
+      }
+      // one index buffer per level of detail over the same vertices: every vertex, every 2nd, every 4th
+      const indexFor = (st) => {
+        const idx = [];
+        for (let j = 0; j < segs; j += st) for (let i = 0; i < segs; i += st) {
+          const a = j * vn + i, b = a + st, c = a + st * vn, d = c + st;
+          idx.push(a, c, b, b, c, d);
         }
+        [top, bot, left, right].forEach((list, e) => {
+          const base = skirtBase[e];
+          for (let k = 0; k + st < list.length; k += st) {
+            const a = list[k], b = list[k + st], c = base + k, d = base + k + st;
+            idx.push(a, b, c, b, d, c, a, c, b, b, c, d);
+          }
+        });
+        return idx;
       };
-      const top = [], bot = [], left = [], right = [];
-      for (let i = 0; i < vn; i++) { top.push(i); bot.push(segs * vn + i); left.push(i * vn); right.push(i * vn + segs); }
-      edge(top); edge(bot); edge(left); edge(right);
-
-      const g = new THREE.BufferGeometry();
-      g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-      g.setAttribute('normal', new THREE.Float32BufferAttribute(norm, 3));
-      g.setIndex(idx);
-      g.computeBoundingSphere();
+      const posA = new THREE.Float32BufferAttribute(pos, 3), normA = new THREE.Float32BufferAttribute(norm, 3);
+      const lods = LOD_STEPS.filter((st) => segs % st === 0).map((st) => {
+        const lg = new THREE.BufferGeometry();
+        lg.setAttribute('position', posA); lg.setAttribute('normal', normA);
+        lg.setIndex(indexFor(st));
+        lg.computeBoundingSphere();
+        return lg;
+      });
+      const g = lods[0];
       const m = new THREE.Mesh(g, mat);
       m.receiveShadow = true;
       m.userData.center = new THREE.Vector3(x0 + size / 2, 0, z0 + size / 2);
+      m.userData.lods = lods; m.userData.x0 = x0; m.userData.z0 = z0;
       group.add(m);
       meshes.push(m);
     }
@@ -135,8 +149,14 @@ export function createTerrain(hm, quality, scene, surf) {
     group, meshes, cell: size / segs,
     update(camPos, drawDistance) {
       for (const m of meshes) {
-        const c = m.userData.center;
+        const u = m.userData, c = u.center;
         m.visible = Math.hypot(c.x - camPos.x, c.z - camPos.z) < drawDistance + 400;
+        if (!m.visible) continue;
+        // level of detail by the distance to the nearest point of the tile (the one you're on is always full)
+        const dx = Math.max(u.x0 - camPos.x, 0, camPos.x - (u.x0 + size)), dz = Math.max(u.z0 - camPos.z, 0, camPos.z - (u.z0 + size));
+        const d = Math.hypot(dx, dz, Math.max(0, camPos.y - 400) * 0.5); // flying high counts as further away
+        const L = Math.min(u.lods.length - 1, d < LOD_NEAR ? 0 : d < LOD_MID ? 1 : 2);
+        if (m.geometry !== u.lods[L]) m.geometry = u.lods[L];
       }
     },
   };

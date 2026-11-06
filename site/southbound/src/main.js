@@ -4,6 +4,9 @@ import { loadSettings, saveSettings, resolveQuality, PRESETS, detectGPU, SOFTWAR
 import { installImperfections } from './core/imperfect.js';
 import { createDynamicLighting } from './core/gi.js';
 import { createAbrasion } from './core/abrasion.js';
+import { updateNearInstances, nearInstanceStats } from './core/nearinst.js';
+import { createLODManager, lodStats } from './core/lod.js';
+import { initKTX2 } from './assets/ktx2.js';
 import { setWorld as setSubstrateWorld, describe as describeSubstrate, SUBSTRATES } from './core/substrate.js';
 import { createFooting } from './systems/footing.js';
 import { setupMenu, setupSettingsPanel } from './ui/menu.js';
@@ -124,6 +127,7 @@ async function createGame(progress) {
   c = 0.18 * pow( max( c, 0.0 ) / 0.18, vec3( 1.08 ) );
   return clamp( c, 0.0, 1.0 );
 }`);
+  initKTX2(renderer); // GPU-compressed textures in the models and trees (assets/ktx2.js)
   renderer.toneMapping = THREE.CustomToneMapping;
   renderer.toneMappingExposure = 1.0;
   renderer.info.autoReset = false;
@@ -259,6 +263,8 @@ async function createGame(progress) {
     roots: () => [terrain.group, roads.group, water.group, sky.sky, ...Object.values(city.meshes), city.roofMesh, ...(veg.giMeshes?.() || [])] });
   // wear along the real edges of everything near you, per substrate (Medium and up)
   const abrasion = createAbrasion(scene, q);
+  // simpler versions of people, the concept car, guns and furniture when they're small on screen
+  const lods = createLODManager(scene, q);
 
   // ---- resolution / post
   let post = null;
@@ -343,7 +349,7 @@ async function createGame(progress) {
   sky.hour = profile.hour; sky.day = profile.day;
   const interact = new Interactions(scene, hm);
   const game = {
-    S, scene, hm, graph, city, veg, player, combat, hud, sky, weather, career, interact, parked, lib, q, settings, camera, input, traffic, peds, police, collision, rig, surf, gi, abrasion, footing,
+    S, scene, hm, graph, city, veg, player, combat, hud, sky, weather, career, interact, parked, lib, q, settings, camera, input, traffic, peds, police, collision, rig, surf, gi, abrasion, footing, lods, lodStats, nearInstanceStats,
     pause: (b) => { S.frozen = b; },
     teleport: (x, z, heading = 0) => { api.teleport(x, z, heading); },
     enterVehicle: (v) => enterVehicle(v, null),
@@ -974,6 +980,8 @@ async function createGame(progress) {
 
     if (!S.indoors) gi.update(dt, focus, camera.position, S.mode === 'car' ? S.vehicle : null);
     abrasion.update(dt, camera.position);
+    updateNearInstances(camera.position); // meters, hydrants, street junk: only the nearby ones are drawn
+    lods.update(dt, camera);
     if (scanner.on && (scanner.t -= dt) <= 0) { scanner.t = 0.2; scanner.read(); }
     // headlight (the low presets' single beam; gi.js lights a pair on Medium and up)
     if (!gi.active && S.vehicle && sky.night > 0.3) {
