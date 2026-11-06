@@ -1,5 +1,45 @@
 # Sound track: progress (for the next session)
 
+## State (2026-11-06, session 10: sync on the rendered X4 shots + 1C loudness decision; short budgeted session)
+
+- **Picture**: director's draft renders of X4-03 (4 s), X4-06 (3 s), X4-11 (3.5 s), X4-14 (5 s), X4-20 (5 s) (all 24 fps,
+  lengths = EDL). Checked on frame grabs (`scratchpad/eng1/sound/s10/`: `*-strip.png` every 3rd frame,
+  `X4-03-fstep.png` frames 4-27 + 42-65, `X4-11-leaf-fstep.png` frames 0-47).
+- **Charcoal** flaps with the same phase in X4-03 / 06 / 11 / 20: wings level mid-downstroke at frames ~12 / 51 / 90
+  (0.50 / 2.125 / 3.75 s), bottom of the stroke ~0.92 / 2.5 s, period ~39 frames (1.6 s, CHAR_HZ 0.625). The s8/s9 rows
+  at 0.16 s peaked at 0.46 s (1 frame early) -> `at` 0.16 -> **0.20** in X4-03 and X4-11; X4-06's far beats 0.3 -> **0.2**
+  (were 2-3 frames late). **New row X4-20** `wingbeat` 0.2 every 1.6 n 3, -28, centre: the camera follows Charcoal
+  from behind and the wings fill the frame (the shot was "air only + M9"). Measured on the fx stem (lowpass 300 Hz,
+  50 ms RMS peaks): X4-03 0.50 / 2.0-2.15 / 3.65, X4-06 0.45 / 2.05, X4-11 0.45 / 2.05, X4-20 0.45 / 2.1 / 3.7 s (+25 ms
+  bin centre) = the picture within 1-2 frames.
+- **Leaf** in X4-11: mid-downstroke frame 8-9 (0.35 s), period ~30.5 frames (1.27 s) = the row (0.05 + peak 0.31 s, every
+  1.25) -> unchanged. Leaf in X4-06 / X4-20 is tiny and far: no beats.
+- **X4-06**: the farmer is a woman who only stands and turns her head, nothing in her hands -> no tool / cloth sound
+  (note text fixed). **X4-14**: static castle on the hill -> wind + one far gull is right. **X4-20 vs M9**: 120 frames
+  = the 5 s the cue was written for; D add9 at 4.7 s, nothing to change.
+- **Loudness decision (1C program -17.2 LUFS)**: KEPT, documented, not forced. Per region now: 0-91.5 s -16.7,
+  X4-01..03 -19.3, X4-06 -22.9, X4-11 -20.7, X4-14 -19.6, X4-20 -16.7. Why not raise it: (a) the master is dialogue-
+  anchored (+2 dB cap binds); pushing the montage up means music where the shot list says "Wind" (X4-14) or no cue is
+  specced (X4-01..03 after M8's tail at 94.5, X4-06, X4-11) - adding score to hit a number would be scoring by meter;
+  (b) -17.2 is within the usual +-1 LU tolerance of -16; (c) 11 of the 18 X4 shots are still slates (harbour market
+  walla, crew call X4-05, lookout X4-10, instructor X4-13 will add level when they are rendered/voiced) so the 1C
+  program number is provisional. Revisit when X4 is complete or at the episode-timeline mix; if -16 is required
+  then, the clean knob is a short score cue over X4-01..03 (the aerial reveal of Verdor), not the wind.
+- **1C re-mix**: `final/audio/cuts/1C/DragonsKingdom_S01E01_draft-cut_1C_sound.mp4` program (123 s) **-17.2 LUFS**
+  (whole -19.6), TP -1.6 dBTP, LRA 9.9, AAC -17.2 / -1.6, min dialogue margin 12.5 LU, **PASS**, sha256
+  b83601d4bd3478f5, 161 fx events. Dialogue unchanged -> ASR not re-run. NOT listened to by a person.
+
+## Next steps (in order)
+
+1. **Listen** (PC): X4-20 beats (-28 under M9 at 184.5-189.5 s: do they fight the theme? knob: row `gain_db`), X4-03 /
+   X4-11 beats, X4-06 lark/goat level, M9 pre-lap; plus s9 item 1.
+2. When the remaining X4 shots render (X4-04/05/07..10/12/13/15..19): spot them from frames (same CHAR phase model:
+   Charcoal `at` 0.20 every 1.6, Leaf `at` 0.05 every 1.25 unless the act has a phase offset), then re-measure the 1C
+   program loudness and re-decide (see the loudness decision above).
+3. s9 item 4 still stands (VO REQUESTS: crew rhythm call X4-05, lookout laugh X4-10, instructor + Abby X4-13, recorded
+   walla; flight_wind level for 1D/1E; M6 basses check; Cling square bed + festival music; VSCO 2 CE; per-line voice
+   treatment; episode-timeline mix).
+
 ## State (2026-11-05, session 9: X4 wired shots (director s20) - timings, beds, M9 pre-lap; short budgeted session)
 
 - **Timings**: regenerated `cut/edl-1C.json` compared with the s18 one (94a0308): every X4 / X5-01 `rec_in` and length
