@@ -157,10 +157,12 @@ export function installMissions(game) {
   placeGiver();
 
   const mark = (x, z, r = 7, opts = {}) => { if (run.marker) interact.remove(run.marker); run.marker = interact.add({ x, z, r, any: true, height: opts.height || 8, color: 0xff3040, blip: { color: '#ff3040', size: 7, global: true, icon: '📍', bg: 'rgba(190,20,30,0.95)' }, label: () => '', use: () => {} }); };
-  const begin = (m) => {
-    run = { m, step: -1, t: 0 };
-    hud.bigMessage(m.title.toUpperCase(), `${m.act} · ${m.who}`, 3.5);
-    say(m.who, m.brief, 7);
+  // opts: { replay } (a story mission again, for a better medal), { from: step } (a checkpoint)
+  const begin = (m, opts = {}) => {
+    run = { m, step: -1, t: 0, replay: !!opts.replay, total: 0 };
+    if (opts.from > 0) { run.step = opts.from - 1; hud.bigMessage(m.title.toUpperCase(), 'From the checkpoint', 2.5); }
+    else { hud.bigMessage(m.title.toUpperCase(), `${m.side ? 'Side job' : m.act} · ${m.who}`, 3.5); say(m.who, m.brief, 7); }
+    game.onMissionStart?.(m, run, opts);
     advance();
   };
   const advance = () => {
@@ -188,26 +190,33 @@ export function installMissions(game) {
   };
   const complete = () => {
     const m = run.m;
-    P.missions.done.push(m.id);
-    career.earn(m.reward, 'mission');
-    hud.bigMessage('MISSION PASSED', `${m.title} · ${money(m.reward)}`, 4);
-    run = null; placeGiver(); career.save();
+    // the rating (systems/missionsplus.js) can scale the pay: medals, bonus objectives, replays
+    const rate = game.missionRate?.(m, run) || { mult: 1, medal: '' };
+    const reward = Math.round(m.reward * rate.mult);
+    if (m.side) { P.side = P.side || { done: [] }; if (!P.side.done.includes(m.id)) P.side.done.push(m.id); }
+    else if (!run.replay) P.missions.done.push(m.id);
+    career.earn(reward, 'mission');
+    hud.bigMessage(run.replay ? 'REPLAY PASSED' : 'MISSION PASSED', `${m.title} · ${money(reward)}${rate.medal ? ` · ${rate.medal}` : ''}`, 4);
+    const r = run; run = null; placeGiver(); career.save();
+    game.onMissionComplete?.(m, r, reward, rate);
   };
   const fail = (why) => {
     if (!run) return;
     if (run.marker) interact.remove(run.marker);
     hud.bigMessage('MISSION FAILED', why || run.m.title, 3);
-    run = null; placeGiver();
+    const r = run; run = null; placeGiver();
+    game.onMissionFail?.(r.m, why || '', r);
   };
 
   return {
     MISSIONS, places, get active() { return run; },
     start: (i) => begin(MISSIONS[i]),
+    begin, fail: (why) => fail(why), say,
     cancel: () => { if (!run) return; if (run.marker) interact.remove(run.marker); run = null; placeGiver(); },
     advanceStep: () => { if (run) advance(); },
     update(dt) {
       if (subT > 0 && (subT -= dt) <= 0) sub.style.opacity = 0;
-      if (!run || game.S.frozen) return '';
+      if (!run || (game.S.frozen && !game.S.stepping)) return '';
       if (game.player.health <= 0) { fail('You died'); return ''; }
       const s = run.m.steps[run.step];
       if (!s) return '';
@@ -223,8 +232,8 @@ export function installMissions(game) {
         case 'drive': if (inMarker && v) advance(); return label + (v ? 'drive to the marker' : 'get a vehicle and drive to the marker');
         case 'boat': if (inMarker && v && v.isBoat) advance(); return label + (v && v.isBoat ? 'take the boat to the marker' : 'get a boat (marina) and reach the marker');
         case 'fly': if (inMarker && v && v.isAir) advance(); return label + (v && v.isAir ? 'fly through the marker' : 'get an aircraft (airfield)');
-        case 'steal': if (v && v === run.veh) advance(); else if (run.veh && run.marker) { run.marker.x = run.veh.pos.x; run.marker.z = run.veh.pos.z; } return label + 'take the marked vehicle';
-        case 'deliver': if (inMarker && v === run.veh && Math.abs(v.speed) < 2) advance(); return label + (v === run.veh ? 'deliver it to the marker' : 'get back in the vehicle');
+        case 'steal': if (run.veh && (run.veh.health ?? 100) <= 0) { fail('The vehicle was wrecked'); return ''; } if (v && v === run.veh) advance(); else if (run.veh && run.marker) { run.marker.x = run.veh.pos.x; run.marker.z = run.veh.pos.z; } return label + 'take the marked vehicle';
+        case 'deliver': if (run.veh && (run.veh.health ?? 100) <= 0) { fail('The vehicle was wrecked'); return ''; } if (inMarker && v === run.veh && Math.abs(v.speed) < 2) advance(); return label + (v === run.veh ? 'deliver it to the marker' : 'get back in the vehicle');
         case 'kill': { const left = run.foes.filter((p) => p.mode !== 'dead' && p.hp > 0).length; if (!left) advance(); return label + `take out the targets (${left} left)`; }
         case 'escape': { const w = game.police.wanted || 0; if (w === 0 && run.t > 2) advance(); return label + 'lose the police'; }
         case 'survive': if (run.t >= a1) advance(); return label + `hold on ${Math.ceil(a1 - run.t)}s`;

@@ -140,6 +140,26 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 - [x] Loading screen with in-game art, tips and progress
 - [x] Fewer touch buttons: ◎ interact replaces the car button; map, phone, arsenal, free cam moved to pause
 
+## Phase 1.43 — Story missions, batch one (feature batch F11)
+
+- [x] Medals (`src/systems/missionsplus.js`): gold, silver or bronze for every mission, from three
+      things: inside the par time (worked out from the mission's own steps), little damage taken,
+      and no police on you that the mission didn't ask for. Each is +10% pay; your best is kept
+- [x] Checkpoints: fail partway and press F within 15 seconds to retry from the step you were on
+      (from the theft, if it was the delivery that went wrong), not from the top
+- [x] Hints: fail the same mission twice and you get a tip for the step that's beating you
+- [x] Failing for a reason: you died, you were arrested, the mission vehicle was wrecked
+- [x] Contacts text you when their next mission is ready, trust you more with every job (more
+      for gold), and have their own words when you finish
+- [x] Act title cards when a new act starts, the papers notice, and an ending card
+- [x] The phone's Story tab: medals and trust on every mission, GPS to the next one, replay any
+      finished mission for a better medal (a quarter of the pay), abandon the job you're on
+- [x] Gold medal milestones: 5, 15 and 30 golds pay out
+- [x] Twelve side jobs from people around Calvera (a yellow ? on the map), opening up as the story
+      goes on: a lost retriever in Pinewood Hollow, a drifting skiff, a wedding run, a crawfish
+      boil, a gator in the motel pool, a repo job, a storm chaser, night fishing, a record
+      collector, moving day, air mail and closing time at the Rusty Anchor
+
 ## Phase 1.42 — The Gulf Line crew, batch one (feature batch F10)
 
 Crew (`src/systems/crew.js`, on the crew's own menu at the hideout):
