@@ -140,6 +140,20 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 - [x] Loading screen with in-game art, tips and progress
 - [x] Fewer touch buttons: ◎ interact replaces the car button; map, phone, arsenal, free cam moved to pause
 
+## Phase 1.41 — Real grass blades (no more crossed cards)
+
+- [x] The meadow and plains grass round you is now real strands (`src/world/grasscards.js`), not
+      painted cards stood up in crosses (from above those read as flat stars). Every tuft is a
+      bunch of individual blades rooted over a small patch, each tapering to a point and leaning
+      and curling its own way, with a darker root, a pale midrib, darker edges, bleached tips on
+      some, a few dead straw blades and the odd seed stalk
+- [x] Three rings round the camera, all blades: thin and packed tight close up (5-13 mm), then
+      wider blades further apart, out to the edge of the grass, so the ground stays covered at
+      every distance. More blades per tuft on the higher presets
+- [x] Everything the cards did still works: the wind, parting round you and your vehicle, the
+      ground's own grass colour, straw on the dry plains, the lawn and path masks, light through
+      the blades from behind
+
 ## Phase 1.40 — People and cars in the rain (graphics milestone G8)
 
 - [x] Soaked through (`src/entities/bodyshade.js`): out in the rain everyone gets wetter over a
