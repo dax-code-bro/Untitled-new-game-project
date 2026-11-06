@@ -144,9 +144,11 @@ export const DESIGNS = {
   starlight: {
     name: 'Starlight', L: 72, skull: 5.6, neck: 16, trunk: 16, tail: 34.4, neckBones: 14, tailBones: 30,
     head: [[0, 2.4, 2.1], [0.25, 2.4, 2.05], [0.5, 1.8, 1.4], [0.75, 1.4, 1], [1, 0.95, 0.66]],
-    neckP: [[0, 1.7, 2.0], [0.5, 2.35, 2.8], [1, 3.5, 4.3]],
-    trunkP: [[0, 4.2, 5.8], [0.25, 4.5, 6.1], [0.6, 3.7, 4.7], [0.85, 3.3, 3.8], [1, 3.5, 3.6]],
-    tailP: [[0, 3.4, 3.7], [0.15, 2.6, 2.9], [0.35, 1.6, 1.8], [0.6, 0.72, 0.82], [0.85, 0.27, 0.3], [1, 0.05, 0.05]],
+    // (r2 s12, F5: seen from below at ~200 m she read as a thin flat white glider - a deeper
+    // keeled chest and belly, a thicker neck and tail base so the body has mass between the wings)
+    neckP: [[0, 1.95, 2.35], [0.5, 2.75, 3.3], [1, 4.1, 5.1]],
+    trunkP: [[0, 5.0, 7.0], [0.25, 5.4, 7.6], [0.6, 4.5, 6.0], [0.85, 3.9, 4.6], [1, 4.0, 4.2]],
+    tailP: [[0, 3.9, 4.3], [0.15, 3.0, 3.4], [0.35, 1.85, 2.1], [0.6, 0.82, 0.95], [0.85, 0.3, 0.34], [1, 0.05, 0.05]],
     // (rev. 3: the sculpt (bind) hip height follows the shorter legs)
     stand: { hip: 10.6, shoulder: 11.0, forearmLean: 10, humerusRise: 16, neckRise: 40, neckTop: 10, headPitch: -12, tailDroop: 18,
       low: { belly: 0.5, mtAng: 54 } },
@@ -158,7 +160,7 @@ export const DESIGNS = {
       fingers: [['II', 14.5, [5, 2.5], 2], ['III', 15.5, [11.5, 8.5, 5], -5], ['IV', 14, [10.5, 7.2, 3.4], -28], ['V', 12.8, [9, 6, 2.6], -52]],
       thumb: { mc: 1.3, ph: 0.9, claw: 1 }, to: 'ankle', glide: { humerus: -15, forearm: 12 }, legSplay: 30, thick: 0.014 },
     eye: 0.39, snout: 0.6, teeth: [18, 17], toothMax: 0.36, jawMax: 45,
-    body: { hump: 0.25, keel: 1.1, belly: 0.5, pec: 1.0, arm: 1.0, thigh: 0.95, tailbase: 1.0, neck: 1.0 },
+    body: { hump: 0.25, keel: 1.35, belly: 0.75, pec: 1.15, arm: 1.0, thigh: 1.05, tailbase: 1.0, neck: 1.0 },
     headX: { brow: 1.5, cheek: 1.0, jawMuscle: 1.0, nostril: 1.0, lipCover: 0.75, tympanum: 0.9, ridgeR: 0.022, long: 1 },
     horns: 'starlight', crest: { tail: 0.3, back: 0.0 },
     scale: { body: 0.0045, belly: 0.0095, head: 0.003 },
@@ -197,13 +199,18 @@ export const DESIGNS = {
     tailP: [[0, 0.1, 0.1], [0.15, 0.075, 0.078], [0.35, 0.05, 0.052], [0.6, 0.028, 0.03], [0.85, 0.012, 0.013], [1, 0.004, 0.004]],
     stand: { hip: 0.17, shoulder: 0.14, forearmLean: 22, humerusRise: -12, neckRise: 20, neckTop: 5, headPitch: -25, tailDroop: 30 },
     // (rev. 3: slimmer limbs and a smaller yolk belly - the bloated body and stubby thick limbs read as a squeeze toy)
-    fold: { curl: [15, 70, 110] }, bulk: { leg: 1.05, arm: 1.0, neck: 1.0 },
-    leg: { femur: 0.075, tibia: 0.08, mt: 0.045, toe: 0.065, claw: 0.018, d: [0.05, 0.035, 0.03, 0.022, 0.02], mtAng: 30, heelPad: 0.5, hallux: 0.45, toeR: 0.0085, soft: 1 },
-    wing: { humerus: 0.072, forearm: 0.118, d: [0.038, 0.026, 0.02, 0.016],
-      fingers: [['III', 0.08, [0.05, 0.035, 0.02], -10], ['IV', 0.07, [0.035, 0.02, 0.01], -48], ['V', 0.06, [0.025, 0.015, 0.008], -80]],
-      thumb: { mc: 0.016, ph: 0.014, claw: 0.02 }, to: 'knee', glide: { humerus: -16, forearm: 12 }, legSplay: 22, thick: 0.0006 },
+    // (r2 s12, F4: the limbs and the folded wing were so slight that the newborn read as a gold
+    // eel - the wing a small flap on the flank, the legs rods: a bigger hand and forearm, thicker
+    // arms and thighs; push = the newborn's pushUp / struggle: elbows and knees up, the fold the fingers lifted up
+    // and back over the back as a loose wet tent, the membrane hanging between them)
+    fold: { curl: [15, 70, 110] },
+    push: { fold: { curl: [-70, 0, 20], mcFan: 14, fanDown: 22, outUp: 0.5, wrap: 0.06 }, sprawlHum: [0.45, 0.6, 0.66], wristIn: 0.05, footOut: 0.75, kneeUp: 0.9 }, bulk: { leg: 1.3, arm: 1.3, neck: 1.0 },
+    leg: { femur: 0.08, tibia: 0.085, mt: 0.048, toe: 0.07, claw: 0.02, d: [0.058, 0.04, 0.032, 0.024, 0.021], mtAng: 30, heelPad: 0.5, hallux: 0.45, toeR: 0.0095, soft: 1 },
+    wing: { humerus: 0.085, forearm: 0.15, d: [0.046, 0.032, 0.024, 0.018],
+      fingers: [['III', 0.11, [0.065, 0.045, 0.026], -10], ['IV', 0.095, [0.05, 0.03, 0.015], -48], ['V', 0.08, [0.035, 0.02, 0.011], -80]],
+      thumb: { mc: 0.018, ph: 0.016, claw: 0.024 }, to: 'knee', glide: { humerus: -16, forearm: 12 }, legSplay: 22, thick: 0.0007 },
     eye: 0.042, snout: 0.2, teeth: [0, 0], toothMax: 0, jawMax: 30, newborn: 1,
-    body: { hump: 0, keel: 0.4, belly: 1.2, pec: 0.5, arm: 0.45, thigh: 0.55, tailbase: 0.7, neck: 0.7 },
+    body: { hump: 0, keel: 0.4, belly: 1.2, pec: 0.6, arm: 0.75, thigh: 0.85, tailbase: 0.7, neck: 0.7 },
     headX: { brow: 0.35, cheek: 0.45, jawMuscle: 0.35, nostril: 0.6, lipCover: 0.0, tympanum: 0.4, ridgeR: 0.026, soft: true, eggTooth: true },
     horns: 'buds', crest: { tail: 0.0, back: 0.0 },
     scale: { body: 0.0034, belly: 0.006, head: 0.0028 },

@@ -775,11 +775,12 @@ export function lie(c, o = {}) {
     const w = A.wings.find((x) => x.side === side);
     if (sprawl) {
       // splayed out to the sides, soles down, toes slack
-      legIK(pb, F, side, [sd * (d.hipX + d.fem * 1.1), d.toeL * 0.13, hip[2] + d.fem * 0.25], { mtAng: 10, fwd: [sd * 0.7, 0, 0.7], pole: [sd, 0.6, 0.2], curl: -0.05 });
+      // (o.footOut / o.kneeUp, r2 s12: the newborn's frog sprawl - feet nearer, knees up above the flank)
+      legIK(pb, F, side, [sd * (d.hipX + d.fem * (o.footOut ?? 1.1)), d.toeL * 0.13, hip[2] + d.fem * 0.25], { mtAng: 10, fwd: [sd * 0.7, 0, 0.7], pole: [sd, 0.6 + (o.kneeUp ?? 0), 0.2], curl: -0.05 });
       // (fix round 1: the splayed arm showed the fingers as a rake beside a flat flap) the wing
       // folded back along the flank like the adults', the wrist and thumb down a little out to
       // the side (too weak to gather the elbows in)
-      plantBack(pb, F, side, { hum: [0.75, -0.1, 0.65], reach: 0.95, wristIn: 0.12, padK: 0.85, fold: { curl: [-8, 10, 30], mcFan: 0, fanDown: 0, handBack: 3, levelK: true, outUp: 0.3, ...(o.fold || {}) } });
+      plantBack(pb, F, side, { hum: o.sprawlHum ?? [0.75, -0.1, 0.65], reach: 0.95, wristIn: o.wristIn ?? 0.12, padK: 0.85, fold: { curl: [-8, 10, 30], mcFan: 0, fanDown: 0, handBack: 3, levelK: true, outUp: 0.3, ...(o.fold || {}) } });
     } else {
       // folded under: the foot flat beside the belly, the knee forward and up along the flank
       legIK(pb, F, side, [sd * Math.max(d.hipX * 1.25, (d.footX ?? 0) * 1.15), d.toeL * 0.13, hip[2] + d.fem * 0.75], { mtAng: 4, fwd: [sd * 0.12, 0, 1], pole: [sd * 0.5, 0.75, 0.45], curl: 0.05 });
@@ -867,7 +868,11 @@ export function pushUp(c, o = {}) {
   const k = clamp(o.k ?? 1, 0, 1);
   const d = c.anatomy.dims;
   const tremble = (o.tremble ?? 1) * (Math.sin(t * 37) * 0.6 + Math.sin(t * 53 + 1) * 0.4) * 0.012 * k;
-  const p = lie(c, { ...o, sprawl: 1, body: undefined, bodyPitch: 0.15 * k + tremble, raise: 0.25 * k, headDown: mix(0.15, -0.05, k) });
+  // (r2 s12) a design's push options (the hatchling): its own loose fold of the newborn's wings
+  // (D.push: the newborn's elbows up above the back - a grounded bat's - and knees up)
+  const P = c.anatomy.design.push || {};
+  const fold = o.fold ?? P.fold;
+  const p = lie(c, { ...P, ...o, fold, sprawl: 1, body: undefined, bodyPitch: 0.15 * k + tremble, raise: 0.25 * k, headDown: mix(0.15, -0.05, k) });
   p.rig.position = [p.rig.position[0], p.rig.position[1] + k * d.shH * 0.45, p.rig.position[2]];
   return p;
 }

@@ -4,6 +4,40 @@ Owner paths: `scenes/lib/creatures/`, `scenes/lookdev/creatures-*.js` (+ creatur
 README.md in this folder is the full description of how the models are built; this file is
 only the state of the work.
 
+## REALISM ROUND 2 - session 12 (2026-11-06, short budgeted session: F4 hatchling, F5 Starlight)
+Stills under `scratchpad/eng1/creatures/r2s12/` (scratchpad = the session's /tmp/claude-0/.../scratchpad): F4 before =
+`../../stylecheck/f4-birthing-chamber.png`, after `f4d.png` (draft, t 2), crop sheet `f4_crop_before_after.png` (top
+before, x150-790 y150-390); intermediate `f4a/b/c.png`, overview `f4a_101.png` (--time 101: high camera - shows the
+hatchling's limbs are under Alexandria's hands/cloth and behind the body). F5 before = `../../stylecheck/f5-cling-square.png`,
+after `f5a.png`, crop sheet `f5_crop_before_after.png` (x210-730 y60-180 x2, top before). Hatchling dev views (pushUp
+k 0.3 on open ground): `dev0/sheet.jpg` (session 11 code: the wing a small flap on the flank, the legs rods),
+`dev2/sheet.jpg` (elbows up), `dev3/sheet.jpg` + `dev4/sheet.jpg` (fold variants; dev4 top = the adopted one).
+Done (code):
+- anatomy.js hatchling: bigger hand / forearm (humerus 0.085, forearm 0.15, fingers III/IV/V 0.11/0.095/0.08), thicker
+  arm / leg bones (bulk 1.3, body.arm 0.75, thigh 0.85, pec 0.6), slightly longer legs. New `push` block (read by
+  poses.pushUp / struggle): `fold` (fingers up and back over the back, curl [-70,0,20], fanned mcFan 14 / fanDown 22),
+  `sprawlHum` [0.45,0.6,0.66] (elbows up above the back like a grounded bat), `wristIn` 0.05, `footOut` 0.75, `kneeUp` 0.9.
+- poses.js: lie() sprawl branch takes o.sprawlHum / o.wristIn / o.footOut / o.kneeUp (defaults = old values);
+  pushUp merges `design.push` under the caller's options (o.fold wins). Other designs: unchanged.
+- materials.js gold: relief amp 0.045 -> 0.06, headRelief 2.0 -> 2.5, wetRough 0.06 -> 0.045 (no visible change at draft).
+- anatomy.js starlight: trunk ~+20% (trunkP), neck +17%, tail base +15%, keel 1.35, belly 0.75, pec 1.15, thigh 1.05.
+RESULTS (looked at): F4 - two crumpled gold wing tents (elbow + finger fan) now rise above the back line behind the head;
+the head still dominates and the legs / near wing stay hidden under Alexandria's hands + the cloth and behind the body
+(staging - REQUEST to the director below). One near finger now pokes up through the cloth's edge (the scene's drape).
+Wetness: no visible change at draft size. F5 - chest a little wider / deeper; still reads mainly as wings head-on; the
+legs hang with spread toes (glide's flightLegs only draws them together).
+REQUEST (director, style-f4): a camera / hands variant that shows the near flank (e.g. CAMS 104 h 0.2, or the hands under
+the chest from the far side / further forward) - the hind legs and near wing are under the hands now.
+- npm test: 48 pass, 0 fail, 1 skipped. creatures-dev.json restored.
+NEXT (exact):
+1. F5 legs tucked: add o.legFold to flightLegs (hip flexion forward, knee + ankle flexed, feet up under the belly; the
+   membrane runs to the ankle on Starlight so check the drape) and a design default (`flight: { legFold }`) for Starlight;
+   render style-f5 t 2 draft and crop x210-730 y60-180.
+2. F5 shading: a darker sky-lit belly (belly albedo 0.64 -> ~0.5, or a ventral AO term) so the white underside models.
+3. F4: if the director keeps the framing, a shorter/rounder hatchling head (skull 0.19 -> ~0.17) so the body share grows;
+   and the fingers clear the cloth (fold curl[1] +10).
+4. Session 11 NEXT 1-2 (X3-15 octave boundary; Charcoal elbow flap) - not started.
+
 ## REALISM ROUND 2 - session 11 (2026-11-06, short budgeted session)
 Stills under `scratchpad/eng1/creatures/r2s11/`: X3-15 draft `before/X3-15_040.png` (= session 10 code) | `v1/X3-15_040.png`
 (this code), crop sheet `x315_before_v1.png` (crop x620-940 y80-320 x2); debug tint `dbgx/` + `x315_v1_dbg.png`

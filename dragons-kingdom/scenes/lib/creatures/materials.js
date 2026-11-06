@@ -154,11 +154,13 @@ export function lookParams(THREE, look) {
       // gold reads as gold through its tinted reflection: metallic crowns (broad, soft sheen at
       // roughness ~0.4, never pin-point sparkle), less in the soft grooves
       // (fix round 1: a little more scale relief - the smooth gold read as a cast toy)
-      rough: [0.3, 0.05, 0.04, 0.1], amp: 0.045, keel: 0.0, facet: 0.0, jit: 0.45, metal: [0.62, 0.35], mottle: 0.12,
+      // (r2 s12, F4: a little more relief again - the wet film needs crowns to break into glints, the
+      // smooth gold read as a cast eel)
+      rough: [0.3, 0.05, 0.04, 0.1], amp: 0.06, keel: 0.0, facet: 0.0, jit: 0.45, metal: [0.62, 0.35], mottle: 0.12,
       hier: [0.0, 0.5, 0.3, 0.0], damp: 0.0, bellyP: [0.38, 0.8, 0.15, 0.18], plateZ: -0.03,
       crevCol: lin(THREE, 0.62, 0.36, 0.14), crevAmt: 0.2,
       // soft newborn head scales: a fine granular tier on the head (low relief, still readable)
-      headRelief: 2.0,
+      headRelief: 2.5,
       scl: [0.75, 0.42, 0.7, 1.1], tub: [0.0, 2.5, 0.0, 0], skin2: [0.0, 0.15, 0, 0.08], skin3: [0.1, 0.18, 0, 0],
       // amniotic residue: a pale, slimy film in patches and streaks
       // (fix round 1: more birth fluid - a newborn glistens all over)
@@ -173,7 +175,7 @@ export function lookParams(THREE, look) {
       // the wet film: glossy but not a mirror (on the soft, lumpy newborn skin a mirror film
       // broke the window's reflection into pin-point sparkle)
       // (fix round 1: a slicker film - the critics saw a dry casting with one drool strand)
-      wet: true, wetRough: 0.06,
+      wet: true, wetRough: 0.045,
     },
     scout: {
       base: lin(THREE, 0.075, 0.088, 0.105), belly: lin(THREE, 0.3, 0.31, 0.31), dorsal: lin(THREE, 0.06, 0.07, 0.085),
