@@ -137,10 +137,11 @@ export function installShops(game) {
       if (shop) break;
     }
     if (!shop) return null;
-    const h = dressMember(lib, { ...st.look, name: st.keeper });
-    h.root.position.copy(shop.keeper); h.root.rotation.y = shop.keeperFace;
-    h.play('Idle_Loop', 0); scene.add(h.root);
-    keepers.push({ h, st, shop, kind });
+    const spawnKeeper = () => { const h = dressMember(lib, { ...st.look, name: st.keeper }); h.root.position.copy(shop.keeper); h.root.rotation.y = shop.keeperFace; h.play('Idle_Loop', 0); scene.add(h.root); return h; };
+    const k = { h: spawnKeeper(), st, shop, kind };
+    k.revive = () => { k.h = spawnKeeper(); }; // a new clerk the next day (systems/robbery.js)
+    keepers.push(k);
+    (game.storeKeepers = game.storeKeepers || []).push(k);
     return shop;
   };
 
@@ -148,9 +149,10 @@ export function installShops(game) {
   for (const st of CLOTHING) {
     const shop = place(st, 'clothes');
     if (!shop) continue;
+    const kp = keepers[keepers.length - 1]; // nobody to serve you if the clerk is gone (systems/robbery.js)
     interact.add({ x: shop.counter.x, z: shop.counter.z, r: 2.3, marker: false, y: shop.y,
       blip: { color: '#9fc4c0', size: 5, global: true, icon: '👕', badge: 'S' },
-      show: () => S.mode === 'foot',
+      show: () => S.mode === 'foot' && !kp.taken,
       label: () => `${keyHint(game)} talk to ${st.keeper}`,
       use: () => !shopOpen(st.id, game.sky.hour) ? hud.toast(closedText(st.name, st.id), 3) : game.openDialog(st.keeper, st.look.lines[(Math.random() * st.look.lines.length) | 0], [
         ['I\'d like to look at some clothes.', () => ui.show(st)],
@@ -169,8 +171,27 @@ export function installShops(game) {
     hud.toast(`${f.name}: +${f.heal} health${f.steady ? ' · steadier hands' : ''}`, 2.2);
     player.h.play?.('Interact', 0.2);
   };
+  // what's on the counter (for the showroom stand)
+  const foodModel = (f) => {
+    const g = new THREE.Group(), M = (c, r = 0.6, m = 0) => new THREE.MeshStandardMaterial({ color: c, roughness: r, metalness: m });
+    const add = (geo, m, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.rotation.set(rx, ry, rz); g.add(o); return o; };
+    const foam = M(0xf4f2ec, 0.9), paper = M(0xe8dcc0, 0.95);
+    switch (f.id) {
+      case 'poboy': { add(new THREE.CapsuleGeometry(0.045, 0.2, 6, 12), M(0xc8904a, 0.8), 0, 0.05, 0, 0, 0, Math.PI / 2); for (let k = 0; k < 6; k++) add(new THREE.TorusGeometry(0.014, 0.008, 6, 10, Math.PI * 1.4), M(0xd07040, 0.7), -0.09 + k * 0.036, 0.085, 0.01, 0, 0, 0.3); add(new THREE.BoxGeometry(0.26, 0.004, 0.06), M(0x6aa040, 0.8), 0, 0.075, 0.03); add(new THREE.BoxGeometry(0.34, 0.004, 0.2), paper, 0, 0.002, 0); break; }
+      case 'boudin': add(new THREE.TorusGeometry(0.07, 0.022, 10, 24, Math.PI * 1.5), M(0x9a5a3a, 0.5), 0, 0.03, 0, Math.PI / 2, 0, 0); add(new THREE.BoxGeometry(0.22, 0.004, 0.18), paper); break;
+      case 'etouffee': case 'catfish': { add(new THREE.BoxGeometry(0.22, 0.05, 0.2), foam, 0, 0.025, 0); const lid = add(new THREE.BoxGeometry(0.22, 0.03, 0.2), foam, 0, 0.1, -0.12, -1.2, 0, 0); void lid; if (f.id === 'catfish') for (let k = 0; k < 3; k++) add(new THREE.CapsuleGeometry(0.02, 0.07, 4, 8), M(0xc89040, 0.8), -0.05 + k * 0.05, 0.06, 0.02, 0, k, Math.PI / 2); else { add(new THREE.CylinderGeometry(0.09, 0.09, 0.01, 18), M(0xb85a24, 0.4), 0, 0.052, 0.01); add(new THREE.CylinderGeometry(0.05, 0.05, 0.02, 14), M(0xf2efe6, 0.8), 0.02, 0.058, 0.02); } break; }
+      case 'gumbo': case 'coffee': case 'tea': { const h = f.id === 'gumbo' ? 0.08 : 0.14; add(new THREE.CylinderGeometry(0.045, 0.035, h, 20), f.id === 'coffee' ? paper : foam, 0, h / 2, 0); add(new THREE.CylinderGeometry(0.047, 0.047, 0.01, 20), M(f.id === 'gumbo' ? 0x5a3418 : 0x202020, 0.4), 0, h, 0); if (f.id === 'tea') add(new THREE.CylinderGeometry(0.004, 0.004, 0.08, 6), M(0xc02020, 0.4), 0.015, h + 0.04, 0, 0, 0, 0.15); break; }
+      case 'jerky': add(new THREE.BoxGeometry(0.14, 0.2, 0.03), M(0x8a2a1c, 0.5), 0, 0.1, 0); add(new THREE.BoxGeometry(0.1, 0.06, 0.002), M(0xe8c040, 0.6), 0, 0.12, 0.016); break;
+      case 'beans': case 'energy': { const h = f.id === 'energy' ? 0.16 : 0.11; add(new THREE.CylinderGeometry(0.035, 0.035, h, 20), M(f.id === 'energy' ? 0x20a040 : 0xb02a20, 0.35, 0.6), 0, h / 2, 0); add(new THREE.CylinderGeometry(0.033, 0.033, 0.004, 20), M(0xc8ccd0, 0.3, 1), 0, h + 0.002, 0); break; }
+      case 'pralines': for (let k = 0; k < 5; k++) add(new THREE.CylinderGeometry(0.03, 0.032, 0.012, 14), M(0xa86a30, 0.6), (k % 3) * 0.065 - 0.065, 0.006 + (k > 2 ? 0.012 : 0), (k > 2 ? 0.03 : 0)); add(new THREE.BoxGeometry(0.24, 0.004, 0.12), paper); break;
+      case 'water': add(new THREE.CylinderGeometry(0.032, 0.032, 0.19, 18), new THREE.MeshStandardMaterial({ color: 0xbcd8ec, roughness: 0.05, transparent: true, opacity: 0.55 }), 0, 0.095, 0); add(new THREE.CylinderGeometry(0.014, 0.014, 0.02, 12), M(0x2a6ac0, 0.4), 0, 0.2, 0); add(new THREE.CylinderGeometry(0.033, 0.033, 0.06, 18), M(0x3a8ad0, 0.5), 0, 0.1, 0); break;
+      default: add(new THREE.BoxGeometry(0.22, 0.1, 0.16), M(0xc8302a, 0.45), 0, 0.05, 0); add(new THREE.BoxGeometry(0.06, 0.02, 0.002), M(0xffffff), 0, 0.05, 0.081); add(new THREE.BoxGeometry(0.02, 0.06, 0.002), M(0xffffff), 0, 0.05, 0.081);
+    }
+    return g;
+  };
   const mart = new ShopUI({
     title: 'Gulf Mart', getMoney: () => career.money, pause: game.pause,
+    model: (f) => foodModel(f), key: (f) => f.id,
     tabs: [{ k: 'here', label: 'Eat here' }, { k: 'go', label: 'To go (carry up to 5)' }],
     note: (t) => t === 'here' ? `Health ${Math.round(player.health)} / 100` : 'Food you carry is in the phone\'s Inventory tab.',
     items: () => FOOD,
@@ -182,6 +203,7 @@ export function installShops(game) {
     },
   });
   mart.k = 1;
+  game.mart = mart;
   game.foodInventory = () => FOOD.filter((f) => P.food[f.id] > 0).map((f) => ({ food: true, name: f.name, sub: `× ${P.food[f.id]} · +${f.heal} health${f.steady ? ', steadier aim' : ''}`, eat: () => { P.food[f.id]--; eat(f); career.saveSoon(); } }));
   const MARTS = [
     { id: 'm-city', priceK: 1.2, look: 'mh_m2', at: () => [[CITY.x0 + 4.5 * CITY.pitch, CITY.z0 - 40], [CITY.x0 - 46, CITY.z0 + 3 * CITY.pitch + 48], [CITY.x0 + CITY.nx * CITY.pitch + 46, CITY.z0 + 2.5 * CITY.pitch], [CITY.x0 + 3.5 * CITY.pitch, CITY.z0 + CITY.nz * CITY.pitch + 46], [CITY.x0 - 46, CITY.z0 + 5 * CITY.pitch + 48]] },
@@ -195,9 +217,10 @@ export function installShops(game) {
       look: { id: 'mart' + i, base: m.look, skin: ['brown', 'tan', 'light', 'dark'][i % 4], suit: [0.55, 0.12, 0.1], hair: ['black', 'brown', 'grey'][i % 3], h: 1, w: 1 + (i % 3) * 0.08, acc: i % 2 ? ['cap'] : [], lines: [] } };
     const shop = place(st, 'mart');
     if (!shop) return;
+    const kp = keepers[keepers.length - 1]; // nobody to serve you if the clerk is gone (systems/robbery.js)
     interact.add({ x: shop.counter.x, z: shop.counter.z, r: 2.3, marker: false, y: shop.y,
       blip: { color: '#f4c430', size: 4, global: true, icon: '🥪', badge: 'S' },
-      show: () => S.mode === 'foot',
+      show: () => S.mode === 'foot' && !kp.taken,
       label: () => `${keyHint(game)} buy food & drink`,
       use: () => { mart.k = m.priceK; mart.show('here', `Gulf Mart · ${st.keeper} at the register`); } });
   });
@@ -208,6 +231,7 @@ export function installShops(game) {
     update(dt) {
       if (game.buffs.steady > 0) game.buffs.steady -= dt;
       for (const k of keepers) {
+        if (k.taken) continue; // came out from behind the counter (systems/robbery.js)
         const d = k.h.root.position.distanceTo(player.pos);
         k.h.root.visible = d < 90 && shopOpen(k.st.id, game.sky.hour);
         if (!k.h.root.visible) continue;

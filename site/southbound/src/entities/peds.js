@@ -1,5 +1,5 @@
 // Pedestrians: walk the sidewalks of Port Calvera and Mill Creek, cross at
-// corners, chat, panic and flee from gunfire, get hit, die and drop cash.
+// corners, chat, panic and flee from gunfire, get hit, flinch, die and go limp (bodies are searched: systems/loot.js).
 import * as THREE from 'three';
 import { Human, locomotion } from './human.js';
 import { CITY, TOWN } from '../world/layout.js';
@@ -51,17 +51,18 @@ export class Peds {
     return null;
   }
 
-  // A ped at an exact spot, running from `threat` (e.g. a carjacked driver)
-  spawnAt(x, z, threat) {
+  // A ped at an exact spot, running from `threat` (e.g. a carjacked driver). `human`: an existing
+  // body to use (a shopkeeper who's come out from behind the counter)
+  spawnAt(x, z, threat, human = null) {
     const id = this.lib.peopleIds[(this.rnd() * this.lib.peopleIds.length) | 0];
-    const h = new Human(this.lib, id);
+    const h = human || new Human(this.lib, id);
     let G = CITY, i = 0, j = 0;
     for (const g of [CITY, TOWN]) {
       const gi = Math.floor((x - g.x0) / g.pitch), gj = Math.floor((z - g.z0) / g.pitch);
       if (gi >= 0 && gj >= 0 && gi < g.nx && gj < g.nz) { G = g; i = gi; j = gj; }
     }
-    const p = { h, G, i, j, corner: 0, dir: 1, mode: 'flee', hp: 100, pos: new THREE.Vector3(x, this.collision.surface(x, z, 300), z),
-      heading: 0, speed: 1.4, target: cornerPos(G, i, j, 0), timer: 9, threat: threat.clone(), idleT: 20, radius: 0.35, acc: 0 };
+    const p = { h, G, i, j, corner: 0, dir: 1, mode: threat ? 'flee' : 'walk', hp: 100, pos: new THREE.Vector3(x, this.collision.surface(x, z, 300), z),
+      heading: 0, speed: 1.4, target: cornerPos(G, i, j, 0), timer: 9, threat: threat ? threat.clone() : null, idleT: 20, radius: 0.35, acc: 0 };
     h.root.position.copy(p.pos);
     this.scene.add(h.root);
     this.list.push(p);
@@ -94,19 +95,48 @@ export class Peds {
     }
   }
 
-  damage(p, amount, from) {
+  // info: { part, side, point, dir, pen } from a bullet, { vehicle } from a car, { blast } from an
+  // explosion, { melee } from a fist or a blade
+  damage(p, amount, from, info = null) {
     if (p.mode === 'dead') return false;
     p.hp -= amount;
     if (p.hp <= 0) {
-      p.mode = 'dead'; p.timer = 30; p.speed = 0;
-      p.h.play('Death01', 0.12, 1, true);
-      if (this.rnd() < 0.8) this.dropCash(p.pos, p.role === 'cop' ? 40 : 10 + ((this.rnd() * 70) | 0));
+      p.mode = 'dead'; p.timer = 120; p.speed = 0; // bodies stay a while (they can be searched: systems/loot.js)
+      if (!this.goLimp(p, from, info)) p.h.play('Death01', 0.12, 1, true);
+      this.onDeath?.(p, from, info);
       return true;
     }
-    p.h.play('Hit_Chest', 0.08, 1.2, true);
+    // a hit they survive: the part that was hit jerks away; a body shot can knock the wind out of them
+    const part = info?.part || 'torso';
+    p.h.flinch(part, info?.side || 'R', info?.melee ? 0.7 : 1);
+    if (part === 'torso' && !info?.melee && this.rnd() < 0.5) p.h.play('Hit_Chest', 0.08, 1.2, true);
     if (p.role === 'cop') return false;
     p.mode = 'flee'; p.threat = from ? from.clone() : p.pos.clone(); p.timer = 10;
     return false;
+  }
+
+  // Physics takes the body (entities/ragdoll.js), pushed where it was struck.
+  goLimp(p, from, info) {
+    if (!this.settings || this.settings.ragdolls === false) return false;
+    if (!p.h.goLimp((x, z, y) => this.collision.surface(x, z, y))) return false;
+    const r = p.h.ragdoll, V = THREE.Vector3;
+    if (info?.vehicle) {
+      // struck by a car: the legs are taken out, the body goes up and over or under, carried along
+      const v = info.vehicle, vx = v.vel?.x ?? Math.sin(v.heading) * v.speed, vz = v.vel?.y ?? Math.cos(v.heading) * v.speed, sp = Math.hypot(vx, vz);
+      r.push(new V(vx * 0.75, 1.5 + sp * 0.18, vz * 0.75), p.pos.clone().setY(p.pos.y + 0.45), new V(vx * 0.5, 0.5, vz * 0.5), 1.5 + sp * 0.1);
+    } else if (info?.blast) {
+      const d = new V().subVectors(p.pos, info.blast); const k = Math.max(0, 1 - d.length() / 12);
+      d.y = 0; d.normalize();
+      r.push(new V(d.x * (3 + 7 * k), 2.5 + 6 * k, d.z * (3 + 7 * k)), null, null, 4 * k);
+    } else if (info?.point && info?.dir) {
+      // shot: the whole body goes a little with the round, the part that was hit a lot
+      const d = info.dir, f = 1.2 + (info.pen || 1) * 0.35, hp = info.part === 'head' ? 4.5 : info.part === 'leg' ? 3.5 : 2.8;
+      r.push(new V(d.x * f, info.part === 'leg' ? 0.2 : 0.6, d.z * f), info.point, new V(d.x * hp, info.part === 'head' ? 1.2 : 0, d.z * hp), 0.6);
+    } else {
+      const d = from ? new V().subVectors(p.pos, from).setY(0).normalize() : new V(Math.sin(p.heading), 0, Math.cos(p.heading)).negate();
+      r.push(new V(d.x * 1.6, 0.8, d.z * 1.6), null, null, 0.8);
+    }
+    return true;
   }
 
   dropCash(pos, amount) {
@@ -144,21 +174,37 @@ export class Peds {
         this.scene.remove(p.h.root); p.h.dispose(); this.list.splice(k, 1); continue;
       }
       this.think(p, dt, player);
-      // cars hitting peds
-      for (const v of cars) {
-        if (!v || p.mode === 'dead') continue;
+      // cars: a person is a body in a car's way. Walking into one, they step round it; hit slowly,
+      // they're knocked aside and hurt; hit fast, they're thrown (and above ~40 km/h, killed)
+      if (p.mode !== 'dead' && p.mode !== 'riding') for (const v of cars) {
+        if (!v || !v.spec) continue;
         const dx = p.pos.x - v.pos.x, dz = p.pos.z - v.pos.z;
-        const sp = Math.abs(v.speed);
-        if (dx * dx + dz * dz < (v.radius + 0.9) ** 2 && sp > 3 && Math.abs(p.pos.y - v.pos.y) < 2) {
-          const killed = this.damage(p, sp * 9, v.pos);
-          p.pos.x += Math.sign(dx || 1) * 1.2; p.pos.z += Math.sign(dz || 1) * 1.2;
-          if (v.onHitPed) v.onHitPed(p, killed);
+        if (dx * dx + dz * dz > 49 || Math.abs(p.pos.y - v.pos.y) > 2) continue;
+        const c = Math.cos(v.heading), sn = Math.sin(v.heading);
+        const lx = dx * c - dz * sn, lz = dx * sn + dz * c; // into the car's frame (+z forward)
+        const hw = (v.spec.width || 1.9) / 2 + 0.3, hl = (v.spec.len || 4.5) / 2 + 0.3;
+        if (Math.abs(lx) > hw || Math.abs(lz) > hl) continue;
+        const sp = Math.abs(v.speed || 0);
+        if (sp > 2.5) {
+          const fast = sp > 9;
+          const killed = this.damage(p, fast ? sp * sp * 1.4 : sp * 7, v.pos, fast ? { vehicle: v } : { part: 'leg', side: lx > 0 ? 'R' : 'L' });
+          if (!killed && !fast) { p.pos.x += Math.sign(dx || 1) * 1.1; p.pos.z += Math.sign(dz || 1) * 1.1; }
+          if (fast && !killed) { p.hp = 0; p.mode = 'dead'; p.timer = 120; this.goLimp(p, v.pos, { vehicle: v }); this.onDeath?.(p, v.pos, { vehicle: v }); }
+          if (v.vel) v.vel.multiplyScalar(fast ? 0.9 : 0.96); // the car feels it
+          v.impact = Math.max(v.impact || 0, fast ? 3 : 1);
+          if (v.onHitPed) v.onHitPed(p, killed || fast);
+          break;
         }
+        // standing still or creeping: step out of the car's footprint the short way
+        const px = hw - Math.abs(lx), pz = hl - Math.abs(lz);
+        if (px < pz) { const k = Math.sign(lx || 1) * px; p.pos.x += c * k; p.pos.z -= sn * k; }
+        else { const k = Math.sign(lz || 1) * pz; p.pos.x += sn * k; p.pos.z += c * k; }
       }
       // animation LOD: full rate nearby, reduced far away
       p.h.root.visible = d < (p.role === 'hunter' ? 450 : 150) && p.mode !== 'riding';
       p.acc += dt;
       const every = d < 50 ? 1 : d < 100 ? 3 : 6;
+      if (p.h.ragdoll) { p.h.update(dt); p.acc = 0; p.pos.copy(p.h.root.position); continue; } // physics every frame; the body moves the person
       if (p.h.root.visible && this.frame % every === 0) { p.h.update(p.acc); p.acc = 0; }
       p.h.root.position.copy(p.pos);
       p.h.root.rotation.y = p.heading;

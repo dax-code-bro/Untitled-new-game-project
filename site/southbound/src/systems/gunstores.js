@@ -66,15 +66,14 @@ export function installGunStores(game) {
     }
     if (!shop) continue;
     // the owner behind the counter
-    const h = dressMember(lib, { ...st.look, name: st.keeper, role: 'Gunsmith' });
-    h.root.position.copy(shop.keeper);
-    h.root.rotation.y = shop.keeperFace;
-    h.play('Idle_Loop', 0);
-    scene.add(h.root);
-    keepers.push({ h, st, shop });
+    const spawnKeeper = () => { const h = dressMember(lib, { ...st.look, name: st.keeper, role: 'Gunsmith' }); h.root.position.copy(shop.keeper); h.root.rotation.y = shop.keeperFace; h.play('Idle_Loop', 0); scene.add(h.root); return h; };
+    const k = { h: spawnKeeper(), st, shop, kind: 'guns' };
+    k.revive = () => { k.h = spawnKeeper(); }; // a new owner... well, the owner's brother, the next day (systems/robbery.js)
+    keepers.push(k);
+    (game.storeKeepers = game.storeKeepers || []).push(k); // robbing a gun shop: systems/robbery.js
     interact.add({ x: shop.counter.x, z: shop.counter.z, r: 2.3, marker: false, y: shop.y,
       blip: { color: '#d8b46a', size: 5, global: true, icon: '🔫', badge: 'S' },
-      show: () => S.mode === 'foot',
+      show: () => S.mode === 'foot' && !k.taken, // (the owner's out from behind the counter: systems/robbery.js)
       label: () => `${keyHint(game)} talk to ${st.keeper}`,
       use: () => !shopOpen(st.id, game.sky.hour) ? hud.toast(`${st.name} is closed. Open ${(SHOP_H[st.id] || [9, 19]).map((h) => (h > 12 ? h - 12 + ' PM' : h + ' AM')).join(' – ')}.`, 3) : openDialog(st.keeper, st.look.lines[(Math.random() * st.look.lines.length) | 0], [
         ['I\'m interested in buying something.', () => ui.show(st)],
@@ -104,6 +103,7 @@ export function installGunStores(game) {
         for (const l of d.leaves) l.pivot.rotation.y = l.s * d.a;
       }
       for (const k of keepers) {
+        if (k.taken) continue; // came out from behind the counter with a gun (systems/robbery.js)
         const d = k.h.root.position.distanceTo(game.player.pos);
         k.h.root.visible = d < 90 && shopOpen(k.st.id, game.sky.hour);
         if (!k.h.root.visible) continue;

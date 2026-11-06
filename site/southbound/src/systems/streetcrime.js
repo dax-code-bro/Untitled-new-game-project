@@ -15,7 +15,7 @@ import { keyHint } from './world-util.js';
 import { locomotion } from '../entities/human.js';
 
 const PRICE = { breakin: 400, trespass: 150, theft: 300, shots: 150, assault: 250, weapon: 120, kill: 900, carjack: 300, disturbance: 80 };
-const SEVERITY = { breakin: 3, trespass: 1, theft: 2, disturbance: 1, weapon: 1, shots: 2, carjack: 2, assault: 3, kill: 5 };
+const SEVERITY = { breakin: 3, trespass: 1, theft: 2, disturbance: 1, weapon: 1, shots: 2, carjack: 2, assault: 3, robbery: 4, kill: 5 };
 const pick = (a) => a[(Math.random() * a.length) | 0];
 
 export function installStreetCrime(game) {
@@ -39,6 +39,7 @@ export function installStreetCrime(game) {
     if (!killed && p.mode !== 'dead' && p.carry && !p.role && !p.disarmed && Math.random() < 0.55 && from && from.distanceTo(player.pos) < 4) startFight(p);
     return killed;
   };
+  game.armAndFight = (p, id) => { p.carry = id; startFight(p); }; // (a shopkeeper with a shotgun: systems/robbery.js)
   const startFight = (p) => {
     if (!p.gun) arm(p, p.carry);
     p.role = 'armedciv'; p.mode = 'fight'; p.fightT = 0;

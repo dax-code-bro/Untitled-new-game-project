@@ -69,15 +69,10 @@ export function installWounds(game) {
 
   const prevDamage = peds.damage.bind(peds);
   peds.damage = (p, amount, from, info) => {
-    const killed = prevDamage(p, amount, from);
+    const killed = prevDamage(p, amount, from, info); // the hit info goes on: where they were struck decides how they fall
     if (killed || p.mode === 'dead') {
       if (p.wound?.help) interact.remove(p.wound.help);
-      // whatever they were carrying falls where they drop
-      if (killed && !p.dropped && near(p, 80) && (p.gun || ['cop', 'foe', 'hunter', 'mugger', 'armedciv'].includes(p.role))) {
-        p.dropped = true; if (p.gun) { scene.remove(p.gun); p.gun = null; }
-        dropGun(p, p.weaponId && WEAPONS[p.weaponId] ? p.weaponId : 'pistol');
-      }
-      return killed;
+      return killed; // what they carried is settled by systems/loot.js (dropped, or found on the body)
     }
     if (!info) return killed;
     const W = (p.wound = p.wound || { leg: 0, arm: 0 });

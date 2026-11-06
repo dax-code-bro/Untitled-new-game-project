@@ -4,6 +4,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { prepareLODs, lodReady } from '../core/lod.js';
+import { shadePerson, setBodyShadeQuality } from '../entities/bodyshade.js';
 import { withKTX2 } from './ktx2.js';
 import { bakeClips, UAL_TO_MH } from './retarget.js';
 import { buildCar } from './carbuilder.js';
@@ -118,6 +119,7 @@ function tunePerson(scene) {
 
 export async function loadLibrary(quality, progress = () => {}) {
   await lodReady;
+  setBodyShadeQuality(quality); // skin, hair, eyes and cloth lighting (entities/bodyshade.js)
   const loader = withKTX2(new GLTFLoader()); // people's textures are GPU-compressed (KTX2)
   const base = 'assets/';
   const people = quality.label === 'Phone' || quality.label === 'Low' ? PEOPLE_LITE : PEOPLE_ALL;
@@ -149,12 +151,14 @@ export async function loadLibrary(quality, progress = () => {}) {
       // police uniform: dark navy shirt and trousers
       g.scene.traverse((o) => { if (o.isMesh && o.material.name === 'suit') { o.material = o.material.clone(); o.material.color.set(0x34405a); } });
     }
+    shadePerson(g.scene);
     lib.people[id] = { scene: g.scene, family: id.startsWith('mh_f') ? 'mh_f' : 'mh_m' };
     step('Loading people');
   }));
   // The player
   const hero = await loader.loadAsync(base + 'people/hero.glb');
   tunePerson(hero.scene);
+  shadePerson(hero.scene);
   lib.people.hero = { scene: hero.scene, family: 'mh_m' };
   // Retarget the animation library once per body type (men/women differ in height)
   for (const fam of ['mh_m', 'mh_f']) {

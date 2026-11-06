@@ -49,6 +49,8 @@ import { installStreetCrime } from './systems/streetcrime.js';
 import { installAuction } from './systems/auction.js';
 import { createWayfinding } from './world/wayfinding.js';
 import { installCarCombat } from './systems/carcombat.js';
+import { installLoot } from './systems/loot.js';
+import { installRobbery } from './systems/robbery.js';
 import { installStreetLife } from './systems/streetlife.js';
 import { installWorldEvents } from './systems/world-events.js';
 import { installDetails } from './systems/details.js';
@@ -413,6 +415,7 @@ async function createGame(progress) {
   game_damageVehicle = damageVehicle;
   const hurtPlayer = (amount, from, pen) => {
     if (S.dead) return;
+    if (from) S.lastHitFrom = from.clone ? from.clone() : { x: from.x, z: from.z }; // which way you fall
     if (game.armorHit && S.mode !== 'car') amount = game.armorHit(amount, from, pen ?? 2);
     if (S.mode === 'car') { damageVehicle(S.vehicle, amount * 0.6, from ? from.x : S.vehicle.pos.x, from ? from.z : S.vehicle.pos.z + 1); player.damage(amount * 0.35); }
     else player.damage(amount);
@@ -430,6 +433,7 @@ async function createGame(progress) {
       player.health = 100; player.armor = title === 'ARRESTED' ? player.armor : 0;
       player.pos.set(at.x, collision.surface(at.x, at.z, 200), at.z);
       player.vel.set(0, 0, 0);
+      player.h.endRagdoll(); S.lastHitFrom = null;
       player.h.play('Idle_Loop', 0, 1, true);
       rig.yaw = player.heading;
       hud.toast(`${sub}. You paid $${fee}.`, 4);
@@ -515,6 +519,12 @@ async function createGame(progress) {
   combat.ammoType = { ...(career.p.weapons.ammoType || {}) };
   Object.assign(game, { hurtPlayer });
   const carCombat = installCarCombat(game, { explodeAt });
+  // bodies are searched, guns picked up (no cash floating over the dead)
+  const loot = installLoot(game);
+  game.loot = loot;
+  // holding up a store: most clerks hand it over, some come up with a shotgun
+  const robbery = installRobbery(game);
+  game.robbery = robbery;
   const props = installProps(game);
   game.props = props;
   game.onDriverKilled = (v) => { if (witnesses(v.pos, 40) || police.nearPolice(60)) police.crime(v.type === 'police' ? 'copKill' : 'kill'); peds.panic(v.pos, 30); };
@@ -678,10 +688,14 @@ async function createGame(progress) {
       // dead / arrested: freeze controls while the message shows
       S.dead -= dt;
       for (const k of ['moveX', 'moveY', 'throttle', 'brake', 'fire', 'firePressed', 'aim', 'jump', 'enter', 'weapon']) a[k] = 0;
-      if (player.health <= 0 && player.h.current !== player.h.actions.Death01) player.h.play('Death01', 0.1, 1, true);
+      if (player.health <= 0 && !player.h.ragdoll && player.h.current !== player.h.actions.Death01) player.h.play('Death01', 0.1, 1, true);
     } else if (player.health <= 0) {
       respawn(HOSPITAL, 'YOU DIED', HOSPITAL.name, Math.min(S.money, Math.round(100 + S.money * 0.1)));
-      player.h.play('Death01', 0.1, 1, true);
+      // on foot you go limp where you fall, knocked away from whatever killed you
+      if (S.mode === 'foot' && !player.swimming && !S.indoors && settings.ragdolls !== false && player.h.goLimp((x, z, y) => collision.surface(x, z, y))) {
+        const f = S.lastHitFrom, d = f ? new THREE.Vector3(player.pos.x - f.x, 0, player.pos.z - f.z).normalize() : new THREE.Vector3(-Math.sin(player.heading), 0, -Math.cos(player.heading));
+        player.h.ragdoll.push(new THREE.Vector3(d.x * 2, 0.7, d.z * 2), player.pos.clone().setY(player.pos.y + 1.3), new THREE.Vector3(d.x * 2.5, 0, d.z * 2.5), 0.6);
+      } else player.h.play('Death01', 0.1, 1, true);
     }
     // ---- weapon wheel (time slows while it is open)
     if (S.mode === 'foot' && a.wheel && S.dead <= 0) {
@@ -840,10 +854,25 @@ async function createGame(progress) {
       if (S.holdCar) { ctl.throttle = 0; ctl.brake = 1; ctl.nitro = false; } // someone is still getting in
       v.physics(dt, ctl, hm, collision);
       if (v.isAir) prompt = `ALT ${Math.round(v.alt)} m · ${v.heli ? 'Space/Shift up-down, W/S tilt, A/D turn' : `PWR ${Math.round(v.power * 100)}% · W/S power, Space/Shift pitch, A/D bank`}`;
-      for (const p of v.isAir || v.isBoat ? [] : parked) {
-        if (p.isBoat || p.isAir || Math.abs(p.pos.x - v.pos.x) > 14 || Math.abs(p.pos.z - v.pos.z) > 14) continue;
-        const m = vehiclesOverlap(v, p); // exact footprints
-        if (m) { v.pos.x += m.nx * m.d; v.pos.z += m.nz * m.d; const vn = v.vel.x * m.nx + v.vel.y * m.nz; if (vn < 0) { v.vel.x -= m.nx * vn * 1.2; v.vel.y -= m.nz * vn * 1.2; } v.vel.multiplyScalar(0.8); v.impact = Math.max(v.impact, Math.max(3, -vn)); }
+      // parked cars and police cars are solid too (exact footprints). A hard hit shoves the other car
+      // along (a parked car rolls a little and slews round; a tank doesn't move)
+      for (const p of v.isAir || v.isBoat ? [] : [...parked, ...police.cars.map((c) => c.v)]) {
+        if (p === v || p.isBoat || p.isAir || Math.abs(p.pos.x - v.pos.x) > 14 || Math.abs(p.pos.z - v.pos.z) > 14) continue;
+        const m = vehiclesOverlap(v, p);
+        if (!m) continue;
+        const vn = v.vel.x * m.nx + v.vel.y * m.nz;
+        const heavy = police.cars.some((c) => c.v === p && c.tank) ? 0 : Math.min(0.5, Math.max(0, -vn - 1.5) * 0.06); // how much of the overlap the other car takes
+        v.pos.x += m.nx * m.d * (1 - heavy); v.pos.z += m.nz * m.d * (1 - heavy);
+        if (heavy > 0) {
+          p.pos.x -= m.nx * m.d * heavy; p.pos.z -= m.nz * m.d * heavy;
+          // struck off-centre it turns: the side of the hit relative to its middle
+          const ox = v.pos.x - p.pos.x, oz = v.pos.z - p.pos.z;
+          p.heading += (ox * m.nz - oz * m.nx) * heavy * 0.03;
+          p.group?.position.copy(p.pos); if (p.group) p.group.rotation.y = p.heading;
+          if (-vn > 6) damageVehicle(p, (-vn - 5) * 1.6, v.pos.x, v.pos.z);
+        }
+        if (vn < 0) { v.vel.x -= m.nx * vn * (1.2 - heavy * 0.6); v.vel.y -= m.nz * vn * (1.2 - heavy * 0.6); }
+        v.vel.multiplyScalar(0.8 + heavy * 0.25); v.impact = Math.max(v.impact, Math.max(3, -vn));
       }
       v.night = sky.night;
       v.sync(dt);
@@ -933,7 +962,9 @@ async function createGame(progress) {
         }
       }
     }
-    peds.update(dt, focus, onFoot, [S.vehicle, ...police.cars.map((c) => c.v), ...traffic.cars.map((c) => c.v)], (amt) => { S.money += amt; hud.toast(`+$${amt}`, 1.2); });
+    peds.update(dt, focus, onFoot, [S.vehicle, ...police.cars.map((c) => c.v), ...traffic.cars.map((c) => c.v), ...parked], (amt) => { S.money += amt; hud.toast(`+$${amt}`, 1.2); });
+    loot.update(dt);
+    robbery.update(dt);
     police.update(dt, { pos: S.indoors ? new THREE.Vector3(S.indoors.d.x, focus.y, S.indoors.d.z) : focus, inCar: S.mode === 'car', speed: S.mode === 'car' ? S.vehicle.speed : player.speed, vehicle: S.vehicle, drawn: combat.drawn && S.mode === 'foot' });
     if (player.health > 0 && player.health < 100 && S.dead <= 0) player.health = Math.min(player.maxHealth || 100, player.health + dt * (police.wanted || S.noRegen ? 0 : 0.6));
     S.dmgFlash = Math.max(0, S.dmgFlash - dt * 0.8);
@@ -1249,7 +1280,7 @@ async function createGame(progress) {
     step(n = 1, dt = 1 / 30) { for (let i = 0; i < n; i++) tick(dt); S.fps = 1 / dt; },
     toggleMap: () => hud.toggleMap(),
     showRegion: () => { hud.lastRegion = ''; hud.toastTimer = 0.001; },
-    renderer, scene, camera, debug: { hm, graph, collision, THREE, cloudShadow: setCloudShadowBoost }, // THREE: tests build probe objects (mirror balls)
+    renderer, scene, camera, debug: { hm, graph, collision, THREE, cloudShadow: setCloudShadowBoost, parked }, // THREE: tests build probe objects (mirror balls)
   };
   api.game = game;
   api.V3 = THREE.Vector3;

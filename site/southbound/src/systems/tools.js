@@ -7,6 +7,7 @@ import * as THREE from 'three';
 import { CITY, TOWN } from '../world/layout.js';
 import { ShopUI } from '../ui/shop.js';
 import { money, keyHint } from './world-util.js';
+import { toolModel } from '../entities/toolmodels.js';
 
 // [trade, [name, price, effect?] ...]  effect: heal/armor/repair/rod/bait/knife/call/light/detector/...
 const RAW = {
@@ -97,6 +98,7 @@ export function installTools(game) {
       const n = P.tools[t.id] || 0, fx = Object.entries(t.fx).map(([k, v]) => `${k}${v !== 1 && typeof v !== 'string' ? ' ' + v : typeof v === 'string' ? ': ' + v : ''}`).join(', ');
       return { name: t.name, sub: `${t.trade}${fx ? ' · ' + fx : ''}${n ? ` · you have ${n}` : ''}`, stats: [], btn: money(t.price), cls: n ? 'own' : '' };
     },
+    model: (t) => toolModel(t.supply ? { name: t.name, trade: 'supplies' } : t), key: (t) => t.id || t.name, // turning on the stand
     act: (t) => { if (t.supply) { if (career.spend(t.price)) { P.supplies = P.supplies || { metal: 0, glass: 0, springs: 0 }; P.supplies[t.supply] += t.n; hud.toast(`Bought ${t.name}`, 1.2); } return; } if (career.spend(t.price)) { career.addTool(t.id, t.fx.bait || t.fx.arrows ? 1 : 1); if (t.fx.bait) P.baitCount = (P.baitCount || 0) + t.fx.bait; hud.toast(`Bought ${t.name}`, 1.2); } },
   });
   const shops = game.hardwareShops = [

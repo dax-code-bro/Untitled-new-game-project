@@ -140,6 +140,65 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 - [x] Loading screen with in-game art, tips and progress
 - [x] Fewer touch buttons: ◎ interact replaces the car button; map, phone, arsenal, free cam moved to pause
 
+## Phase 1.23 — Doors, hold-ups and showrooms (side batch S2)
+
+- [x] No more "press F to open the door": walk into a door and you open it and go in
+- [x] Run into a door and you shoulder it open; whoever's working inside tells you to chill out
+      ("Whoa, whoa! Chill out, man!", "You break it, you buy it, buddy."), a homeowner less politely
+- [x] A locked door rattles when you walk into it, and gives way after two to four running hits
+      (homes, shops, warehouses get sturdier) — a break-in, same as kicking it; F still knocks
+- [x] Rob a store (`src/systems/robbery.js`): hold a gun on the clerk at a Gulf Mart, a clothing store
+      or a gun shop. Most put their hands up and empty the register into your hands; let the gun drop
+      first and they hit the panic button. Some come up from under the counter with a shotgun and
+      fight (a gun-shop owner nearly always; more often out in the country and late at night). Either
+      way the police are told (two stars); the till is empty until tomorrow, and a dead clerk is
+      replaced the next day
+- [x] Every store is a showroom like the gun store: the list on the left, the thing itself turning
+      on a stand on the right (drag to turn it), its details and the buy button under it
+      (`src/ui/shop.js`, `src/ui/viewer.js`): cars at the dealers, your own car wearing the paint or
+      part you're looking at in the custom shop, boats and aircraft, the real building as an
+      architect's model at the realtor, and food at the Gulf Mart
+- [x] 3D models for all 240 tools and the crafting supplies (`src/entities/toolmodels.js`): rods,
+      lures, knives, pliers, power tools, ladders, kits, gadgets, garden tools, mowers...
+
+## Phase 1.22 — People up close (graphics milestone G2)
+
+- [x] Skin (`src/entities/bodyshade.js`): light goes into it and comes out a little way off, red
+      furthest, so the line between light and shadow on a face is soft and warm, not a hard grey edge
+- [x] With the sun behind someone, the outline of the face and the ear rims glow red
+- [x] Skin's shine is two layers (a tight oily one over a broad soft one) instead of plastic
+- [x] Pores and the skin's fine grain within arm's length, fading out once a pixel is too big to
+      show them (no shimmer or sandpaper further off)
+- [x] Hair: a strand highlight across it (two lobes, the second coloured by the hair), and light
+      through its edges against the sun
+- [x] Eyes: wet, and set back in the head instead of glowing with skylight
+- [x] Clothes: cotton and wool catch the light at grazing angles (a soft sheen on folds and edges)
+- [x] Works for every person, recoloured gang members and SWAT, and the player's outfits; off on Phone,
+      pores off on Low
+- [x] Fix: the hit info never reached the ragdoll (the wound system dropped it), so every death got the
+      same small shove; now a car throws the body, a head shot snaps it back. Guns were also dropped
+      twice on death
+
+## Phase 1.21 — Bodies fall for real (side batch S1)
+
+- [x] Ragdolls (`src/entities/ragdoll.js`): when someone dies, physics takes over from the animation.
+      Fifteen joints with stiff bones and a braced torso fall under gravity onto the real ground,
+      slide and settle; the skeleton follows, so the character's own body crumples. No two deaths
+      look the same
+- [x] The push goes in where they were struck: a head shot snaps the head back, a leg shot takes the
+      legs out, a blast throws everyone outward, a car scoops the legs and throws the body
+- [x] Hits someone survives: the part that was hit jerks away (head, shoulder, knee), and a body shot
+      can double them over
+- [x] Run people over: a car above ~30 km/h throws and kills; slower knocks them down and back; at a
+      crawl it only pushes them aside. Parked and moving cars all count
+- [x] Your car no longer drives through police cars; a hard hit shoves a parked car and slews it round
+- [x] No more cash floating over the dead (`src/systems/loot.js`). Walk up and search the body: you
+      crouch over it and take what's there. Officers drop their sidearm (SWAT their rifle) and may
+      have a little cash; a civilian with a gun out drops it, and a hidden gun or knife is found on
+      him; anyone else may have some cash, and very rarely a pistol. A dropped gun lies on the ground
+      to be picked up
+- [x] You go limp too when you're killed on foot, and get up again at the hospital
+
 ## Phase 1.20 — Cloud shadows (graphics milestone G1)
 
 - [x] The clouds' shadows slide over the land, streets, roofs, trees, cars and people with the wind

@@ -8,6 +8,7 @@ import * as THREE from 'three';
 import { CITY, TOWN } from '../world/layout.js';
 import { ShopUI } from '../ui/shop.js';
 import { nearestRoad, spawnParked, money, keyHint } from './world-util.js';
+import { Vehicle } from '../entities/vehicle.js';
 
 export function installGarage(game) {
   const { career, interact, hud } = game;
@@ -17,6 +18,16 @@ export function installGarage(game) {
 
   const ownedOf = (v) => P.garage.find((g) => g.uid === v.uid);
   const addToGarage = (type, up = {}) => { const g = { uid: `v${uidN++}`, cat: 'car', type, up }; P.garage.push(g); career.saveSoon(); return g; };
+
+  // a car for the showroom stand (ui/shop.js): its own model, with any parts and paint on it
+  const carPreview = (type, up) => {
+    const v = new Vehicle(game.lib, type);
+    if (up) applyUpgrades(v, up);
+    v.night = 0; v.sync(0);
+    v.group.userData.dispose = () => v.dispose();
+    return v.group;
+  };
+  game.carPreview = carPreview;
 
   // ---------------- dealership ----------------
   let lot = null;
@@ -32,8 +43,10 @@ export function installGarage(game) {
         name: m.name, sub: `${m.cls}${owned ? ' · owned' : ''}`,
         stats: [['Speed', h.top / 90, `${Math.round(h.top * 2.237)} mph`], ['Accel', h.accel / 16], ['Grip', h.grip / 11]],
         btn: money(m.price), cls: owned ? 'own' : '',
+        desc: m.desc || `${m.name}: a ${m.cls.toLowerCase()} car. Top speed ${Math.round(h.top * 2.237)} mph.`,
       };
     },
+    model: (m) => carPreview(m.id), key: (m) => m.id,
     act: (m) => {
       if (!career.spend(m.price)) return;
       const g = addToGarage(m.id);
@@ -62,6 +75,16 @@ export function installGarage(game) {
       const stats = it.kind === 'perf' ? Object.entries(it.fx).map(([k, v]) => [k, null, `${k === 'armor' ? '+' + v * it.tier : k === 'ride' ? `${Math.round(v * it.tier * 100)} cm` : '+' + Math.round(v * it.tier * 100) + '%'}`]) : [];
       return { name: it.name, sub: it.group, stats, btn: fitted ? 'Fitted' : money(it.price), cls: fitted ? 'own' : '' };
     },
+    // your car on the stand, wearing the paint or part you're looking at
+    model: (it, t) => {
+      if (!shopCar) return null;
+      const up = { ...(ownedOf(shopCar)?.up || {}) };
+      if (t === 'paint') up.paint = [...it[1], it[2]];
+      else if (t === 'look') Object.assign(up, it.fx);
+      else if (t === 'perf') up[it.group] = Math.max(up[it.group] || 0, it.tier);
+      return carPreview(shopCar.type, up);
+    },
+    key: (it) => (Array.isArray(it) ? it[0] : it.name || 'repair') + '|' + (shopCar?.uid || shopCar?.type || ''),
     act: (it, t) => {
       if (!shopCar) return;
       let g = ownedOf(shopCar);
