@@ -1,7 +1,7 @@
 // SOUTHBOUND — boot, world build, game loop.
 import * as THREE from 'three';
 import { scanGround } from './core/substrate.js';
-import { loadSettings, saveSettings, resolveQuality, PRESETS, detectGPU, SOFTWARE_HINT, probeGPU, IDLE_CARD_HINT } from './settings.js';
+import { loadSettings, saveSettings, resolveQuality, PRESETS, detectGPU, SOFTWARE_HINT, probeGPU, IDLE_CARD_HINT, presetOverReach } from './settings.js';
 import { installImperfections } from './core/imperfect.js';
 import { installCloudShadows, setCloudShadowBoost } from './core/cloudshadow.js';
 import { createDynamicLighting } from './core/gi.js';
@@ -120,9 +120,14 @@ async function createGame(progress) {
   // The browser is drawing without the graphics card (hardware acceleration off, or the GPU
   // blocklisted): whatever preset was saved, start on Low at a reduced resolution so it's at least
   // playable, and say how to fix it (automated test browsers are left on the preset they asked for)
-  const SOFT_START = (() => { try { return detectGPU().software && !navigator.webdriver; } catch (e) { return false; } })();
+  const GPU_INFO = (() => { try { return detectGPU(); } catch (e) { return { name: '?', preset: 'medium' }; } })();
+  const AUTOMATED = !!navigator.webdriver; // test browsers: leave their settings alone
+  const SOFT_START = GPU_INFO.software && !AUTOMATED;
   if (SOFT_START && !['phone', 'low'].includes(settings.preset)) settings.preset = 'low';
   const q = resolveQuality(settings);
+  // graphics built into the processor (most laptops): one pixel per screen pixel at most. A
+  // high-DPI laptop screen at 1.5-2x on Ultra is 2-4x the pixels, and a built-in chip can't do it
+  if (GPU_INFO.integrated && !AUTOMATED) q.maxPixelRatio = Math.min(q.maxPixelRatio, 1);
   installImperfections(q); // micro-surface wear on every PBR material (before anything compiles)
   installCloudShadows(q); // the clouds' shadows on every lit surface (core/cloudshadow.js)
   const canvas = $('#game');
@@ -1186,11 +1191,26 @@ async function createGame(progress) {
     const now = performance.now();
     if (now < guard.next || S.paused || S.indoors || guard.level >= 5) return;
     // part of adaptive quality; but a slide show is rescued even with dynamic resolution off
-    if (!settings.dynamicRes && S.fps >= 8 && guard.level < 4) return;
+    // (except in test browsers, which run slowly on purpose)
+    if (!settings.dynamicRes && (S.fps >= 8 || AUTOMATED) && guard.level < 4) return;
     guard.next = now + 2000;
     if (S.fps >= 24) { guard.low = 0; return; }
     if (++guard.low < 3) return; // six seconds in a row
     guard.low = 0; guard.next = now + 5000;
+    // a preset far heavier than this machine can draw (Ultra on a laptop's built-in graphics):
+    // turning pieces off won't save it. Save the game and come straight back on the preset that
+    // fits (once a session, so it can never loop)
+    let auto = null; try { auto = sessionStorage.getItem('sbAutoPreset'); } catch (e) { /* private mode */ }
+    if (S.fps < 4 && !AUTOMATED && !auto && presetOverReach(settings.preset, GPU_INFO) >= 1) {
+      try { sessionStorage.setItem('sbAutoPreset', '1'); } catch (e) { /* ignore */ }
+      const was = PRESETS[settings.preset]?.label, to = GPU_INFO.preset === 'phone' && !GPU_INFO.mobile ? 'low' : GPU_INFO.preset;
+      settings.preset = to; settings.dynamicRes = true; settings.resolution = 'native'; saveSettings(settings);
+      try { game.career?.save?.(); } catch (e) { /* the autosave has it anyway */ }
+      guard.level = 5;
+      hud.toast(`${was} is too heavy for ${GPU_NAME}: restarting on ${PRESETS[to].label}. Your game is saved. (Settings > Graphics to change it.)`, 8);
+      setTimeout(() => location.reload(), 3000);
+      return;
+    }
     if (guard.level >= 4) {
       // everything's already off and it's still a slide show: the last resort. Fewer pixels, a
       // shorter view, and start on the lightest preset next time
