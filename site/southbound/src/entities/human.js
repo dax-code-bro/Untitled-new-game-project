@@ -122,7 +122,12 @@ export class Human {
     this.flinchBone.quaternion.multiply(_fq.setFromAxisAngle(this.flinchAxis, this.flinchAngle * e));
   }
 
-  dispose() { this.mixer.stopAllAction(); this.mixer.uncacheRoot(this.model); }
+  // Free what this person holds on the graphics card: each skinned mesh's skeleton keeps a small
+  // "bone texture" that three.js never frees on its own. Removed people left one behind every
+  // time, so a long session piled up hundreds. Safe for someone who comes back: the bone texture
+  // is made again the next time they're drawn
+  freeGpu() { this.model.traverse((o) => { if (o.isSkinnedMesh && o.skeleton?.boneTexture) o.skeleton.dispose(); }); }
+  dispose() { this.mixer.stopAllAction(); this.mixer.uncacheRoot(this.model); this.freeGpu(); }
 }
 
 // Pick a locomotion clip and playback speed for a ground speed (m/s)

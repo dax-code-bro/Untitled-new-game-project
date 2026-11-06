@@ -171,7 +171,7 @@ export function installPhone(game) {
           c.leave = (c.leave || 0) + dt;
           h.root.position.x += Math.sin(c.away) * 1.5 * dt; h.root.position.z += Math.cos(c.away) * 1.5 * dt;
           h.root.position.y = collision.surface(h.root.position.x, h.root.position.z, h.root.position.y + 2);
-          if (c.leave > 8) { scene.remove(h.root); couriers.splice(i, 1); continue; }
+          if (c.leave > 8) { scene.remove(h.root); h.dispose?.(); couriers.splice(i, 1); continue; }
         }
         h.update(dt);
       }

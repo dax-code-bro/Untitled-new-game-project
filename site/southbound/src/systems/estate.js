@@ -334,7 +334,7 @@ export function installEstate(game) {
   }
   function updateOccupant(dt) {
     if (!occ) return;
-    if (!inside || inside.d !== occ.d) { occ.h.root.parent?.remove(occ.h.root); if (!occ.called && occ.t > 1) { /* you left in time */ } occ = null; return; }
+    if (!inside || inside.d !== occ.d) { occ.h.root.parent?.remove(occ.h.root); occ.h.freeGpu?.(); if (!occ.called && occ.t > 1) { /* you left in time */ } occ = null; return; }
     occ.t += dt;
     const pp = player.pos, hp = occ.h.root.position;
     occ.h.root.rotation.y = Math.atan2(pp.x - hp.x, pp.z - hp.z);
@@ -370,7 +370,7 @@ export function installEstate(game) {
   function dropClerk() {
     if (!clerk) return;
     const i = game.storeKeepers.indexOf(clerk); if (i >= 0) game.storeKeepers.splice(i, 1);
-    if (!clerk.taken) clerk.h.root.parent?.remove(clerk.h.root);
+    if (!clerk.taken) { clerk.h.root.parent?.remove(clerk.h.root); clerk.h.freeGpu?.(); }
     clerk = null;
   }
   function updateClerk(dt) {

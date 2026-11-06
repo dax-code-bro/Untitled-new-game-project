@@ -212,7 +212,7 @@ export function installDetails(game) {
           } else f.t = -1e9;
         }
         if (f.crew) { for (const h of f.crew.men) h.update(dt); if (f.t > 40 && !f.out) { f.out = true; f.v.group.traverse((o) => { if (o.material && o.material.blending === THREE.AdditiveBlending) o.visible = false; }); } }
-        if (f.t > 95 && f.crew) { scene.remove(f.crew.t.group); for (const h of f.crew.men) scene.remove(h.root); fires.splice(i, 1); }
+        if (f.t > 95 && f.crew) { scene.remove(f.crew.t.group); for (const h of f.crew.men) { scene.remove(h.root); h.dispose?.(); } fires.splice(i, 1); }
       }
     },
   };
