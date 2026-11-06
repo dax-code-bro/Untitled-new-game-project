@@ -140,6 +140,17 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 - [x] Loading screen with in-game art, tips and progress
 - [x] Fewer touch buttons: ◎ interact replaces the car button; map, phone, arsenal, free cam moved to pause
 
+## Phase 1.20 — Cloud shadows (graphics milestone G1)
+
+- [x] The clouds' shadows slide over the land, streets, roofs, trees, cars and people with the wind
+      (`src/core/cloudshadow.js`): every lit surface follows the sun ray up through the cloud layer
+      and reads the same cloud field the sky draws; sunlight dims, skylight stays
+- [x] The sky's clouds are anchored to the world (they pass overhead as you travel), so the shadows
+      are cast by the clouds you see; the cloud cube takes the viewer's position once per round of
+      faces (no seams) and redraws at once after a teleport
+- [x] Grass translucency and far tree impostors darken under a cloud too; weaker with a low sun or
+      overcast; off on Phone
+
 ## Phase 1.19 — Lighter frames: KTX2 textures and levels of detail
 
 - [x] Wheels in three levels (they were ~20k triangles each, most of a street's triangles); a fourth,

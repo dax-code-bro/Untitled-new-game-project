@@ -215,7 +215,7 @@ vec3 nonPerturbedNormal = normal;`)
   // sunlight through thin blades when it's behind them
   vec3 vd = normalize(vGW - cameraPosition);
   float back = pow(max(dot(vd, uSunDirG), 0.0), 3.0);
-  totalEmissiveRadiance += diffuseColor.rgb * uSunColG * (0.04 + back * 0.45) * vV;
+  totalEmissiveRadiance += diffuseColor.rgb * uSunColG * (0.04 + back * 0.45) * vV * sbCloudShade(vGW); // through the blades, also under a cloud's shadow
 }`)
       .replace('#include <aomap_fragment>', `#include <aomap_fragment>
 reflectedLight.indirectDiffuse *= mix(0.45, 1.0, vV);`);

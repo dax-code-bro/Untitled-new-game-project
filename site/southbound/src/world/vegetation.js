@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { loadTexture, withKTX2 } from '../assets/ktx2.js';
 import { simplified, thinCards, lodReady } from '../core/lod.js';
+import { cloudShadowUniforms, CLOUD_SHADOW_GLSL } from '../core/cloudshadow.js';
 import { WORLD, CITY, coastZ } from './layout.js';
 import { forestMask, plainsMask, bayouMask } from './heightmap.js';
 import { worldUniforms } from './terrain.js';
@@ -313,6 +314,7 @@ export async function createVegetation(hm, quality, scene, collision, cityBlocks
         ...grassUniforms, tImp: { value: v.imp }, uNear: { value: Q.near },
         uSize: { value: new THREE.Vector3(v.half * 2, v.half * 4, v.top - v.half * 4) },
         sbFogA: { value: fogParams.a }, sbFogB: { value: fogParams.b },
+        ...cloudShadowUniforms,
       },
       vertexShader: /* glsl */`
         attribute vec4 aInst; uniform vec3 uSize; uniform float uNear;
@@ -332,12 +334,13 @@ export async function createVegetation(hm, quality, scene, collision, cityBlocks
         uniform vec4 sbFogA; uniform vec4 sbFogB;
         varying vec2 vUv; varying vec3 vW; varying float vFade;
         ${FOG_GLSL}
+        ${CLOUD_SHADOW_GLSL}
         void main() {
           vec4 c = texture2D(tImp, vUv);
           // dithered fade into the 3D tree (no hard pop)
           float dither = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453);
           if (c.a < 0.5 || vFade < dither) discard;
-          vec3 lit = c.rgb * (uAmbient * 1.6 + uSunColor * 1.4 * (0.45 + 0.55 * max(uSunDir.y, 0.0)));
+          vec3 lit = c.rgb * (uAmbient * 1.6 + uSunColor * 1.4 * (0.45 + 0.55 * max(uSunDir.y, 0.0)) * sbCloudShade(vW));
           gl_FragColor = vec4(sbApplyFog(lit, vW, cameraPosition, uFogColor, uFogDensity, sbFogA, sbFogB), 1.0);
           #include <colorspace_fragment>
         }`,

@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { loadSettings, saveSettings, resolveQuality, PRESETS, detectGPU, SOFTWARE_HINT, probeGPU, IDLE_CARD_HINT } from './settings.js';
 import { installImperfections } from './core/imperfect.js';
+import { installCloudShadows, setCloudShadowBoost } from './core/cloudshadow.js';
 import { createDynamicLighting } from './core/gi.js';
 import { createAbrasion } from './core/abrasion.js';
 import { updateNearInstances, nearInstanceStats } from './core/nearinst.js';
@@ -114,6 +115,7 @@ async function createGame(progress) {
   installAtmosphere();
   const q = resolveQuality(settings);
   installImperfections(q); // micro-surface wear on every PBR material (before anything compiles)
+  installCloudShadows(q); // the clouds' shadows on every lit surface (core/cloudshadow.js)
   const canvas = $('#game');
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: q.aa === 'msaa', powerPreference: 'high-performance', stencil: false });
   // presets without the post chain (phone/low) get the filmic curve plus the
@@ -1247,7 +1249,7 @@ async function createGame(progress) {
     step(n = 1, dt = 1 / 30) { for (let i = 0; i < n; i++) tick(dt); S.fps = 1 / dt; },
     toggleMap: () => hud.toggleMap(),
     showRegion: () => { hud.lastRegion = ''; hud.toastTimer = 0.001; },
-    renderer, scene, camera, debug: { hm, graph, collision, THREE }, // THREE: tests build probe objects (mirror balls)
+    renderer, scene, camera, debug: { hm, graph, collision, THREE, cloudShadow: setCloudShadowBoost }, // THREE: tests build probe objects (mirror balls)
   };
   api.game = game;
   api.V3 = THREE.Vector3;
