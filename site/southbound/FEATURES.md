@@ -1,0 +1,87 @@
+# Southbound feature tracker
+
+The owner's goal: **~30 new things added to every feature in the game, and 30+ brand-new
+features.** This file is the source of truth for how far that has got. Update it whenever a
+batch ships (counts, the batch name, and strike the ideas you used from the backlog). Pick the
+feature with the fewest additions next. Batches ship as F# (features) alternating with G#
+(graphics); see `ROADMAP.md` for what each one contains.
+
+Counts are additions made in the "add to every feature" programme (F1 onwards, plus the S3/S4
+side batches where they extended a feature). The original build of each feature isn't counted.
+
+## Status (last updated: Phase 1.41, after F9 + the real-grass change)
+
+| # | Feature | Files | Added | Batches | Status |
+|---|---------|-------|------:|---------|--------|
+| 1 | Hunting | hunting.js, wilds.js | 12 | F5 | 18 to go |
+| 2 | Police & law | police.js, policeplus.js, law.js | 11 | S3, F4 | 19 to go |
+| 3 | Phone | phone.js, phoneplus.js | 10 | F6 | 20 to go |
+| 4 | Residents / people | population.js, residents.js, peds.js | 8 | S3, S4 | 22 to go |
+| 5 | Jobs | jobs.js | 8 | F7 | 22 to go |
+| 6 | Driving & cars | driving.js, vehicle.js | 7 | F1, G4 | 23 to go |
+| 7 | Fishing | fishing.js | 7 | F5 | 23 to go |
+| 8 | Property | estate.js, propertyplus.js | 8 | S2, F8 | 22 to go |
+| 9 | Street life | ambient.js, streetlife.js | 5 | F3 | 25 to go |
+| 10 | Food & Gulf Marts | shops.js, foodplus.js | 4 | F9 | 26 to go |
+| 11 | Guns & combat | gunwork.js, combat.js | 5 | F2 | 25 to go |
+| 12 | Robbery & street crime | robbery.js, streetcrime.js, kerbside.js | 4 | S2, S4, F5 | 26 to go |
+| 13 | Weather & time | weather.js, sky.js | 3 | F6, G8 | 27 to go |
+| 14 | Boats & water | marine-air.js, splashes.js | 2 | G5 | 28 to go |
+| 15 | Garage & customs | garage.js | 2 | F1 | 28 to go |
+| 16 | Interiors | estate.js | 2 | S2, S4 | 28 to go |
+| 17 | HUD, map & UI | hud.js, ui/ | 2 | F5, F6 | 28 to go |
+| 18 | Needs (sleep, food, weight) | needs.js | 1 | F9 | 29 to go |
+| 19 | Wounds & health | wounds.js | 1 | F9 | 29 to go |
+| 20 | Tools & inventory | tools.js | 1 | F2 | 29 to go |
+| 21 | Gangs & the hideout | gang.js | 0 | | 30 to go |
+| 22 | Story missions | missions.js | 0 | | 30 to go |
+| 23 | Aircraft | marine-air.js, craft.js | 0 | | 30 to go |
+| 24 | Clothing & barber | clothes.js, clothing.js | 0 | | 30 to go |
+| 25 | Armory, armor & medical | armory.js | 0 | | 30 to go |
+| 26 | Gunsmiths | gunstores.js | 0 | | 30 to go |
+| 27 | Stray & farm animals | strays.js | 0 | | 30 to go |
+| 28 | World events | world-events.js | 0 | | 30 to go |
+| 29 | Demolition & damage | demolition.js, holes.js | 0 | | 30 to go |
+| 30 | Property auction | auction.js | 0 | | 30 to go |
+| 31 | Audio | core/audio.js | 0 | | 30 to go |
+| 32 | Camera & controls | core/camera.js, input.js | 0 | | 30 to go |
+| 33 | Career, stats & saving | career.js | 0 | | 30 to go |
+| 34 | Hospital & precinct | civic.js | 0 | | 30 to go |
+| 35 | Roadside (breakdowns, hitchhikers) | roadside.js | 0 | | 30 to go |
+| 36 | Physics props | props.js | 0 | | 30 to go |
+| 37 | Loot | loot.js | 0 | | 30 to go |
+| 38 | Car combat | carcombat.js | 0 | | 30 to go |
+| 39 | Movement & footing | footing.js, player.js | 0 | | 30 to go |
+
+**Totals: about 105 additions across 20 features; 19 features untouched; none at 30 yet.**
+Brand-new features added this programme (not extensions): banking, news, contacts, cabs,
+legendary animals and fish, poaching, property market, burglaries, food spoilage, tracks in the
+ground, boat wakes, rain soak: about 12 of the 30+ asked for.
+
+## Backlog: ideas per feature (take from here, strike when shipped)
+
+- **Gangs & hideout:** crew loyalty and moods, crew members with skills (driver, medic, shooter),
+  hideout upgrades (bunks, armory rack, garage, kitchen), camp chores, crew camp talk at night,
+  rival gang territory map, turf wars, protection money from businesses, crew injuries and
+  recovery, recruiting, a crew member arrested (bail him out), gang colours and vehicles,
+  safehouses, stash houses, informants, gang reputation, crew birthdays and stories, crew
+  follows you on jobs, crew horses/cars, morning briefing, payouts split, betrayal risk.
+- **Story missions:** mission replay, checkpoints, mission ratings (time, accuracy, no damage),
+  optional objectives, mission choices with consequences, phone calls that start missions,
+  cutscene camera framing, mission-specific vehicles, side characters returning, epilogue
+  missions, mission failure reasons, hints after failing twice.
+- **Aircraft:** fuel, stall warning, flaps, landing gear, crosswind, runway lights at night,
+  air traffic radio, flight school, crop-dusting pay by coverage, skydiving, seaplane docking,
+  helicopter winch, turbulence in storms, altimeter/heading HUD, crash damage states.
+- **Clothing & barber:** weather-appropriate clothes (cold, rain), clothes getting dirty and
+  bloody, washing, outfits saved, disguises reduce recognition, beard growth styles,
+  tattoos, accessories, uniforms for jobs, NPC reactions to how you dress.
+- **Armory / medical:** bandage over time, splints for broken bones, painkillers with side
+  effects, armor durability and repair, plates cracking, trauma kits, infection if wounds go
+  untreated, hospital bills by injury.
+- **Audio:** footsteps by surface, wind in grass, birdsong by time of day, rain on roofs and car
+  roofs, distant traffic, sirens doppler, radio stations (original, procedurally generated),
+  ambient city hum, gun echoes by environment, interior reverb.
+- **HUD, map & UI:** map legend and filters, custom markers, fast travel signposts, a journal,
+  achievements, a photo gallery, a settings search, minimap rotation option, compass.
+- (more lists to be added as each feature comes up)
