@@ -143,6 +143,15 @@ export function installMarineAir(game) {
       if (t === 'up') { const g = lastOwned(cat), have = g && (g.up[it.group] || 0) >= it.tier; return { name: it.name, sub: it.group, stats: Object.entries(it.fx).map(([k, v]) => [k, null, typeof v === 'number' && v < 1 ? `+${Math.round(v * it.tier * 100)}%` : `+${v}`]), btn: have ? 'Fitted' : money(it.price), cls: have ? 'own' : '' }; }
       return { name: it.name, sub: it.type, stats: [], btn: money(it.price), cls: P.garage.some((g) => g.type === it.id) ? 'own' : '' };
     },
+    // the boat or plane itself on the stand (for upgrades: the one they'd be fitted to)
+    model: (it, t) => {
+      const id = t === 'buy' ? it.id : t === 'mine' ? it.type : lastOwned(cat)?.type;
+      const entry = catalog.find((c) => c.id === id); if (!entry) return null;
+      const v = cat === 'boat' ? new Boat(entry, game.q) : new Aircraft(entry, game.q);
+      v.group.userData.dispose = () => v.dispose?.();
+      return v.group;
+    },
+    key: (it, t) => (it.id || it.type || it.name),
     act: (it, t) => {
       if (t === 'up') {
         const g = lastOwned(cat);

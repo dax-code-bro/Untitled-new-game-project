@@ -51,10 +51,11 @@ export class Peds {
     return null;
   }
 
-  // A ped at an exact spot, running from `threat` (e.g. a carjacked driver)
-  spawnAt(x, z, threat) {
+  // A ped at an exact spot, running from `threat` (e.g. a carjacked driver). `human`: an existing
+  // body to use (a shopkeeper who's come out from behind the counter)
+  spawnAt(x, z, threat, human = null) {
     const id = this.lib.peopleIds[(this.rnd() * this.lib.peopleIds.length) | 0];
-    const h = new Human(this.lib, id);
+    const h = human || new Human(this.lib, id);
     let G = CITY, i = 0, j = 0;
     for (const g of [CITY, TOWN]) {
       const gi = Math.floor((x - g.x0) / g.pitch), gj = Math.floor((z - g.z0) / g.pitch);

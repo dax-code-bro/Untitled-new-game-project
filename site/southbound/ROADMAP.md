@@ -140,6 +140,27 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 - [x] Loading screen with in-game art, tips and progress
 - [x] Fewer touch buttons: ◎ interact replaces the car button; map, phone, arsenal, free cam moved to pause
 
+## Phase 1.23 — Doors, hold-ups and showrooms (side batch S2)
+
+- [x] No more "press F to open the door": walk into a door and you open it and go in
+- [x] Run into a door and you shoulder it open; whoever's working inside tells you to chill out
+      ("Whoa, whoa! Chill out, man!", "You break it, you buy it, buddy."), a homeowner less politely
+- [x] A locked door rattles when you walk into it, and gives way after two to four running hits
+      (homes, shops, warehouses get sturdier) — a break-in, same as kicking it; F still knocks
+- [x] Rob a store (`src/systems/robbery.js`): hold a gun on the clerk at a Gulf Mart, a clothing store
+      or a gun shop. Most put their hands up and empty the register into your hands; let the gun drop
+      first and they hit the panic button. Some come up from under the counter with a shotgun and
+      fight (a gun-shop owner nearly always; more often out in the country and late at night). Either
+      way the police are told (two stars); the till is empty until tomorrow, and a dead clerk is
+      replaced the next day
+- [x] Every store is a showroom like the gun store: the list on the left, the thing itself turning
+      on a stand on the right (drag to turn it), its details and the buy button under it
+      (`src/ui/shop.js`, `src/ui/viewer.js`): cars at the dealers, your own car wearing the paint or
+      part you're looking at in the custom shop, boats and aircraft, the real building as an
+      architect's model at the realtor, and food at the Gulf Mart
+- [x] 3D models for all 240 tools and the crafting supplies (`src/entities/toolmodels.js`): rods,
+      lures, knives, pliers, power tools, ladders, kits, gadgets, garden tools, mowers...
+
 ## Phase 1.22 — People up close (graphics milestone G2)
 
 - [x] Skin (`src/entities/bodyshade.js`): light goes into it and comes out a little way off, red

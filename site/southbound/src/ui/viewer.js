@@ -18,6 +18,14 @@ function make() {
   const rim = new THREE.DirectionalLight(0xc8dcff, 1.2); rim.position.set(-4, 3, -5); scene.add(rim);
   const floor = new THREE.Mesh(new THREE.CircleGeometry(1, 48), new THREE.ShadowMaterial({ opacity: 0.35 }));
   floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
+  // soft studio reflections for paint, chrome and glass (a dim room with a big softbox overhead)
+  const pm = new THREE.PMREMGenerator(r), env = new THREE.Scene();
+  env.add(new THREE.Mesh(new THREE.SphereGeometry(5, 16, 8), new THREE.MeshBasicMaterial({ color: 0x8a847c, side: THREE.BackSide })));
+  const floorE = new THREE.Mesh(new THREE.CircleGeometry(5, 24), new THREE.MeshBasicMaterial({ color: 0x4a4540 })); floorE.rotation.x = -Math.PI / 2; floorE.position.y = -1.5; env.add(floorE);
+  const front = new THREE.Mesh(new THREE.PlaneGeometry(3, 2), new THREE.MeshBasicMaterial({ color: 0xfff4e6 })); front.position.set(3, 1.5, 3.5); front.lookAt(0, 0, 0); env.add(front);
+  const box = new THREE.Mesh(new THREE.PlaneGeometry(4, 1.6), new THREE.MeshBasicMaterial({ color: 0xffffff })); box.position.set(0, 3.5, 0.5); box.lookAt(0, 0, 0); env.add(box);
+  const side = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 3), new THREE.MeshBasicMaterial({ color: 0xbfd2ff })); side.position.set(-4, 1.5, -1); side.lookAt(0, 0, 0); env.add(side);
+  scene.environment = pm.fromScene(env, 0.04).texture;
   const cam = new THREE.PerspectiveCamera(32, 1, 0.01, 200);
   const stand = new THREE.Group(); scene.add(stand);
   const s = { canvas, r, scene, cam, key, floor, stand, yaw: 0.6, pitch: 0.28, dist: 3, spin: true, drag: null, raf: 0, size: 1 };

@@ -360,11 +360,81 @@ export function installEstate(game) {
       color: p && owned(p) ? 0x60ff90 : 0xffd040, height: 1.2,
       blip: p ? { color: '#60ff90', size: 4, global: true } : null,
       show: () => !inside,
-      label: () => { const ls = lockState(d, p); return p ? `${keyHint(game)} ${ls === 'locked' ? 'try the door of' : 'enter'} ${p.name}${owned(p) ? ' (yours)' : ` · for sale ${money(p.price)}`}` : `${keyHint(game)} ${ls === 'locked' ? 'try the door' : 'go inside'}`; },
+      // no prompt: you open a door by walking into it (see walkIntoDoors); F still knocks / kicks a locked one
+      label: () => (p && !owned(p) ? `${p.name} · for sale ${money(p.price)}` : ''),
       use: () => tryDoor(d, p) });
     // only owned homes show on the map
     if (p) interact.points[interact.points.length - 1].blip = null;
   }
+  // ---------------- walking into a door ----------------
+  // Walk into a door and you open it and go in; run into it and you shoulder it open. A locked door
+  // rattles when you walk into it, and gives way after two or three running hits (a break-in, as if
+  // you'd kicked it). Burst into a shop or a bar and whoever's working tells you to calm down.
+  const CHILL = ['"Whoa, whoa! Chill out, man!"', '"Hey! Easy on the door!"', '"Jesus — what\'s the rush?"', '"You break it, you buy it, buddy."', '"Calm down! We\'re open!"', '"Damn, you trying to take it off the hinges?"'];
+  const HOME_CHILL = ['"Who the hell—?! Chill out!"', '"What is wrong with you?!"', '"You can\'t just barge in here!"'];
+  const sturdy = (d) => ({ warehouse: 4, office: 3, store: 3, bar: 3 })[kindOf(d)] || 2;
+  const push = { d: null, t: 0, hitT: 0, rattleT: 0 };
+  function walkIntoDoors(dt) {
+    push.hitT -= dt; push.rattleT -= dt;
+    const S = game.S;
+    if (inside || S.mode !== 'foot' || S.dead > 0 || S.search || player.h?.ragdoll) { push.d = null; return; }
+    const pp = player.pos, v = player.vel;
+    let hit = null;
+    for (const d of doors) {
+      if (Math.abs(d.x - pp.x) > 3 || Math.abs(d.z - pp.z) > 3 || d.b.ruined) continue;
+      const wx = d.b.x + d.nx * (d.b.w / 2), wz = d.b.z + d.nz * (d.b.d / 2); // the door, on the wall
+      const out = (pp.x - wx) * d.nx + (pp.z - wz) * d.nz, lat = Math.abs((pp.x - wx) * d.nz - (pp.z - wz) * d.nx);
+      const into = -(v.x * d.nx + v.z * d.nz);
+      if (out > -0.1 && out < 0.75 && lat < 0.8 && into > 0.9) { hit = d; break; }
+    }
+    if (!hit) { push.d = null; push.t = 0; return; }
+    if (push.d !== hit) { push.d = hit; push.t = 0; }
+    push.t += dt;
+    const p = propByBuilding.get(hit.i), run = player.speed > 5.4, k = kindOf(hit), home = k === 'home' || k === 'apartment';
+    const open = lockState(hit, p) === 'open';
+    if (open) {
+      if (run) { bash(hit, false); }
+      else if (push.t > 0.18) { game.audio?.click?.(0.6); tryDoor(hit, p); } // the handle turns and you go in
+      return;
+    }
+    // locked
+    if (run) {
+      if (push.hitT > 0) return;
+      push.hitT = 0.7;
+      hit.hits = (hit.hits || 0) + 1;
+      game.audio?.thud?.(1 + hit.hits * 0.15);
+      if (game.rig) game.rig.shake = Math.min(1, 0.35 + hit.hits * 0.15);
+      player.vel.x += hit.nx * 2.5; player.vel.z += hit.nz * 2.5; // you bounce off it
+      if (hit.hits >= sturdy(hit)) { hit.hits = 0; bash(hit, true); }
+      else hud.toast(hit.hits === 1 ? '*THUD*' : '*THUD* ...it\'s giving', 1);
+      if (home && someoneHome(hit) && hit.hits === 1) setTimeout(() => !inside && hud.toast('"Hey! Who\'s out there?!"', 2.2), 500);
+    } else if (push.t > 0.25 && push.rattleT <= 0) {
+      push.rattleT = 3;
+      game.audio?.click?.(0.4);
+      hud.toast(home && someoneHome(hit) && Math.random() < 0.5 ? 'Locked. Someone moves around inside.' : `Locked.  ${keyHint(game)} knock · kick it in`, 2.2);
+    }
+  }
+  // shouldering a door open (broken: it was locked)
+  function bash(d, broken) {
+    push.d = null;
+    game.audio?.thud?.(1.4);
+    if (game.rig) game.rig.shake = 0.6;
+    const p = propByBuilding.get(d.i), k = kindOf(d), home = k === 'home' || k === 'apartment';
+    if (broken) {
+      d.broken = 24; // stays broken until it's fixed (a game day)
+      game.reportCrime?.('breakin', new THREE.Vector3(d.x, 0, d.z));
+      enter(d).then?.(() => { if (home && someoneHome(d)) occupy(d, 'breakin'); else if (!home && Math.random() < 0.5) hud.toast('An alarm starts beeping somewhere.', 2.5); });
+      return;
+    }
+    const ent = enter(d);
+    const after = () => {
+      if (home && !(p && owned(p))) { if (someoneHome(d)) { occupy(d, 'trespass'); hud.toast(HOME_CHILL[(Math.random() * HOME_CHILL.length) | 0], 3); } }
+      else if (!(p && owned(p))) hud.toast(CHILL[(Math.random() * CHILL.length) | 0], 3);
+    };
+    if (ent?.then) ent.then(after); else after();
+  }
+  game.walkIntoDoors = walkIntoDoors;
+
   // owned properties: map blips + daily income from businesses
   const ownedBlips = props.map((p) => interact.add({ x: p.door.x, z: p.door.z, r: 0.1, marker: false, show: () => owned(p) && !inside, label: '', use: () => {}, blip: { color: '#60ff90', size: 5, global: true, icon: '🏠', bg: 'rgba(30,110,50,0.9)' } }));
   void ownedBlips;
@@ -378,7 +448,35 @@ export function installEstate(game) {
     items: (t) => t === 'mine' ? props.filter(owned) : props.filter((p) => p.type === t),
     row: (p) => ({ name: p.name, sub: `${p.type} · ${p.region}${INCOME[p.type] ? ` · earns ${money(p.price * INCOME[p.type])}/day` : ''}`, stats: [['Size', Math.min(1, p.door.b.w * p.door.b.d / 900), `${Math.round(p.door.b.w * p.door.b.d)} m²`]], btn: owned(p) ? 'Owned' : `Mark · ${money(p.price)}`, cls: owned(p) ? 'own' : '' }),
     act: (p) => { game.setWaypoint?.(p.door.x, p.door.z, p.name); realtor.close(); },
+    model: (p) => houseModel(p), key: (p) => p.id,
   });
+  // the building as an architect's model: its real footprint and height, wall colour, windows on
+  // every floor, the front door where it really is, on a little lawn
+  function houseModel(p) {
+    const b = p.door.b, g = new THREE.Group();
+    const H = Math.max(3.5, b.h || 8), floors = Math.max(1, Math.round(H / 3.2));
+    const wall = new THREE.MeshStandardMaterial({ color: b.color ?? 0xd8d0c4, roughness: 0.85 });
+    const glass = new THREE.MeshStandardMaterial({ color: 0x2a3440, roughness: 0.15, metalness: 0.3 });
+    const trim = new THREE.MeshStandardMaterial({ color: 0xf0ece4, roughness: 0.7 });
+    const body = new THREE.Mesh(new THREE.BoxGeometry(b.w, H, b.d), wall); body.position.y = H / 2; g.add(body);
+    const lawn = new THREE.Mesh(new THREE.BoxGeometry(b.w + 6, 0.3, b.d + 6), new THREE.MeshStandardMaterial({ color: 0x5d7a3a, roughness: 1 })); lawn.position.y = -0.15; g.add(lawn);
+    if (b.style === 4 || p.type === 'House') { // a pitched roof on houses
+      const roof = new THREE.Mesh(new THREE.CylinderGeometry(0.01, Math.hypot(b.w, b.d) * 0.55, 2.4, 4, 1), new THREE.MeshStandardMaterial({ color: 0x5a3a2c, roughness: 0.8 }));
+      roof.rotation.y = Math.PI / 4; roof.scale.set(b.w / Math.hypot(b.w, b.d) * 1.45, 1, b.d / Math.hypot(b.w, b.d) * 1.45); roof.position.y = H + 1.2; g.add(roof);
+    } else { const cap = new THREE.Mesh(new THREE.BoxGeometry(b.w + 0.4, 0.4, b.d + 0.4), trim); cap.position.y = H + 0.2; g.add(cap); }
+    const win = new THREE.BoxGeometry(1.1, 1.4, 0.12);
+    for (let f = 0; f < floors; f++) for (const [ax, len, other] of [['x', b.w, b.d], ['z', b.d, b.w]]) {
+      const n = Math.max(1, Math.floor((len - 2) / 3));
+      for (let k = 0; k < n; k++) for (const sgn of [-1, 1]) {
+        const m = new THREE.Mesh(win, glass), t = -len / 2 + (len / (n + 1)) * (k + 1);
+        if (ax === 'x') m.position.set(t, 1.7 + f * 3.2, sgn * (other / 2 + 0.02)); else { m.position.set(sgn * (other / 2 + 0.02), 1.7 + f * 3.2, t); m.rotation.y = Math.PI / 2; }
+        g.add(m);
+      }
+    }
+    const door = new THREE.Mesh(new THREE.BoxGeometry(1.2, 2.3, 0.2), new THREE.MeshStandardMaterial({ color: 0x3a2a1c, roughness: 0.6 }));
+    door.position.set(p.door.nx * (b.w / 2 + 0.05), 1.15, p.door.nz * (b.d / 2 + 0.05)); if (p.door.nx) door.rotation.y = Math.PI / 2; g.add(door);
+    return g;
+  }
   const officeDoor = doors.find((d) => d.b.style === 5 && Math.hypot(d.x - (CITY.x0 + 60), d.z - (CITY.z0 + 3 * CITY.pitch)) < 200) || doors[0];
   interact.add({ x: officeDoor.x + officeDoor.nx * 2.5 + 2, z: officeDoor.z + officeDoor.nz * 2.5, label: () => `${keyHint(game)} browse Gulf Coast Realty listings`, color: 0x60ff90, blip: { color: '#9fffb8', size: 5, global: true, icon: '🏡', badge: 'S' }, show: () => !inside, use: () => realtor.show() });
 
@@ -389,6 +487,7 @@ export function installEstate(game) {
     props, doors, realtor, enter, leave, get inside() { return inside; },
     update(dt = 0) {
       updateOccupant(dt);
+      walkIntoDoors(dt);
       // broken doors get fixed after about a game day
       const now = game.sky.day * 24 + game.sky.hour;
       if (this._t != null) { const gh = now - this._t; if (gh > 0 && gh < 48) for (const d of doors) if (d.broken > 0) d.broken -= gh; }

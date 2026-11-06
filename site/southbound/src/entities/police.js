@@ -15,7 +15,7 @@ loadOpen(TANK);
 // 1 disturbance/assault: guns holstered, they come to arrest you
 // 2 theft/shots fired/brandishing: guns drawn, they shoot only if you're armed or attack
 // 3 killing: shoot on sight   4 cop killer: SWAT with rifles   5 rampage: tanks
-const HEAT = { disturbance: 1, assault: 1, resist: 1, carjack: 2, shots: 2, brandish: 2, kill: 3, copShot: 3, copKill: 4, rampage: 5 };
+const HEAT = { disturbance: 1, assault: 1, resist: 1, carjack: 2, shots: 2, brandish: 2, robbery: 2, kill: 3, copShot: 3, copKill: 4, rampage: 5 };
 
 // Armoured vehicle for the top wanted level (Quaternius Tank pack, CC0)
 class Tank {
@@ -74,6 +74,7 @@ export class Police {
     if (kind === 'weapon') this.wanted = Math.max(this.wanted, 1);
     if (kind === 'theft' || kind === 'breakin' || kind === 'trespass') this.wanted = Math.max(this.wanted, 1);
     if (kind === 'assault') this.wanted = Math.max(this.wanted, 1);
+    if (kind === 'robbery') this.wanted = Math.max(this.wanted, 2); // armed robbery of a store
     if (kind === 'kill') { this.kills++; this.wanted = Math.max(this.wanted, 1 + Math.floor(this.kills / 3)); }
     if (kind === 'copShot') this.wanted = Math.max(this.wanted, 2);
     if (kind === 'copKill') this.wanted = Math.min(5, Math.max(this.wanted + 1, 3));

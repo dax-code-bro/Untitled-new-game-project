@@ -50,6 +50,7 @@ import { installAuction } from './systems/auction.js';
 import { createWayfinding } from './world/wayfinding.js';
 import { installCarCombat } from './systems/carcombat.js';
 import { installLoot } from './systems/loot.js';
+import { installRobbery } from './systems/robbery.js';
 import { installStreetLife } from './systems/streetlife.js';
 import { installWorldEvents } from './systems/world-events.js';
 import { installDetails } from './systems/details.js';
@@ -521,6 +522,9 @@ async function createGame(progress) {
   // bodies are searched, guns picked up (no cash floating over the dead)
   const loot = installLoot(game);
   game.loot = loot;
+  // holding up a store: most clerks hand it over, some come up with a shotgun
+  const robbery = installRobbery(game);
+  game.robbery = robbery;
   const props = installProps(game);
   game.props = props;
   game.onDriverKilled = (v) => { if (witnesses(v.pos, 40) || police.nearPolice(60)) police.crime(v.type === 'police' ? 'copKill' : 'kill'); peds.panic(v.pos, 30); };
@@ -960,6 +964,7 @@ async function createGame(progress) {
     }
     peds.update(dt, focus, onFoot, [S.vehicle, ...police.cars.map((c) => c.v), ...traffic.cars.map((c) => c.v), ...parked], (amt) => { S.money += amt; hud.toast(`+$${amt}`, 1.2); });
     loot.update(dt);
+    robbery.update(dt);
     police.update(dt, { pos: S.indoors ? new THREE.Vector3(S.indoors.d.x, focus.y, S.indoors.d.z) : focus, inCar: S.mode === 'car', speed: S.mode === 'car' ? S.vehicle.speed : player.speed, vehicle: S.vehicle, drawn: combat.drawn && S.mode === 'foot' });
     if (player.health > 0 && player.health < 100 && S.dead <= 0) player.health = Math.min(player.maxHealth || 100, player.health + dt * (police.wanted || S.noRegen ? 0 : 0.6));
     S.dmgFlash = Math.max(0, S.dmgFlash - dt * 0.8);
