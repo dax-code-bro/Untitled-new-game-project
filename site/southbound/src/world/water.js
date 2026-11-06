@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { LAKE, CHANNELS, CITY, lakeRadius, coastZ } from './layout.js';
 import { worldUniforms } from './terrain.js';
 import { GLSL_NOISE } from '../util.js';
+import { wakeUniforms, WAKE_GLSL } from './wakes.js';
 
 // Planar reflection shared by the lake and the ocean (both sit at y = 0).
 export const reflUniforms = {
@@ -16,7 +17,7 @@ function makeWaterMaterial(kind) {
   const flow = kind === 'river' ? 1.0 : 0.0;
   const scale = kind === 'ocean' ? 1.0 : 0.6;
   mat.onBeforeCompile = (shader) => {
-    Object.assign(shader.uniforms, worldUniforms, reflUniforms);
+    Object.assign(shader.uniforms, worldUniforms, reflUniforms, wakeUniforms);
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>', '#include <common>\nattribute vec2 aFlow;\nvarying vec3 vWPos;\nvarying vec2 vFlow;')
       .replace('#include <begin_vertex>', `#include <begin_vertex>
@@ -32,7 +33,24 @@ varying vec3 vWPos; varying vec2 vFlow;
 uniform float uTime; uniform float uNight; uniform sampler2D uHeightTex; uniform float uWorldHalf;
 uniform sampler2D tReflect; uniform float uReflectOn; uniform mat4 uReflMatrix; uniform float uReflY;
 ${GLSL_NOISE}
-float sbDepth; float sbFoam; vec3 sbWN = vec3(0.0, 1.0, 0.0);
+${WAKE_GLSL}
+uniform float uRain; uniform vec3 uSunDir;
+float sbDepth; float sbFoam; vec3 sbWN = vec3(0.0, 1.0, 0.0); vec3 sbWk = vec3(0.0);
+// raindrops: rings spreading from a jittered grid, each drop with its own phase
+vec2 sbDrops(vec2 p){
+  vec2 g = vec2(0.0);
+  for (int k = 0; k < 2; k++){
+    vec2 q = p * (k == 0 ? 1.6 : 2.3) + float(k) * 7.3;
+    vec2 i = floor(q), f = fract(q);
+    float h = fract(sin(dot(i, vec2(12.9898, 78.233))) * 43758.5453);
+    vec2 c = vec2(fract(h * 7.1), fract(h * 13.7)) * 0.6 + 0.2;
+    float t = fract(uTime * 1.1 + h);
+    vec2 d = f - c; float r = length(d);
+    float ring = sin((r - t * 0.5) * 48.0) * smoothstep(0.0, 0.05, t * 0.5 - r + 0.05) * (1.0 - t) * smoothstep(0.5, 0.0, r);
+    g += d / max(r, 1e-3) * ring;
+  }
+  return g;
+}
 vec2 waveGrad(vec2 p, float t){
   vec2 g = vec2(0.0);
   // directional waves: (dir, wavelength, amplitude, speed)
@@ -56,6 +74,9 @@ vec2 waveGrad(vec2 p, float t){
   sbDepth = max(vWPos.y - ground, 0.0);
   float fn = sbNoise(vWPos.xz*0.6 + vFlow*uTime*2.0 + uTime*0.3);
   sbFoam = (1.0 - smoothstep(0.0, 0.9 + fn*0.8, sbDepth)) * (0.6 + 0.4*sin(uTime*1.5 + vWPos.x*0.3 + vWPos.z*0.2));
+  // wakes, splashes and wading: rings that tilt the surface, churn that whitens it
+  sbWk = sbWakes(vWPos.xz);
+  sbFoam += sbWk.z;
   vec3 shallow = vec3(0.10, 0.36, 0.34);
   vec3 deep = ${kind === 'ocean' ? 'vec3(0.010, 0.07, 0.11)' : 'vec3(0.02, 0.09, 0.07)'};
   vec3 c = mix(shallow, deep, 1.0 - exp(-sbDepth*0.22));
@@ -69,6 +90,8 @@ vec2 waveGrad(vec2 p, float t){
 {
   float dfade = 1.0 - smoothstep(80.0, 900.0, length(vWPos - cameraPosition));
   vec2 g = waveGrad(vWPos.xz*${scale.toFixed(2)} + vFlow*uTime*3.0, uTime) * (0.35 + 0.65*dfade);
+  g += sbWk.xy;
+  if (uRain > 0.02) g += sbDrops(vWPos.xz) * uRain * 0.16 * dfade;
   vec3 wn = normalize(vec3(-g.x, 1.0, -g.y));
   sbWN = wn;
   normal = normalize((viewMatrix * vec4(wn, 0.0)).xyz);
@@ -86,6 +109,13 @@ if (uReflectOn > 0.5 && abs(vWPos.y - uReflY) < 0.6) {
   float k = clamp(F * 1.15, 0.0, 1.0) * (1.0 - clamp(sbFoam, 0.0, 1.0));
   outgoingLight = mix(outgoingLight, refl, k);
   diffuseColor.a = max(diffuseColor.a, k);
+}
+{
+  // sunlight through the thin top of a wave (or a wake's crest) when you look toward the sun
+  vec3 V = normalize(cameraPosition - vWPos), Ls = normalize(uSunDir);
+  float back = pow(clamp(dot(V, -normalize(Ls + sbWN * 0.7)), 0.0, 1.0), 4.0);
+  float crest = smoothstep(0.01, 0.12, 1.0 - sbWN.y) + clamp(length(sbWk.xy) * 2.0, 0.0, 1.0);
+  outgoingLight += vec3(0.02, 0.15, 0.12) * back * crest * clamp(Ls.y * 4.0, 0.0, 1.0) * (1.0 - uNight) * (1.0 - clamp(sbFoam, 0.0, 1.0));
 }
 #include <opaque_fragment>`);
   })(mat.onBeforeCompile);

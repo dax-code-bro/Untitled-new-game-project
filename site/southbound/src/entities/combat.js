@@ -221,12 +221,13 @@ export class Combat {
       const f = this.collision.raycast(origin.x, origin.y, origin.z, end.x, end.y, end.z);
       if (f < 1) best = { t: best.t * f, kind: 'building' };
     }
-    // terrain: march, then bisect to the surface
+    // terrain (or the water over it): march, then bisect to the surface
+    const surfY = (x, z) => Math.max(this.hm.height(x, z), this.hm.waterLevel(x, z));
     for (let s = 0.5; s < best.t; s += 1.0) {
       const y = origin.y + dir.y * s;
-      if (y < this.hm.height(origin.x + dir.x * s, origin.z + dir.z * s)) {
+      if (y < surfY(origin.x + dir.x * s, origin.z + dir.z * s)) {
         let lo = Math.max(0, s - 1.0), hi = s;
-        for (let k = 0; k < 10; k++) { const m = (lo + hi) / 2; if (origin.y + dir.y * m < this.hm.height(origin.x + dir.x * m, origin.z + dir.z * m)) hi = m; else lo = m; }
+        for (let k = 0; k < 10; k++) { const m = (lo + hi) / 2; if (origin.y + dir.y * m < surfY(origin.x + dir.x * m, origin.z + dir.z * m)) hi = m; else lo = m; }
         best = { t: hi, kind: 'ground' };
         break;
       }
@@ -290,6 +291,7 @@ export class Combat {
   attack(origin, dir, muzzle, targets, from) {
     const w = this.def;
     if (this.cooldown > 0 || this.reloading > 0) return null;
+    if (!w.melee && !w.silent) this.firedAt = performance.now(); // (the police hear gunshots: entities/police.js)
     if (w.melee) {
       this.cooldown = w.rate;
       // hit the closest ped in front within reach
@@ -486,6 +488,7 @@ export class Combat {
       this.burst(at, this.settings.gore ? this.bloodMat : this.dustMat, this.settings.gore ? n : 3, { speed: D.speed, life: D.life, grav: D.grav });
     } else {
       this.burst(at, this.dustMat, n, { speed: D.speed, life: D.life, grav: D.grav, up: D.up, color: _dc, size: kind === 'dust' || kind === 'dirt' || kind === 'splash' ? 1 : 0.55 });
+      if (kind === 'splash') this.onSplash?.(at); // rings on the water (systems/splashes.js)
     }
   }
 

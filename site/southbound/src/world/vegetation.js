@@ -2,6 +2,7 @@
 // offline (tools/southbound/bake-vegetation.mjs), drawn as full 3D models
 // near the camera and as camera-facing impostor sprites in the distance.
 // Ground cover: photo-textured grass clumps around the player and scanned rocks.
+import { shadeLeaves, bakeCanopyAO, setBodyShadeQuality } from '../entities/bodyshade.js';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { loadTexture, withKTX2 } from '../assets/ktx2.js';
@@ -99,6 +100,7 @@ function addWind(mat, strength) {
 
 export async function createVegetation(hm, quality, scene, collision, cityBlocks, progress = () => {}, surf = null, coverDensity = 1) {
   const Q = QUALITY[quality.label] || QUALITY.Medium;
+  setBodyShadeQuality(quality); // (leaf lighting is off on Phone)
   const gltf = withKTX2(new GLTFLoader());
   const tl = new THREE.TextureLoader();
   await lodReady; // meshoptimizer, for the lighter mid-distance trees
@@ -139,8 +141,10 @@ export async function createVegetation(hm, quality, scene, collision, cityBlocks
     const g = await gltf.loadAsync(`${BASE}${t.id}.glb`);
     const bark = g.scene.getObjectByName('bark'), leaves = g.scene.getObjectByName('leaves');
     const v = { ...t, bark: bakedGeometry(bark), leaves: bakedGeometry(leaves), barkType: t.bark, leafType: t.leaf };
+    bakeCanopyAO(v.leaves); // before the lighter mid-distance cards copy its attributes
     v.barkMat = barkMat(t.bark, t.barkTint ?? 0xffffff);
     v.leafMat = leafMat(t.leaf, t.leafTint ?? 0xffffff);
+    shadeLeaves(v.leafMat); // light through the leaves (entities/bodyshade.js)
     v.imp = texture(tl, `${BASE}${t.id}_impostor.png`, true);
     v.imp.wrapS = v.imp.wrapT = THREE.ClampToEdgeWrapping;
     variants.push(v);
@@ -340,7 +344,11 @@ export async function createVegetation(hm, quality, scene, collision, cityBlocks
           // dithered fade into the 3D tree (no hard pop)
           float dither = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453);
           if (c.a < 0.5 || vFade < dither) discard;
-          vec3 lit = c.rgb * (uAmbient * 1.6 + uSunColor * 1.4 * (0.45 + 0.55 * max(uSunDir.y, 0.0)) * sbCloudShade(vW));
+          float cs = sbCloudShade(vW);
+          vec3 lit = c.rgb * (uAmbient * 1.6 + uSunColor * 1.4 * (0.45 + 0.55 * max(uSunDir.y, 0.0)) * cs);
+          // a far tree against the sun: light comes through the crown
+          float back = pow(max(dot(normalize(vW - cameraPosition), uSunDir), 0.0), 5.0);
+          lit += c.rgb * uSunColor * back * cs * vec3(0.85, 1.0, 0.4) * 0.9;
           gl_FragColor = vec4(sbApplyFog(lit, vW, cameraPosition, uFogColor, uFogDensity, sbFogA, sbFogB), 1.0);
           #include <colorspace_fragment>
         }`,

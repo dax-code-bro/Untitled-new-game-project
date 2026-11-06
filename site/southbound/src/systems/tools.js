@@ -21,7 +21,7 @@ const RAW = {
     ...['Skinning knife', 'Gut hook knife', 'Bowie knife'].flatMap((n, k) => [1, 2].map((t) => [`${n}${t === 2 ? ' Pro' : ''}`, 40 * (k + 1) * t, { knife: k * 2 + t }])),
     ['Deer grunt call', 25, { call: 'deer' }], ['Turkey box call', 30, { call: 'turkey' }], ['Duck call', 22, { call: 'duck' }], ['Predator call', 45, { call: 'coyote' }], ['Hog call', 28, { call: 'boar' }], ['Electronic caller', 160, { call: 'any' }],
     ['Doe scent', 12], ['Cover scent', 10], ['Binoculars 8x42', 140, { binos: 1 }], ['Rangefinder', 210], ['Camo jacket', 90], ['Camo pants', 70], ['Ghillie suit', 260, { stealth: 1 }], ['Tree stand', 180], ['Ground blind', 150], ['Trail camera', 110],
-    ['Game bag', 25, { pelts: 1 }], ['Field dressing kit', 40], ['Blood tracking light', 60], ['Bow sight', 75], ['Quiver', 35], ['Arrows (12)', 48, { arrows: 12 }], ['Broadheads (6)', 40], ['Decoy deer', 120], ['Turkey decoys', 60],
+    ['Game bag', 25, { pelts: 1 }], ['Field dressing kit', 40], ['Blood tracking light', 60], ['Bow sight', 75], ['Quiver', 35], ['Arrows (12)', 48, { arrows: 12 }], ['Broadheads (6)', 40], ['Decoy deer', 120], ['Turkey decoys', 60], ['Gun cleaning kit', 35, { clean: 1 }],
   ],
   Mechanic: [
     ['Repair kit', 120, { repair: 50 }], ['Pro repair kit', 300, { repair: 100 }], ['Tire plug kit', 25, { repair: 10 }], ['Jumper cables', 30], ['Floor jack', 140], ['Jack stands', 60], ['Socket set', 90, { trade: 'mech' }],

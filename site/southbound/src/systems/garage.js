@@ -65,11 +65,12 @@ export function installGarage(game) {
     tabs: [{ k: 'perf', label: 'Performance' }, { k: 'look', label: 'Looks' }, { k: 'paint', label: 'Paint' }, { k: 'repair', label: 'Repair' }],
     getMoney: () => career.money, pause: game.pause,
     note: (t) => shopCar ? `${shopCar.spec.name} — ${t === 'perf' ? '48 performance parts' : t === 'look' ? '15 visual parts' : t === 'paint' ? `${PAINTS.length} colours` : 'fix body damage'}. Fitting a part registers the car to you.` : '',
-    items: (t) => t === 'paint' ? PAINTS : t === 'repair' ? [{ repair: true }] : UPGRADES.filter((u) => u.kind === t),
+    items: (t) => t === 'paint' ? PAINTS : t === 'repair' ? [{ repair: true }, { wash: true }] : UPGRADES.filter((u) => u.kind === t),
     row: (it, t) => {
       const g = shopCar && ownedOf(shopCar);
       const up = g ? g.up : {};
       if (t === 'paint') return { name: it[0], sub: it[2] > 0.5 ? 'metallic' : 'solid', stats: [], btn: money(500), cls: '' };
+      if (t === 'repair' && it.wash) return { name: 'Car wash', sub: shopCar ? `${Math.round((shopCar.dirt || 0) * 100)}% dirty` : 'drive a car in first', stats: [], btn: money(15), cls: shopCar ? '' : 'dis' };
       if (t === 'repair') return shopCar ? { name: 'Full repair', sub: `Body ${Math.round(shopCar.health)}/${shopCar.maxHealth}`, stats: [], btn: money(250) } : { name: 'Full repair', sub: 'drive a car into the shop first', stats: [], btn: '—', cls: 'dis' };
       const fitted = it.kind === 'perf' ? (up[it.group] || 0) >= it.tier : matchesLook(up, it);
       const stats = it.kind === 'perf' ? Object.entries(it.fx).map(([k, v]) => [k, null, `${k === 'armor' ? '+' + v * it.tier : k === 'ride' ? `${Math.round(v * it.tier * 100)} cm` : '+' + Math.round(v * it.tier * 100) + '%'}`]) : [];
@@ -88,10 +89,11 @@ export function installGarage(game) {
     act: (it, t) => {
       if (!shopCar) return;
       let g = ownedOf(shopCar);
+      if (it.wash) { if (career.spend(15)) { shopCar.dirt = 0; hud.toast('Washed and dried', 1.6); } return; }
       const price = t === 'paint' ? 500 : t === 'repair' ? 250 : it.price;
       if (t === 'perf' && g && (g.up[it.group] || 0) >= it.tier) return;
       if (!career.spend(price)) return;
-      if (t === 'repair') { shopCar.health = shopCar.maxHealth; shopCar.wrecked = false; shopCar.dmg = null; return; }
+      if (t === 'repair') { shopCar.health = shopCar.maxHealth; shopCar.wrecked = false; shopCar.dmg = null; shopCar.flats = false; return; } // (new tyres too, if a stinger got them)
       if (!g) { g = addToGarage(shopCar.type); shopCar.uid = g.uid; hud.toast('Car registered to you', 2); }
       if (t === 'paint') g.up.paint = [...it[1], it[2]];
       else if (it.kind === 'perf') g.up[it.group] = it.tier;

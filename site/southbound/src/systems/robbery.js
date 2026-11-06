@@ -21,7 +21,7 @@ export function installRobbery(game) {
     if (k.kind === 'guns') return 0.85;
     const reg = regionAt(k.h.root.position.x, k.h.root.position.z), country = reg.sub !== 'City';
     const h = game.sky.hour, late = h < 6 || h > 21;
-    return (k.kind === 'mart' ? 0.25 : 0.12) + (country ? 0.15 : 0) + (late ? 0.12 : 0);
+    return (k.kind === 'bar' ? 0.35 : k.kind === 'mart' ? 0.25 : 0.12) + (country ? 0.15 : 0) + (late ? 0.12 : 0); // (a bartender keeps something under the bar)
   };
   const take = (k) => Math.round((k.kind === 'guns' ? 300 + Math.random() * 600 : k.kind === 'clothes' ? 150 + Math.random() * 450 : 60 + Math.random() * 220));
   // is the player holding a gun on this keeper?
@@ -32,7 +32,8 @@ export function installRobbery(game) {
     const off = Math.atan2(Math.sin(Math.atan2(dx, dz) - player.heading), Math.cos(Math.atan2(dx, dz) - player.heading));
     return Math.abs(off) < Math.max(0.12, 0.6 / d);
   };
-  const callCops = (k, delay) => { k.callT = delay; };
+  const calls = []; // phone calls to the police still to be made (they're made even if you've left)
+  const callCops = (k, delay) => { calls.push({ k, t: delay }); };
 
   function fight(k) {
     // the clerk becomes a person in the world (who can be shot) with a shotgun
@@ -51,8 +52,8 @@ export function installRobbery(game) {
   return {
     update(dt) {
       // a store keeps quiet for a moment, then phones it in (or the alarm company does)
-      for (const k of keepers) if (k.callT !== undefined && (k.callT -= dt) <= 0) {
-        k.callT = undefined;
+      for (let i = calls.length - 1; i >= 0; i--) if ((calls[i].t -= dt) <= 0) {
+        const k = calls[i].k; calls.splice(i, 1);
         game.police?.crime('robbery');
         hud.toast(k.taken ? 'Someone called in the shooting at the store.' : 'The clerk is on the phone with the police.', 2.5);
       }

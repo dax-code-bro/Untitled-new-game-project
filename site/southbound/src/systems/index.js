@@ -9,6 +9,17 @@ import { installJobs } from './jobs.js';
 import { installMissions } from './missions.js';
 import { installPhone } from './phone.js';
 import { installKerbside } from './kerbside.js';
+import { installPopulation } from './population.js';
+import { installDriving } from './driving.js';
+import { installGunwork } from './gunwork.js';
+import { installAmbient } from './ambient.js';
+import { installPolicePlus } from './policeplus.js';
+import { installSplashes } from './splashes.js';
+import { installWilds } from './wilds.js';
+import { installPhonePlus } from './phoneplus.js';
+import { installPrints } from './prints.js';
+import { installPropertyPlus } from './propertyplus.js';
+import { installFoodPlus } from './foodplus.js';
 
 export function installSystems(game) {
   const list = [];
@@ -24,13 +35,24 @@ export function installSystems(game) {
   };
   add('waypoint', { update() { if (wp && Math.hypot(game.player.pos.x - wp.x, game.player.pos.z - wp.z) < 8 && game.S.mode === 'foot') { game.interact.remove(wp); wp = null; } } });
   add('estate', installEstate(game));
+  add('propertyPlus', installPropertyPlus(game)); // rent, tax, the market, selling, burglaries, upgrades
+  add('gunwork', installGunwork(game)); // wear, jams, cleaning, takedowns (before the residents: a takedown beats "say hello")
+  add('policePlus', installPolicePlus(game)); // the helicopter, roadblocks and stingers, bribes, the radio
+  add('population', installPopulation(game)); // ~3,000 residents with homes, jobs, friends and days of their own
   add('toolsSys', installTools(game));
   add('hunting', installHunting(game));
   add('fishing', installFishing(game));
   add('jobs', installJobs(game));
   add('missions', installMissions(game));
   add('phoneSys', installPhone(game));
+  add('phonePlus', installPhonePlus(game)); // battery, bank and ATMs, news, texts, contacts, forecast, camera, cabs
   add('kerbside', installKerbside(game));
+  add('driving', installDriving(game)); // fuel, skid marks, the horn, hot-wiring and alarms, speeding tickets
+  add('ambient', installAmbient(game)); // pigeons, umbrellas, joggers, phones, food carts
+  add('splashes', installSplashes(game)); // wakes, spray, wading rings, rising fish
+  add('wilds', installWilds(game)); // blood trails, crows, ducks, poaching, the wind
+  add('prints', installPrints(game)); // boot, hoof and paw prints and tyre tracks in soft ground
+  add('foodPlus', installFoodPlus(game)); // food that goes off, coffee, loyalty card, today's special
   return {
     list,
     // systems may return a prompt; `free` says whether F is still unclaimed this frame

@@ -63,20 +63,30 @@ export function createWeather(scene, quality) {
   scene.add(rain);
   const ru = rain.material.uniforms;
   const cur = { ...WEATHER.cloudy };
+  // weather builds and clears a step at a time: no storm out of a clear sky
+  const ORDER = ['clear', 'cloudy', 'overcast', 'rain', 'storm'];
+  const roll = (from) => {
+    const i = Math.max(0, ORDER.indexOf(from));
+    const opts = [i - 1, i, i + 1].filter((j) => j >= 0 && j < ORDER.length).map((j) => ORDER[j]);
+    let t = Math.random() * opts.reduce((a, k) => a + WEATHER[k].w, 0);
+    for (const k of opts) if ((t -= WEATHER[k].w) <= 0) return k;
+    return opts[0];
+  };
   const state = {
     kind: 'cloudy', target: WEATHER.cloudy, cover: cur.cover, rain: 0, dark: cur.dark, fog: 1, flash: 0,
     nextChange: 3 + Math.random() * 4, // game hours
-    set(kind) { if (WEATHER[kind]) { state.kind = kind; state.target = WEATHER[kind]; } },
+    upcoming: null, // what comes next (the phone's forecast)
+    set(kind) { if (WEATHER[kind]) { state.kind = kind; state.target = WEATHER[kind]; state.upcoming = null; } },
     snap() { Object.assign(cur, state.target); worldUniforms.uWet.value = state.target.rain > 0 ? 0.9 : 0; },
     update(dt, gameHours, camera, auto = true) {
       // pick the next weather every few game hours
       if (auto) {
         state.nextChange -= gameHours;
+        if (!state.upcoming) state.upcoming = roll(state.kind);
         if (state.nextChange <= 0) {
           state.nextChange = 3 + Math.random() * 5;
-          const list = Object.entries(WEATHER);
-          let t = Math.random() * list.reduce((a, [, w]) => a + w.w, 0);
-          for (const [k, w] of list) if ((t -= w.w) <= 0) { state.set(k); break; }
+          state.set(state.upcoming);
+          state.upcoming = roll(state.kind);
         }
       }
       // ease toward the target over ~40 s
