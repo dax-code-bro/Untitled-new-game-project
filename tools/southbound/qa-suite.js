@@ -15,7 +15,7 @@ async (opts) => {
   await run('new game: start with nothing', async () => {
     const P = G.career.p;
     ok(G.combat.owned.length === 1 && G.combat.owned[0] === 'fists', 'new game owns no weapons (fists only)');
-    ok(G.career.money <= 150, 'new game starts with $150 or less');
+    ok(G.career.money === 50000, 'new game starts with $50,000 (' + G.career.money + ')');
     ok(P.garage.length === 0, 'new game owns no vehicles');
     ok(!Object.values(P.med || {}).some((n) => n > 0), 'new game has no medical supplies');
     ok(!(P.gearOwned || []).length && (P.gear?.holster || 'owb') === 'owb', 'new game owns no gear');

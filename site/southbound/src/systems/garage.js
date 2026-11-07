@@ -31,12 +31,32 @@ export function installGarage(game) {
 
   // ---------------- dealership ----------------
   let lot = null;
+  // your own cars: lost one (left it somewhere, sunk it, got it towed, blew it up)? the dealer
+  // brings it round to the lot, with its parts and paint, at no charge
+  const mine = () => P.garage.filter((g) => (g.cat || 'car') === 'car' && LAND.some((m) => m.id === g.type));
+  const whereIs = (g) => game.parked.find((v) => v.uid === g.uid) || (game.S.vehicle?.uid === g.uid ? game.S.vehicle : null);
+  const fetchCar = (g) => {
+    const v0 = whereIs(g);
+    if (v0 && v0 === game.S.vehicle) { hud.toast('You\'re sitting in it', 1.6); return null; }
+    if (v0) { const i = game.parked.indexOf(v0); if (i >= 0) game.parked.splice(i, 1); game.scene.remove(v0.group); v0.dispose?.(); if (game.S.lastVehicle === v0) game.S.lastVehicle = null; }
+    const v = spawnParked(game, g.type, lot.x, lot.z, lot.h, g.up);
+    v.uid = g.uid;
+    game.S.lastVehicle = v;
+    return v;
+  };
+  game.fetchOwnedCar = fetchCar;
   const dealer = new ShopUI({
-    title: 'Gulfstar Autos', tabs: CLASS_LIST.filter((c) => c !== 'Emergency').map((c) => ({ k: c, label: c })),
+    title: 'Gulfstar Autos', tabs: [{ k: 'mine', label: 'Your cars' }, ...CLASS_LIST.filter((c) => c !== 'Emergency').map((c) => ({ k: c, label: c }))],
     getMoney: () => career.money, pause: game.pause,
-    note: () => `${LAND.length} models in the catalog. Bought cars are delivered to the lot outside and saved to your garage.`,
-    items: (cls) => LAND.filter((m) => m.cls === cls && !m.restricted),
-    row: (m) => {
+    note: (t) => t === 'mine' ? (mine().length ? 'Lost a car? We\'ll bring it round to the lot outside, parts and paint and all. No charge.' : 'You don\'t own a car yet. Pick one from the other tabs.') : `${LAND.length} models in the catalog. Bought cars are delivered to the lot outside and saved to your garage.`,
+    items: (cls) => cls === 'mine' ? mine() : LAND.filter((m) => m.cls === cls && !m.restricted),
+    row: (m, t) => {
+      if (t === 'mine' || m.uid) {
+        const spec = LAND.find((x) => x.id === m.type) || { name: m.type, cls: '' };
+        const v = whereIs(m), d = v ? Math.round(v.pos.distanceTo(game.player.pos)) : null;
+        return { name: spec.name, sub: v ? (d < 40 ? 'parked right here' : `parked ${d >= 1000 ? (d / 1000).toFixed(1) + ' km' : d + ' m'} away`) : 'not on the road: lost or towed', stats: [], btn: 'Bring it round', cls: '',
+          desc: `Your ${spec.name}${Object.keys(m.up || {}).length ? ', with its parts and paint' : ''}. The lot staff fetch it and leave it outside.` };
+      }
       const h = VEHICLES[m.id];
       const owned = P.garage.some((g) => g.type === m.id);
       return {
@@ -46,8 +66,9 @@ export function installGarage(game) {
         desc: m.desc || `${m.name}: a ${m.cls.toLowerCase()} car. Top speed ${Math.round(h.top * 2.237)} mph.`,
       };
     },
-    model: (m) => carPreview(m.id), key: (m) => m.id,
+    model: (m) => (m.uid ? carPreview(m.type, m.up) : carPreview(m.id)), key: (m) => m.uid || m.id,
     act: (m) => {
+      if (m.uid) { const v = fetchCar(m); if (v) { hud.toast(`Your ${v.spec?.name || 'car'} is waiting outside`, 3); career.saveSoon(); } return; }
       if (!career.spend(m.price)) return;
       const g = addToGarage(m.id);
       const v = spawnParked(game, m.id, lot.x, lot.z, lot.h);

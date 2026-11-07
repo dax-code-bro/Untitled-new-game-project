@@ -6,7 +6,7 @@ const KEY = 'southbound.save.v1';
 export function newProfile() {
   return {
     v: 1, created: Date.now(), saved: 0, playSeconds: 0,
-    money: 150, bank: 0, hour: 9.5, day: 1, weather: 'cloudy', pos: null, // you arrive with next to nothing
+    money: 50000, bank: 0, hour: 9.5, day: 1, weather: 'cloudy', pos: null, // you arrive with $50,000: enough for a car and a gun
     weapons: { owned: null, ammo: null, mods: null },
     garage: [],        // { uid, cat: 'car'|'boat'|'air', type, paint: [r,g,b,metal], up: { upgradeId: tier } }
     properties: [],    // property ids

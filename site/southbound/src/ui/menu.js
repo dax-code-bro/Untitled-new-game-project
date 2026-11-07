@@ -95,14 +95,14 @@ export function setupMenu(settings, onPlay) {
   });
   $('#back').onclick = () => { settings.platform = null; refresh(); };
   $('#play').onclick = () => { saveSettings(settings); onPlay(); };
-  // start over: arrive in Calvera with nothing again
+  // start over: arrive in Calvera with $50,000 again
   let hasSave = false;
   try { hasSave = !!localStorage.getItem('southbound.save.v1'); } catch (e) { /* storage blocked */ }
   if (hasSave) {
     $('#play').textContent = 'Continue';
     const ng = $('#newgame'); ng.style.display = '';
     ng.onclick = () => {
-      if (!confirm('Start a new game? Your saved progress, money, guns, cars and houses will be erased. You start with nothing.')) return;
+      if (!confirm('Start a new game? Your saved progress, money, guns, cars and houses will be erased. You start again with $50,000.')) return;
       try { localStorage.removeItem('southbound.save.v1'); } catch (e) { /* */ }
       saveSettings(settings); onPlay();
     };

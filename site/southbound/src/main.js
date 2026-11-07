@@ -379,13 +379,17 @@ vec3 CustomToneMapping( vec3 color ) {
     profile.ricoTruck = false;
   }
   profile.nothingMig = 2;
+  // everyone starts with $50,000 now (enough for a car and a gun): saves that began with less get
+  // topped up once
+  if (!profile.cash50k) { if (profile.money < 50000) profile.money = 50000; profile.cash50k = 1; }
   S.money = profile.money;
   if (profile.weapons.owned) { for (const id of profile.weapons.owned) combat.give(id); Object.assign(combat.ammo, profile.weapons.ammo || {}); }
   const career = new Career(profile, {
     getMoney: () => S.money, setMoney: (n) => { S.money = Math.max(0, Math.round(n)); }, toast: (m, t) => hud.toast(m, t),
     snapshot: (p) => {
       p.money = S.money; p.hour = sky.hour; p.day = sky.day; p.weather = weather.kind;
-      p.pos = [+player.pos.x.toFixed(1), +player.pos.z.toFixed(1)];
+      // where you'll come back: only moves while you're safe (systems/saves.js), never mid-fight
+      if (S.safeSpot !== false) { const at = S.mode === 'car' && S.vehicle ? S.vehicle.pos : player.pos; p.pos = [+at.x.toFixed(1), +at.z.toFixed(1)]; }
       p.weapons = { ...p.weapons, owned: combat.owned.slice(), ammo: combat.ammo }; // keep counts and finishes
     },
   });
@@ -410,6 +414,7 @@ vec3 CustomToneMapping( vec3 color ) {
   game.PRECINCT = PRECINCT; game.HOSPITAL = HOSPITAL;
   game.Vehicle = game.Vehicle || Vehicle;
   const civic = placeCivic(game, { PRECINCT, HOSPITAL });
+  game.gunPose = gunPose; game.catalogs = { WEAPONS };
   const systems = installSystems(game);
   // scenery bullets can hit (tree trunks, rocks, street poles, piers, hangar)
   const hitStatics = [];
@@ -424,6 +429,7 @@ vec3 CustomToneMapping( vec3 color ) {
   };
   $('#resume').onclick = () => setPaused(false);
   $('#pause-settings').onclick = () => settingsPanel.open();
+  $('#pause-save').onclick = () => { if (game.saveGame?.()) setPaused(false); };
   $('#pause-map').onclick = () => { setPaused(false); hud.toggleMap(); };
   $('#quit').onclick = () => location.reload();
   // fewer on-screen buttons: phone, arsenal and the free camera live in the pause menu
@@ -1424,6 +1430,9 @@ vec3 CustomToneMapping( vec3 color ) {
   game.Vehicle = Vehicle;
   api.trace = (ox, oy, oz, dx, dy, dz, far = 200) => { const t = combat.trace(new THREE.Vector3(ox, oy, oz), new THREE.Vector3(dx, dy, dz).normalize(), far, { peds, vehicles: [...traffic.cars.map((c) => c.v), ...police.cars.map((c) => c.v), ...parked], animals: game.hunting ? game.hunting.list : [], statics: hitStatics }); return { kind: t.kind, t: +t.t.toFixed(3), head: !!t.head }; };
   window.SB = api;
+  // a saved game: back within 20 m of where you saved, in the middle of something ordinary
+  // (after the test API exists: game.teleport goes through it)
+  if (profile.saved && Array.isArray(profile.pos) && profile.story?.prologue) game.arrival?.arrive();
 
   return {
     applyLive(key) {

@@ -140,6 +140,20 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 - [x] Loading screen with in-game art, tips and progress
 - [x] Fewer touch buttons: ◎ interact replaces the car button; map, phone, arsenal, free cam moved to pause
 
+## Phase 1.53 — Saves that make sense, $50,000 to start, your car back from the dealer
+
+- [x] Save only when you're safe (`systems/saves.js`): F5 or the pause menu's "Save game". Not while
+      wanted, with enemies within 120 m, within 20 s of being hurt or 15 s of a gunfight, indoors,
+      swimming or in a moving car; it says exactly why not
+- [x] The autosave still keeps money, guns and progress, but the place you come back to only moves
+      while you're safe, so a save never drops you back into a fight
+- [x] Loading puts you within 20 m of where you saved (open ground: no building, road or water),
+      already doing something: smoking a cigarette (smoke on the exhale), drinking a coffee, or
+      cleaning your gun with a rag. A close camera looks on; moving hands control back
+- [x] New games start with $50,000 (enough for a car and a gun); older saves topped up once
+- [x] Dealerships have a "Your cars" tab: any car you own, wherever it is (or lost, towed, sunk), is
+      brought round to the lot with its parts and paint, free
+
 ## Phase 1.52 — Holding guns, first and third person, and a looser run
 
 The owner: first person is the main fix; holding guns and the run looked wrong ("too robotic, the

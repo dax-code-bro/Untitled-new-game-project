@@ -26,6 +26,7 @@ import { installAviation } from './aviation.js';
 import { installGrooming } from './grooming.js';
 import { installDust } from './dust.js';
 import { installMedical } from './medical.js';
+import { installSaves } from './saves.js';
 
 export function installSystems(game) {
   const list = [];
@@ -65,6 +66,7 @@ export function installSystems(game) {
   add('aviation', installAviation(game)); // flight panel, fuel, gear, flaps, stalls, landings, radio, flight school
   add('grooming', installGrooming(game)); // dirt, blood, washing, outfits, disguises, barber styles, Saturday sale
   add('medical', installMedical(game)); // infection, antibiotics, doctors, concussion, falls, snakebites, healing, Health tab
+  add('saves', installSaves(game)); // safe-only saves; coming back near where you saved, mid-cigarette
   return {
     list,
     // systems may return a prompt; `free` says whether F is still unclaimed this frame
