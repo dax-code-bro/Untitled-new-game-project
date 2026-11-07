@@ -18,49 +18,41 @@
   "windows_s": [
    [
     0,
-    106.5
-   ],
-   [
-    116.5,
-    119.5
+    133
    ],
    [
     140,
-    143.5
-   ],
-   [
-    155.5,
-    160.5
-   ],
-   [
-    184.5,
     189.5
+   ],
+   [
+    290,
+    382
    ]
   ],
-  "seconds": 123,
+  "seconds": 274.5,
   "note": "I/LRA measured over these windows (shots with a picture spec); I_full = whole cut incl. slates"
  },
  "result": {
   "mix": "episodes/s01e01/final/audio/cuts/1C/mix.wav",
-  "I": -17.2,
-  "I_full": -19.6,
+  "I": -17.4,
+  "I_full": -18.4,
   "TP": -1.6,
-  "LRA": 9.9,
-  "sha256": "c7de89cb52b51fd317bb7cef5038c88a5c796439add556563ba3841aeaef1c41",
+  "LRA": 11.5,
+  "sha256": "f0623e5c86e0d37b57eb473e65b2a3f6b304f0899307e1ed0b871d49442e0788",
   "master_gain_db": 2,
   "limiter_ceiling_dbfs": -1.6,
-  "dialogue_gain_db": 11.4,
-  "min_dialogue_margin_lu": 12.507,
+  "dialogue_gain_db": 11.3,
+  "min_dialogue_margin_lu": 10.44,
   "anchored": "dialogue",
   "pass": true
  },
  "muxed": {
   "file": "episodes/s01e01/final/audio/cuts/1C/DragonsKingdom_S01E01_draft-cut_1C_sound.mp4",
   "duration_s": 382,
-  "aac_I": -17.2,
-  "aac_I_full": -19.6,
-  "aac_TP": -1.6,
-  "bytes": 56566728
+  "aac_I": -17.4,
+  "aac_I_full": -18.4,
+  "aac_TP": -1.5,
+  "bytes": 73488364
  },
  "beds": {
   "grounds_wind": {
@@ -307,21 +299,77 @@
    "shots": "X6-19..X6-20 (2)"
   }
  ],
- "voice_cues": 4,
+ "voice_cues": 20,
  "speech_windows": [
   {
    "from_s": 36.1,
    "to_s": 37.37,
-   "dialogue_M": -14.244,
+   "dialogue_M": -14.344,
    "background_M": -26.751,
-   "margin_LU": 12.507
+   "margin_LU": 12.407
   },
   {
    "from_s": 61,
    "to_s": 64.285,
-   "dialogue_M": -15.892,
+   "dialogue_M": -15.992,
    "background_M": -28.628,
-   "margin_LU": 12.736
+   "margin_LU": 12.636
+  },
+  {
+   "from_s": 143.85,
+   "to_s": 144.875,
+   "dialogue_M": -14.838,
+   "background_M": -25.749,
+   "margin_LU": 10.911
+  },
+  {
+   "from_s": 173.5,
+   "to_s": 180.27,
+   "dialogue_M": -14.993,
+   "background_M": -26.472,
+   "margin_LU": 11.479
+  },
+  {
+   "from_s": 304.8,
+   "to_s": 305.875,
+   "dialogue_M": -15.048,
+   "background_M": -34.725,
+   "margin_LU": 19.677
+  },
+  {
+   "from_s": 306.475,
+   "to_s": 309.095,
+   "dialogue_M": -15.728,
+   "background_M": -26.167,
+   "margin_LU": 10.44
+  },
+  {
+   "from_s": 309.795,
+   "to_s": 312.015,
+   "dialogue_M": -14.491,
+   "background_M": -25.519,
+   "margin_LU": 11.028
+  },
+  {
+   "from_s": 312.615,
+   "to_s": 314.195,
+   "dialogue_M": -14.084,
+   "background_M": -30.975,
+   "margin_LU": 16.891
+  },
+  {
+   "from_s": 319.4,
+   "to_s": 320.725,
+   "dialogue_M": -16.098,
+   "background_M": -26.899,
+   "margin_LU": 10.801
+  },
+  {
+   "from_s": 359.3,
+   "to_s": 362.745,
+   "dialogue_M": -14.764,
+   "background_M": -38.455,
+   "margin_LU": 23.691
   }
  ]
 }

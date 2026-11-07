@@ -2692,7 +2692,7 @@
    "seq": 170,
    "scene": "1C",
    "set": "OUTER_ROCKS",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 144,
    "rec_in": 6960,
    "rec_out": 7104,
@@ -2701,11 +2701,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/outer-rocks.js",
+    "start_s": 1,
+    "start_frame": 24
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 4.8,
+    "k4_cpu_s_per_frame": 63.94,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 11.51,
+    "k4_cpu_hours": 2.56,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.48,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.6
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.6 for the shot's content"
+   },
+   "staging": "EXTREME WIDE 120 mm from a camera ship far out SSE, slow drift: the outer rocks centre (the two leaning stacks and the gap opening toward us, birds on the ledges, white water), the mist bank against their seaward side right; Leaf and Charcoal small, left, coming down the coast toward them.",
    "deviation": null,
    "action": "Off the end of the coast stand the outer rocks: tall sea stacks, white water at their feet, seabirds on every ledge. Two stacks lean close together, leaving a narrow gap that opens seaward; on the seaward side a low bank of sea mist lies against the rocks. One clear wide; it must match 1F.",
    "need": {
@@ -2718,7 +2738,7 @@
    "seq": 171,
    "scene": "1C",
    "set": "OUTER_ROCKS",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 72,
    "rec_in": 7104,
    "rec_out": 7176,
@@ -2727,11 +2747,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/outer-rocks.js",
+    "start_s": 9,
+    "start_frame": 216
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 3.24,
+    "k4_cpu_s_per_frame": 43.2,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 3.89,
+    "k4_cpu_hours": 0.86,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.08
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.08 for the shot's content"
+   },
+   "staging": "WIDE 35 mm low over the water on the approach side, a slow push: the gap - two stone walls leaning together, a slot of bright mist and sea beyond, white water at their feet.",
    "deviation": null,
    "action": "The gap.",
    "need": {
@@ -2744,7 +2784,7 @@
    "seq": 172,
    "scene": "1C",
    "set": "OUTER_ROCKS",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 72,
    "rec_in": 7176,
    "rec_out": 7248,
@@ -2753,11 +2793,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/outer-rocks.js",
+    "start_s": 14,
+    "start_frame": 336
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 3.24,
+    "k4_cpu_s_per_frame": 43.2,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 3.89,
+    "k4_cpu_hours": 0.86,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.08
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.08 for the shot's content"
+   },
+   "staging": "WIDE 35 mm on the seaward side: the low bank of sea mist lying against the stacks' seaward faces, the gap's exit half lost in it; muffled surf.",
    "deviation": null,
    "action": "The mist lying against the seaward side.",
    "need": {
@@ -3095,11 +3155,11 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 4.02,
-    "k4_cpu_s_per_frame": 53.57,
+    "draft_s_per_frame": 3.67,
+    "k4_cpu_s_per_frame": 48.93,
     "k4_gpu_s_per_frame": null,
-    "draft_minutes": 4.82,
-    "k4_cpu_hours": 1.07,
+    "draft_minutes": 4.4,
+    "k4_cpu_hours": 0.98,
     "k4_gpu_hours": null,
     "factors": {
      "people": 1.24,
@@ -3109,7 +3169,7 @@
      "move": 1.08,
      "total": 1.34
     },
-    "basis": "ESTIMATE: unknown set, generic; x 1.34 for the shot's content"
+    "basis": "MEASURED draft 3.67 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
    },
    "staging": "WIDE 120 mm from a camera ship inland and a little above: she does not wait - Leaf (Abby up) tips over and drops away toward the rocks (off frame right) with quick, eager beats.",
    "deviation": null,
@@ -3180,6 +3240,52 @@
    ],
    "captions": [],
    "cost": {
+    "draft_s_per_frame": 3.03,
+    "k4_cpu_s_per_frame": 40.33,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 4.84,
+    "k4_cpu_hours": 1.08,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.34
+    },
+    "basis": "MEASURED draft 3.03 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
+   },
+   "staging": "MEDIUM 50 mm off Charcoal's right front: Remi, resigned (\"We're going to lose.\"), looks after them; Charcoal goes after them - out of the glide into a deep beat, nose down.",
+   "deviation": null,
+   "action": "Remi, resigned, leans forward, and Charcoal goes after them.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "X6-08",
+   "seq": 177,
+   "scene": "1C",
+   "set": "OUTER_ROCKS",
+   "kind": "3d",
+   "frames": 96,
+   "rec_in": 7752,
+   "rec_out": 7848,
+   "tc_in": "00:05:23:00",
+   "tc_out": "00:05:27:00",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/outer-rocks.js",
+    "start_s": 19,
+    "start_frame": 456
+   },
+   "dialogue": [],
+   "captions": [],
+   "cost": {
     "draft_s_per_frame": 4.02,
     "k4_cpu_s_per_frame": 53.57,
     "k4_gpu_s_per_frame": null,
@@ -3196,33 +3302,7 @@
     },
     "basis": "ESTIMATE: unknown set, generic; x 1.34 for the shot's content"
    },
-   "staging": "MEDIUM 50 mm off Charcoal's right front: Remi, resigned (\"We're going to lose.\"), looks after them; Charcoal goes after them - out of the glide into a deep beat, nose down.",
-   "deviation": null,
-   "action": "Remi, resigned, leans forward, and Charcoal goes after them.",
-   "need": {
-    "pre": 0,
-    "post": 0
-   }
-  },
-  {
-   "job": "X6-08",
-   "seq": 177,
-   "scene": "1C",
-   "set": "OUTER_ROCKS",
-   "kind": "missing",
-   "frames": 96,
-   "rec_in": 7752,
-   "rec_out": 7848,
-   "tc_in": "00:05:23:00",
-   "tc_out": "00:05:27:00",
-   "trans": [
-    "cut"
-   ],
-   "src": null,
-   "dialogue": [],
-   "captions": [],
-   "cost": null,
-   "staging": null,
+   "staging": "WIDE 35 mm tracking low over the water from behind-right: Leaf skims the sea a few metres up, short quick beats, small corrections; Abby tucked down; the stacks ahead right.",
    "deviation": null,
    "action": "Leaf goes low and fast, skimming the water, making small quick corrections.",
    "need": {
@@ -3235,7 +3315,7 @@
    "seq": 178,
    "scene": "1C",
    "set": "OUTER_ROCKS",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 96,
    "rec_in": 7848,
    "rec_out": 7944,
@@ -3244,11 +3324,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/outer-rocks.js",
+    "start_s": 25,
+    "start_frame": 600
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 3.72,
+    "k4_cpu_s_per_frame": 49.6,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 5.95,
+    "k4_cpu_hours": 1.32,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1,
+     "total": 1.24
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.24 for the shot's content"
+   },
+   "staging": "WIDE 35 mm static INSIDE the gap looking out (NNW): Leaf comes in low and fast, tilts almost onto his side and threads the gap toward the lens, wingtips passing close to both walls; Abby tucked down.",
    "deviation": null,
    "action": "He tilts almost onto his side and threads the gap, wingtips passing close to the rock.",
    "need": {
@@ -3261,7 +3361,7 @@
    "seq": 179,
    "scene": "1C",
    "set": "OUTER_ROCKS",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 48,
    "rec_in": 7944,
    "rec_out": 7992,
@@ -3270,11 +3370,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/outer-rocks.js",
+    "start_s": 31,
+    "start_frame": 744
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 4.02,
+    "k4_cpu_s_per_frame": 53.57,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 3.21,
+    "k4_cpu_hours": 0.71,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.34
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.34 for the shot's content"
+   },
+   "staging": "CLOSE 85 mm air-to-air on Abby from her right front: tucked down against Leaf, both hands on the grips, laughing into the wind; sea and spray behind.",
    "deviation": null,
    "action": "Abby is tucked down against him, both hands on the straps, laughing into the wind.",
    "need": {
@@ -3287,7 +3407,7 @@
    "seq": 180,
    "scene": "1C",
    "set": "OUTER_ROCKS",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 120,
    "rec_in": 7992,
    "rec_out": 8112,
@@ -3296,11 +3416,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/outer-rocks.js",
+    "start_s": 35,
+    "start_frame": 840
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 4.02,
+    "k4_cpu_s_per_frame": 53.57,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 8.04,
+    "k4_cpu_hours": 1.79,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.34
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.34 for the shot's content"
+   },
+   "staging": "WIDE 35 mm from low at the stacks' feet looking up: Charcoal cannot follow - he climbs and goes over the top of the stacks, slow and enormous, Remi low on his back.",
    "deviation": null,
    "action": "Charcoal cannot follow. He climbs and goes over the top of the stacks, slow and enormous.",
    "need": {
@@ -3313,7 +3453,7 @@
    "seq": 181,
    "scene": "1C",
    "set": "OUTER_ROCKS",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 96,
    "rec_in": 8112,
    "rec_out": 8208,
@@ -3322,11 +3462,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/outer-rocks.js",
+    "start_s": 42,
+    "start_frame": 1008
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 3.91,
+    "k4_cpu_s_per_frame": 52.08,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 6.25,
+    "k4_cpu_hours": 1.39,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1.05,
+     "walk": 1,
+     "move": 1,
+     "total": 1.3
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.3 for the shot's content"
+   },
+   "staging": "WIDE 35 mm static at the foot of the stacks looking up at them: his downwash (from above, off frame top) flattens the water round the rocks into a pale ring and lifts every seabird off its ledge at once.",
    "deviation": null,
    "action": "His downwash flattens the water around the rocks into a pale ring and lifts every seabird off its ledge at once.",
    "need": {
@@ -3339,7 +3499,7 @@
    "seq": 182,
    "scene": "1C",
    "set": "OUTER_ROCKS",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 72,
    "rec_in": 8208,
    "rec_out": 8280,
@@ -3348,11 +3508,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/outer-rocks.js",
+    "start_s": 48,
+    "start_frame": 1152
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 4.62,
+    "k4_cpu_s_per_frame": 61.6,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 5.54,
+    "k4_cpu_hours": 1.23,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1.15,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.54
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.54 for the shot's content"
+   },
+   "staging": "MEDIUM 50 mm air-to-air from Charcoal's left front as he comes down past the stacks: Remi stays low in the saddle; behind him spray climbs the stone and the birds wheel.",
    "deviation": null,
    "action": "Spray climbs the stone. Remi stays low in the saddle.",
    "need": {
@@ -3365,7 +3545,7 @@
    "seq": 183,
    "scene": "1C",
    "set": "OUTER_ROCKS",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 96,
    "rec_in": 8280,
    "rec_out": 8376,
@@ -3374,11 +3554,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/outer-rocks.js",
+    "start_s": 53,
+    "start_frame": 1272
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 4.02,
+    "k4_cpu_s_per_frame": 53.57,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 6.43,
+    "k4_cpu_hours": 1.43,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.34
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.34 for the shot's content"
+   },
+   "staging": "WIDE 35 mm from the far side: Charcoal folds his wings and comes down the slope of the air past the stacks toward the low stack; for a moment it looks as if he might get there first.",
    "deviation": null,
    "action": "On the far side Charcoal folds his wings and comes down the slope of the air; for a moment it looks as if he might get there first.",
    "need": {
@@ -3391,7 +3591,7 @@
    "seq": 184,
    "scene": "1C",
    "set": "OUTER_ROCKS",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 144,
    "rec_in": 8376,
    "rec_out": 8520,
@@ -3400,11 +3600,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/outer-rocks.js",
+    "start_s": 59,
+    "start_frame": 1416
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 3.72,
+    "k4_cpu_s_per_frame": 49.6,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 8.93,
+    "k4_cpu_hours": 1.98,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1,
+     "total": 1.24
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.24 for the shot's content"
+   },
+   "staging": "WIDE 35 mm static from the top of a lower stack (F): Leaf bursts out of the gap on the seaward side through the mist, swings up in a tight climbing right turn and lands on the flat top of the low stack, settling low and level, wrists down, Abby on his back - the whole of him fitting with room to spare.",
    "deviation": null,
    "action": "Leaf bursts out of the gap on the seaward side, swings up in a tight turn and lands on the flat top of a lower stack. He settles there low and level, the wrists of his folded wings braced on the rock, Abby on his back, the whole of him fitting with room to spare.",
    "need": {
@@ -3417,7 +3637,7 @@
    "seq": 185,
    "scene": "1C",
    "set": "OUTER_ROCKS",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 96,
    "rec_in": 8520,
    "rec_out": 8616,
@@ -3426,11 +3646,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/outer-rocks.js",
+    "start_s": 67,
+    "start_frame": 1608
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 4.44,
+    "k4_cpu_s_per_frame": 59.2,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 7.1,
+    "k4_cpu_hours": 1.58,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.48,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1,
+     "total": 1.48
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.48 for the shot's content"
+   },
+   "staging": "WIDE 135 mm static, low over the water from the SSW: Leaf crouched on the low stack (left); Charcoal arrives out of his dive above it from the ESE and checks with one huge beat that sends the last birds wheeling; his shadow covers the whole stack and the dragon on it.",
    "deviation": null,
    "action": "Charcoal arrives a moment later, out of his dive, and checks above the stack with one huge beat that sends the last birds wheeling. His shadow covers the whole stack and the dragon crouched on it.",
    "need": {
@@ -3443,7 +3683,7 @@
    "seq": 186,
    "scene": "1C",
    "set": "OUTER_ROCKS",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 168,
    "rec_in": 8616,
    "rec_out": 8784,
@@ -3452,11 +3692,159 @@
    "trans": [
     "cut"
    ],
-   "src": null,
-   "dialogue": [],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/outer-rocks.js",
+    "start_s": 73,
+    "start_frame": 1752
+   },
+   "dialogue": [
+    {
+     "id": "X6-07",
+     "part": 0,
+     "ref": "X6-07",
+     "role": "ABBY",
+     "file": "vo/X6-07.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.59,
+     "at_s": 0.27,
+     "speech_in_s": 0.3,
+     "speech_out_s": 0.83,
+     "words": [
+      {
+       "w": "again",
+       "start_s": 0.27,
+       "end_s": 0.78
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 359.27
+    },
+    {
+     "id": "X6-08",
+     "part": 0,
+     "ref": "X6-08",
+     "role": "REMI",
+     "file": "vo/X6-08.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.73,
+     "at_s": 0.95,
+     "speech_in_s": 0.98,
+     "speech_out_s": 1.65,
+     "words": [
+      {
+       "w": "you",
+       "start_s": 0.95,
+       "end_s": 1.19
+      },
+      {
+       "w": "won",
+       "start_s": 1.19,
+       "end_s": 1.58
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 359.95
+    },
+    {
+     "id": "X6-09",
+     "part": 0,
+     "ref": "X6-09",
+     "role": "ABBY",
+     "file": "vo/X6-09.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.195,
+     "at_s": 1.77,
+     "speech_in_s": 1.8,
+     "speech_out_s": 2.935,
+     "words": [
+      {
+       "w": "say",
+       "start_s": 1.77,
+       "end_s": 2.04
+      },
+      {
+       "w": "it",
+       "start_s": 2.04,
+       "end_s": 2.14
+      },
+      {
+       "w": "so",
+       "start_s": 2.14,
+       "end_s": 2.28
+      },
+      {
+       "w": "he",
+       "start_s": 2.28,
+       "end_s": 2.41
+      },
+      {
+       "w": "can",
+       "start_s": 2.41,
+       "end_s": 2.58
+      },
+      {
+       "w": "hear",
+       "start_s": 2.58,
+       "end_s": 2.91
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 360.77
+    },
+    {
+     "id": "X6-10",
+     "part": 0,
+     "ref": "X6-10",
+     "role": "REMI",
+     "file": "vo/X6-10.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.68,
+     "at_s": 3.095,
+     "speech_in_s": 3.135,
+     "speech_out_s": 3.745,
+     "words": [
+      {
+       "w": "you",
+       "start_s": 3.095,
+       "end_s": 3.305
+      },
+      {
+       "w": "won",
+       "start_s": 3.305,
+       "end_s": 3.665
+      }
+     ],
+     "gain_db": 3,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 362.095
+    }
+   ],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 4.8,
+    "k4_cpu_s_per_frame": 63.94,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 13.43,
+    "k4_cpu_hours": 2.98,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.48,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.6
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.6 for the shot's content"
+   },
+   "staging": "MEDIUM 50 mm static two-shot, Remi above: from behind Abby's left shoulder on the low stack (left, three-quarter back) up to Remi on the hovering Charcoal (right, top). \"Again?\" - \"You won.\" - \"Say it so he can hear.\" - \"You won.\" (louder).",
    "deviation": null,
    "action": "Say it so he can hear.",
    "need": {
@@ -3469,7 +3857,7 @@
    "seq": 187,
    "scene": "1C",
    "set": "OUTER_ROCKS",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 72,
    "rec_in": 8784,
    "rec_out": 8856,
@@ -3478,12 +3866,32 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/outer-rocks.js",
+    "start_s": 82,
+    "start_frame": 1968
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
-   "deviation": null,
+   "cost": {
+    "draft_s_per_frame": 4.02,
+    "k4_cpu_s_per_frame": 53.57,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 4.82,
+    "k4_cpu_hours": 1.07,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.34
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.34 for the shot's content"
+   },
+   "staging": "CLOSE 85 mm static on Leaf's head from his front-left, on the stack: he turns one eye up toward Charcoal (off frame, above left) without any fear at all.",
+   "deviation": "Leaf stays on the stack (the shot list's \"and flies a little higher than he needs to\" is not staged: he has just landed in X6-15/16/17).",
    "action": "Leaf turns one eye toward Charcoal without any fear at all and flies a little higher than he needs to.",
    "need": {
     "pre": 0,
