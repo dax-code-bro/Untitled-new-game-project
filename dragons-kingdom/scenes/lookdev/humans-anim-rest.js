@@ -3,7 +3,8 @@
 // fanned drape fingers). Alexandria stands at a rounded "flank" (a lying capsule, the hatchling stand-in)
 // at hip height: her right hand palm DOWN on its top, her left hand palm UP under its near underside.
 // frame 0: restHand (after), frame 1: same arms with the build's drape fingers (before), frame 2: after
-// from her right side, low.
+// from her right side, low; frame 3 (perf s14): her left hand palm up in the flatter 'cradle' shape (as F4's
+// near hand under the cloth: handShape only, no settle), seen level from her left with the flank hidden (the finger tops over the palm line in profile).
 //   node render/render.mjs --still scenes/lookdev/humans-anim-rest.js --time 0.5 --preset draft --png out.png
 import * as THREE from 'three';
 import { loadHDRI } from '../lib/assets.js';
@@ -13,7 +14,7 @@ import { filmFinish } from './finish.js';
 
 export const meta = {
   title: 'Humans performance - resting hand',
-  duration: 3,
+  duration: 4,
   seed: 4,
   cinematic: filmFinish({ motionBlur: { mode: 'off' }, shadows: { cascades: 0 }, ao: { enabled: true, radius: 0.06 }, dof: { samples: 16 }, grade: { exposure: 0.15, whiteBalance: 4600 } }),
 };
@@ -38,10 +39,10 @@ export async function setup(ctx) {
   stand.position.set(C.x, (C.y - R) / 2, C.z); scene.add(stand);
   const ch = await loadCharacter('alexandria');
   scene.add(ch.root);
-  S = { ch };
+  S = { ch, hide: [flank, stand] };
 }
 
-function pose(t, after) {
+function pose(t, after, cradle = false) {
   const { ch } = S;
   ch.update(t);
   placeCharacter(ch, 0, 0, 0, 0);
@@ -55,7 +56,7 @@ function pose(t, after) {
   const poleR = new THREE.Vector3(-0.45, 0.9, 0.0), poleL = new THREE.Vector3(0.45, 0.8, 0.0);
   const fR = new THREE.Vector3(0.35, 0, 1), fL = new THREE.Vector3(-0.2, 0, 1);
   restHand(ch, 'R', { at: atR, normal: nR, fingers: fR, pole: poleR, radius: R });
-  restHand(ch, 'L', { at: atL, normal: nL, fingers: fL, pole: poleL, radius: R });
+  restHand(ch, 'L', { at: atL, normal: nL, fingers: fL, pole: poleL, radius: R, ...(cradle ? { shape: 'cradle', settle: false } : {}) });
   if (!after) {
     // the build's drape fingers (what the scene shows with keepFingers)
     for (const sd of ['L', 'R']) for (let f = 1; f <= 5; f++) for (let j = 1; j <= 3; j++) {
@@ -69,11 +70,14 @@ function pose(t, after) {
 
 export function update(t, ctx) {
   const { camera } = ctx;
-  const k = Math.min(2, Math.floor(t));
-  pose(1.0, k !== 1);
+  const k = Math.min(3, Math.floor(t));
+  pose(1.0, k !== 1, k === 3);
   if (k < 2) camera.position.set(0.25, 1.45, 1.25);
-  else camera.position.set(-0.75, 1.02, 0.85);
-  camera.lookAt(C.x, C.y + 0.02, C.z - 0.06);
+  else if (k === 2) camera.position.set(-0.75, 1.02, 0.85);
+  else camera.position.set(0.75, 0.79, 0.36);
+  for (const m of S.hide) m.visible = k !== 3;
+  if (k === 3) camera.lookAt(0.1, 0.78, 0.36);     // the palm-up left hand, level from her left (flank hidden)
+  else camera.lookAt(C.x, C.y + 0.02, C.z - 0.06);
   camera.fov = 24; camera.near = 0.05; camera.far = 50;
   camera.updateProjectionMatrix();
   if (ctx.lens) { ctx.lens.focalLength = null; ctx.lens.fstop = 8; ctx.lens.focus = camera.position.distanceTo(C); ctx.lens.shutterAngle = 90; }

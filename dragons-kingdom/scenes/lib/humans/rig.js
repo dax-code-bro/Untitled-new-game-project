@@ -228,9 +228,10 @@ function handAxes(ch, side) {
  * index to little finger ~22 deg apart; -0.12 = fingers together), together (0..1, instead of spread:
  * each finger turned back by that share of its OWN rest splay - side by side at 1, measured per
  * character: MakeHuman's rest fan is uneven, a linear spread closed the middle fingers past each
- * other before the little finger came in), thumbIn (0..1 across the palm) }
+ * other before the little finger came in), thumbIn (0..1 across the palm), thumbAdd (rad, optional: the thumb
+ * swung toward the index about the palm normal), mcp ([index..little] rad, optional extra knuckle bend; < 0 lifts) }
  * or a preset name: 'relaxed', 'open', 'point', 'fist', 'cup', 'grip', 'clutch', 'limp', 'claw',
- * 'wave', 'rest' (a soft hand on a body - see restHand). amount blends from the current (drape) fingers. The fingers are set from MakeHuman's rest
+ * 'wave', 'rest' (a soft hand on a body - see restHand), 'cradle' (flatter, palm up under a body / cloth). amount blends from the current (drape) fingers. The fingers are set from MakeHuman's rest
  * (straight) fingers, then curled - independent of whatever grip the build's drape pose gave the hand.
  * (MakeHuman's rest hand is splayed ~31 deg index to little finger; until 2026-10-27 the sign was
  * inverted - a positive spread closed the fingers and 0 left that splay, so a limp hand read as a claw.)
@@ -251,8 +252,14 @@ export const HAND_SHAPES = {
   // a soft hand resting on a body (palm down on a flank, palm up under a chest): fingers together and
   // gently curled (more toward the little finger, the tips softer than a grip), the thumb soft alongside
   // the index - never the build's fanned drape fingers (a claw in the open). restHand() settles it.
-  rest: { curl: [0.2, 0.2, 0.26, 0.32, 0.4], together: 0.92, thumbIn: 0.38, dip: 0.55 },
+  // (perf s14: thumbAdd 0.8 - the thumb adducted alongside the index, 49 -> 16 deg; it stood off like a hitchhiker's)
+  rest: { curl: [0.2, 0.2, 0.26, 0.32, 0.4], together: 0.92, thumbIn: 0.38, thumbAdd: 0.8, dip: 0.55 },
+  // a flatter cupped hand, palm up under a body or a cloth (perf s14, F4's near hand under the folded cloth): the
+  // knuckles lifted (mcp -0.4: MakeHuman's straight fingers already droop ~3.3 cm toward the palm), soft curls, the
+  // thumb alongside the index - the finger tops ~1.8 cm over the palm line ('rest' 6.1 cm: they showed through cloth)
+  cradle: { curl: [-0.05, 0.1, 0.12, 0.14, 0.18], together: 0.92, thumbIn: 0.1, thumbAdd: 0.85, dip: 0.6, mcp: [-0.38, -0.4, -0.42, -0.5] },
 };
+const _qa = new THREE.Quaternion();
 export function handShape(ch, side, shape, amount = 1) {
   const s = typeof shape === 'string' ? HAND_SHAPES[shape] : shape;
   if (!s || amount <= 0) return;
@@ -289,6 +296,9 @@ export function handShape(ch, side, shape, amount = 1) {
   // thumb: swing across the palm (thumbIn) + curl
   const ti = s.thumbIn ?? 0.2, tc = curls[0];
   const sw = new THREE.Quaternion().setFromAxisAngle(ax.fwd, (side === 'L' ? -1 : 1) * ti * 0.6);
+  // thumbAdd (rad, optional): adduction - the thumb swung about the palm normal toward the index, so a palm-up
+  // hand's thumb lies alongside the index / palm edge (thumbIn's swing is about the hand's fwd: across the palm)
+  if (s.thumbAdd) sw.premultiply(_qa.setFromAxisAngle(ax.palm, (side === 'L' ? -1 : 1) * s.thumbAdd));
   set('finger1-1', new THREE.Quaternion().setFromAxisAngle(ax.tcurl, tc * 0.4).premultiply(sw));
   set('finger1-2', q.setFromAxisAngle(ax.tcurl, tc * 0.8));
   set('finger1-3', q.setFromAxisAngle(ax.tcurl, tc * 0.7));
@@ -325,7 +335,8 @@ export function orientHand(ch, side, fingersDir, palmDir, amount = 1) {
  *            signed height of world point p over the body (m), when the scene can measure it
  *   settle   true (default): each finger bends at its knuckle (then curls / straightens) until its tip lies
  *            on the surface (a hand on a rounded flank drapes round it; on a flat one it lies longer) }
- * Returns { palm, tips } (palm centre, fingertip heights over the plane) or null.
+ * Returns { palm, tips } (palm centre; fingertip centre heights over the surface: the sphere with `radius`,
+ * surface(p), else the plane through the contact point) or null.
  */
 export function restHand(ch, side, o = {}) {
   const amount = o.amount ?? 1;
@@ -375,7 +386,7 @@ export function restHand(ch, side, o = {}) {
   // the contact point - lifted where the middle joint would dig in, never more than ~20 deg up / 35 deg down
   const base = at ? at.clone() : null;
   const s0 = typeof (o.shape || 'rest') === 'string' ? HAND_SHAPES[o.shape || 'rest'] : o.shape;
-  const mcp = [0, 0, 0, 0];
+  const mcp = (s0.mcp || [0, 0, 0, 0]).slice();
   const curls = (Array.isArray(s0.curl) ? s0.curl : [0, 1, 2, 3, 4].map(() => s0.curl)).slice();
   const hf0 = handFrame(ch, side);
   const ref = base || hf0.wrist.clone().lerp(wpos(ch.bone(`finger3-1.${side}`), new THREE.Vector3()), 0.45).addScaledVector(hf0.palm, 0.012).addScaledVector(n, -pad);
@@ -398,15 +409,16 @@ export function restHand(ch, side, o = {}) {
       const dp = (H(pp.clone()) - 0.008) / Math.max(0.02, pp.distanceTo(k));
       if (dp < 0) d = Math.min(d, dp);
       // past ~17 deg of knuckle lift the finger straightens instead (a hand lying on a flat or a rounded body)
-      const m = mcp[fi] + d;
-      mcp[fi] = Math.max(-0.3, Math.min(0.6, m));
-      if (m < -0.3) curls[fi + 1] = Math.max(0.05, curls[fi + 1] + (m + 0.3) * 0.8);
+      const m = mcp[fi] + d, lo = Math.min(-0.3, s0.mcp?.[fi] ?? 0);     // (a shape's own lifted knuckles kept)
+      mcp[fi] = Math.max(lo, Math.min(0.6, m));
+      if (m < lo) curls[fi + 1] = Math.max(0.05, curls[fi + 1] + (m - lo) * 0.8);
       // past ~35 deg of knuckle bend the finger curls on round the body
       if (m > 0.6) curls[fi + 1] = Math.min(1.1, curls[fi + 1] + (m - 0.6) * 0.8);
     }
     handShape(ch, side, { ...s0, curl: curls, mcp }, amount);
   }
-  out.palm = ref; out.tips = FINGERS.map((f) => (ch.bone(`finger${f}-3.${side}`) ? +tip(f).sub(ref).dot(n).toFixed(4) : null));
+  // (perf s14: the tips are reported against the same surface they settled on - the sphere / surface(p) / plane)
+  out.palm = ref; out.tips = FINGERS.map((f) => (ch.bone(`finger${f}-3.${side}`) ? +H(tip(f)).toFixed(4) : null));
   return out;
 }
 
