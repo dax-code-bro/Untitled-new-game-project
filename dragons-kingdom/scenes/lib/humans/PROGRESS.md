@@ -1249,6 +1249,38 @@ NEXT (look, in order):
    (hands are on every body); hero close-ups first: abby*, remi*, then the riders.
 5. 2j NEXT 2-4 unchanged.
 
+## LOOK round 2m (2026-11-06, short session) - crowd05 kirtle tone + tied kerchief (director X4-06 note)
+Problem: the ochre kirtle rendered pale cream (sampled sRGB 104,96,79 on the lower back) and slightly plastic;
+the kerchief still read as a smooth cap at 11 m.
+CHANGED (crowd05 ONLY - shared defaults NOT changed: FABRIC.wool, G_kirtle, G_kerchief, cloth.js all untouched):
+1. characters.py crowd05 `kirtle={...}`: color ochre [0.27,0.17,0.085] -> madder brown [0.155,0.076,0.038]
+   (1st try [0.15,0.068,0.042] read a little mauve under the sky fill), fade 0.25 -> 0.1 (the sun-bleach mix
+   lifted the upper surfaces toward a warm grey), sheen 0.35 -> 0.18 (the dye-tinted wool sheen at grazing
+   angles was the plastic rim), wrinkle 0.5 (the shader's soft shading folds, for texture at distance).
+2. garments.py head_shell: new optional key `tails` (m, default 0 = off): the bottom ~5 cm of the back of a
+   kerchief is stretched down into the folded corner plus two tie-end tongues, carried back to hang plumb from
+   the occiput. crowd05: tails 0.1, knot 0.02 -> 0.03.
+   garments.py/characters.py changed again -> build-caches marks the other 47 "made by older code"; only
+   crowd05's output differs.
+Rebuilt: crowd05 only. Checked: selftest-perf all passed; npm test 48 pass / 0 fail / 1 skipped.
+Images (scratch eng1/look14/): before/, after/ (1st try), after2/ (final), draft X4-06@0.5 (frame 36);
+X4-06_036_before_after2.png, X4-06_crowd05_x3_before_after2.png (left before).
+RESULT (draft, looked): the kirtle reads as matte, earthy russet / madder-brown wool (sRGB 79,64,52), no longer
+cream. The skirt flutes and the back creases read more clearly in the darker tone, and there is no plastic rim.
+The kerchief now shows a cloth tongue hanging below the knot at the nape (seen to her right side, as her head
+is yawed 0.3), so it reads as tied rather than as a smooth cap. It is still small at 11 m; there is no darker
+tie band (that would need a per-vertex band channel in cloth.js, which is a shared shader).
+NEXT (look, in order):
+1. Check crowd05's kerchief tails in motion (X4-06 video by the owner/director): they are rigid with the head
+   (head weights), so they do not swing. If they read stiff, try tails 0.08, or simulate them.
+2. Optional: a darker tie band = an opt-in aux channel in build.py for kerchiefs plus a cloth.js branch
+   (default off).
+3. 2l NEXT 2 (move bodice_pin/flare into G_kirtle defaults) and 2l NEXT 3 (full rebuild for 2k back_env)
+   are unchanged.
+4. Fingertip pad bulge (postfix.py) - still NOT started (budget). After it, ALL 48 characters need a rebuild
+   (hands are on every body). Do the hero close-ups first: abby, abby_injured, abby_sling, abby_ride, the remi*
+   variants, then the riders.
+
 ## perf s13 (2026-11-06, short session) - a soft hand resting ON a body (director s26 REQUEST, F4)
 Done (rig.js, director.js, selftest-perf.mjs, new lookdev scenes/lookdev/humans-anim-rest.js):
 1. rig.js HAND_SHAPES.rest: fingers together (together 0.92), gently curled (more toward the little finger, soft

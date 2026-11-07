@@ -544,10 +544,16 @@ def crowd():
          # doublet) for the mid-back ripples, deeper skirt flutes for soft vertical folds, a narrower hem;
          # the kerchief warmer natural linen (oatmeal read stark white in the sun), deeper folds + a back knot
          ('kirtle', 'ochre'), ('kerchief', 'oatmeal'), 'basket_front', dict(layer='apron', foot='shoes', ex='smile', pp={'head_yaw': 0.3},
+                                                                           # (LOOK 2m) the ochre kirtle rendered pale cream in the sun (sRGB ~140,124,100)
+                                                                           # and the backlit wool sheen read plastic: a madder-brown dye, less sun
+                                                                           # bleach, a duller sheen, soft shading folds for texture at 11 m
                                                                            kirtle={'bodice_pin': 0.45, 'torso_smooth': 70, 'flare': 1.45,
-                                                                                   'prefold': 0.09, 'folds': 12},
+                                                                                   'prefold': 0.09, 'folds': 12, 'color': [0.155, 0.076, 0.038],
+                                                                                   'fade': 0.1, 'sheen': 0.18, 'wrinkle': 0.5},
+                                                                           # tied at the back: the folded corner and the two tie ends hang
+                                                                           # below a bigger knot over the nape (a smooth cap at 11 m before)
                                                                            kerchief={'back': 0.03, 'front': 0.05, 'color': [0.28, 0.215, 0.13],
-                                                                                     'fold_amp': 0.005, 'knot': 0.02})),
+                                                                                     'fold_amp': 0.005, 'knot': 0.03, 'tails': 0.1})),
         ('crowd06', 1.0, 0.78, 'light', (0.35, 0.45, 0.42), {'style': 'none', 'color': HAIR['white'], 'beard': {'count': 7000, 'length': (0.012, 0.035), 'curl': 0.4, 'color': HAIR['white'], 'clump': 0.7}},
          ('tunic', 'greybrown'), ('hood', 'russet'), 'stand', dict(belt='cord', foot='shoes', ex='smile', hem=0.32, pp={'flex': 0.22, 'head_pitch': -0.12, 'elbow': 0.4})),
         ('crowd07', 0.0, 0.3, 'olive', (0.45, 0.4, 0.45), {'style': 'braid', 'color': HAIR['darkbrown'], 'length': 0.4, 'hang': 'R', 'part': 0.004},

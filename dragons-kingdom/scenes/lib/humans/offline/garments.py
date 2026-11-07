@@ -1414,6 +1414,21 @@ def head_shell(D, g):
             w = np.exp(-(da / 0.38) ** 2) * np.exp(-((S[:, 1] - (ey - bk + 0.022)) / 0.022) ** 2)
             w = w * (1 + 0.25 * np.sin(a_ * 21 + ph[2]))
             S = S + nS * (g['knot'] * w)[:, None] + np.array([0, -0.25 * g['knot'], 0]) * w[:, None]
+        if g.get('tails', 0.0):
+            # (kerchief) the folded corner and the two tie ends hanging below the knot over the nape:
+            # the bottom ~5 cm of the back of the shell is stretched down into a point flanked by two
+            # tongues and carried back to hang plumb from the occiput (default off)
+            bk = g.get('back', 0.085)
+            edge_y = ey - bk
+            da = np.abs(np.angle(np.exp(1j * (a_ - math.pi))))
+            prof = np.maximum(np.clip(1 - da / 0.4, 0, 1), 0.85 * np.exp(-((da - 0.26) / 0.07) ** 2))
+            up = np.clip(1 - (S[:, 1] - edge_y) / 0.05, 0, 1) ** 1.5
+            drop = g['tails'] * prof * up
+            bz = (np.abs(da) < 0.5) & (S[:, 1] > edge_y)
+            zb = S[bz, 2].min() if bz.any() else S[:, 2].min()
+            wz = np.clip(drop / 0.02, 0, 1)
+            S[:, 1] = S[:, 1] - drop
+            S[:, 2] = S[:, 2] * (1 - wz) + np.minimum(S[:, 2], zb - 0.004) * wz
     if kind == 'hood':
         # wool falling from the crown: folds that run down the sides and back, deeper toward the
         # neck, bunched where the hood meets the cape; the face opening's edge turned back
