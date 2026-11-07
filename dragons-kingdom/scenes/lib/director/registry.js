@@ -75,6 +75,12 @@ export const SETS = {
     from: 'SKY_OFF_VERDOR continued south to the harbour town (spec MAP, session 17 plan)',
     continuity: { '1C': { sun: sunDir(102, 31), tod: 'morning (continuous from 1B)', exposure: 1.1 } },
   },
+  VERDOR_HARBOR: {
+    file: 'verdor-harbor.js', builder: 'verdor-harbor', frame: 'VERDOR',
+    libs: ['sets/verdor-aerial.js (the whole harbour town: terrain, sea, basin, breakwater, quay + warehouses, terraces, palace, the Santa Maria) from the SAME map', 'quay-level dressing in sets/verdor-harbor.js (procedural three.js: bollards, slipway, boats, hauled net + haul lines, fish baskets, market stalls)', 'scenes/lib/creatures (working dragons: Leaf builds in the scout look; Charcoal for his shadow)', 'scenes/lib/humans (sailor1/2, vendor, crowd extras)'],
+    from: 'VERDOR_AERIAL at quay level (session 31)',
+    continuity: { '1C': { sun: sunDir(102, 31), tod: 'late morning at the harbour (continuous from 1B)', exposure: 1.1 } },
+  },
   BIRTHING_CHAMBER: {
     file: 'birthing-chamber.js', builder: 'birthing-chamber', frame: 'VERDOR',
     libs: ['scenes/lib/architecture/interiors.js (birthingChamber, nest, lamps)', 'scenes/lib/props/verdor.js (the egg: closed / cracked / opened)', 'scenes/lib/creatures (hatchling)', 'scenes/lib/humans (alexandria, attendant, abby, remi, young attendant = messenger)', 'runtime/cinematic (dust in the window shaft)'],

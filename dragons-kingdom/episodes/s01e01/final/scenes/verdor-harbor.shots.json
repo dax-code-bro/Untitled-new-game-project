@@ -1,0 +1,141 @@
+{
+ "set": "VERDOR_HARBOR",
+ "scene_file": "episodes/s01e01/final/scenes/verdor-harbor.js",
+ "spec": "episodes/s01e01/final/scenes/specs/verdor-harbor.spec.js",
+ "fps": 24,
+ "handles": 12,
+ "generated_by": "scenes/lib/director/tools/build-shots.mjs",
+ "note": "start_s / frames are the render-jobs.json contract (episode.mjs); pre/post are handle frames the editor may render around each shot.",
+ "shots": [
+  {
+   "job": "X4-04",
+   "seq": 131,
+   "scene": "1C",
+   "set": "VERDOR_HARBOR",
+   "start_s": 1,
+   "start_frame": 24,
+   "frames": 96,
+   "pre": 12,
+   "post": 12,
+   "seconds": 4,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "late morning at the harbour (continuous from 1B)",
+    "weather": "clear; the last mist over the water and against the seaward side of the outer rocks; light breeze off the sea",
+    "notes": "CONTINUOUS from 1B-15: Leaf launches first (Abby), then Charcoal (Remi) tears the cleared launch space (the launch scar mended in X19). Same sun as 1B (east, ~31 deg up). The flight line (1C-10/11) runs along the coast with Leaf behind and on the near (inland) side; screen direction L -> R held through 1E.",
+    "sun": [
+     0.8384361386092437,
+     0.5150380749100542,
+     0.17821510280267075
+    ],
+    "exposure": 1.1
+   },
+   "staging": "MEDIUM 50 mm STATIC from the quay, looking north along it (the Santa Maria soft beyond, right): a working dragon about Leaf's size (slate grey) crouches low and level, wrists of the folded wings on the stones, head toward the catch; the crew sort fish into baskets at left, full baskets right; it waits for its share.",
+   "deviation": null
+  },
+  {
+   "job": "X4-05",
+   "seq": 132,
+   "scene": "1C",
+   "set": "VERDOR_HARBOR",
+   "start_s": 7,
+   "start_frame": 168,
+   "frames": 144,
+   "pre": 12,
+   "post": 12,
+   "seconds": 6,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "late morning at the harbour (continuous from 1B)",
+    "weather": "clear; the last mist over the water and against the seaward side of the outer rocks; light breeze off the sea",
+    "notes": "CONTINUOUS from 1B-15: Leaf launches first (Abby), then Charcoal (Remi) tears the cleared launch space (the launch scar mended in X19). Same sun as 1B (east, ~31 deg up). The flight line (1C-10/11) runs along the coast with Leaf behind and on the near (inland) side; screen direction L -> R held through 1E.",
+    "sun": [
+     0.8384361386092437,
+     0.5150380749100542,
+     0.17821510280267075
+    ],
+    "exposure": 1.1
+   },
+   "staging": "WIDE 35 mm STATIC from the slipway (the quay's south end, looking south-east down the slip, the sun high left): two boats bring in a heavy net between them out on the basin (background); a second, smaller working dragon (slate grey) walks the slack line up the slipway (centre, toward screen right), low on its two legs and the wrists of its folded wings, the line running from its jaws back to the net; the crew (right) haul a second line from the near boat in time.",
+   "deviation": null
+  },
+  {
+   "job": "X4-07",
+   "seq": 134,
+   "scene": "1C",
+   "set": "VERDOR_HARBOR",
+   "start_s": 15,
+   "start_frame": 360,
+   "frames": 120,
+   "pre": 12,
+   "post": 12,
+   "seconds": 5,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [
+    {
+     "kind": "shadow-pass",
+     "from": 0,
+     "to": 5
+    }
+   ],
+   "continuity": {
+    "tod": "late morning at the harbour (continuous from 1B)",
+    "weather": "clear; the last mist over the water and against the seaward side of the outer rocks; light breeze off the sea",
+    "notes": "CONTINUOUS from 1B-15: Leaf launches first (Abby), then Charcoal (Remi) tears the cleared launch space (the launch scar mended in X19). Same sun as 1B (east, ~31 deg up). The flight line (1C-10/11) runs along the coast with Leaf behind and on the near (inland) side; screen direction L -> R held through 1E.",
+    "sun": [
+     0.8384361386092437,
+     0.5150380749100542,
+     0.17821510280267075
+    ],
+    "exposure": 1.1
+   },
+   "staging": "WIDE 35 mm STATIC at street level in the market street (terrace 1), looking north along the stalls: Charcoal's shadow sweeps across the cloth roofs and the people (right to left, ~2.7 s); they glance up, know him, go back to business; two lift a hand. Nobody runs. Charcoal himself stays above the frame.",
+   "deviation": null
+  },
+  {
+   "job": "X4-09",
+   "seq": 136,
+   "scene": "1C",
+   "set": "VERDOR_HARBOR",
+   "start_s": 22,
+   "start_frame": 528,
+   "frames": 120,
+   "pre": 12,
+   "post": 12,
+   "seconds": 5,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "late morning at the harbour (continuous from 1B)",
+    "weather": "clear; the last mist over the water and against the seaward side of the outer rocks; light breeze off the sea",
+    "notes": "CONTINUOUS from 1B-15: Leaf launches first (Abby), then Charcoal (Remi) tears the cleared launch space (the launch scar mended in X19). Same sun as 1B (east, ~31 deg up). The flight line (1C-10/11) runs along the coast with Leaf behind and on the near (inland) side; screen direction L -> R held through 1E.",
+    "sun": [
+     0.8384361386092437,
+     0.5150380749100542,
+     0.17821510280267075
+    ],
+    "exposure": 1.1
+   },
+   "staging": "WIDE 35 mm slow aerial pass from over the basin (camera ship ~20 m up, ~60 m out): the Santa Maria moored at the quay, sails furled on the yards, the town terraces rising behind; crew at work on the quay by her side. Name not held on.",
+   "deviation": null
+  }
+ ]
+}

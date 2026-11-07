@@ -4,8 +4,9 @@
 // NOTE (s20): the MAP numbers below supersede the s17 prose where they differ (harbour wall rooted at [275, 1440],
 // Santa Maria at x 267, terraced town: ground = 2.6 + 7.5 * terrace index, terraces 25 m apart west of x 230).
 //
-// The ground-level X4 shots (X4-04, X4-05, X4-07, X4-09) are set VERDOR_HARBOR (their own spec / builder later); they
-// share the SAME map below so the dragons' shadows / the harbour layout match across the cut.
+// The ground-level X4 shots (X4-04, X4-05, X4-07, X4-09) are set VERDOR_HARBOR (s31: specs/verdor-harbor.spec.js +
+// sets/verdor-harbor.js, a wrapper over this builder); they import the SAME map below so the layout matches across the cut.
+// (s30 wired X4-08/12/16-19, s31 X4-13 + X4-15; X4-10 is still in `plans`.)
 //
 // MAP (VERDOR frame: +x east = the sea, -z north, y up, metres; PROVISIONAL - first placement of the harbour town):
 //   The riding grounds are around the origin (1B); the palace lies SOUTH of the field (1A: they walk up the field
@@ -109,6 +110,16 @@ export default {
     remiR: { kind: 'human', id: 'remi_ride', ride: 'charcoal', outfit: 'remi', role: 'REMI' },
     abbyR: { kind: 'human', id: 'abby_ride', ride: 'leaf', outfit: 'abby', role: 'ABBY' },
     farmer: { kind: 'human', id: 'crowd05' },                         // X4-06 (perf s11 lean-on-a-hoe)
+    // (s31) X4-13 the riding school: small young dragons (Leaf's design, smaller, the 'scout' slate look - the only
+    // non-hero look the creatures library has), one student rider (scout_ride: the only free seated build - REQUEST
+    // young seated builds), a young student standing by (crowd13), the instructor (crowd12, adult)
+    young1: { kind: 'creature', id: { name: 'young1', design: 'leaf', L: 5.2, look: 'scout', flapHz: 1.0, flapAmp: 0.9, scaleMul: 0.66, seatBack: 0.3, limbScaleMul: 0.8 }, quality: 'draft', length: 5.2 },
+    young2: { kind: 'creature', id: { name: 'young2', design: 'leaf', L: 4.6, look: 'scout', flapHz: 1.0, flapAmp: 0.9, scaleMul: 0.66, seatBack: 0.3, limbScaleMul: 0.8 }, quality: 'draft', length: 4.6 },
+    young3: { kind: 'creature', id: { name: 'young3', design: 'leaf', L: 4.9, look: 'scout', flapHz: 1.0, flapAmp: 0.9, scaleMul: 0.66, seatBack: 0.3, limbScaleMul: 0.8 }, quality: 'draft', length: 4.9 },
+    student: { kind: 'human', id: 'scout_ride', ride: { on: 'young1', lean: 0.6 }, outfit: 'scout' },
+    student2: { kind: 'human', id: 'crowd13' },
+    instructor: { kind: 'human', id: 'crowd12' },
+    alexandria: { kind: 'human', id: 'alexandria' },                // (s31) X4-15: in the chamber's opening
   },
   map: MAP,
   shots: {
@@ -209,6 +220,38 @@ export default {
       cast: { leaf: { tack: true, root: [[0, [361, 55, 2302]], [5, [389, 55, 2378], 'linear']], yawKeys: 160, acts: LEAF_FLY() }, charcoal: { tack: true, root: [[0, [384, 57, 2312]], [5, [412, 57, 2388], 'linear']], yawKeys: 160, acts: CHAR_FLY() }, abbyR: {}, remiR: {} },
       notes: 'outer rocks: nature/rocks kit stacks at [700, 0, 3200] (X6 continuity: two stacks leaning close, mist on the seaward side)',
     },
+    // ------------------------------------------------------------------ session 31 (batch 2) ---
+    'X4-13': {
+      staging: 'AERIAL 35 mm looking down (~60 m) on the riding school on the grass terraces south of the town: the INSTRUCTOR (left) calls; a young dragon makes a wobbling takeoff with its rider clinging on with both arms (lean); another student stands by a crouched young dragon; one young dragon lies down flat in the middle of the lesson and will not move (right). Abby\'s laugh is OFF (sound). No rider named or aged.',
+      // (s31: the school is on terrace 3 (flat x ~137-155, y 25.1) at z 1960-1995 - the MAP schoolField centre [120, 36]
+      // sits on the narrow terrace-4 flat; terrace 3 is wider. The pair's shadows are NOT staged (plan note) - add
+      // Leaf / Charcoal flights with shTrack boxes if wanted.)
+      cam: { rig: 'follow', pos: [[0, [174, 86, 1948]], [8, [176, 86, 1986], 'linear']], look: [[0, [146, 25.1, 1970]], [8, [146, 25.1, 1980], 'linear']], mm: 35, fstop: 8, focus: [146, 25.1, 1975] },
+      set: { shadowAt: [146, 25.1, 1975], shadowExtent: 45 },
+      cast: {
+        young1: { tack: true, yawKeys: [[0, 20], [8, 32, 'linear']], root: [[0, [147, 25.1, 1974]], [1.6, [147, 25.1, 1974]], [3.0, [147.6, 28.4, 1971.5], 'inOut'], [4.4, [148.4, 26.6, 1969.6], 'inOut'], [6.2, [149.6, 30.2, 1967], 'inOut'], [8, [151, 32.5, 1964.4], 'inOut']],
+          acts: [[0, 'crouch', { k: 0.6 }], [1.2, 'launch', { blend: 0.4 }], [2.4, 'flight', { hz: 1.3, amp: 0.95, blend: 0.4 }], [4.2, 'flight', { hz: 1.6, amp: 1.0, blend: 0.3 }], [5.6, 'flight', { hz: 1.2, amp: 0.9, blend: 0.4 }]] },
+        student: {},
+        young2: { at: [144.2, 1987.5], face: 300, acts: [[0, 'stand', { breathe: 0.5 }], [1.0, 'lie', { blend: 1.6 }]] },
+        young3: { at: [149.5, 1981], face: 250, acts: [[0, 'crouch', { k: 0.7, breathe: 0.5, look: [0.3, 0.1] }]] },
+        student2: { at: [147.6, 1982.2], face: 70, look: 'young3.head', lookAmount: 0.6, acts: [[3.0, 'look', { at: 'young1.chest', amount: 0.7, blend: 0.5 }]] },
+        instructor: { at: [141.2, 1976.5], face: 80, look: 'young1.chest', lookAmount: 0.8, acts: [[1.4, 'raiseHand', { side: 'R', in: 0.35, hold: 1.2, out: 0.4 }], [5.0, 'point', { side: 'R', at: 'young2.chest', in: 0.4, hold: 1.4, out: 0.5 }], [5.0, 'look', { at: 'young2.chest', amount: 0.7, blend: 0.5 }]] },
+      },
+      notes: 'young dragons: Leaf design, smaller, scout look (creatures REQUEST: more working / young dragon colours); student = scout_ride clinging (ride lean 0.6); sound: instructor call ~1.5 s, Abby laugh OFF ~5.5 s (young2 lies down)',
+    },
+    'X4-15': {
+      staging: 'POV 300 mm from Remi\'s eyeline (on Charcoal, passing ~67 m east of the palace keep, heading south): Alexandria stands in the chamber\'s high opening on the keep\'s east face, watching them pass - still, unreadable, hands folded; she does not wave. Remi lifts his right hand (his act; the REVERSE on him is not staged - DEVIATION: one POV set-up, no cut inside the shot).',
+      // (s31: the opening = the keep's top front window row (architecture palace(): keep 20 x 15 x 24 m at palace-local
+      // (0, -6), front = EAST face x ~61.5, windows 1.2 x 2.4 m at 16.5 m over the box base (world y 74.5), centres at
+      // z 1430 +-2.5 / +-7.5); MAP.palace.chamberOpening [84, 76, 1430] is 22 m in the air east of the face - not used.)
+      cam: { rig: 'follow', pos: [[0, 'remiR.head']], look: [[0, [61.0, 75.7, 1427.5]]], mm: 300, fstop: 5.6, focus: [61.0, 75.7, 1427.5], shake: { kind: 'dragonback', amount: 0.12, seed: 15 } },
+      set: { shadowAt: [80, 60, 1430], shadowExtent: 80 },
+      cast: {
+        charcoal: { tack: true, ...fly([128, 66, 1398], 178, 16, 4.5), acts: CHAR_GLIDE({ droop: 0.1 }) },
+        remiR: { acts: [[0, 'look', { at: [61.0, 75.7, 1427.5], amount: 0.9 }], [1.6, 'raiseHand', { side: 'R', in: 0.4, hold: 1.6, out: 0.5 }]] },
+        alexandria: { at: [61.0, 1427.5], y: 74.5, face: 90, look: 'remiR.head', lookAmount: 0.7, acts: [[0, 'clasp', { in: 0.01 }]] },
+      },
+    },
     // ------------------------------------------------------------------ session 30 (batch 1) ---
     'X4-08': {
       staging: 'MEDIUM-WIDE 120 mm air-to-air off Leaf\'s right, a little above: low over the harbour basin, Leaf gives a quick bright call (neck up, jaw open), then back to the line; the quay dragon\'s answer is OFF (sound). Charcoal does not call (not in frame).',
@@ -286,16 +329,6 @@ export default {
         lookout: { at: [MAP.santaMaria.at[0], MAP.santaMaria.at[2]], y: 22, face: 270, acts: [[1.4, 'crouch', { dur: 1.2 }], [2.9, 'wave', { side: 'R', in: 0.3, hold: 1.6, out: 0.4 }]] },
       },
       lines: [['X4-01', { at: 4.6 }]],
-    },
-    'X4-13': {
-      staging: 'AERIAL 35 mm looking down on the school field from ~90 m: young riders on small dragons, an INSTRUCTOR; one wobbling takeoff, one rider clinging on with both arms; the pair\'s shadows cross the field.',
-      cam: { rig: 'follow', pos: [[0, [170, 130, 1900]], [8, [180, 130, 1990], 'linear']], look: [[0, [190, 38, 1950]], [8, [195, 38, 1985], 'linear']], mm: 35, fstop: 8, focus: [190, 38, 1960] },
-      notes: 'cast: 3-4 small dragons (scout / grown-hatchling presets, low stance), 4 young riders (crowd kit, teen builds - NO child content beyond riding lessons), 1 instructor; acts: takeoff (wobble), sit, walk',
-    },
-    'X4-15': {
-      staging: 'POV 300 mm-equivalent from Remi\'s eyeline: Alexandria standing in the chamber opening, watching them pass (face too small to need lip-sync; still, unreadable); REVERSE 85 mm on Remi lifting a hand.',
-      cam: { rig: 'follow', pos: [[0, 'remiR.head']], look: [[0, MAP.palace.chamberOpening]], mm: 300, fstop: 5.6, focus: MAP.palace.chamberOpening },
-      notes: 'two set-ups in one shot id: split into X4-15a (POV 0-2.5 s) / X4-15b (reverse 2.5-4.5 s) via a camera cut key at 2.5 s; Alexandria: humans id alexandria, stand, hands folded',
     },
   },
 };

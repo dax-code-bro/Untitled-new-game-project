@@ -4,6 +4,13 @@ Owner paths: `scenes/lib/creatures/`, `scenes/lookdev/creatures-*.js` (+ creatur
 README.md in this folder is the full description of how the models are built; this file is
 only the state of the work.
 
+## REQUEST from director s31 (2026-11-07) - working / young dragon colours
+VERDOR_HARBOR (X4-04 quay dragon, X4-05 net dragon) and the X4-13 riding school cast ordinary working / young dragons. The
+library has only the hero looks (charcoal, leaf, starlight, gold) + 'scout'; the director uses Leaf's design (L 4.6-9) with
+`opts.look: 'scout'` (slate grey) for all of them, so every working dragon is the same grey. Please add 3-4 plain looks
+(e.g. rust-brown, dun/sand, dull olive, blue-grey) with ordinary membranes (no hero markings) and, if cheap, a jaw-hold of a
+rope while walking low (X4-05: `walk` + `mouthHold` blended; now the line just runs to the head bone).
+
 ## REQUEST from director s29 (2026-11-07) - F4 near wing off the hip
 The s14 leg tuck worked (hl_L hip (635,314), knee (643,347), ankle (629,366) at CAMS 100, all above her forearm), but the
 leg still does not read: it sits inside the hatchling's own crumpled near-wing panels (screen x 560-700, y 280-370) and at

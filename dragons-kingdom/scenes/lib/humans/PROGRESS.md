@@ -1,5 +1,12 @@
 # Humans - progress log (for a successor)
 
+## REQUEST from director s31 (2026-11-07) - young seated riders (X4-13)
+The X4-13 riding school needs young riders (could be children per CHARACTERS.md: wholesome riding lesson only) on small
+dragons. The only seated builds are abby_ride / remi_ride / fall_ride / scout_ride (adult); the director uses scout_ride
+(outfit 'scout', ride lean 0.6 = "clinging on") for the one rider and crowd13 standing by. Please add 1-2 young seated
+builds (e.g. `student_ride`, `student2_ride`, plain riding clothes, not the scout's outfit) and a rider "cling" pose
+(both arms round the neck / grip, chest down).
+
 ## State (2026-10-08, session 4 - see the newest section at the end first)
 
 Done (code committed; caches are git-ignored and rebuilt with offline/build.py)

@@ -3,6 +3,49 @@
 Owner paths: `scenes/lib/director/`, `episodes/s01e01/final/scenes/`, `episodes/s01e01/final/cut/`.
 How it works: `README.md` in this folder. Latest state first.
 
+## Session 31 (2026-11-07, budgeted batch 2 of the 1C slates: VERDOR_HARBOR set + 6 specs - STILLS only)
+
+Scratch: `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/build2/` - `r1/`, `r2/` (all stills), `final/` (the kept still
+per shot), `contact-build2.png` (3x2 sheet). All draft.
+- NEW SET VERDOR_HARBOR (registry entry, scene `episodes/s01e01/final/scenes/verdor-harbor.js`, builder
+  `sets/verdor-harbor.js`, spec `specs/verdor-harbor.spec.js`): a thin WRAPPER that calls VERDOR_AERIAL's build() with
+  the same MAP (the harbour spec imports the aerial spec's MAP) and adds procedural quay dressing: bollards, a stone
+  slipway (MAP.slipway, the ground follows it), boats (two hauled out; `boatA` / `boatB` set objects keyed per shot in
+  `set.boats`, actors can ride them via `parent` + groundIn), the hauled net + haul lines (`set.net`, `set.haul` = a
+  cast point, `set.haul2`), fish baskets + heap, crates, a paved market street and stalls with cloth roofs, a
+  shadow-only dragon silhouette (`shadowDragon`, for the FX 'shadow-pass'). `ground` returns the quay paving (2.8) /
+  slipway height. The Santa Maria is the existing props santaMaria() (3 masts, furled sails) - no new ship needed.
+- WIRED (ready for video): VERDOR_HARBOR X4-09, X4-07, X4-04, X4-05; VERDOR_AERIAL X4-13, X4-15 (moved out of
+  `plans`). Durations = shot-list frames = edl-1C slots (X4-04 96, X4-05 144, X4-07 120, X4-09 120, X4-13 192, X4-15 108).
+- Stills (looked at): X4-09 ok (ship moored, town terraces + warehouse behind, crew on the quay). X4-04 ok (grey
+  Leaf-size dragon crouched low between the crew sorting fish (L) and baskets (R), Santa Maria right); two crates by
+  the lens blocked the bottom -> moved behind (not re-stilled). X4-07 r1: grass street, too far, NO Charcoal shadow
+  (Charcoal cast at draft quality - his shadow did not show; cause not found) -> r2: paved street, lens 11 m nearer,
+  Charcoal not cast, his shadow = FX 'shadow-pass' on his line (heading 224, 41 m, continuing X4-06): a big shade over
+  the mid-street at 0.54, a woman looks up with a raised hand. Paving darkened after r2 (read near-white; not re-stilled).
+  X4-05 r1 from the slip head looking ENE: dragon walked out left, boats sank in the swell -> lens on the quay end NW
+  of the slip looking SE, boats ride +0.28: r2 reads (boats + boatmen + net line left, grey dragon centre walking up
+  the slip, crew hauling right). The slipway's side wall is a plain slab (darkened after r2, not re-stilled).
+  X4-13 ok (top-down 35 mm over the terrace-3 grass: instructor, takeoff dragon + shadow, a student by a crouched young
+  dragon, one lying flat). X4-15 ok (300 mm POV from remiR.head: Alexandria in the keep's top-row east window, hands
+  folded - the window = MAP.palace.chamberOpening corrected to [61.0, 75.7, 1427.5]).
+- KNOWN ISSUES: the harbour basin carries the open-sea FFT swell (looks like open water at quay level; the boats ride
+  +0.28 to stay above it) - a calm-basin mask in dk/ocean.js is wanted. X4-05: the net bag is mostly under the swell
+  (only floats / top rope read); no jaw-hold pose (the line just ends at the head bone). X4-07: Charcoal's real shadow
+  from the cast did not render in r1 (check X4-03's shadow in its video for the same cause); the FX shadow is a flat
+  silhouette (no wingbeat). X4-13: the student rider is scout_ride (adult build, outfit 'scout'); the pair's shadows
+  are not staged; rider "clinging" = ride lean 0.6. X4-15: one POV set-up only (DEVIATION: no reverse on Remi; his
+  raiseHand act is off screen); the window interior shows a dark moire (keep far lod has no interior). All working /
+  young dragons are Leaf's design in the 'scout' look (same grey).
+- NOT DONE: X4-10 (still in `plans`: the mainmast top must be measured in the santaMaria model and a lookout needs a
+  platform; budget).
+- Verify: npm test 48 pass / 0 fail / 1 skipped; selftest 20 pass; build-shots: no X4 warnings except X4-10 (slate).
+- NEXT: 1. Lead renders X4-04/05/07/09/13/15 (harbor set loads ~11 humans + 2 dragons: use --workers 1 for VERDOR_HARBOR;
+  X4-13 adds 3 small dragons + 3 humans to the aerial set). 2. Re-still X4-05/X4-07 after the material darkening if wanted.
+  3. X4-10 (s30 NEXT 2). 4. Calm harbour water. 5. Investigate the cast-creature shadow in VERDOR_AERIAL / HARBOR.
+- REQUESTS: creatures - working / young dragon looks + walking jaw-hold (creatures/PROGRESS.md); humans - young seated
+  rider builds + a cling pose (humans/PROGRESS.md).
+
 ## Session 30 (2026-11-07, budgeted batch 1 of the 1C slates: 12 new specs on existing sets - STILLS only)
 
 Scratch: `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/build1/` - `r1..r4/` (all stills),
