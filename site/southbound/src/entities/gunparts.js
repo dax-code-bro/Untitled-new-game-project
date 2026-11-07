@@ -15,14 +15,18 @@ import * as THREE from 'three';
 const M = new Map();
 const mat = (c, r = 0.5, m = 0.6) => { const k = `${c}|${r}|${m}`; if (!M.has(k)) M.set(k, new THREE.MeshStandardMaterial({ color: c, roughness: r, metalness: m })); return M.get(k); };
 const BLACK = () => mat(0x111113, 0.45, 0.55), POLY = () => mat(0x1a1a1c, 0.75, 0.1), STEEL = () => mat(0x3a3b3e, 0.3, 0.9);
-const GLASS = () => { if (!M.has('glass')) M.set('glass', new THREE.MeshStandardMaterial({ color: 0x2a4a5a, roughness: 0.05, metalness: 0.2, transparent: true, opacity: 0.55, emissive: 0x0a1418 })); return M.get('glass'); };
+// optic glass: coated, a faint blue-green tint, and you can see through it (the first-person view
+// looks down the tube; dark 55% glass blacked the target out)
+const GLASS = () => { if (!M.has('glass')) M.set('glass', new THREE.MeshStandardMaterial({ color: 0x9cc8d8, roughness: 0.02, metalness: 0.1, transparent: true, opacity: 0.14, depthWrite: false })); return M.get('glass'); };
+// the inside of an optic's tube is drawn too (you look down it when aiming)
+const TUBE = () => { if (!M.has('tube')) M.set('tube', new THREE.MeshStandardMaterial({ color: 0x111113, roughness: 0.5, metalness: 0.5, side: THREE.DoubleSide })); return M.get('tube'); };
 const DOT = () => { if (!M.has('dot')) M.set('dot', new THREE.MeshBasicMaterial({ color: 0xff2a1a })); return M.get('dot'); };
 
 function hash(s) { let h = 2166136261; for (const c of s) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return h >>> 0; }
 function rng(seed) { let s = seed >>> 0 || 1; return () => ((s = (Math.imul(s, 1664525) + 1013904223) >>> 0) / 4294967296); }
 
 // parts, built along +Z from z = 0
-const tubeZ = (r, len, m, seg = 16, r2 = r) => { const g = new THREE.CylinderGeometry(r2, r, len, seg); g.rotateX(Math.PI / 2); g.translate(0, 0, len / 2); return new THREE.Mesh(g, m); };
+const tubeZ = (r, len, m, seg = 16, r2 = r, open = false) => { const g = new THREE.CylinderGeometry(r2, r, len, seg, 1, open); g.rotateX(Math.PI / 2); g.translate(0, 0, len / 2); return new THREE.Mesh(g, m); };
 const box = (x, y, z, m) => new THREE.Mesh(new THREE.BoxGeometry(x, y, z), m);
 const put = (parent, mesh, x, y, z, rx = 0, ry = 0, rz = 0) => { mesh.position.set(x, y, z); mesh.rotation.set(rx, ry, rz); parent.add(mesh); return mesh; };
 
@@ -31,12 +35,12 @@ function optic(kind, power = 4) {
   let eye = 0.03; // height of the sight line above the mount base
   if (kind === 'reddot') {
     put(g, box(0.026, 0.012, 0.032, BLACK()), 0, 0.006, 0.02);
-    put(g, tubeZ(0.017, 0.062, BLACK(), 20), 0, 0.03, -0.01);
-    put(g, tubeZ(0.0175, 0.004, mat(0x202022, 0.4, 0.7), 20), 0, 0.03, 0.05);
+    put(g, tubeZ(0.017, 0.062, TUBE(), 20, 0.017, true), 0, 0.03, -0.01);
+    put(g, tubeZ(0.0175, 0.004, TUBE(), 20, 0.0175, true), 0, 0.03, 0.05);
     put(g, new THREE.Mesh(new THREE.CircleGeometry(0.014, 18), GLASS()), 0, 0.03, 0.051);
     put(g, new THREE.Mesh(new THREE.SphereGeometry(0.0012, 6, 4), DOT()), 0, 0.03, 0.0);
     put(g, new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.012, 10), BLACK()), 0, 0.047, 0.02); // turret
-    eye = 0.03;
+    eye = 0.03; g.userData.back = 0.041 + 0.2; // eye relief: the eye sits ~20 cm behind the tube (the ring stays a slim frame)
   } else if (kind === 'holo') {
     put(g, box(0.034, 0.014, 0.085, BLACK()), 0, 0.007, 0.02);
     for (const s of [-1, 1]) put(g, box(0.004, 0.034, 0.05, BLACK()), s * 0.016, 0.031, 0.04);
@@ -45,7 +49,7 @@ function optic(kind, power = 4) {
     put(g, box(0.028, 0.028, 0.002, GLASS()), 0, 0.032, 0.02);
     put(g, new THREE.Mesh(new THREE.SphereGeometry(0.0013, 6, 4), DOT()), 0, 0.032, 0.03);
     put(g, box(0.02, 0.012, 0.02, BLACK()), 0.022, 0.02, -0.005); // battery cap
-    eye = 0.032;
+    eye = 0.032; g.userData.back = 0.023 + 0.2;
   } else if (kind === 'micro') { // pistol slide dot
     put(g, box(0.024, 0.006, 0.038, BLACK()), 0, 0.003, 0);
     put(g, box(0.024, 0.02, 0.006, BLACK()), 0, 0.012, 0.016);
@@ -54,14 +58,14 @@ function optic(kind, power = 4) {
     eye = 0.013;
   } else { // variable scope on rings
     const L = 0.2 + Math.min(power, 12) * 0.012;
-    put(g, tubeZ(0.0135, L, BLACK(), 20), 0, 0.045, -L * 0.45);
-    put(g, tubeZ(0.0135, 0.06, BLACK(), 20, 0.024), 0, 0.045, L * 0.55 - 0.06); // objective bell
-    put(g, tubeZ(0.02, 0.055, BLACK(), 20, 0.0135), 0, 0.045, -L * 0.45 - 0.055); // eyepiece
+    put(g, tubeZ(0.0135, L, TUBE(), 20, 0.0135, true), 0, 0.045, -L * 0.45);
+    put(g, tubeZ(0.0135, 0.06, TUBE(), 20, 0.024, true), 0, 0.045, L * 0.55 - 0.06); // objective bell
+    put(g, tubeZ(0.02, 0.055, TUBE(), 20, 0.0135, true), 0, 0.045, -L * 0.45 - 0.055); // eyepiece
     put(g, new THREE.Mesh(new THREE.CircleGeometry(0.022, 20), GLASS()), 0, 0.045, L * 0.55 + 0.001);
     put(g, new THREE.Mesh(new THREE.CylinderGeometry(0.009, 0.009, 0.018, 12), BLACK()), 0, 0.065, 0.0);
     put(g, new THREE.Mesh(new THREE.CylinderGeometry(0.009, 0.009, 0.018, 12), BLACK()), -0.022, 0.045, 0.0, 0, 0, Math.PI / 2);
     for (const z of [-L * 0.3, L * 0.25]) { put(g, tubeZ(0.017, 0.012, BLACK(), 16), 0, 0.045, z); put(g, box(0.02, 0.03, 0.014, BLACK()), 0, 0.017, z + 0.006); }
-    eye = 0.045;
+    eye = 0.045; g.userData.back = L * 0.45 + 0.055 + 0.085; // a scope's eye relief: ~8.5 cm behind the eyepiece
   }
   g.userData.eye = eye;
   return g;
@@ -173,6 +177,7 @@ export function dressGun(g, w, G) {
     P.add(o);
     H.sight = base.clone().add(new THREE.Vector3(0, o.userData.eye, 0));
     H.optic = f.optic;
+    if (o.userData.back) H.eyeBack = o.userData.back; // how far behind the sight point the eye goes when aiming
   } else if (f.irons && !pistol) { const ir = irons(H.len); ir.position.copy(at(0.42, 1)); P.add(ir); }
   // muzzle device in line with the bore; the flash moves to its end
   if (f.muzzle && g.userData.muzzle) {

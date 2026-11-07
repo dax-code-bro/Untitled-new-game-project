@@ -140,6 +140,21 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 - [x] Loading screen with in-game art, tips and progress
 - [x] Fewer touch buttons: ◎ interact replaces the car button; map, phone, arsenal, free cam moved to pause
 
+## Phase 1.52 — Holding guns, first and third person, and a looser run
+
+The owner: first person is the main fix; holding guns and the run looked wrong ("too robotic, the
+shoulders come back way too far").
+- [x] First person, not aiming: rifles and shotguns carried at the hip in the lower right of the
+      view, pistols at a low ready in the bottom of the view (before, nothing was in sight)
+- [x] Optics you can see through: open tubes with clear glass and proper eye relief (a red dot
+      is a slim ring with the dot in it; it was a solid black disc filling the screen)
+- [x] First-person pistol aim out at arm's length, as far as both hands can reach the grip
+- [x] Reloads and weapon checks stay in view in first person
+- [x] Third person: drawn pistols held at a two-handed low ready in front of the belly, muzzle down
+      (the idle clip held the gun up beside the face); NPCs with pistols too
+- [x] The run: the shoulders and upper arms are drawn toward their average pose every frame, so the
+      swing is smaller and the shoulders no longer yank back on each stride (jog and sprint, everyone)
+
 ## Phase 1.51 — Is the game on the graphics card?
 
 The owner has an RTX 5090, but the game crawled: the readout said "Intel(R) Graphics". Windows and
