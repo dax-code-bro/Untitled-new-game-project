@@ -1,7 +1,7 @@
 // SOUTHBOUND — boot, world build, game loop.
 import * as THREE from 'three';
 import { scanGround } from './core/substrate.js';
-import { loadSettings, saveSettings, resolveQuality, PRESETS, detectGPU, SOFTWARE_HINT, probeGPU, IDLE_CARD_HINT, presetOverReach } from './settings.js';
+import { loadSettings, saveSettings, resolveQuality, PRESETS, detectGPU, SOFTWARE_HINT, probeGPU, presetOverReach, DEDICATED_CHOICES, GPU_CHOICES, gpuFixBox, gpuShortName } from './settings.js';
 import { installImperfections } from './core/imperfect.js';
 import { installCloudShadows, setCloudShadowBoost } from './core/cloudshadow.js';
 import { createDynamicLighting } from './core/gi.js';
@@ -1227,10 +1227,30 @@ vec3 CustomToneMapping( vec3 color ) {
   const guard = { level: 0, low: 0, next: performance.now() + 12000 };
   // a third line on the FPS readout that says where the time goes: the game's code (CPU) or
   // drawing (GPU), and which graphics device the browser is actually using
-  const GPU_NAME = (() => { try { const g = detectGPU(); return (g.name || '?').replace(/^ANGLE \(|\)$/g, '').replace(/Direct3D.*$|vs_.*$|\(0x[0-9A-F]+\)/gi, '').replace(/\s+/g, ' ').trim().slice(0, 56); } catch (e) { return '?'; } })();
+  const GPU_NAME = (() => { try { return gpuShortName(detectGPU().name) + (GPU_INFO.integrated ? ' (built-in graphics)' : ''); } catch (e) { return '?'; } })();
   // what WebGPU says the fastest card is (shown when it isn't the one drawing the game)
   let CARD = null;
-  probeGPU().then((p) => { if (p.idleCard) { CARD = p.card; hud.toast(IDLE_CARD_HINT(p.card), 12); } });
+  // on the built-in graphics while a gaming card sits idle (picked from the start screen's list, or
+  // seen by WebGPU): a panel that stays until it's read, with how to fix it (not a toast that's gone
+  // before anyone reads it). Once a session
+  const showGpuFix = () => {
+    if (AUTOMATED || !GPU_INFO.integrated || GPU_INFO.software) return;
+    try { if (sessionStorage.getItem('sb.gpufix')) return; sessionStorage.setItem('sb.gpufix', '1'); } catch (e) { /* */ }
+    const choice = GPU_CHOICES.find((g) => g.id === settings.gpuChoice);
+    const box = gpuFixBox(DEDICATED_CHOICES.has(settings.gpuChoice) ? choice.label.split('·')[0].split('/')[0].trim() + '-class card' : null, gpuShortName(GPU_INFO.name), CARD);
+    box.style.cssText += ';position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:9999;width:min(680px,calc(100vw - 32px));max-height:calc(100vh - 24px);overflow:auto;background:rgba(40,10,6,0.94);box-shadow:0 8px 30px rgba(0,0,0,0.6)';
+    const tip = document.createElement('div');
+    tip.style.cssText = 'margin-top:8px;color:#ffd0bf';
+    tip.textContent = 'Until then the game drops its settings to keep moving. Once the browser is on the graphics card, pick your card again on the start screen.';
+    const ok = document.createElement('button');
+    ok.textContent = 'Got it';
+    ok.style.cssText = 'margin-top:10px;padding:7px 18px;border-radius:7px;border:0;background:#ff8a5c;color:#200;font-weight:700;cursor:pointer';
+    ok.onclick = () => box.remove();
+    box.append(tip, ok);
+    document.body.appendChild(box);
+  };
+  if (DEDICATED_CHOICES.has(settings.gpuChoice)) setTimeout(showGpuFix, 2500);
+  probeGPU().then((p) => { if (p.idleCard) { CARD = p.card; showGpuFix(); } });
   function diagLine() {
     const frameMs = 1000 / Math.max(S.fps, 0.1), cpu = S.cpuMs || 0;
     const where = SOFTWARE ? 'NO GPU: software rendering' : frameMs > cpu * 2.2 + 8 ? 'GPU-bound' : 'CPU-bound';

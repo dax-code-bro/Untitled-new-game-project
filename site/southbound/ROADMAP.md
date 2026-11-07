@@ -140,6 +140,18 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 - [x] Loading screen with in-game art, tips and progress
 - [x] Fewer touch buttons: ◎ interact replaces the car button; map, phone, arsenal, free cam moved to pause
 
+## Phase 1.51 — Is the game on the graphics card?
+
+The owner has an RTX 5090, but the game crawled: the readout said "Intel(R) Graphics". Windows and
+the browser had put the game on the processor's built-in graphics and left the card idle.
+- [x] The start screen says so the moment a gaming card is picked from the list (or WebGPU can see
+      one) while the browser is on built-in graphics, with the steps to fix it: Windows graphics
+      settings, Chrome / Edge's "Force High-Performance GPU", NVIDIA Control Panel, a laptop's GPU
+      mode and charger, the monitor cable on a desktop, how to check (chrome://gpu)
+- [x] In the game, the same as a panel that stays until it's read (it used to be a 12-second toast)
+- [x] The FPS readout says "(built-in graphics)" after the name when that's what it's drawing on
+- The Windows desktop app already forces the graphics card (`force_high_performance_gpu`)
+
 ## Phase 1.50 — Lived-in streets and the coast (graphics milestone G11)
 
 The owner: "it still does not look like GTA 6". A survey of street, downtown, beach and night
