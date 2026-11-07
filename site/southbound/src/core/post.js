@@ -59,6 +59,11 @@ export function createPost(renderer, scene, camera, quality) {
       aoRadius: 1.8, distanceFalloff: 1.0, intensity: high ? 1.6 : 1.3, color: new THREE.Color(0, 0, 0),
       halfRes: !top, aoSamples: quality.cine ? 24 : top ? 16 : 8, denoiseSamples: quality.cine ? 12 : 8,
     });
+    // N8AO looked for see-through materials by walking the whole scene every frame, and when it
+    // found any (it always did: glass, decals, water) drew them twice more on their own, walking
+    // the scene four more times (~570 extra draw calls and 140k object visits a frame). The AO on
+    // glass that this guarded against isn't visible in this game, so it's off.
+    ao.autoDetectTransparency = false; ao.configuration.transparencyAware = false;
     composer.addPass(ao);
   }
 

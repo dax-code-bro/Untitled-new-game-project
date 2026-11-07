@@ -140,6 +140,42 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 - [x] Loading screen with in-game art, tips and progress
 - [x] Fewer touch buttons: ◎ interact replaces the car button; map, phone, arsenal, free cam moved to pause
 
+## Phase 1.57 — Performance: distance detail, fewer draw calls, connection-aware loading (O1-O5)
+
+The owner (on a 5090): lag and freezes; asked for quality that drops with distance, a lower render
+when needed, and loading that suits the Wi-Fi. A profile on High found the game's own code cheap
+(~3 ms a frame) and the drawing heavy: 2,000-3,650 draw calls a frame (in a browser every draw call
+costs CPU time, however fast the card), plus whole-scene walks that caused regular stalls.
+- [x] `core/detail.js`, distance detail: far cars lose pedals, brake parts and other small pieces,
+      then wipers, discs and badges, then anything under a metre (tyres stay); their insides go once
+      the glass hides them; small parts stop casting shadows at ~55 m and the body at ~120 m (the
+      contact patch underneath stays). People cast shadows within ~45 m. Camps and settlements built
+      of many pieces lose small pieces at ~120 m, shadows at ~90 m, everything at ~650 m. Lights and
+      glows are never thinned. Distances scale with the preset. Done with camera layer 0, so it never
+      fights the game's own showing and hiding; hits don't use layers
+- [x] Adaptive quality knows where the time goes: GPU-bound, it lowers the render resolution as
+      before; CPU-bound, it shortens the detail distances instead (down to 45%), since a blurrier
+      picture wouldn't help; both come back when there's headroom
+- [x] The AO pass no longer walks the whole scene every frame looking for see-through materials
+      and draws them twice more (~570 draw calls and five 28k-object walks a frame)
+- [x] Whole-scene walks spread over frames: the model LOD sweep (5-13 ms every 1.5 s), the wear
+      scanner (5-20 ms every 2.5 s); the water mirror's hide-list is found every 2 s, not every frame;
+      the light capture tags its layer every 4th capture and no closer than 1.5 s apart while driving
+- [x] Townsfolk step out one per frame (three at once was a 10-15 ms stall)
+- [x] Result on High: Mill Creek 3,650 -> ~1,000 draw calls, downtown 1,780 -> ~730; worst stall in
+      the profile 43 ms -> 27 ms (and the one-off 5.4 s stall in the first capture gone from the
+      sample); the QA suite runs ~20% faster
+- [x] `core/net.js`, connection-aware loading: the game's own download time (and the browser's
+      hints) picks a tier. Slow (< ~6 Mbit/s, data saver, 2G/3G): starts without the subtlest texture
+      maps (AO, height, metal) and with fewer townsfolk models, then downloads them in the background
+      for next time. Fast: once you've played 20 s, the 208 models fetched on first use (shops' guns,
+      animals, furniture) are downloaded ahead, two at a time, low priority. `?net=slow|medium|fast`
+      forces a tier. (Once loaded the game uses no network: the connection can't cause in-game lag)
+- [x] FPS readout (Settings > Show FPS): resolution %, detail %, far parts and shadows thinned out,
+      connection tier
+- [ ] Not done: merging each far car into one mesh (would cut cars to ~5 draw calls each), GPU
+      instancing of people, a true occlusion pass (buildings hiding what's behind them)
+
 ## Phase 1.56 — Lived-in streets, grounded buildings, contact shadows, mist (graphics milestone G12)
 
 The owner: layered PBR and lighting, environmental clutter ("remove the empty, clean look"), foliage

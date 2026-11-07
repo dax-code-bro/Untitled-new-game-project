@@ -42,7 +42,16 @@ function flat(r, g, b, srgb) {
 }
 const DEFAULTS = { color: [128, 128, 128, true], normal: [128, 128, 255], rough: [230, 230, 230], ao: [255, 255, 255], metal: [0, 0, 0], emit: [0, 0, 0, true], height: [128, 128, 128] };
 
-export async function loadSurfaces(renderer, quality, progress = () => {}) {
+// the files a slow connection leaves for later (core/net.js), to download in the background
+export const LATER_MAPS = ['ao', 'height', 'metal'];
+export function laterTextureUrls() {
+  const out = [];
+  for (const s of Object.values(SURF)) for (const k of s.maps) if (LATER_MAPS.includes(k)) out.push(`assets/textures/${s.name}_${k}.ktx2`);
+  return out;
+}
+
+// `skip`: map kinds left out this time (a slow connection starts without the subtlest ones)
+export async function loadSurfaces(renderer, quality, progress = () => {}, { skip = [] } = {}) {
   const lite = quality.label === 'Phone';
   const loader = new KTX2Loader().setTranscoderPath('vendor/three/addons/libs/basis/').detectSupport(renderer);
   const out = {};
@@ -52,6 +61,7 @@ export async function loadSurfaces(renderer, quality, progress = () => {}) {
     for (const k of Object.keys(DEFAULTS)) out[key][k] = flat(...DEFAULTS[k]);
     for (const k of s.maps) {
       if (lite && k !== 'color' && k !== 'emit') continue;
+      if (skip.includes(k)) continue;
       jobs.push([key, s.name, k]);
     }
   }

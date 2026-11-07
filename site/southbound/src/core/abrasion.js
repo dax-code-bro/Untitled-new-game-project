@@ -116,7 +116,7 @@ const isStd = (m) => m && m.isMeshStandardMaterial && !(m.alphaTest > 0) && !m.w
 export function createAbrasion(scene, quality) {
   const on = !(quality.label === 'Phone' || quality.label === 'Low');
   const seen = new WeakSet(), baked = new Map(), queue = [];
-  let sweepT = 0;
+  let sweepI = 0; const found = [];
   const _p = new THREE.Vector3();
   const stats = { meshes: 0, geometries: 0, skipped: 0, ms: 0, maxMs: 0 };
 
@@ -172,11 +172,17 @@ export function createAbrasion(scene, quality) {
     },
     update(dt, cam) {
       if (!on) return;
-      if ((sweepT -= dt) <= 0) {
-        sweepT = 2.5;
-        // what's near enough to see wear on, nearest first
-        const found = [];
-        scene.traverseVisible((o) => {
+      // what's near enough to see wear on, nearest first: a few top-level objects a frame (walking
+      // the whole visible scene every 2.5 s, ~25k objects, was a 5-20 ms hitch)
+      const kids = scene.children, per = Math.max(6, Math.ceil(kids.length / 120));
+      for (let k = 0; k < per && kids.length; k++) {
+        if (sweepI >= kids.length) {
+          sweepI = 0;
+          found.sort((x, y) => x[0] - y[0]);
+          for (const [, o] of found) queue.push(o);
+          found.length = 0;
+        }
+        kids[sweepI++].traverseVisible((o) => {
           if (seen.has(o) || !o.isMesh) return;
           if (o.isInstancedMesh) { if (eligible(o)) found.push([0, o]); seen.add(o); return; }
           _p.setFromMatrixPosition(o.matrixWorld);
@@ -186,8 +192,6 @@ export function createAbrasion(scene, quality) {
           seen.add(o);
           if (eligible(o)) found.push([d, o]);
         });
-        found.sort((x, y) => x[0] - y[0]);
-        for (const [, o] of found) queue.push(o);
       }
       const t0 = performance.now();
       while (queue.length && performance.now() - t0 < 2.5) { const t1 = performance.now(); apply(queue.shift()); stats.maxMs = Math.max(stats.maxMs, performance.now() - t1); }

@@ -46,6 +46,13 @@ the fewest additions next. Be honest in reports about what is and isn't done.
   vegetation, sky, weather, roads, buildings, yards (front yards: planned before the trees, built
   after them), palms (cabbage palms + saw palmettos), contact (contact shadows at building feet),
   streetclutter (signs, drains, litter, weeds), shoulders (road shoulders, building footings).
+- `src/core/detail.js`: distance detail (far cars' small parts/insides/shadows, people's shadows, far
+  camps) via camera layer 0; `setPressure` shrinks it when CPU-bound. `src/core/net.js`: connection
+  tier (slow/medium/fast, `?net=` forces) and background downloads. Profile scripts that found the
+  costs: `tools/southbound/perf-cpu.mjs` (per-system ms) and `perf-draws.mjs` (draw calls by pass and kind).
+- Performance rules learned: count draw calls, not triangles (WebGL pays CPU per call); never walk
+  the whole scene (28k objects) in one frame, spread it over frames; three r170's
+  `matrixWorldAutoUpdate=false` does not skip children (no gain from freezing hidden roots).
 - `ROADMAP.md`: newest phases at the top (Phase 1.41 is the latest at the time of writing).
 - Build: `node tools/southbound/build.mjs` (from the repo root) bundles to `site/southbound/game.js`
   (commit the bundle). Two N8AO "duplicate key" warnings are normal.
@@ -53,7 +60,7 @@ the fewest additions next. Be honest in reports about what is and isn't done.
 ## Testing
 
 - Full QA: `node tools/southbound/qa.mjs low` (from the repo root): ~3-6 min, must be
-  `684 passed, 0 failed ... no console errors` (the count grows as tests are added).
+  `705 passed, 0 failed ... no console errors` (the count grows as tests are added).
 - Feature/screenshot tests: Playwright + SwiftShader scripts in the session scratchpad
   (copy the header of an existing one). Use `SB.freeze(true); SB.skipRender(true)`, step with
   `SB.step(n, 1/30)`, render only for the shot (`SB.skipRender(false); SB.renderNow()`), then

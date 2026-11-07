@@ -117,12 +117,13 @@ function tunePerson(scene) {
   });
 }
 
-export async function loadLibrary(quality, progress = () => {}) {
+// `lite`: the smaller set of townsfolk (a slow connection; the rest download in the background)
+export async function loadLibrary(quality, progress = () => {}, { lite = false } = {}) {
   await lodReady;
   setBodyShadeQuality(quality); // skin, hair, eyes and cloth lighting (entities/bodyshade.js)
   const loader = withKTX2(new GLTFLoader()); // people's textures are GPU-compressed (KTX2)
   const base = 'assets/';
-  const people = quality.label === 'Phone' || quality.label === 'Low' ? PEOPLE_LITE : PEOPLE_ALL;
+  const people = lite || quality.label === 'Phone' || quality.label === 'Low' ? PEOPLE_LITE : PEOPLE_ALL;
   const carIds = BASE_CAR_IDS;
   const total = people.length + carIds.length + 1;
   let done = 0;

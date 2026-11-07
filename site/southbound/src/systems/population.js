@@ -41,6 +41,7 @@ export function installPopulation(game) {
 
   const out = new Map(); // resident id -> ped
   let scanT = 0, newT = 0;
+  const pending = []; // residents about to step out, made one a frame
 
   // ---- a resident on the pavement
   const realize = (r, pos) => {
@@ -173,6 +174,9 @@ export function installPopulation(game) {
         }
       }
       if (S.indoors) return '';
+      // one new person a frame: building one (a copy of a skinned model) takes a few ms, and three
+      // in the same frame was a 10-15 ms stall
+      if (pending.length) { const [r, pos] = pending.shift(); if (r.alive && !out.has(r.id)) realize(r, pos); }
       if ((scanT -= dt) <= 0) {
         scanT = 0.5;
         const fx = player.pos.x, fz = player.pos.z, day = game.sky.day, hour = game.sky.hour;
@@ -188,7 +192,7 @@ export function installPopulation(game) {
           if (!pos || pos.indoors || added >= Math.min(3, room)) continue;
           const d = Math.hypot(pos.x - fx, pos.z - fz);
           if (d > NEAR || d < 35) continue; // (never pop into existence right next to you)
-          if (realize(r, pos)) added++;
+          if (!pending.some(([q]) => q === r)) { pending.push([r, pos]); added++; }
         }
         // friends who meet stop for a word
         for (const p of out.values()) {

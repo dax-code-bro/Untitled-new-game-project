@@ -49,6 +49,7 @@ export class Vehicle {
     this.type = type;
     const v = VEHICLES[type] || VEHICLES.sedan;
     this.group = new THREE.Group();
+    this.group.userData.vehicle = true; // core/detail.js thins out far vehicles' small parts
     this.body = new THREE.Group();
     this.group.add(this.body);
     if (!lib.cars[type]) { if (hasSpec(type)) lib.cars[type] = buildCar(type, lib.quality); else type = 'sedan-sports'; } // catalog models: built on first use
