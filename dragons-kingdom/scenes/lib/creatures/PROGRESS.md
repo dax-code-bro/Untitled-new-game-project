@@ -4,6 +4,15 @@ Owner paths: `scenes/lib/creatures/`, `scenes/lookdev/creatures-*.js` (+ creatur
 README.md in this folder is the full description of how the models are built; this file is
 only the state of the work.
 
+## REQUEST from director s29 (2026-11-07) - F4 near wing off the hip
+The s14 leg tuck worked (hl_L hip (635,314), knee (643,347), ankle (629,366) at CAMS 100, all above her forearm), but the
+leg still does not read: it sits inside the hatchling's own crumpled near-wing panels (screen x 560-700, y 280-370) and at
+the sleeve's top edge. CAMS 104 was tried and is worse (the forearm rises on screen). Please do your s14 NEXT 1: fold the
+near (L) wing up and forward off the hip band (per-side `armSide` in lie() sprawl, sprawlHum.L y 0.6 -> 0.9, or the
+membrane ending above the knee), so a gold haunch + shin shows above her sleeve. Check with
+`node render/render.mjs --still scenes/lookdev/style-f4-birthing-chamber.js --time 2 --preset draft --png out.png` and
+the `[f4] screen` log. Director images: scratch eng1/dir29/f4_after.png, f4_t104.png.
+
 ## REALISM ROUND 2 - session 14 (2026-11-07, short budgeted session: F4 hatchling near hind leg - director s28 REQUEST)
 Stills (draft, t=2, CAMS 100) under `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/cr14/`:
 `f4_before.png` (s13 code), `f4_v1.png`, `f4_v2.png` (= `f4_after.png`, adopted), `f4_v3.png`, crops `v2_crop.png` /

@@ -142,10 +142,17 @@ export default {
       // the s24 lens (bearing 12) the pair sat on / past the right edge (previs x 0.87-1.1), so the lens turns 7 deg
       // right about the camera (bearing 19) and the farmer + her facing turn with it (same screen spot, same back
       // three-quarter): Charcoal x ~0.6 -> 0.5, Leaf ~0.75 -> 0.65. NO phase / tOffset (sound: beats unchanged).
+      // s29 (X4-06 video 11-06 showed "no hoe, no lean"): NOT a wiring bug - a debug log in the stage at 0.6 found the
+      // gesture overlay 'tool' (w 1, prop 'hoe', stance 'R'), posture lean 0.6, the performance 'gesture' hook registered,
+      // the hoe in the scene (base 0.59 m ahead of her root, hands on its top). A red-painted hoe showed WHY it did not
+      // read: from the lens (her facing 44 deg off the lens ray) the shaft ran exactly behind her skirt's left edge, only
+      // the blade tip showed by her feet. Now she faces bearing -51 (was -33: 62 deg off the lens ray, still back
+      // three-quarter, face away) and the hoe stands 0.7 m ahead (gesture ahead 0.6 -> 0.7): the shaft clears her
+      // silhouette on the left and the forward lean onto it reads in near-profile.
       cam: { rig: 'static', pos: [141, 26.8, 1856], look: [189.8, 21.6, 1714.2], mm: 35, fstop: 5.6, focus: 'farmer.head' },
       set: { shadowAt: [170, 25, 1760], shadowExtent: 160 },
       cast: {
-        farmer: { at: [143.1, 1845.2], face: [113.1, 1799.1], acts: [[0, 'lean', { to: 0.6, dur: 0.01 }], [0, 'gesture', { name: 'tool', prop: 'hoe', stance: 'R' }], [0.5, 'look', { at: 'leaf.chest', amount: 0.7 }]] },
+        farmer: { at: [143.1, 1845.2], face: [100.4, 1810.6], acts: [[0, 'lean', { to: 0.6, dur: 0.01 }], [0, 'gesture', { name: 'tool', prop: 'hoe', stance: 'R', ahead: 0.7 }], [0.5, 'look', { at: 'leaf.chest', amount: 0.7 }]] },
         leaf: { tack: true, root: [[0, [334.4, 40, 1563.7]], [3, [296.4, 40, 1603.7], 'linear']], yawKeys: 224, acts: LEAF_FLY() },
         charcoal: { tack: true, root: [[0, [300, 41, 1600]], [3, [262, 41, 1640], 'linear']], yawKeys: 224, acts: CHAR_FLY() },
         abbyR: {}, remiR: {},
