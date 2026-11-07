@@ -140,6 +140,29 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 - [x] Loading screen with in-game art, tips and progress
 - [x] Fewer touch buttons: ◎ interact replaces the car button; map, phone, arsenal, free cam moved to pause
 
+## Phase 1.55 — Every tool its own model
+
+The owner: "most of the items were just different colors or slightly different versions of other
+models, and the tools don't look unique at all". An audit found 244 tools drawn with only 124
+different shapes (twelve products, from bandages to a caulk gun, were the same bottle; the jigsaw
+was drawn as a fishing lure; the branding iron as a shovel).
+- [x] `entities/toolunique.js`: 120 tools get a model of their own, so all 244 are now different
+      shapes (checked by an automated geometry audit)
+- [x] Rods: spinning (open-face reel under the rod, bail, big first guide), baitcast (low-profile
+      reel on top, trigger grip), fly (large-arbor reel at the butt, snake guides), surf (3.4 m,
+      long two-hand grip, big reel), deep-sea (short and heavy, roller guides, trolling reel,
+      gimbal butt); Basic / Pro / Elite each their own blank, grip, reel seat and fittings
+- [x] The rest: scent dropper and spray, filler tin with spreader, aerosol, sunscreen tube, caulk
+      gun, bandage roll, pill bottle, gel tube, drink can, gauze pouch, auto-injector, tackle box
+      with trays, gun cleaning case, rolling repair case, belt and tensioner, nested mess kit,
+      cantilever toolbox, lures by type, multimeter with probes, oscilloscope, scanner, CB radio
+      with mic, crank weather radio, knives by blade shape, IFAK, SAM splint, tourniquet, tile
+      cutter, rebar bender, lockpick wallet, bait cup / aerated bucket / minnow bucket / cricket
+      tube, grease gun, brake bleeder, timing light, paint gun, nail gun, ghillie strands, plate
+      carriers by level, dome tent, hub blind, welder, two different phones...
+- [ ] Cars (93 from ~11 base bodies) and guns (233 on 20 base models) are still variants of a
+      smaller set of shapes: needs new models (see FEATURES backlog)
+
 ## Phase 1.54 — The crew defends the hill; police fight from cover
 
 - [x] Lead armed enemies (raiders, a mission's gunmen, a rival crew, armed civilians, or the police
