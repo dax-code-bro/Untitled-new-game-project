@@ -48,8 +48,11 @@ export function installKerbside(game) {
   // not across an intersection, a driveway or a hydrant
   const slots = [];
   const grid = new Map();
+  const aprons = (game.yards?.drives || []).map((d) => d.apron).filter(Boolean);
   for (const e of graph.edges) {
-    if (e.kind === 'highway' || e.width < 14) continue;
+    // city streets, and (G12) Mill Creek's: cars along both kerbs, never across a driveway
+    const town = e.a[0] === 't' && e.b[0] === 't';
+    if (e.kind === 'highway' || (e.width < 14 && !town)) continue;
     const P = e.pts;
     let acc = 0, total = 0;
     for (let k = 1; k < P.length; k++) total += Math.hypot(P[k][0] - P[k - 1][0], P[k][1] - P[k - 1][1]);
@@ -62,11 +65,12 @@ export function installKerbside(game) {
         // keep clear of both ends of the edge (the intersections and their crossings)
         if (s < 16 || s > total - 16) continue;
         for (const side of [-1, 1]) {
-          const off = e.width / 2 - 1.4;
+          const off = e.width / 2 - (town ? 1.2 : 1.4);
           const x = x0 - tz * off * side, z = z0 + tx * off * side;
           let clear = true;
           collision.query(x, z, 4, (it) => { if (clear && it.t === 0 && !it.data?.walkable && x > it.minX - 1.4 && x < it.maxX + 1.4 && z > it.minZ - 1.4 && z < it.maxZ + 1.4) clear = false; });
           if (!clear) continue;
+          if (town && aprons.some(([ax, az]) => Math.hypot(ax - x, az - z) < 3.6)) continue; // a driveway
           const hr = mulberry32(Math.floor(x * 7.13) * 92821 + Math.floor(z * 3.71) * 68917);
           const h = hr(), h2 = hr();
           // on the pavement beside the stall: a hydrant now and then (no parking in front of it),

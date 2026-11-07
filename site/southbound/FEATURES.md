@@ -59,9 +59,14 @@ legendary animals and fish, poaching, property market, burglaries, food spoilage
 ground, boat wakes, rain soak, crew jobs, hideout raids, 12 side jobs, flight school, laundromats,
 dirty/bloody clothes, dust (G9: cars, feet, aircraft, dust devils), gravel county roads and live
 oaks (G10), front yards with driveways and parked cars, town utility poles with service wires,
-cabbage palms on the coast (G11): about 35 of the 30+ asked for.
+cabbage palms on the coast (G11); G12 street clutter (stop signs and street-name blades at every
+crossing, manholes, storm drains with kerb inlets, litter piles and oil stains, kerb weeds,
+Mill Creek hydrants and corner bins, parked cars along town streets), contact shadows under every car
+and round every building's foot, gravel and dirt road shoulders, bare-soil footings round houses,
+saw palmetto clumps, and low ground mist at dawn, dusk and night: about 45 of the 30+ asked for.
 
-(P1-P4: the owner's list after G11. P1 first-person/third-person gun holding and the run; P2 safe-only
+(G12: the owner's "lived-in streets, ground blending, lighting" list, see ROADMAP Phase 1.56.
+P1-P4: the owner's list after G11. P1 first-person/third-person gun holding and the run; P2 safe-only
 saves, arriving mid-activity, $50,000 start, dealership "Your cars"; P3 hideout defence, police cover
 and peeking; P4 unique models for all 244 tools.)
 

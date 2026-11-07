@@ -88,6 +88,15 @@ export function createSky(renderer, scene, quality) {
       fogParams.b.y = lerp(0.92, 0.72, low) * (elev > -0.05 ? 1 : 0.3);
       fogParams.b.z = lerp(0.78, 0.42, low) * (elev > -0.05 ? 1 : 0.45);
       fogParams.b.w = elev > -0.05 ? lerp(0.35, 0.95, low) : 0.25;
+      // ground mist: thickest in the hour round sunrise, again at dusk and through the night, burnt
+      // off by mid-morning; heavier in damp weather (G12)
+      {
+        const W0 = state.weather || { cover: 0.5, rain: 0 };
+        const dawn = 1 - Math.min(1, Math.abs(h - 6.6) / 2.2), dusk = 1 - Math.min(1, Math.abs(h - 19.6) / 2.4);
+        const night = state.night * 0.55;
+        const k = Math.max(dawn, dusk * 0.6, night) * (0.7 + (W0.rain || 0) * 0.6 + (W0.cover || 0) * 0.3);
+        fogParams.c.x = 0.016 * Math.max(0, k);
+      }
 
       // Sun / moon key light
       const moonDir = sunDir.clone().negate();

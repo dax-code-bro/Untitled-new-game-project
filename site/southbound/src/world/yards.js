@@ -257,6 +257,7 @@ export function buildYards(plan, { scene, hm, collision, quality: q, surf, power
   const stains = [];
   const lamps = [];
   const drives = [];        // car slots for kerbside.js
+  const weedSpots = [];     // world/streetclutter.js grows weeds here
   const m4 = new THREE.Matrix4(), qq = new THREE.Quaternion(), UP = new THREE.Vector3(0, 1, 0), v3 = new THREE.Vector3();
   const put = (key, make, x, y, z, ry, sx = 1, sy = 1, sz = 1) => {
     let p = pieces.get(key); if (!p) pieces.set(key, (p = { make, list: [] }));
@@ -289,6 +290,8 @@ export function buildYards(plan, { scene, hm, collision, quality: q, surf, power
       return yc;
     };
     counts.houses++;
+    // weeds where the walls meet the ground, at a couple of corners
+    for (const [cu, ct] of [[-flen / 2 - 0.15, 0.15], [flen / 2 + 0.15, -hd * 1.5]]) if (hash(b.x + cu, b.z + ct) < 0.6) weedSpots.push(P(cu, ct));
     // the front walk: porch steps (or the door) to the pavement
     const tw0 = porch ? pd + 0.75 : 0.55;
     if (tL - tw0 > 0.6) { strip(0, 1.2, tw0, tL + 0.02, 0.035, 0.3, 0.98); counts.walks++; }
@@ -303,7 +306,7 @@ export function buildYards(plan, { scene, hm, collision, quality: q, surf, power
       const [cx, cz] = P(uc, tc);
       const y = ground(cx, cz) + 0.04;
       const car = h3 < 0.6;
-      drives.push({ x: cx, z: cz, y, heading: Math.atan2(-N[0], -N[1]) + (h3 < 0.12 ? Math.PI : 0), car, seed: Math.floor(h3 * 1e6) });
+      drives.push({ x: cx, z: cz, y, heading: Math.atan2(-N[0], -N[1]) + (h3 < 0.12 ? Math.PI : 0), car, seed: Math.floor(h3 * 1e6), apron: P(uc, D - 0.3) });
       if (car || h3 < 0.75) stains.push([cx, y + 0.012, cz, hash(cx, cz) * 6.28, 1.1 + h2 * 0.6]);
       if (car) counts.cars++;
       // the mailbox at the kerb on the walk side of the driveway, wheelie bins against the side wall
@@ -371,6 +374,7 @@ export function buildYards(plan, { scene, hm, collision, quality: q, surf, power
         for (let i = 0; i < n; i++) {
           const u = a + i * sl, [x, z] = P(u, tf), [x1, z1] = P(u + sl, tf), [xm, zm] = P(u + sl / 2, tf);
           if (trunkNear(xm, zm, 0.55)) continue;
+          if (hash(x, z) < 0.45) weedSpots.push([x + (hash(z, x) - 0.5) * 0.3, z + (hash(x, 7) - 0.5) * 0.3]); // weeds at the posts
           // the section runs along +x in its own frame: turn it to run along the street
           const ry = alongX ? 0 : -Math.PI / 2;
           put(fc, () => picketGeo(fc === 'picketWhite' ? 0xf1efe8 : 0xe4dccb), x, Math.min(ground(x, z), ground(x1, z1)), z, ry, sl / 2, 1, 1);
@@ -476,6 +480,7 @@ export function buildYards(plan, { scene, hm, collision, quality: q, surf, power
   return {
     counts,
     drives,
+    weedSpots,
     meshes,
     lampK: () => (glassMat ? glassMat.emissiveIntensity : 0),
     // the lanterns come on at dusk (sky.night: 0 day .. 1 night)

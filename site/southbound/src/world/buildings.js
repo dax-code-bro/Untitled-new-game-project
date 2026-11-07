@@ -288,6 +288,9 @@ ${group === 'frame' ? `
     }
   }
   diffuseColor.rgb *= mix(1.0, sbAO, 0.8);
+  // contact occlusion (G12): the foot of every wall is darker where it meets the ground, the way sky
+  // light can't reach into the corner (the shadow map is far too coarse to draw it)
+  if (abs(normalize(vWNrm).y) < 0.5) diffuseColor.rgb *= mix(0.6, 1.0, smoothstep(-0.05, 0.75, vWPos.y - baseY));
 }`)
       .replace('#include <roughnessmap_fragment>', 'float roughnessFactor = mix(sbRough, sbRough * 0.6, uWet); diffuseColor.rgb *= 1.0 - uWet * 0.22;')
       .replace('#include <metalnessmap_fragment>', 'float metalnessFactor = sbMetal;')

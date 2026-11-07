@@ -44,7 +44,8 @@ the fewest additions next. Be honest in reports about what is and isn't done.
 - `src/entities/`: people, police, vehicles, combat, clothing, body shading.
 - `src/world/`: terrain, water, wakes, tracks, beams, grass (`grasscards.js` = real blade tufts),
   vegetation, sky, weather, roads, buildings, yards (front yards: planned before the trees, built
-  after them), palms (cabbage palms, built from scratch).
+  after them), palms (cabbage palms + saw palmettos), contact (contact shadows at building feet),
+  streetclutter (signs, drains, litter, weeds), shoulders (road shoulders, building footings).
 - `ROADMAP.md`: newest phases at the top (Phase 1.41 is the latest at the time of writing).
 - Build: `node tools/southbound/build.mjs` (from the repo root) bundles to `site/southbound/game.js`
   (commit the bundle). Two N8AO "duplicate key" warnings are normal.

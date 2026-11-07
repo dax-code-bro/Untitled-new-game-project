@@ -47,6 +47,9 @@ import { installStrays } from './systems/strays.js';
 import { createPowerLines } from './world/powerlines.js';
 import { planYards, buildYards } from './world/yards.js';
 import { createPalms } from './world/palms.js';
+import { buildContactShadows } from './world/contact.js';
+import { buildStreetClutter } from './world/streetclutter.js';
+import { buildShoulders, buildFootings } from './world/shoulders.js';
 import { createHoles } from './world/holes.js';
 import { installDemolition } from './systems/demolition.js';
 import { installWounds } from './systems/wounds.js';
@@ -213,6 +216,10 @@ vec3 CustomToneMapping( vec3 color ) {
   addSidewalkColliders(collision, parks);
   const yards = buildYards(yardPlan, { scene, hm, collision, quality: q, surf, power }); // walks, driveways, mailboxes, fences...
   const palms = createPalms(scene, { hm, collision, quality: q, cityBlocks: city.cityBlocks, graph }); // cabbage palms on the coast (G11)
+  buildContactShadows(city.buildings, { scene, hm, collision }); // dark ground along every wall's foot (G12)
+  const clutter = buildStreetClutter({ scene, graph, hm, collision, quality: q, yards }); // stop signs, street names, drains, litter, weeds (G12)
+  buildShoulders(graph, { scene, hm, surf, collision }); // gravel and dirt along the country roads' edges (G12)
+  buildFootings(city.buildings, { scene, hm, surf, collision }); // bare soil round the foot of houses on open ground (G12)
   veg.cover?.setLawns?.(city.buildings); // yards and lots round every building are mown
   veg.cover?.setParks?.(parks); // and no grass on the park paths
   progress(0.92, 'Lighting the sky');
@@ -396,7 +403,7 @@ vec3 CustomToneMapping( vec3 color ) {
   sky.hour = profile.hour; sky.day = profile.day;
   const interact = new Interactions(scene, hm);
   const game = {
-    S, scene, hm, graph, city, veg, yards, palms, player, combat, hud, sky, weather, career, interact, parked, lib, q, settings, camera, input, traffic, peds, police, collision, rig, surf, gi, abrasion, footing, lods, lodStats, nearInstanceStats,
+    S, scene, hm, graph, city, veg, yards, palms, clutter, player, combat, hud, sky, weather, career, interact, parked, lib, q, settings, camera, input, traffic, peds, police, collision, rig, surf, gi, abrasion, footing, lods, lodStats, nearInstanceStats,
     pause: (b) => { S.frozen = b; },
     teleport: (x, z, heading = 0) => { api.teleport(x, z, heading); },
     enterVehicle: (v) => enterVehicle(v, null),

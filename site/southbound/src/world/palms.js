@@ -45,8 +45,9 @@ function trunkGeo(H, bend) {
   return g;
 }
 
-// the crown: fronds radiating from the top of the trunk
-function crownGeo(H, bend, n, seed, lite = false) {
+// the crown: fronds radiating from the top of the trunk (or, for a saw palmetto clump, from the
+// ground: opts.clump)
+function crownGeo(H, bend, n, seed, lite = false, opts = {}) {
   const rnd = mulberry32(seed);
   const top = new THREE.Vector3(bend * H, H, 0);
   const P = [], C = [], A = [], I = [];
@@ -90,14 +91,24 @@ function crownGeo(H, bend, n, seed, lite = false) {
       }
     }
   };
-  for (let i = 0; i < n; i++) {
-    const az = (i / n) * Math.PI * 2 + rnd() * 0.3;
-    const layer = i % 3; // young (up), mature (out), old (drooping)
-    const el = layer === 0 ? 0.75 + rnd() * 0.35 : layer === 1 ? 0.15 + rnd() * 0.3 : -0.35 - rnd() * 0.35;
-    frond(az, el, 1.7 + rnd() * 0.5, false);
+  if (opts.clump) {
+    // saw palmetto: stiff fans on short stalks straight out of the ground, mostly standing up and
+    // out, a few old ones browning at the bottom
+    for (let i = 0; i < n; i++) {
+      const az = rnd() * Math.PI * 2, el = 0.35 + rnd() * 0.85;
+      top.set((rnd() - 0.5) * 0.5, 0.05, (rnd() - 0.5) * 0.5);
+      frond(az, el, 0.75 + rnd() * 0.45, i % 7 === 6);
+    }
+  } else {
+    for (let i = 0; i < n; i++) {
+      const az = (i / n) * Math.PI * 2 + rnd() * 0.3;
+      const layer = i % 3; // young (up), mature (out), old (drooping)
+      const el = layer === 0 ? 0.75 + rnd() * 0.35 : layer === 1 ? 0.15 + rnd() * 0.3 : -0.35 - rnd() * 0.35;
+      frond(az, el, 1.7 + rnd() * 0.5, false);
+    }
+    // a skirt of dead fronds hanging against the trunk
+    for (let i = 0; i < 5; i++) frond(rnd() * Math.PI * 2, -1.15 - rnd() * 0.25, 1.4, true);
   }
-  // a skirt of dead fronds hanging against the trunk
-  for (let i = 0; i < 5; i++) frond(rnd() * Math.PI * 2, -1.15 - rnd() * 0.25, 1.4, true);
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3));
   g.setAttribute('color', new THREE.Float32BufferAttribute(C, 3));
@@ -221,5 +232,34 @@ export function createPalms(scene, { hm, collision, quality: q, cityBlocks = [],
     }
   });
   void m;
-  return { count: spots.length, meshes, list: () => spots.map(([x, y, z, sh, sc]) => ['palm' + sh, x, y, z, sc]) };
+  // ---- saw palmetto clumps (G12): the low fan palms of Gulf Coast pinewoods, dunes and ditches
+  const clumps = [];
+  const crnd = mulberry32(9191);
+  const tries = q.label === 'Phone' ? 6000 : 14000;
+  for (let k = 0; k < tries; k++) {
+    const x = (crnd() * 2 - 1) * 1980, z = (crnd() * 2 - 1) * 1980;
+    const dC = coastZ(x) - z;
+    const y = hm.height(x, z);
+    if (y < hm.waterLevel(x, z) + 0.4 || hm.splatAt(x, z, 3) > 0.1) continue;
+    // where they grow: the pine woods' understory (sandy, forest floor), the dunes behind the beach,
+    // the low wet bayou ground; thinly anywhere else in the open
+    const forest = hm.splatAt(x, z, 1), sand = hm.splatAt(x, z, 0);
+    const p = dC > 40 && dC < 200 ? 0.6 : forest > 0.4 ? 0.35 : sand > 0.3 ? 0.25 : 0.04;
+    if (crnd() > p) continue;
+    if (Math.abs(x - CITY.x0 - CITY.nx * CITY.pitch / 2) < CITY.nx * CITY.pitch / 2 + 30 && Math.abs(z - CITY.z0 - CITY.nz * CITY.pitch / 2) < CITY.nz * CITY.pitch / 2 + 30) continue;
+    if (!clear(x, z, 0.9)) continue;
+    const n = 1 + ((crnd() * 3) | 0);
+    for (let i = 0; i < n; i++) { const px = x + (crnd() - 0.5) * 2.5, pz = z + (crnd() - 0.5) * 2.5; clumps.push([px, hm.height(px, pz), pz, (crnd() * 3) | 0, 0.7 + crnd() * 0.6, crnd() * 6.28]); }
+  }
+  if (clumps.length) {
+    for (let vi = 0; vi < 3; vi++) {
+      const list = clumps.filter((c) => c[3] === vi).map(([x, y, z, , sc, r]) => new THREE.Matrix4().compose(new THREE.Vector3(x, y - 0.05, z), new THREE.Quaternion().setFromAxisAngle(UP, r), new THREE.Vector3(sc, sc, sc)));
+      if (!list.length) continue;
+      const im = new THREE.InstancedMesh(crownGeo(0, 0, 12 + vi * 3, 700 + vi * 13, q.label === 'Phone' || q.label === 'Low', { clump: true }), crownMat, list.length);
+      im.castShadow = q.shadows > 0; im.receiveShadow = true; im.userData.noReflect = true; im.userData.noHit = true;
+      nearInstances(im, list, (NEAR_RANGE[q.label] || 140) * 1.5).update(v.set(0, 0, 0), true);
+      scene.add(im); meshes.push(im);
+    }
+  }
+  return { count: spots.length, palmettos: clumps.length, meshes, list: () => spots.map(([x, y, z, sh, sc]) => ['palm' + sh, x, y, z, sc]) };
 }

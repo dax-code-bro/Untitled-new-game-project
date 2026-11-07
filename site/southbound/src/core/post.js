@@ -51,10 +51,12 @@ export function createPost(renderer, scene, camera, quality) {
   const high = quality.label === 'High' || top;
 
   let ao = null;
-  if (quality.ao || high) {
+  // ambient occlusion: the dark in corners, under cars, where walls meet the ground (half resolution on
+  // Medium, so mid-range cards get it too)
+  if (quality.ao || high || quality.label === 'Medium') {
     ao = new N8AOPostPass(scene, camera, size.x, size.y);
     Object.assign(ao.configuration, {
-      aoRadius: 1.6, distanceFalloff: 1.0, intensity: 1.4, color: new THREE.Color(0, 0, 0),
+      aoRadius: 1.8, distanceFalloff: 1.0, intensity: high ? 1.6 : 1.3, color: new THREE.Color(0, 0, 0),
       halfRes: !top, aoSamples: quality.cine ? 24 : top ? 16 : 8, denoiseSamples: quality.cine ? 12 : 8,
     });
     composer.addPass(ao);

@@ -339,6 +339,18 @@ async (opts) => {
     ok(Y.lampK() === 0, 'and off by day');
   });
 
+  // ---------------- street clutter, contact shadows, palmettos (G12) ----------------
+  await run('street clutter and contact shadows', async () => {
+    const c = G.clutter || {};
+    ok(c.stops >= 60 && c.names >= 20, 'stop signs and street-name blades at the junctions (' + c.stops + ', ' + c.names + ')');
+    ok(c.manholes >= 100 && c.drains >= 100, 'manholes and storm drains (' + c.manholes + ', ' + c.drains + ')');
+    ok(c.litter >= 200 && c.weeds >= 200, 'litter and weeds (' + c.litter + ', ' + c.weeds + ')');
+    ok(c.hydrants >= 5 && c.bins >= 5, 'Mill Creek hydrants and bins (' + c.hydrants + ', ' + c.bins + ')');
+    ok((G.palms?.palmettos || 0) >= 300, 'saw palmetto clumps (' + G.palms?.palmettos + ')');
+    const cars = G.parked.filter((v) => v.contactShadow);
+    ok(cars.length > 0 && cars.length === G.parked.filter((v) => !v.isBoat && !v.isAir && v.group).length, 'every parked car has a contact shadow');
+  });
+
   // NaN sweep over everything in the scene
   await run('scene NaN sweep', async () => {
     let bad = [];

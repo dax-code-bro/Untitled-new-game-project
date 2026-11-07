@@ -12,6 +12,26 @@ export function randomCarType(rnd) {
   return 'sedan';
 }
 
+// the contact shadow: a rounded rectangle, darkest under the middle, fading out past the body
+let _shGeo = null, _shMat = null;
+const SHADOW_GEO = () => _shGeo || (_shGeo = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2));
+const SHADOW_MAT = () => {
+  if (_shMat) return _shMat;
+  const W = 64, Hh = 128, c = document.createElement('canvas'); c.width = W; c.height = Hh;
+  const x = c.getContext('2d'), img = x.createImageData(W, Hh);
+  for (let j = 0; j < Hh; j++) for (let i = 0; i < W; i++) {
+    // signed distance to a rounded rectangle inset from the edges, then a soft falloff
+    const px = Math.abs((i + 0.5) / W - 0.5) * 2, pz = Math.abs((j + 0.5) / Hh - 0.5) * 2;
+    const qx = Math.max(px - 0.55, 0), qz = Math.max(pz - 0.72, 0), d = Math.hypot(qx / 0.45, qz / 0.28);
+    const a = Math.max(0, 1 - d) ** 1.6 * (0.75 + 0.25 * (1 - Math.min(1, Math.hypot(px, pz * 0.8))));
+    const k = (j * W + i) * 4; img.data[k] = img.data[k + 1] = img.data[k + 2] = 0; img.data[k + 3] = Math.round(a * 255);
+  }
+  x.putImageData(img, 0, 0);
+  const t = new THREE.CanvasTexture(c);
+  _shMat = new THREE.MeshBasicMaterial({ map: t, color: 0x000000, transparent: true, opacity: 0.62, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -6, polygonOffsetUnits: -6 });
+  return _shMat;
+};
+
 const lightMats = {};
 function mats() {
   if (lightMats.head) return lightMats;
@@ -122,6 +142,12 @@ export class Vehicle {
     this.dirt = Math.random() * Math.random() * 0.55; // cars out in the world aren't showroom-clean
     this.nitro = 0; this.nitroTank = 1; this.spoiler = null;
     this.radius = w / 2 + 0.1;
+    // a soft contact shadow on the ground under the car (G12): the dark where the body meets the road
+    // that the sun's shadow map is too coarse to draw, on every preset
+    const sh = new THREE.Mesh(SHADOW_GEO(), SHADOW_MAT());
+    sh.scale.set(this.spec.width + 0.55, 1, v.len + 0.7);
+    sh.position.y = 0.035; sh.renderOrder = 1; sh.userData.noHit = true; sh.userData.noReflect = true; sh.castShadow = false;
+    this.group.add(sh); this.contactShadow = sh;
   }
 
   forward() { return { x: Math.sin(this.heading), z: Math.cos(this.heading) }; }
@@ -332,6 +358,7 @@ export class Vehicle {
 
 
   sync(dt) {
+    if (this.contactShadow) this.contactShadow.visible = !this.airborne && !this.drowned;
     this.group.position.copy(this.pos);
     this.group.rotation.order = 'YXZ';
     this.group.rotation.set(-this.pitch, this.heading, this.roll);
