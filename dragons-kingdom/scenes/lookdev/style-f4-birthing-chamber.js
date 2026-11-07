@@ -36,7 +36,10 @@ import { filmFinish } from './finish.js';
 // daylight through the chamber's high east window: the shaft lands on the bedding just behind the
 // hatchling and the shell (the hatchling itself is in the lamp's warm light)
 const SUN = new THREE.Vector3(0.72, 0.685, 0.06).normalize();
-const NEST_C = [-0.6, 0, 0.3];                                     // the chamber's nest centre (world)
+const NEST_C = [-0.6, 0, 0.3];
+// (dir27) the far (right) hand on its back: further forward toward the chest (was fwd -0.06, on the hips) and the
+// elbow lifted, so her right forearm comes down onto the back from above and the near hind leg reads at CAMS 100
+const FAR_FWD = 0.05, FAR_POLE_UP = 0.3, NEAR_POLE_UP = 0;                                     // the chamber's nest centre (world)
 const HATCH = new THREE.Vector3(0.33, 0, 0.02);                    // where the hatchling lies on the linen
 
 export const meta = {
@@ -268,21 +271,26 @@ float dkShellD;`)
  * times so it drapes between them instead of tenting; soft creases; the left edge (under the
  * hatchling's chest) is the fold. Everything from the current pose (pure in t).
  */
-function drapeCloth(mesh, c, across, along, w, d, ch, linenY, hatch) {
+function drapeCloth(mesh, c, across, along, w, d, ch, linenY, hatch, sides = null) {
   const [CU, CV] = mesh.userData.grid;
   ch.root.updateMatrixWorld(true);
   const bp = (n) => { const b = ch.bone(n); return b ? new THREE.Vector3().setFromMatrixPosition(b.matrixWorld) : null; };
   // each hand under the cloth is one smooth pad (palm + fingers together, as cloth spans the
   // knuckles instead of wrapping every finger): an ellipsoid from the wrist to the fingertips
   const pads = [];
-  for (const sd of ['L', 'R']) {
+  for (const sd of sides || ['L', 'R']) {
     const w = bp(`wrist.${sd}`), k = bp(`finger3-1.${sd}`), tip = bp(`finger3-3.${sd}`);
     if (!w || !k || !tip) continue;
-    if (w.y - linenY(w.x, w.z) > 0.065) continue;         // (s27) a hand up on the hatchling is not under the cloth
+    // (dir27: the caller may name the hands under the cloth - the near hand sits over the bed's dip, where its
+    // wrist read > 6.5 cm over the linen and the hand was skipped: the cloth lay flat under it)
+    if (!sides && w.y - linenY(w.x, w.z) > 0.065) continue;         // (s27) a hand up on the hatchling is not under the cloth
     const end = tip.clone().addScaledVector(tip.clone().sub(k), 0.35);
     // (s27: thicker, less tapered pads - the curled 'rest' fingers of a palm-up hand rise above the old pad and
     // poked through the cloth)
-    pads.push({ a: w, b: end, r: 0.05, h: 0.042 });
+    // (dir27: the near hand is the flat palm-up 'cradle' (finger tops ~1.8 cm) -> h 0.042 -> 0.03; the pad starts
+    // 4 cm up the forearm so the cloth's near edge lies over her wrist instead of dropping to the bed in front of it)
+    const a = w.clone().addScaledVector(w.clone().sub(k).setY(0).normalize(), 0.04);
+    pads.push({ a, b: end, r: 0.05, h: 0.03 });
   }
   // the hatchling's chest rests on it: the cloth never comes up through the body (its belly
   // presses it to the bed) - the body's lowest points are below the cloth anyway
@@ -412,7 +420,11 @@ export function update(t, ctx) {
     // hatchling's near side and her hands reach the bedding with the elbows bent)
     // (s26: her shoulders nearer the lens and lower, so her forearms come in from the right FOREGROUND, under the
     // hatchling's flank in the frame instead of across its hindquarters)
-    const goal = base.clone().addScaledVector(near, 0.4).addScaledVector(CAM_R, 0.44).addScaledVector(up, 0.12);
+    // (dir27, tried and dropped: CAM_R runs mostly toward its tail, so these shoulders sit behind its hips and the near
+  // hand stops ~14 cm short of wA, its forearm level across the near hind leg (which splays toward the lens, its foot
+  // BELOW the wrist line on screen). 0.34 / 0.36 / 0.12 brought her face into frame; 0.36 / 0.38 / 0.3 with the near
+  // elbow up tented the cloth into a lifted sheet over the flank - neither showed the leg. See director PROGRESS s28.)
+  const goal = base.clone().addScaledVector(near, 0.4).addScaledVector(CAM_R, 0.44).addScaledVector(up, 0.12);
     alex.root.position.add(goal.sub(shC));
     alex.root.updateMatrixWorld(true);
   }
@@ -423,7 +435,7 @@ export function update(t, ctx) {
   // her right hand is the one toward screen right
   const aIsR = wA.clone().sub(wB).dot(CAM_R) > 0;
   const pole = base.clone().addScaledVector(near, 0.45).addScaledVector(CAM_R, 0.3).addScaledVector(up, -0.1);
-  limbIK(alex, 'arm', aIsR ? 'R' : 'L', wA, pole.clone().addScaledVector(fwd, 0.25));
+  limbIK(alex, 'arm', aIsR ? 'R' : 'L', wA, pole.clone().addScaledVector(fwd, 0.25).addScaledVector(up, NEAR_POLE_UP)); // (dir27) near elbow up
   limbIK(alex, 'arm', aIsR ? 'L' : 'R', wB, pole.clone().addScaledVector(fwd, -0.25));
   const under = near.clone().negate().addScaledVector(up, -0.1).normalize();
   for (const sd of ['L', 'R']) relaxHand(alex, sd, { fingers: under, palm: up, keepFingers: true });
@@ -432,17 +444,17 @@ export function update(t, ctx) {
   // soft 'rest' shape. The open, build-spread far hand read as a claw / startled, not tender.)
   {
     const farSd = aIsR ? 'L' : 'R';            // wB: the hand less toward the lens
-    const from = chest.clone().addScaledVector(near, 0.3).addScaledVector(up, 0.12).addScaledVector(fwd, -0.06);
-    const ray = new THREE.Raycaster(from, chest.clone().addScaledVector(fwd, -0.06).sub(from).normalize(), 0, 1);
+    const from = chest.clone().addScaledVector(near, 0.3).addScaledVector(up, 0.12).addScaledVector(fwd, FAR_FWD);
+    const ray = new THREE.Raycaster(from, chest.clone().addScaledVector(fwd, FAR_FWD).sub(from).normalize(), 0, 1);
     hatch.root.traverse((m) => { if (m.isSkinnedMesh) m.computeBoundingSphere(); });
     const hit = ray.intersectObject(hatch.root, true)[0];
     if (hit) {
       const nrm = hit.face.normal.clone().transformDirection(hit.object.matrixWorld);
       if (nrm.dot(from.clone().sub(hit.point)) < 0) nrm.negate();
       restHand(alex, farSd, { at: hit.point, normal: nrm, fingers: far.clone().addScaledVector(fwd, -0.3), radius: 0.06,
-        pole: pole.clone().addScaledVector(fwd, aIsR ? -0.25 : 0.25) });
+        pole: pole.clone().addScaledVector(fwd, aIsR ? -0.25 : 0.25).addScaledVector(up, FAR_POLE_UP) });
     }
-    handShape(alex, aIsR ? 'R' : 'L', 'rest');
+    handShape(alex, aIsR ? 'R' : 'L', 'cradle');   // (perf s14) near hand flatter palm up: finger tops ~1.8 cm, thumb alongside
   }
   // the cloth: folded edge under the chest, the rest over her hands toward the lens
   // (it ends over her knuckles: the backs of her hands and her wrists show at its near edge)
@@ -451,7 +463,18 @@ export function update(t, ctx) {
   // (s27: a FOLDED cloth, not a ribbon over one hand: wider and deeper (0.24 x 0.2 -> 0.3 x 0.3), its centre further
   // toward the lens (near 0.055 -> 0.08) so a broad pad of linen shows under the chest in front of the near hand, a
   // thicker rolled fold under the chest and the top layer's hem as a step; the far hand on its back no longer lifts it)
-  drapeCloth(fcloth, base.clone().addScaledVector(near, 0.08).addScaledVector(fwd, 0.08), near, fwd.clone().setY(0).normalize(), 0.3, 0.3, alex, S.linenY, hatch);
+  // (dir27: the cloth reaches over the near hand - perf s14 found it bare in front of the linen at t=2: the arm does
+  // not reach wA, so the near edge follows her actual near wrist (+3 cm, over the wrist) and the cloth stays a
+  // single piece from under the chest to her wrist)
+  const fwdP = fwd.clone().setY(0).normalize();
+  let cn0 = -0.07, cn1 = 0.23, cf0 = -0.07, cf1 = 0.23;
+  {
+    const nw = bonePos(alex, `wrist.${aIsR ? 'R' : 'L'}`).sub(base), nt = bonePos(alex, `finger3-3.${aIsR ? 'R' : 'L'}`).sub(base);
+    cn1 = Math.max(cn1, nw.dot(near) + 0.03);
+    cf0 = Math.min(cf0, Math.min(nw.dot(fwdP), nt.dot(fwdP)) - 0.07); cf1 = Math.max(cf1, Math.max(nw.dot(fwdP), nt.dot(fwdP)) + 0.07);
+    if (T0 === 2) console.warn('[f4] near wrist (near,fwd,up)', nw.dot(near).toFixed(3), nw.dot(fwdP).toFixed(3), nw.y.toFixed(3), 'tip', nt.dot(near).toFixed(3), nt.dot(fwdP).toFixed(3), nt.y.toFixed(3), 'cloth', cn0, cn1.toFixed(3), cf0.toFixed(3), cf1.toFixed(3));
+  }
+  drapeCloth(fcloth, base.clone().addScaledVector(near, (cn0 + cn1) / 2).addScaledVector(fwdP, (cf0 + cf1) / 2), near, fwdP, cn1 - cn0, cf1 - cf0, alex, S.linenY, hatch, [aIsR ? 'R' : 'L']);
   const endR = base.clone().addScaledVector(near, 0.2).addScaledVector(up, 0.03);     // her hands
   lookAtPoint(alex, chest, 0.8);
   if (T0 === 2) { const wr = ['L', 'R'].map((sd) => bonePos(alex, `wrist.${sd}`)); console.warn('[f4] wrists', wr.map((w) => (w.y - base.y).toFixed(3) + '@' + w.distanceTo(wA).toFixed(2) + '/' + w.distanceTo(wB).toFixed(2)).join(' '), 'base', base.toArray().map((v) => v.toFixed(3)).join(',')); }
@@ -475,4 +498,12 @@ export function update(t, ctx) {
   ctx.lens.focus = cam.position.distanceTo(eyeP.clone().lerp(endR, 0.25));
   ctx.lens.shutterAngle = 180;
   ctx.lens.iso = 1600;
+  if (T0 === 2) { // (dir27) debug: screen px (960x540) of the hatchling's legs and her forearms
+    const tf = Math.tan(Math.atan(24.89 / 2 / ctx.lens.focalLength)), inv = cam.matrixWorldInverse;
+    const pr = (v) => { const q = v.clone().applyMatrix4(inv); return `${Math.round(480 + 480 * q.x / -q.z / tf)},${Math.round(270 - 480 * q.y / -q.z / tf)}`; };
+    const out = [];
+    for (const n of Object.keys(hatch.boneIndex)) if (/^hl_|pelv|thor/i.test(n)) out.push(n + '@' + pr(new THREE.Vector3().setFromMatrixPosition(hatch.bones[hatch.boneIndex[n]].matrixWorld)));
+    for (const n of ['lowerarm01.L', 'lowerarm01.R', 'wrist.L', 'wrist.R', 'finger3-3.L', 'finger3-3.R']) out.push(n + '@' + pr(bonePos(alex, n)));
+    console.warn('[f4] screen', out.join(' '));
+  }
 }
