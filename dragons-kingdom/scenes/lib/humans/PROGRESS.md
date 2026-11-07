@@ -1415,3 +1415,9 @@ NEXT (look, in order):
 1. After the full rebuild: hero hand check at draft (abby_injured, remi, a rider in 1C-16); tune fingertip_pad.
 2. 2m NEXT 1-3 unchanged (kerchief tails in motion, optional tie band, G_kirtle defaults).
 3. 2g NEXT 3 (dorsal veins / tendons, palm creases) and 4 (crowd05 brown iris - check whether still blue).
+
+## REQUEST from the director (session 30, 2026-11-07)
+- Riders: a per-ACT forward lean for a seated rider (e.g. `[t, 'lean', { to: 0.4, dur: 0.6 }]` on a `*_ride` build, today only
+  `ride.lean` at createRider). Needed by X6-07 (Remi "leans forward, and Charcoal goes after them") and X6-06 (Abby leans
+  before Leaf drops). Also a short PAT for a rider's free hand on the mount's neck (X4-12: `touch` at `leaf.neck_2` +12 cm
+  is used now; unchecked whether the hand leaves the grip bar - verify in the video).

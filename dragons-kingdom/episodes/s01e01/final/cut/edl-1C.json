@@ -1032,11 +1032,11 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 16.96,
-    "k4_cpu_s_per_frame": 226.11,
+    "draft_s_per_frame": 9.12,
+    "k4_cpu_s_per_frame": 121.56,
     "k4_gpu_s_per_frame": null,
-    "draft_minutes": 47.48,
-    "k4_cpu_hours": 10.55,
+    "draft_minutes": 25.53,
+    "k4_cpu_hours": 5.67,
     "k4_gpu_hours": null,
     "factors": {
      "people": 1.48,
@@ -1046,7 +1046,7 @@
      "move": 1.08,
      "total": 1.6
     },
-    "basis": "MEASURED draft 16.96 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
+    "basis": "MEASURED draft 9.12 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
    },
    "staging": "EXTREME WIDE: 24 mm (s21; was 180 mm) from a camera ship high and inland over the north shore, slow travel: the coast bends, the harbour opens below - curved wall, pale quay, boats on the slipway, nets on frames; the pair enter LEFT, Leaf near/behind, Charcoal right/ahead.",
    "deviation": null,
@@ -1222,11 +1222,11 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 9.54,
-    "k4_cpu_s_per_frame": 127.24,
+    "draft_s_per_frame": 9.02,
+    "k4_cpu_s_per_frame": 120.25,
     "k4_gpu_s_per_frame": null,
-    "draft_minutes": 11.45,
-    "k4_cpu_hours": 2.54,
+    "draft_minutes": 10.82,
+    "k4_cpu_hours": 2.41,
     "k4_gpu_hours": null,
     "factors": {
      "people": 1.6,
@@ -1236,7 +1236,7 @@
      "move": 1,
      "total": 1.6
     },
-    "basis": "MEASURED draft 9.54 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
+    "basis": "MEASURED draft 9.02 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
    },
    "staging": "35 mm STATIC on the terrace farm (s24; was 50): a farmer (a woman) rests on a hoe (foreground left, back three-quarter, face turned away), the town's upper rows behind her, watches the riders pass high over the town (background right), unimpressed.",
    "deviation": null,
@@ -1277,7 +1277,7 @@
    "seq": 135,
    "scene": "1C",
    "set": "VERDOR_AERIAL",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 84,
    "rec_in": 2988,
    "rec_out": 3072,
@@ -1286,11 +1286,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/verdor-aerial.js",
+    "start_s": 27,
+    "start_frame": 648
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 4.02,
+    "k4_cpu_s_per_frame": 53.57,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 5.62,
+    "k4_cpu_hours": 1.25,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.34
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.34 for the shot's content"
+   },
+   "staging": "MEDIUM-WIDE 120 mm air-to-air off Leaf's right, a little above: low over the harbour basin, Leaf gives a quick bright call (neck up, jaw open), then back to the line; the quay dragon's answer is OFF (sound). Charcoal does not call (not in frame).",
    "deviation": null,
    "action": "Leaf gives a quick, bright call. The quay dragon answers from below. Charcoal does not call.",
    "need": {
@@ -1366,8 +1386,8 @@
    ],
    "src": {
     "scene_file": "episodes/s01e01/final/scenes/verdor-aerial.js",
-    "start_s": 27,
-    "start_frame": 648
+    "start_s": 33,
+    "start_frame": 792
    },
    "dialogue": [],
    "captions": [],
@@ -1401,7 +1421,7 @@
    "seq": 139,
    "scene": "1C",
    "set": "VERDOR_AERIAL",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 96,
    "rec_in": 3444,
    "rec_out": 3540,
@@ -1410,11 +1430,70 @@
    "trans": [
     "cut"
    ],
-   "src": null,
-   "dialogue": [],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/verdor-aerial.js",
+    "start_s": 39,
+    "start_frame": 936
+   },
+   "dialogue": [
+    {
+     "id": "X4-02",
+     "part": 0,
+     "ref": "X4-02",
+     "role": "REMI",
+     "file": "vo/X4-02.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.085,
+     "at_s": 0.32,
+     "speech_in_s": 0.35,
+     "speech_out_s": 1.375,
+     "words": [
+      {
+       "w": "they",
+       "start_s": 0.32,
+       "end_s": 0.5
+      },
+      {
+       "w": "wave",
+       "start_s": 0.5,
+       "end_s": 0.87
+      },
+      {
+       "w": "at",
+       "start_s": 0.87,
+       "end_s": 1.08
+      },
+      {
+       "w": "you",
+       "start_s": 1.08,
+       "end_s": 1.32
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 143.82
+    }
+   ],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 4.02,
+    "k4_cpu_s_per_frame": 53.57,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 6.43,
+    "k4_cpu_hours": 1.43,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.34
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.34 for the shot's content"
+   },
+   "staging": "MEDIUM 50 mm on Abby from Leaf's right front three-quarter (Remi's line X4-02 \"They wave at you.\" OFF / over, he is 30 m away seaward): she pretends not to hear and pats Leaf's neck with her right hand; face three-quarter.",
    "deviation": null,
    "action": "Abby pretends not to hear and pats Leaf's neck.",
    "need": {
@@ -1464,8 +1543,8 @@
    ],
    "src": {
     "scene_file": "episodes/s01e01/final/scenes/verdor-aerial.js",
-    "start_s": 33,
-    "start_frame": 792
+    "start_s": 45,
+    "start_frame": 1080
    },
    "dialogue": [],
    "captions": [],
@@ -1525,7 +1604,7 @@
    "seq": 143,
    "scene": "1C",
    "set": "VERDOR_AERIAL",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 144,
    "rec_in": 3960,
    "rec_out": 4104,
@@ -1534,11 +1613,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/verdor-aerial.js",
+    "start_s": 52,
+    "start_frame": 1248
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 4.02,
+    "k4_cpu_s_per_frame": 53.57,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 9.64,
+    "k4_cpu_hours": 2.14,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.34
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.34 for the shot's content"
+   },
+   "staging": "MEDIUM 50 mm off Charcoal's right front: Remi (screen right) looks down over the town longer than he needs to - roofs, harbour, people working below-left; face three-quarter AWAY (down-left).",
    "deviation": null,
    "action": "Remi looks down over the town for longer than he needs to: the roofs, the harbor, the people working.",
    "need": {
@@ -1551,7 +1650,7 @@
    "seq": 144,
    "scene": "1C",
    "set": "VERDOR_AERIAL",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 48,
    "rec_in": 4104,
    "rec_out": 4152,
@@ -1560,11 +1659,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/verdor-aerial.js",
+    "start_s": 60,
+    "start_frame": 1440
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 4.02,
+    "k4_cpu_s_per_frame": 53.57,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 3.21,
+    "k4_cpu_hours": 0.71,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.34
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.34 for the shot's content"
+   },
+   "staging": "CLOSE 85 mm on Abby (screen left) from Leaf's right front three-quarter: she watches him doing it - looks screen RIGHT toward Remi. Silent.",
    "deviation": null,
    "action": "Abby watches him doing it.",
    "need": {
@@ -1577,7 +1696,7 @@
    "seq": 145,
    "scene": "1C",
    "set": "VERDOR_AERIAL",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 192,
    "rec_in": 4152,
    "rec_out": 4344,
@@ -1586,11 +1705,197 @@
    "trans": [
     "cut"
    ],
-   "src": null,
-   "dialogue": [],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/verdor-aerial.js",
+    "start_s": 64,
+    "start_frame": 1536
+   },
+   "dialogue": [
+    {
+     "id": "X4-03",
+     "part": 0,
+     "ref": "X4-03",
+     "role": "ABBY",
+     "file": "vo/X4-03.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.055,
+     "at_s": 0.47,
+     "speech_in_s": 0.5,
+     "speech_out_s": 1.495,
+     "words": [
+      {
+       "w": "you're",
+       "start_s": 0.47,
+       "end_s": 0.69
+      },
+      {
+       "w": "doing",
+       "start_s": 0.69,
+       "end_s": 0.97
+      },
+      {
+       "w": "it",
+       "start_s": 0.97,
+       "end_s": 1.04
+      },
+      {
+       "w": "again",
+       "start_s": 1.04,
+       "end_s": 1.43
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 173.47
+    },
+    {
+     "id": "X4-04",
+     "part": 0,
+     "ref": "X4-04",
+     "role": "REMI",
+     "file": "vo/X4-04.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.915,
+     "at_s": 1.815,
+     "speech_in_s": 1.845,
+     "speech_out_s": 2.7,
+     "words": [
+      {
+       "w": "doing",
+       "start_s": 1.815,
+       "end_s": 2.255
+      },
+      {
+       "w": "what",
+       "start_s": 2.255,
+       "end_s": 2.715
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 174.815
+    },
+    {
+     "id": "X4-05",
+     "part": 0,
+     "ref": "X4-05",
+     "role": "ABBY",
+     "file": "vo/X4-05.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.975,
+     "at_s": 2.97,
+     "speech_in_s": 3,
+     "speech_out_s": 3.915,
+     "words": [
+      {
+       "w": "counting",
+       "start_s": 2.97,
+       "end_s": 3.45
+      },
+      {
+       "w": "roofs",
+       "start_s": 3.45,
+       "end_s": 3.93
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 175.97
+    },
+    {
+     "id": "X4-06",
+     "part": 0,
+     "ref": "X4-06",
+     "role": "REMI",
+     "file": "vo/X4-06.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.57,
+     "at_s": 4.235,
+     "speech_in_s": 4.265,
+     "speech_out_s": 5.775,
+     "words": [
+      {
+       "w": "i'm",
+       "start_s": 4.345,
+       "end_s": 4.495
+      },
+      {
+       "w": "not",
+       "start_s": 4.495,
+       "end_s": 4.735
+      },
+      {
+       "w": "counting",
+       "start_s": 4.735,
+       "end_s": 5.255
+      },
+      {
+       "w": "roofs",
+       "start_s": 5.255,
+       "end_s": 5.745
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 177.235
+    },
+    {
+     "id": "X4-07",
+     "part": 0,
+     "ref": "X4-07",
+     "role": "ABBY",
+     "file": "vo/X4-07.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.205,
+     "at_s": 6.095,
+     "speech_in_s": 6.125,
+     "speech_out_s": 7.27,
+     "words": [
+      {
+       "w": "you're",
+       "start_s": 6.095,
+       "end_s": 6.245
+      },
+      {
+       "w": "counting",
+       "start_s": 6.245,
+       "end_s": 6.685
+      },
+      {
+       "w": "something",
+       "start_s": 6.685,
+       "end_s": 7.245
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 179.095
+    }
+   ],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 4.8,
+    "k4_cpu_s_per_frame": 63.94,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 15.34,
+    "k4_cpu_hours": 3.41,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.48,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.6
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.6 for the shot's content"
+   },
+   "staging": "TWO-SHOT 180 mm air-to-air from inland: the exchange X4-03..X4-07 (\"You're doing it again.\" ... \"You're counting something.\"); Leaf / Abby left and near, Charcoal / Remi right and beyond; the sea below and behind them.",
    "deviation": null,
    "action": "Counting roofs.",
    "need": {
@@ -1603,7 +1908,7 @@
    "seq": 146,
    "scene": "1C",
    "set": "VERDOR_AERIAL",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 84,
    "rec_in": 4344,
    "rec_out": 4428,
@@ -1612,11 +1917,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/verdor-aerial.js",
+    "start_s": 74,
+    "start_frame": 1776
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 4.02,
+    "k4_cpu_s_per_frame": 53.57,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 5.62,
+    "k4_cpu_hours": 1.25,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.34
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.34 for the shot's content"
+   },
+   "staging": "CLOSE 85 mm on Remi (screen right) from Charcoal's right front: he does not answer; looks away from the town (down-left) toward the sea (screen right), like someone caught.",
    "deviation": null,
    "action": "He does not answer. He looks away from the town toward the sea, like someone caught.",
    "need": {
@@ -1640,8 +1965,8 @@
    ],
    "src": {
     "scene_file": "episodes/s01e01/final/scenes/verdor-aerial.js",
-    "start_s": 40,
-    "start_frame": 960
+    "start_s": 80,
+    "start_frame": 1920
    },
    "dialogue": [],
    "captions": [],
@@ -2325,7 +2650,7 @@
    "seq": 173,
    "scene": "1C",
    "set": "SKY_OFF_VERDOR",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 48,
    "rec_in": 7248,
    "rec_out": 7296,
@@ -2334,11 +2659,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/sky-off-verdor.js",
+    "start_s": 91,
+    "start_frame": 2184
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 4.02,
+    "k4_cpu_s_per_frame": 53.57,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 3.21,
+    "k4_cpu_hours": 0.71,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.34
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.34 for the shot's content"
+   },
+   "staging": "MEDIUM 50 mm air-to-air off Leaf's right front: Abby (screen left) looks ahead at the gap (off frame right, far), then across at Remi (screen right). He already knows what she is going to say.",
    "deviation": null,
    "action": "Abby looks at the gap, then at Remi. He already knows what she is going to say.",
    "need": {
@@ -2351,7 +2696,7 @@
    "seq": 174,
    "scene": "1C",
    "set": "SKY_OFF_VERDOR",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 288,
    "rec_in": 7296,
    "rec_out": 7584,
@@ -2360,11 +2705,247 @@
    "trans": [
     "cut"
    ],
-   "src": null,
-   "dialogue": [],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/sky-off-verdor.js",
+    "start_s": 95,
+    "start_frame": 2280
+   },
+   "dialogue": [
+    {
+     "id": "X6-01",
+     "part": 0,
+     "ref": "X6-01",
+     "role": "ABBY",
+     "file": "vo/X6-01.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.135,
+     "at_s": 0.77,
+     "speech_in_s": 0.8,
+     "speech_out_s": 1.875,
+     "words": [
+      {
+       "w": "first",
+       "start_s": 0.77,
+       "end_s": 1.2
+      },
+      {
+       "w": "through",
+       "start_s": 1.2,
+       "end_s": 1.37
+      },
+      {
+       "w": "the",
+       "start_s": 1.37,
+       "end_s": 1.45
+      },
+      {
+       "w": "gap",
+       "start_s": 1.45,
+       "end_s": 1.89
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 304.77
+    },
+    {
+     "id": "X6-02",
+     "part": 0,
+     "ref": "X6-02",
+     "role": "REMI",
+     "file": "vo/X6-02.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.62,
+     "at_s": 2.445,
+     "speech_in_s": 2.475,
+     "speech_out_s": 4.035,
+     "words": [
+      {
+       "w": "he",
+       "start_s": 2.445,
+       "end_s": 2.605
+      },
+      {
+       "w": "doesn't",
+       "start_s": 2.605,
+       "end_s": 2.905
+      },
+      {
+       "w": "fit",
+       "start_s": 2.905,
+       "end_s": 3.185
+      },
+      {
+       "w": "through",
+       "start_s": 3.185,
+       "end_s": 3.425
+      },
+      {
+       "w": "the",
+       "start_s": 3.425,
+       "end_s": 3.505
+      },
+      {
+       "w": "gap",
+       "start_s": 3.505,
+       "end_s": 4.055
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 306.445
+    },
+    {
+     "id": "X6-03",
+     "part": 0,
+     "ref": "X6-03",
+     "role": "ABBY",
+     "file": "vo/X6-03.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.62,
+     "at_s": 4.505,
+     "speech_in_s": 4.535,
+     "speech_out_s": 5.095,
+     "words": [
+      {
+       "w": "i",
+       "start_s": 4.505,
+       "end_s": 4.655
+      },
+      {
+       "w": "know",
+       "start_s": 4.655,
+       "end_s": 5.045
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 308.505
+    },
+    {
+     "id": "X6-04",
+     "part": 0,
+     "ref": "X6-04",
+     "role": "REMI",
+     "file": "vo/X6-04.wav",
+     "file_in_s": 0,
+     "file_out_s": 2.28,
+     "at_s": 5.765,
+     "speech_in_s": 5.795,
+     "speech_out_s": 8.015,
+     "words": [
+      {
+       "w": "mother",
+       "start_s": 5.765,
+       "end_s": 6.075
+      },
+      {
+       "w": "said",
+       "start_s": 6.075,
+       "end_s": 6.435
+      },
+      {
+       "w": "within",
+       "start_s": 6.435,
+       "end_s": 6.835
+      },
+      {
+       "w": "reach",
+       "start_s": 6.835,
+       "end_s": 7.215
+      },
+      {
+       "w": "of",
+       "start_s": 7.215,
+       "end_s": 7.315
+      },
+      {
+       "w": "the",
+       "start_s": 7.315,
+       "end_s": 7.455
+      },
+      {
+       "w": "island",
+       "start_s": 7.455,
+       "end_s": 7.995
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 309.765
+    },
+    {
+     "id": "X6-05",
+     "part": 0,
+     "ref": "X6-05",
+     "role": "ABBY",
+     "file": "vo/X6-05.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.64,
+     "at_s": 8.585,
+     "speech_in_s": 8.615,
+     "speech_out_s": 10.195,
+     "words": [
+      {
+       "w": "they're",
+       "start_s": 8.585,
+       "end_s": 8.835
+      },
+      {
+       "w": "within",
+       "start_s": 8.835,
+       "end_s": 9.135
+      },
+      {
+       "w": "reach",
+       "start_s": 9.135,
+       "end_s": 9.485
+      },
+      {
+       "w": "of",
+       "start_s": 9.485,
+       "end_s": 9.565
+      },
+      {
+       "w": "the",
+       "start_s": 9.565,
+       "end_s": 9.695
+      },
+      {
+       "w": "island",
+       "start_s": 9.695,
+       "end_s": 10.165
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 312.585
+    }
+   ],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 4.8,
+    "k4_cpu_s_per_frame": 63.94,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 23.02,
+    "k4_cpu_hours": 5.11,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.48,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.6
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.6 for the shot's content"
+   },
+   "staging": "TWO-SHOT 180 mm air-to-air from inland (the X4-18 set-up): Leaf / Abby left and near, Charcoal / Remi right and beyond, the sea behind. The challenge: \"First through the gap.\" ... \"They're within reach of the island.\"",
    "deviation": null,
    "action": "The challenge.",
    "need": {
@@ -2377,7 +2958,7 @@
    "seq": 175,
    "scene": "1C",
    "set": "SKY_OFF_VERDOR",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 72,
    "rec_in": 7584,
    "rec_out": 7656,
@@ -2386,11 +2967,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/sky-off-verdor.js",
+    "start_s": 109,
+    "start_frame": 2616
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 4.02,
+    "k4_cpu_s_per_frame": 53.57,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 4.82,
+    "k4_cpu_hours": 1.07,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.34
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.34 for the shot's content"
+   },
+   "staging": "WIDE 120 mm from a camera ship inland and a little above: she does not wait - Leaf (Abby up) tips over and drops away toward the rocks (off frame right) with quick, eager beats.",
    "deviation": null,
    "action": "She does not wait. She leans, and Leaf drops away toward the rocks with quick, eager wingbeats.",
    "need": {
@@ -2403,7 +3004,7 @@
    "seq": 176,
    "scene": "1C",
    "set": "SKY_OFF_VERDOR",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 96,
    "rec_in": 7656,
    "rec_out": 7752,
@@ -2412,11 +3013,70 @@
    "trans": [
     "cut"
    ],
-   "src": null,
-   "dialogue": [],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/sky-off-verdor.js",
+    "start_s": 114,
+    "start_frame": 2736
+   },
+   "dialogue": [
+    {
+     "id": "X6-06",
+     "part": 0,
+     "ref": "X6-06",
+     "role": "REMI",
+     "file": "vo/X6-06.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.385,
+     "at_s": 0.37,
+     "speech_in_s": 0.4,
+     "speech_out_s": 1.725,
+     "words": [
+      {
+       "w": "we're",
+       "start_s": 0.37,
+       "end_s": 0.56
+      },
+      {
+       "w": "going",
+       "start_s": 0.56,
+       "end_s": 0.94
+      },
+      {
+       "w": "to",
+       "start_s": 0.94,
+       "end_s": 1.06
+      },
+      {
+       "w": "lose",
+       "start_s": 1.06,
+       "end_s": 1.68
+      }
+     ],
+     "gain_db": -2,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 319.37
+    }
+   ],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 4.02,
+    "k4_cpu_s_per_frame": 53.57,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 6.43,
+    "k4_cpu_hours": 1.43,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.34
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.34 for the shot's content"
+   },
+   "staging": "MEDIUM 50 mm off Charcoal's right front: Remi, resigned (\"We're going to lose.\"), looks after them; Charcoal goes after them - out of the glide into a deep beat, nose down.",
    "deviation": null,
    "action": "Remi, resigned, leans forward, and Charcoal goes after them.",
    "need": {
@@ -2715,7 +3375,7 @@
    "seq": 188,
    "scene": "1C",
    "set": "SKY_OFF_VERDOR",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 120,
    "rec_in": 8856,
    "rec_out": 8976,
@@ -2724,11 +3384,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/sky-off-verdor.js",
+    "start_s": 120,
+    "start_frame": 2880
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 4.8,
+    "k4_cpu_s_per_frame": 63.94,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 9.59,
+    "k4_cpu_hours": 2.13,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.48,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.6
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.6 for the shot's content"
+   },
+   "staging": "WIDE 160 mm from a camera ship high, behind and seaward, looking north-west up the coast: they turn back along the coast side by side (travel screen L -> R), Leaf a little behind on the inland side (left), Charcoal right; sea below, the island's cliffs beyond.",
    "deviation": null,
    "action": "They turn back along the coast side by side, Leaf a little behind on the near side, as for 1D. Behind them the mist still lies against the rocks.",
    "need": {
@@ -2741,7 +3421,7 @@
    "seq": 189,
    "scene": "1C",
    "set": "SKY_OFF_VERDOR",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 192,
    "rec_in": 8976,
    "rec_out": 9168,
@@ -2750,11 +3430,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/sky-off-verdor.js",
+    "start_s": 127,
+    "start_frame": 3048
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 4.8,
+    "k4_cpu_s_per_frame": 63.94,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 15.34,
+    "k4_cpu_hours": 3.41,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.48,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.6
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.6 for the shot's content"
+   },
+   "staging": "EXTREME WIDE 135 mm aerial travel from high behind them on the seaward side: ahead, the island in the morning light, the coast running away north; Leaf left, Charcoal right. Nobody speaks; the camera travels with them, not around them.",
    "deviation": null,
    "action": "Ahead, the whole island in the morning light. For a while nobody speaks. The camera travels with them, not around them.",
    "need": {

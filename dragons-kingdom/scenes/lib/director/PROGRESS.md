@@ -3,6 +3,37 @@
 Owner paths: `scenes/lib/director/`, `episodes/s01e01/final/scenes/`, `episodes/s01e01/final/cut/`.
 How it works: `README.md` in this folder. Latest state first.
 
+## Session 30 (2026-11-07, budgeted batch 1 of the 1C slates: 12 new specs on existing sets - STILLS only)
+
+Scratch: `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/build1/` - `r1..r4/` (all stills),
+`final/` (the kept still per shot), `contact-build1.png` (4x3 sheet). All draft.
+- WIRED (ready for video): VERDOR_AERIAL X4-08, X4-12, X4-16, X4-17, X4-18, X4-19 (moved from `plans` to `shots`);
+  SKY_OFF_VERDOR X6-04, X6-05, X6-06, X6-07, X6-19, X6-20. Durations = shot-list frames = the edl-1C slots (unchanged).
+  Lines placed from the takes: X4-12 (X4-02, OFF), X4-18 (X4-03..07), X6-05 (X6-01..05), X6-07 (X6-06); build-shots: no warnings.
+- New helpers (both specs): `fly`, `pair(p, h, dur, {lat, lead})` (the 1C TALK formation on any heading; negative lat =
+  Charcoal to Leaf's right), `SH` / `shTrack` (shadow box centred so its sun axis passes through a flyer - the 1C close
+  shots used the default box far away), `posAt`; sky-off-verdor also `shipCam` (a long-lens camera ship riding with a pair).
+- Stills (looked at): X4-16 r1 (from 212 over x 298) showed sea + a bare apron -> pair moved inland over the town, lens from
+  AHEAD (185) looking back down: roofs + harbour wall read. X6-05 r1/r2 (the 1C-14 shoulder set-up rotated to heading 158,
+  rise 3.2 then 5, Leaf +3 then +6) hid Abby behind his wing both times -> the X4-18 long-lens two-shot from inland (180 mm,
+  230 m). X6-19 r1 (abeam from the seaward side): cliff face filled the frame, Leaf on his tail -> from behind / high
+  (bearing 140, 600 m, 110 m up), Leaf back on the INLAND side (convention), Charcoal 24 m right + 20 m ahead; X6-20 same.
+- KNOWN ISSUES: X4-18 / X6-05 faces small (180 mm two-shots: lip-sync barely visible; the framer reports 0.4 off - it
+  cannot hold both heads at +-0.4, the read is fine). X4-12: the pat (rider `touch` at leaf.neck_2) did not show at
+  1.8 s - check in video. X4-12 plays Remi's line OFF (medium on Abby; shot list puts him R). X4-08: no quay dragon
+  (answer OFF, sound only), sea background. X6: no OUTER_ROCKS set - the rocks / gap / mist are kept OFF FRAME in every
+  shot (approach shots look NE, return shots have the rocks behind the lens); X6-20's island is SKY_OFF_VERDOR's coast and
+  hills only (no harbour / town / palace: those are VERDOR_AERIAL's builder). X6-07: Remi cannot lean per act (REQUEST).
+- NOT DONE: X4-10 (back in `plans` with notes: r2 still had no mast in frame - the 50 mm frame at y 30 cuts above the
+  ship's rig, Abby hidden by the upstroke; the mainmast position / top must be measured and a lookout (crowd08) needs a
+  platform). X4-15 (needs a mark at the palace chamber opening: MAP.chamberOpening [84, 76, 1430] does not match the keep,
+  whose east face is at x ~61; then Alexandria standing in it).
+- Verify: npm test 48 pass / 0 fail / 1 skipped.
+- NEXT: 1. Lead renders the 12 videos (none heavy beyond the usual pair shots). 2. X4-10: measure the Santa Maria's
+  mainmast in a probe, Leaf ~20 m, lens 4 m above her. 3. X4-15: a `chamberOpening` mark from palace() (keep front
+  windows, row 16.5 m) + Alexandria (`y` on the cast) + Remi raiseHand reverse. 4. OUTER_ROCKS set for X6-01..03/08..18.
+- REQUESTS: humans - per-act rider lean (X6-06/07) and a rider pat (X4-12): written in humans/PROGRESS.md.
+
 ## Session 29 (2026-11-07, short budgeted session: F4 cloth + near leg, X4-06 "no hoe / no lean" - STILLS only)
 
 Scratch: `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/dir29/` - `f4_before.png` (= s28 after), `f4_t2.png` (try 1), `f4_t104.png` (try 1 at CAMS 104),

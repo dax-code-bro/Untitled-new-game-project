@@ -546,6 +546,441 @@
    },
    "staging": "EXTREME WIDE: 160 mm slow aerial travel from inland, abeam and a little behind: the pair over the bright sea, Leaf left, Charcoal right; Verdor's headland receding in the left background. Private freedom, not a procession.",
    "deviation": null
+  },
+  {
+   "job": "X6-04",
+   "seq": 173,
+   "scene": "1C",
+   "set": "SKY_OFF_VERDOR",
+   "start_s": 91,
+   "start_frame": 2184,
+   "frames": 48,
+   "pre": 12,
+   "post": 12,
+   "seconds": 2,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "morning (continuous from 1B)",
+    "weather": "clear; the last mist over the water and against the seaward side of the outer rocks; light breeze off the sea",
+    "notes": "CONTINUOUS from 1B-15: Leaf launches first (Abby), then Charcoal (Remi) tears the cleared launch space (the launch scar mended in X19). Same sun as 1B (east, ~31 deg up). The flight line (1C-10/11) runs along the coast with Leaf behind and on the near (inland) side; screen direction L -> R held through 1E.",
+    "sun": [
+     0.8384361386092437,
+     0.5150380749100542,
+     0.17821510280267075
+    ],
+    "exposure": 1.1
+   },
+   "staging": "MEDIUM 50 mm air-to-air off Leaf's right front: Abby (screen left) looks ahead at the gap (off frame right, far), then across at Remi (screen right). He already knows what she is going to say.",
+   "deviation": null
+  },
+  {
+   "job": "X6-05",
+   "seq": 174,
+   "scene": "1C",
+   "set": "SKY_OFF_VERDOR",
+   "start_s": 95,
+   "start_frame": 2280,
+   "frames": 288,
+   "pre": 12,
+   "post": 12,
+   "seconds": 12,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [
+    {
+     "id": "X6-01",
+     "part": 0,
+     "ref": "X6-01",
+     "role": "ABBY",
+     "file": "vo/X6-01.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.135,
+     "at_s": 0.77,
+     "speech_in_s": 0.8,
+     "speech_out_s": 1.875,
+     "words": [
+      {
+       "w": "first",
+       "start_s": 0.77,
+       "end_s": 1.2
+      },
+      {
+       "w": "through",
+       "start_s": 1.2,
+       "end_s": 1.37
+      },
+      {
+       "w": "the",
+       "start_s": 1.37,
+       "end_s": 1.45
+      },
+      {
+       "w": "gap",
+       "start_s": 1.45,
+       "end_s": 1.89
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    },
+    {
+     "id": "X6-02",
+     "part": 0,
+     "ref": "X6-02",
+     "role": "REMI",
+     "file": "vo/X6-02.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.62,
+     "at_s": 2.445,
+     "speech_in_s": 2.475,
+     "speech_out_s": 4.035,
+     "words": [
+      {
+       "w": "he",
+       "start_s": 2.445,
+       "end_s": 2.605
+      },
+      {
+       "w": "doesn't",
+       "start_s": 2.605,
+       "end_s": 2.905
+      },
+      {
+       "w": "fit",
+       "start_s": 2.905,
+       "end_s": 3.185
+      },
+      {
+       "w": "through",
+       "start_s": 3.185,
+       "end_s": 3.425
+      },
+      {
+       "w": "the",
+       "start_s": 3.425,
+       "end_s": 3.505
+      },
+      {
+       "w": "gap",
+       "start_s": 3.505,
+       "end_s": 4.055
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    },
+    {
+     "id": "X6-03",
+     "part": 0,
+     "ref": "X6-03",
+     "role": "ABBY",
+     "file": "vo/X6-03.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.62,
+     "at_s": 4.505,
+     "speech_in_s": 4.535,
+     "speech_out_s": 5.095,
+     "words": [
+      {
+       "w": "i",
+       "start_s": 4.505,
+       "end_s": 4.655
+      },
+      {
+       "w": "know",
+       "start_s": 4.655,
+       "end_s": 5.045
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    },
+    {
+     "id": "X6-04",
+     "part": 0,
+     "ref": "X6-04",
+     "role": "REMI",
+     "file": "vo/X6-04.wav",
+     "file_in_s": 0,
+     "file_out_s": 2.28,
+     "at_s": 5.765,
+     "speech_in_s": 5.795,
+     "speech_out_s": 8.015,
+     "words": [
+      {
+       "w": "mother",
+       "start_s": 5.765,
+       "end_s": 6.075
+      },
+      {
+       "w": "said",
+       "start_s": 6.075,
+       "end_s": 6.435
+      },
+      {
+       "w": "within",
+       "start_s": 6.435,
+       "end_s": 6.835
+      },
+      {
+       "w": "reach",
+       "start_s": 6.835,
+       "end_s": 7.215
+      },
+      {
+       "w": "of",
+       "start_s": 7.215,
+       "end_s": 7.315
+      },
+      {
+       "w": "the",
+       "start_s": 7.315,
+       "end_s": 7.455
+      },
+      {
+       "w": "island",
+       "start_s": 7.455,
+       "end_s": 7.995
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    },
+    {
+     "id": "X6-05",
+     "part": 0,
+     "ref": "X6-05",
+     "role": "ABBY",
+     "file": "vo/X6-05.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.64,
+     "at_s": 8.585,
+     "speech_in_s": 8.615,
+     "speech_out_s": 10.195,
+     "words": [
+      {
+       "w": "they're",
+       "start_s": 8.585,
+       "end_s": 8.835
+      },
+      {
+       "w": "within",
+       "start_s": 8.835,
+       "end_s": 9.135
+      },
+      {
+       "w": "reach",
+       "start_s": 9.135,
+       "end_s": 9.485
+      },
+      {
+       "w": "of",
+       "start_s": 9.485,
+       "end_s": 9.565
+      },
+      {
+       "w": "the",
+       "start_s": 9.565,
+       "end_s": 9.695
+      },
+      {
+       "w": "island",
+       "start_s": 9.695,
+       "end_s": 10.165
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    }
+   ],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "morning (continuous from 1B)",
+    "weather": "clear; the last mist over the water and against the seaward side of the outer rocks; light breeze off the sea",
+    "notes": "CONTINUOUS from 1B-15: Leaf launches first (Abby), then Charcoal (Remi) tears the cleared launch space (the launch scar mended in X19). Same sun as 1B (east, ~31 deg up). The flight line (1C-10/11) runs along the coast with Leaf behind and on the near (inland) side; screen direction L -> R held through 1E.",
+    "sun": [
+     0.8384361386092437,
+     0.5150380749100542,
+     0.17821510280267075
+    ],
+    "exposure": 1.1
+   },
+   "staging": "TWO-SHOT 180 mm air-to-air from inland (the X4-18 set-up): Leaf / Abby left and near, Charcoal / Remi right and beyond, the sea behind. The challenge: \"First through the gap.\" ... \"They're within reach of the island.\"",
+   "deviation": null
+  },
+  {
+   "job": "X6-06",
+   "seq": 175,
+   "scene": "1C",
+   "set": "SKY_OFF_VERDOR",
+   "start_s": 109,
+   "start_frame": 2616,
+   "frames": 72,
+   "pre": 12,
+   "post": 12,
+   "seconds": 3,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "morning (continuous from 1B)",
+    "weather": "clear; the last mist over the water and against the seaward side of the outer rocks; light breeze off the sea",
+    "notes": "CONTINUOUS from 1B-15: Leaf launches first (Abby), then Charcoal (Remi) tears the cleared launch space (the launch scar mended in X19). Same sun as 1B (east, ~31 deg up). The flight line (1C-10/11) runs along the coast with Leaf behind and on the near (inland) side; screen direction L -> R held through 1E.",
+    "sun": [
+     0.8384361386092437,
+     0.5150380749100542,
+     0.17821510280267075
+    ],
+    "exposure": 1.1
+   },
+   "staging": "WIDE 120 mm from a camera ship inland and a little above: she does not wait - Leaf (Abby up) tips over and drops away toward the rocks (off frame right) with quick, eager beats.",
+   "deviation": null
+  },
+  {
+   "job": "X6-07",
+   "seq": 176,
+   "scene": "1C",
+   "set": "SKY_OFF_VERDOR",
+   "start_s": 114,
+   "start_frame": 2736,
+   "frames": 96,
+   "pre": 12,
+   "post": 12,
+   "seconds": 4,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [
+    {
+     "id": "X6-06",
+     "part": 0,
+     "ref": "X6-06",
+     "role": "REMI",
+     "file": "vo/X6-06.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.385,
+     "at_s": 0.37,
+     "speech_in_s": 0.4,
+     "speech_out_s": 1.725,
+     "words": [
+      {
+       "w": "we're",
+       "start_s": 0.37,
+       "end_s": 0.56
+      },
+      {
+       "w": "going",
+       "start_s": 0.56,
+       "end_s": 0.94
+      },
+      {
+       "w": "to",
+       "start_s": 0.94,
+       "end_s": 1.06
+      },
+      {
+       "w": "lose",
+       "start_s": 1.06,
+       "end_s": 1.68
+      }
+     ],
+     "gain_db": -2,
+     "continues": false,
+     "placeholder": false
+    }
+   ],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "morning (continuous from 1B)",
+    "weather": "clear; the last mist over the water and against the seaward side of the outer rocks; light breeze off the sea",
+    "notes": "CONTINUOUS from 1B-15: Leaf launches first (Abby), then Charcoal (Remi) tears the cleared launch space (the launch scar mended in X19). Same sun as 1B (east, ~31 deg up). The flight line (1C-10/11) runs along the coast with Leaf behind and on the near (inland) side; screen direction L -> R held through 1E.",
+    "sun": [
+     0.8384361386092437,
+     0.5150380749100542,
+     0.17821510280267075
+    ],
+    "exposure": 1.1
+   },
+   "staging": "MEDIUM 50 mm off Charcoal's right front: Remi, resigned (\"We're going to lose.\"), looks after them; Charcoal goes after them - out of the glide into a deep beat, nose down.",
+   "deviation": null
+  },
+  {
+   "job": "X6-19",
+   "seq": 188,
+   "scene": "1C",
+   "set": "SKY_OFF_VERDOR",
+   "start_s": 120,
+   "start_frame": 2880,
+   "frames": 120,
+   "pre": 12,
+   "post": 12,
+   "seconds": 5,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "morning (continuous from 1B)",
+    "weather": "clear; the last mist over the water and against the seaward side of the outer rocks; light breeze off the sea",
+    "notes": "CONTINUOUS from 1B-15: Leaf launches first (Abby), then Charcoal (Remi) tears the cleared launch space (the launch scar mended in X19). Same sun as 1B (east, ~31 deg up). The flight line (1C-10/11) runs along the coast with Leaf behind and on the near (inland) side; screen direction L -> R held through 1E.",
+    "sun": [
+     0.8384361386092437,
+     0.5150380749100542,
+     0.17821510280267075
+    ],
+    "exposure": 1.1
+   },
+   "staging": "WIDE 160 mm from a camera ship high, behind and seaward, looking north-west up the coast: they turn back along the coast side by side (travel screen L -> R), Leaf a little behind on the inland side (left), Charcoal right; sea below, the island's cliffs beyond.",
+   "deviation": null
+  },
+  {
+   "job": "X6-20",
+   "seq": 189,
+   "scene": "1C",
+   "set": "SKY_OFF_VERDOR",
+   "start_s": 127,
+   "start_frame": 3048,
+   "frames": 192,
+   "pre": 12,
+   "post": 12,
+   "seconds": 8,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "morning (continuous from 1B)",
+    "weather": "clear; the last mist over the water and against the seaward side of the outer rocks; light breeze off the sea",
+    "notes": "CONTINUOUS from 1B-15: Leaf launches first (Abby), then Charcoal (Remi) tears the cleared launch space (the launch scar mended in X19). Same sun as 1B (east, ~31 deg up). The flight line (1C-10/11) runs along the coast with Leaf behind and on the near (inland) side; screen direction L -> R held through 1E.",
+    "sun": [
+     0.8384361386092437,
+     0.5150380749100542,
+     0.17821510280267075
+    ],
+    "exposure": 1.1
+   },
+   "staging": "EXTREME WIDE 135 mm aerial travel from high behind them on the seaward side: ahead, the island in the morning light, the coast running away north; Leaf left, Charcoal right. Nobody speaks; the camera travels with them, not around them.",
+   "deviation": null
   }
  ]
 }

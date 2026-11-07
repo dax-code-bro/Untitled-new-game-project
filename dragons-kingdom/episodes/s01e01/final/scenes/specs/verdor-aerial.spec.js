@@ -54,6 +54,33 @@ const LEAF_FLY = (o = {}) => [[0, 'flight', { corr: 1, ...o }]];
 const CHAR_HZ = 0.625;                                   // sound spots: one beat / 1.6 s (do not change without telling sound)
 const CHAR_FLY = (o = {}) => [[0, 'flight', { hz: CHAR_HZ, amp: 0.68, ...o }]];
 const CHAR_GLIDE = (o = {}) => [[0, 'glide', { bank: 0.03, dihedral: 0.08, droop: 0.06, ...o }]];
+// (s30) straight flight + the talking formation on any heading, and the sun's shadow box on a flyer
+const D2R = Math.PI / 180;
+function fly(p0, h, v, dur, dy = 0) {
+  const dx = Math.sin(h * D2R) * v * dur, dz = -Math.cos(h * D2R) * v * dur;
+  return { root: [[0, p0], [dur, [p0[0] + dx, p0[1] + dy, p0[2] + dz], 'linear']], yawKeys: h };
+}
+/** Leaf at p on heading h; Charcoal `lat` m to her LEFT (seaward when heading south), `lead` m ahead, 2 m lower (1C TALK) */
+function pair(p, h, dur, o = {}) {
+  const f = [Math.sin(h * D2R), -Math.cos(h * D2R)], l = [-Math.cos(h * D2R), -Math.sin(h * D2R)];
+  const lat = o.lat ?? 30, lead = o.lead ?? 16;
+  const c0 = [p[0] + l[0] * lat + f[0] * lead, p[1] + (o.cdy ?? -2), p[2] + l[1] * lat + f[1] * lead];
+  return { leaf: fly(p, h, o.v ?? V, dur, o.dy || 0), charcoal: fly(c0, h, o.v ?? V, dur, o.dy || 0) };
+}
+/** shadow-box centre for a flyer at p (sun 102 / 31: the box's axis through p meets y 20 here) */
+const SH = (p) => [p[0] - 1.86 * (p[1] - 20), 20, p[2] - 0.394 * (p[1] - 20)];
+const shTrack = (fl) => fl.root.map(([t, p, e]) => (e ? [t, SH(p), e] : [t, SH(p)]));
+const posAt = (fl, t) => { const [[t0, a], [t1, b]] = fl.root; const k = (t - t0) / (t1 - t0); return a.map((v, i) => v + (b[i] - v) * k); };
+// (s30) X4-16..19 formation over the town's south end, heading 170 (after X4-14 / 15 they cross back inland)
+const X4P = {
+  'X4-16': pair([196, 66, 1690], 170, 6),            // over the town: Charcoal on the terrace-1 roofs' line (x ~228)
+  'X4-17': pair([270, 64, 1800], 170, 2),
+  'X4-18': pair([272, 64, 1840], 170, 8),
+  'X4-19': pair([290, 64, 1975], 170, 3.5),
+};
+const X4_10 = { root: [[0, [257, 30, 1545]], [7, [259, 31, 1657], 'linear']], yawKeys: 179 };
+const X4_12 = fly([454, 58, 1770], 172, V, 4);
+const X4_08 = { root: [[0, [360, 22, 1600]], [3.5, [355, 24, 1655], 'linear']], yawKeys: 185 };
 
 export const MAP = {
   // (s20: the numbers the builder sets/verdor-aerial.js reads - quayX / apronY / terrace / palace / harbourWall / santaMaria / quay)
@@ -182,31 +209,83 @@ export default {
       cast: { leaf: { tack: true, root: [[0, [361, 55, 2302]], [5, [389, 55, 2378], 'linear']], yawKeys: 160, acts: LEAF_FLY() }, charcoal: { tack: true, root: [[0, [384, 57, 2312]], [5, [412, 57, 2388], 'linear']], yawKeys: 160, acts: CHAR_FLY() }, abbyR: {}, remiR: {} },
       notes: 'outer rocks: nature/rocks kit stacks at [700, 0, 3200] (X6 continuity: two stacks leaning close, mist on the seaward side)',
     },
+    // ------------------------------------------------------------------ session 30 (batch 1) ---
+    'X4-08': {
+      staging: 'MEDIUM-WIDE 120 mm air-to-air off Leaf\'s right, a little above: low over the harbour basin, Leaf gives a quick bright call (neck up, jaw open), then back to the line; the quay dragon\'s answer is OFF (sound). Charcoal does not call (not in frame).',
+      // (s30: plan dist 26 held only head + neck at 120 mm -> 48 m, rise 8 (looks down onto the basin / wall); the quay
+      // dragon is not built yet - its answer stays off screen, sound only)
+      cam: { rig: 'follow', frame: { subjects: [['leaf.chest', [-0.05, 0.05]]], from: 250, dist: 48, rise: 8, track: true }, mm: 120, fstop: 5.6, focus: 'leaf.head' },
+      set: { shadowAt: shTrack(X4_08), shadowExtent: 60 },
+      cast: { leaf: { tack: true, ...X4_08, acts: [[0, 'flight', { corr: 1 }], [0.8, 'flight', { corr: 1, call: 1, blend: 0.25 }], [1.9, 'flight', { corr: 1, blend: 0.5 }]] }, abbyR: {} },
+      notes: 'creatures flight `call` channel (r2 s8). Sound: Leaf call 0.9-1.8 s, the quay dragon answers OFF ~2.3 s',
+    },
+    'X4-12': {
+      staging: 'MEDIUM 50 mm on Abby from Leaf\'s right front three-quarter (Remi\'s line X4-02 "They wave at you." OFF / over, he is 30 m away seaward): she pretends not to hear and pats Leaf\'s neck with her right hand; face three-quarter.',
+      // (s30: one subject (the 1C-09 lesson: two subjects flip the solve); Remi is OFF - at 50 mm a medium on Abby cannot hold a
+      // rider 30 m away; the shot list's 'Remi R' is his voice from screen right. The line plays OFF, so no lip-sync on screen.)
+      cam: { rig: 'follow', frame: { subjects: [['abbyR.head', [-0.12, 0.2]]], from: 222, dist: 4.5, rise: 0.6, track: true }, mm: 50, fstop: 4, focus: 'abbyR.head' },
+      set: { shadowAt: shTrack(X4_12), shadowExtent: 40 },
+      cast: {
+        leaf: { tack: true, ...X4_12, acts: LEAF_FLY() },
+        abbyR: { acts: [[0, 'look', { at: [700, 50, 2000], amount: 0.5 }], [1.5, 'touch', { side: 'R', at: 'leaf.neck_2', offset: [0, 0.12, 0], in: 0.35, hold: 0.3, out: 0.25 }], [2.45, 'touch', { side: 'R', at: 'leaf.neck_2', offset: [0, 0.12, 0], in: 0.25, hold: 0.3, out: 0.4 }]] },
+      },
+      lines: [['X4-02', 0.35]],
+    },
+    'X4-16': {
+      staging: 'MEDIUM 50 mm off Charcoal\'s right front: Remi (screen right) looks down over the town longer than he needs to - roofs, harbour, people working below-left; face three-quarter AWAY (down-left).',
+      // (s30 r1 still from 212 over x 298: sea + a bare apron behind him, no town -> the pair moved inland over the town
+      // and the lens comes from AHEAD (185), 4 m above him, looking back down: the terrace roofs below / behind him)
+      cam: { rig: 'follow', frame: { subjects: [['remiR.head', [0.3, 0.15]]], from: 185, dist: 14, rise: 4, track: true }, mm: 50, fstop: 4, focus: 'remiR.head' },
+      set: { shadowAt: shTrack(X4P['X4-16'].charcoal), shadowExtent: 50 },
+      cast: { charcoal: { tack: true, ...X4P['X4-16'].charcoal, acts: CHAR_GLIDE({ droop: 0.16 }) }, remiR: { acts: [[0, 'look', { at: [175, 12, 1650], amount: 0.9 }]] } },
+    },
+    'X4-17': {
+      staging: 'CLOSE 85 mm on Abby (screen left) from Leaf\'s right front three-quarter: she watches him doing it - looks screen RIGHT toward Remi. Silent.',
+      cam: { rig: 'follow', frame: { subjects: [['abbyR.head', [-0.15, 0.12]]], from: 215, dist: 5.5, rise: 0.4, track: true }, mm: 85, fstop: 4, focus: 'abbyR.head' },
+      set: { shadowAt: shTrack(X4P['X4-17'].leaf), shadowExtent: 40 },
+      cast: { leaf: { tack: true, ...X4P['X4-17'].leaf, acts: LEAF_FLY() }, abbyR: { acts: [[0, 'look', { at: posAt(X4P['X4-17'].charcoal, 1).map((v, i) => v + (i === 1 ? 3 : 0)), amount: 0.8 }]] } },
+    },
+    'X4-18': {
+      staging: 'TWO-SHOT 180 mm air-to-air from inland: the exchange X4-03..X4-07 ("You\'re doing it again." ... "You\'re counting something."); Leaf / Abby left and near, Charcoal / Remi right and beyond; the sea below and behind them.',
+      // (s30: the 1C TALK formation (30 m lateral, Charcoal 16 m ahead) on heading 170; lines from the takes)
+      cam: { rig: 'follow', frame: { subjects: [['abbyR.head', [-0.4, 0]], ['remiR.head', [0.4, 0.08]]], from: 262, dist: 230, rise: 22, track: true }, mm: 180, fstop: 5.6, focus: 'abbyR.head' },
+      set: { shadowAt: shTrack(X4P['X4-18'].leaf), shadowExtent: 90 },
+      cast: {
+        leaf: { tack: true, ...X4P['X4-18'].leaf, acts: LEAF_FLY() },
+        charcoal: { tack: true, ...X4P['X4-18'].charcoal, acts: CHAR_GLIDE() },
+        abbyR: { acts: [[0, 'look', { at: 'remiR.head', amount: 0.8 }]] },
+        remiR: { acts: [[0, 'look', { at: [210, 12, 1800], amount: 0.8 }], [5.2, 'look', { at: 'abbyR.head', amount: 0.6, blend: 0.5 }]] },
+      },
+      lines: [['X4-03', 0.5], ['X4-04', 0.35], ['X4-05', 0.3], ['X4-06', 0.35], ['X4-07', 0.35]],
+    },
+    'X4-19': {
+      staging: 'CLOSE 85 mm on Remi (screen right) from Charcoal\'s right front: he does not answer; looks away from the town (down-left) toward the sea (screen right), like someone caught.',
+      cam: { rig: 'follow', frame: { subjects: [['remiR.head', [0.2, 0.1]]], from: 205, dist: 7, rise: 0.8, track: true }, mm: 85, fstop: 4, focus: 'remiR.head' },
+      set: { shadowAt: shTrack(X4P['X4-19'].charcoal), shadowExtent: 40 },
+      cast: { charcoal: { tack: true, ...X4P['X4-19'].charcoal, acts: CHAR_GLIDE({ droop: 0.16 }) }, remiR: { acts: [[0, 'look', { at: [180, 10, 1760], amount: 0.8 }], [1.2, 'look', { at: [800, 40, 2100], amount: 0.8, blend: 0.6 }]] } },
+    },
   },
   // NOT WIRED yet (build-shots reads only `shots`): these stay slates in edl-1C until each is checked in previs /
   // stills and its requests are met; move an entry up into `shots` to wire it.
   plans: {
-    'X4-08': {
-      staging: 'MEDIUM 120 mm air-to-air off Leaf\'s right: Leaf gives a quick bright call (mouth open, head up); hold; the quay dragon\'s answer is OFF (sound). Charcoal does not call.',
-      cam: { rig: 'follow', frame: { subjects: [['leaf.head', [-0.1, 0.1]]], from: 250, dist: 26, rise: 2, track: true }, mm: 120, fstop: 4, focus: 'leaf.head' },
-      cast: { leaf: { tack: true, root: [[0, [360, 22, 1600]], [3.5, [355, 24, 1655], 'linear']], yawKeys: 185, acts: [[0, 'flight', { corr: 1 }], [0.8, 'flight', { corr: 1, call: 1 }], [1.6, 'flight', { corr: 1 }]] }, abbyR: {} },
-      notes: 'REQUEST creatures: a `call` channel (jaw open + neck lift) in flight if `bite`/`roar` cannot be layered on flight',
-    },
     'X4-10': {
-      staging: '50 mm air-to-air past the Santa Maria\'s mainmast: Leaf passes close beside it, the LOOKOUT at the masthead ducks, then laughs and waves; Abby waves back with her LEFT hand (her right stays on the grip bar). Line X4-01 (Abby).',
-      cam: { rig: 'follow', frame: { subjects: [['abbyR.head', [-0.15, 0.05]], ['lookout.head', [0.3, 0]]], from: 225, dist: 14, rise: 1.5, track: true }, mm: 50, fstop: 5.6, focus: 'abbyR.head' },
+      staging: '50 mm air-to-air from inland past the Santa Maria\'s mainmast: Leaf passes close beside it on its inland side, the LOOKOUT high on the mast (beyond her, right) ducks, then laughs and waves; Abby waves back with her LEFT hand (her right stays on the grip bar). Line X4-01 (Abby).',
+      // (s30 NOT DONE - r2 still @0.35: no mast in frame (the 50 mm frame at Leaf's height 30 m cuts at ~24 m, the ship's
+      // rig is lower / behind her) and Abby hidden by the upstroke. NEXT: Leaf ~20 m, lens 4 m above her, Abby [-0.3, 0.2];
+      // measure the mainmast (x, z, top) from the santa-maria model first; the lookout needs a cast entry
+      // `lookout: { kind: 'human', id: 'crowd08' }` and a top platform under him.)
+      // (s30: Leaf passes 10 m INLAND of the mast (x 257) so the mast and the lookout stand BEYOND her from an inland
+      // camera - the flight line stays L -> R and nothing crosses in front of Abby; the mast is ahead (screen right)
+      // until ~2.8 s, then slides behind her. Lookout: crowd08 at the masthead mark, y 22 (a guess at the main top -
+      // check the still); if there is no platform there he floats: then cut him and log the request)
+      cam: { rig: 'follow', frame: { subjects: [['abbyR.head', [-0.3, 0.0]]], from: 252, dist: 30, rise: 1.5, track: true }, mm: 50, fstop: 5.6, focus: 'abbyR.head' },
+      set: { shadowAt: shTrack(X4_10), shadowExtent: 60 },
       cast: {
-        leaf: { tack: true, root: [[0, [282, 30, 1545]], [7, [290, 32, 1655], 'linear']], yawKeys: 182, acts: LEAF_FLY() },
-        abbyR: { acts: [[2.6, 'gesture', { name: 'wave', hand: 'L' }]] },
-        lookout: { kind: 'human', id: 'sailor1', mark: 'santaMaria.masthead', acts: [[1.2, 'duck'], [2.4, 'gesture', { name: 'wave', hand: 'R' }]] },
+        leaf: { tack: true, ...X4_10, acts: LEAF_FLY() },
+        abbyR: { acts: [[3.2, 'wave', { side: 'L', in: 0.3, hold: 1.3, out: 0.4 }]] },
+        lookout: { at: [MAP.santaMaria.at[0], MAP.santaMaria.at[2]], y: 22, face: 270, acts: [[1.4, 'crouch', { dur: 1.2 }], [2.9, 'wave', { side: 'R', in: 0.3, hold: 1.6, out: 0.4 }]] },
       },
-      notes: 'mast clearance: Leaf\'s right wingtip must stay >= 4 m from the mast at the beat\'s full extension (check every 6th frame)',
-    },
-    'X4-12': {
-      staging: 'MEDIUM 50 mm on Abby (Remi\'s line X4-02 "They wave at you." OFF/over): she pretends not to hear and pats Leaf\'s neck; face three-quarter.',
-      cam: { rig: 'follow', frame: { subjects: [['abbyR.head', [-0.1, 0.15]], ['abbyR.hand.R', [0.15, -0.3]]], from: 215, dist: 4.5, rise: 0.6, track: true }, mm: 50, fstop: 4, focus: 'abbyR.head' },
-      cast: { leaf: { tack: true, ...inForm(452, 62, 0, T['X4-12'], 4, { heading: 172 }), acts: LEAF_FLY() }, abbyR: { acts: [[1.4, 'gesture', { name: 'pat', target: 'leaf.neck', hand: 'R' }]] } },
-      notes: 'wing-sweep rule (1C-16 lesson): at dist 4.5 from 215 the lens may be inside the right wing\'s sweep - previs every beat phase',
+      lines: [['X4-01', { at: 4.6 }]],
     },
     'X4-13': {
       staging: 'AERIAL 35 mm looking down on the school field from ~90 m: young riders on small dragons, an INSTRUCTOR; one wobbling takeoff, one rider clinging on with both arms; the pair\'s shadows cross the field.',
@@ -217,26 +296,6 @@ export default {
       staging: 'POV 300 mm-equivalent from Remi\'s eyeline: Alexandria standing in the chamber opening, watching them pass (face too small to need lip-sync; still, unreadable); REVERSE 85 mm on Remi lifting a hand.',
       cam: { rig: 'follow', pos: [[0, 'remiR.head']], look: [[0, MAP.palace.chamberOpening]], mm: 300, fstop: 5.6, focus: MAP.palace.chamberOpening },
       notes: 'two set-ups in one shot id: split into X4-15a (POV 0-2.5 s) / X4-15b (reverse 2.5-4.5 s) via a camera cut key at 2.5 s; Alexandria: humans id alexandria, stand, hands folded',
-    },
-    'X4-16': {
-      staging: 'MEDIUM 50 mm off Charcoal\'s right: Remi looks down over the town longer than he needs to - roofs, harbour, people working; face three-quarter AWAY (down-left).',
-      cam: { rig: 'follow', frame: { subjects: [['remiR.head', [0.3, 0.1]]], from: 200, dist: 16, rise: 3, track: true }, mm: 50, fstop: 4, focus: 'remiR.head' },
-      cast: { charcoal: { tack: true, root: [[0, [300, 62, 1760]], [6, [318, 62, 1854], 'linear']], yawKeys: 170, acts: CHAR_GLIDE({ droop: 0.16 }) }, remiR: { acts: [[0, 'look', { at: [200, 10, 1700], amount: 0.9 }]] } },
-    },
-    'X4-17': {
-      staging: 'CLOSE 85 mm on Abby: she watches him doing it (looks screen RIGHT toward Remi). Silent.',
-      cam: { rig: 'follow', frame: { subjects: [['abbyR.head', [-0.15, 0.1]]], from: 215, dist: 5.5, rise: 0.4, track: true }, mm: 85, fstop: 4, focus: 'abbyR.head' },
-      cast: { leaf: { tack: true, root: [[0, [270, 62, 1800]], [2, [275, 62, 1832], 'linear']], yawKeys: 170, acts: LEAF_FLY() }, abbyR: { acts: [[0, 'look', { at: 'remiR.head', amount: 0.8 }]] } },
-    },
-    'X4-18': {
-      staging: 'TWO-SHOT 180 mm air-to-air from inland: the exchange X4-03..X4-07 ("You\'re doing it again." ... "You\'re counting something."); Leaf left/near, Charcoal right; the roofs drop away below.',
-      cam: { rig: 'follow', frame: { subjects: [['abbyR.head', [-0.35, 0]], ['remiR.head', [0.3, 0.05]]], from: 262, dist: 180, rise: 18, track: true }, mm: 180, fstop: 5.6, focus: 'abbyR.head' },
-      notes: 'formation TALK as 1C (Leaf 16 m behind Charcoal\'s centre, 30 m lateral); lines placed by build-shots from takes',
-    },
-    'X4-19': {
-      staging: 'CLOSE 85 mm on Remi: he does not answer; looks away from the town toward the sea (screen right), like someone caught.',
-      cam: { rig: 'follow', frame: { subjects: [['remiR.head', [0.2, 0.1]]], from: 205, dist: 7, rise: 0.8, track: true }, mm: 85, fstop: 4, focus: 'remiR.head' },
-      notes: 'remiR look: [0] at town (down-left) -> [1.2] at sea (east), blend 0.6',
     },
   },
 };
