@@ -24,7 +24,7 @@ import numpy as np  # noqa: E402
 
 import mhcore as mc  # noqa: E402
 import meshutil as mu  # noqa: E402
-from humanbuild import Kit, Part, shape, body_part, proxy_part, welded_normals, bake_ao_thickness, to_mesh_dict, eye_attrs, skin_aux  # noqa: E402
+from humanbuild import Kit, Part, shape, body_part, proxy_part, welded_normals, bake_ao_thickness, to_mesh_dict, eye_attrs, skin_aux, fingertip_pads  # noqa: E402
 from posing import PoseBuilder  # noqa: E402
 import recipes  # noqa: E402
 import garments as gm  # noqa: E402
@@ -108,6 +108,10 @@ def assemble(kit, spec, out_dir, opts):
     V = shape(kit, spec)
     H, T = kit.rig.joints(V)
     sk = mc.Skeleton(kit.rig, H, T)
+    # fingertip flesh pads (look 2n): rest-shape offset after the joints, so the rig is unchanged
+    V, fp = fingertip_pads(kit, V, sk, pad=spec.get('fingertip_pad', 0.11))
+    if fp:
+        log(f'   fingertip pads: max {fp["max_mm"]} mm, {fp["moved"]} verts')
     sole = spec.get('sole', 0.012)
     # poses
     seated = spec.get('pose', 'stand').startswith('ride')

@@ -67,6 +67,76 @@ def shape(kit, spec):
     return V
 
 
+def fingertip_pads(kit, V, skel, pad=0.11, iters=3):
+    """Soft flesh pads on the palm side of the distal finger segments (MakeHuman's fingertips taper
+    to a point): each body vertex on a distal phalanx (finger*-3, nearest of this hand's finger bones)
+    whose normal faces the palm side moves out by up to pad x the segment length (adult ~2.5 mm),
+    peaked over the pulp (~57 % along the segment, still ~30 % at the tip), partly toward its own
+    normal so the pad also widens a little. Rest pose; joints unchanged. Returns (V', stats)."""
+    if not pad:
+        return V, {}
+    V = V.copy()
+    fv = [f[0] for f in kit.body_faces]
+    used = np.unique(np.concatenate([np.asarray(f) for f in fv]))
+    tris = np.array([(f[0], f[i], f[i + 1]) for f in fv for i in range(1, len(f) - 1)])
+    nrm = mc.vertex_normals(V, tris)
+    edges = np.unique(np.sort(np.concatenate([tris[:, [0, 1]], tris[:, [1, 2]], tris[:, [2, 0]]]), axis=1), axis=0)
+    idx = {n: i for i, n in enumerate(skel.names)}
+    H, T = skel.H, skel.T
+    off = np.zeros_like(V)
+    stats = {}
+
+    def seg_dist(P, h, t):
+        ax = t - h
+        L2 = ax @ ax
+        u = np.clip((P - h) @ ax / L2, 0, 1)
+        return np.linalg.norm(P - (h + u[:, None] * ax), axis=1)
+
+    for s in ('L', 'R'):
+        wr = H[idx[f'wrist.{s}']]
+        f2, f5 = H[idx[f'finger2-1.{s}']], H[idx[f'finger5-1.{s}']]
+        fwd = mc_norm((f2 + f5) / 2 - wr)
+        lat = mc_norm(f5 - f2)
+        sg = 1.0 if s == 'L' else -1.0
+        palm = mc_norm(sg * np.cross(lat, fwd))
+        sel = used[np.linalg.norm(V[used] - wr, axis=1) < 0.25]
+        P = V[sel]
+        bones = [f'finger{k}-{j}.{s}' for k in range(1, 6) for j in (1, 2, 3) if f'finger{k}-{j}.{s}' in idx]
+        D = np.stack([seg_dist(P, H[idx[b]], T[idx[b]]) for b in bones], axis=1)
+        near = np.argmin(D, axis=1)
+        for k in range(1, 6):
+            b = f'finger{k}-3.{s}'
+            h, t = H[idx[b]], T[idx[b]]
+            ax = t - h
+            L = np.linalg.norm(ax)
+            ax = ax / L
+            padn = palm if k > 1 else mc_norm(np.cross(ax, palm) * sg)
+            padn = mc_norm(padn - (padn @ ax) * ax)
+            along = (P - h) @ ax / L
+            m = (near == bones.index(b)) & (D[:, bones.index(b)] < 0.015) & (along > 0.0)
+            c = nrm[sel] @ padn
+            w = np.sin(np.pi * np.clip((along - 0.05) / 1.05, 0, 1)) * np.clip((c + 0.15) / 0.75, 0, 1) ** 1.5
+            w = np.where(m, w, 0.0)
+            d = 0.65 * padn[None, :] + 0.35 * nrm[sel]
+            d /= np.linalg.norm(d, axis=1, keepdims=True)
+            off[sel] += (pad * L) * w[:, None] * d
+            stats[b] = (round(pad * L * 1000, 2), int(np.count_nonzero(w > 0.05)))
+    # a few neighbour-averaging passes so the pad edge is smooth on the coarse base mesh
+    for _ in range(iters):
+        acc = np.zeros_like(off)
+        cnt = np.zeros(len(V))
+        np.add.at(acc, edges[:, 0], off[edges[:, 1]])
+        np.add.at(acc, edges[:, 1], off[edges[:, 0]])
+        np.add.at(cnt, edges[:, 0], 1)
+        np.add.at(cnt, edges[:, 1], 1)
+        nb = acc / np.maximum(cnt, 1)[:, None]
+        off = np.where(cnt[:, None] > 0, 0.5 * off + 0.5 * nb, off)
+    V += off
+    stats['max_mm'] = round(float(np.linalg.norm(off, axis=1).max()) * 1000, 2)
+    stats['moved'] = int(np.count_nonzero(np.linalg.norm(off, axis=1) > 2e-4))
+    return V, stats
+
+
 # ----------------------------------------------------------- geometry --
 def split_by_uv(faces, nv):
     """faces: list of (vidx, vtidx). Returns (vert_of (K,), vt_of (K,), tris (T,3) into K)."""

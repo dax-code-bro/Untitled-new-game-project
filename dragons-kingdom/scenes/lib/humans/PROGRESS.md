@@ -1382,3 +1382,36 @@ Checked: selftest-perf all passed; npm test fail 0 / skipped 1.
 NEXT (perf, in order): 1. s11 NEXT 1 (1C-16 pinky still), 3 (REQUEST props: real hoe), 4 (remi_ride thumb);
    2. if the director wants it, a cradle with the thumb's opposition reduced (thumb curl -0.15 gives 12 deg, lies in
    the index plane - looked stiff in theory, untested at full).
+
+## LOOK round 2n (2026-11-07, short session) - fingertip flesh pads (build time); crowd05 kirtle back re-checked
+Problem: MakeHuman fingertips taper to a point (2g NEXT 2, 2k-2m NEXT "fingertip pad bulge").
+CHANGED (humanbuild.py new `fingertip_pads()`, build.py calls it right after the Skeleton is made):
+1. Rest-shape vertex offset on the body: every body vertex on a distal phalanx (finger*-3; nearest of the hand's
+   15 finger segments, < 1.5 cm from the bone) whose normal faces the palm side (fingers: the hand's palm normal as
+   in skin_aux's nail mask; thumb: its own pad side) moves out by up to pad x segment length - profile
+   sin(pi * along) peaked over the pulp (~57 % along, ~30 % at the very tip), side weight from normal . pad,
+   direction 0.65 pad side + 0.35 own normal (the pulp also widens a little), then 3 neighbour-averaging passes.
+   Applied AFTER kit.rig.joints(V): joints, bone lengths and skin weights are unchanged (rig.js / restHand
+   unaffected). Spec key `fingertip_pad` (default 0.11, 0 = off) for a per-character override in characters.py.
+   Numbers: adult distal segment ~25.8 mm -> pad up to 2.8 mm before smoothing, max 2.47 mm after (alexandria;
+   crowd05 2.43, abby 2.31), ~466 verts moved (both hands); finger tips (k 2-5) move palmward ~1.6 mm on average
+   over the pad, ~0.2 mm along the finger.
+2. crowd05 kirtle back (perf s12 REQUEST, "up to 1.4 cm inside in the hoe lean"): already fixed by 2k-2m (the 1.4 cm
+   was perf's nearest-vertex metric). Re-probed after this rebuild (_probe_gap.mjs, ray gap): drape 0 verts < 3 mm,
+   0 through (means 1.05-1.57 cm, 36-52 cm over the root); director full lean 0 < 3 mm, 0 through (1.46-2.46 cm).
+   No change made. crowd05's dark tie band (optional) NOT done (needs a cloth.js branch; see 2m NEXT 2).
+Rebuilt: alexandria, crowd05 only. Checked: npm test 48 pass / 0 fail / 1 skipped.
+Images (scratch eng1/look15/): before/ + after/ rest_3.5.png (palm-up left hand, profile) and rest_2.5.png
+(right hand on the flank, low), humans-anim-rest.js draft; look15_sheet.png (2x crops, left before / right after;
+top t=3.5, bottom t=2.5). before/ also holds the old alexandria/crowd05 caches.
+RESULT (draft, looked): subtle but visible - the fingertips on the flank (t=2.5) end in rounder, fuller pads instead
+of a pointed wedge; the palm-up thumb / finger tips (t=3.5) are a little fuller underneath. No artefacts at the
+nails or the DIP crease. If it should read stronger at mid shots, try fingertip_pad 0.14-0.16 (~3-3.5 mm).
+FULL REBUILD NEEDED: yes - hands are on every body and build.py / humanbuild.py changed, so build-caches marks all
+other 46 characters "made by older code" (they still load, with pointed tips). Owner/lead runs it in the background;
+this also picks up 2k's back_env for the kirtle wearers. Spot-check after it: abby*, remi* hand close-ups, the riders
+(1C-16 grip: the pads add ~2 mm under the bar - perf may want to re-check the tuck / PIP clearance).
+NEXT (look, in order):
+1. After the full rebuild: hero hand check at draft (abby_injured, remi, a rider in 1C-16); tune fingertip_pad.
+2. 2m NEXT 1-3 unchanged (kerchief tails in motion, optional tie band, G_kirtle defaults).
+3. 2g NEXT 3 (dorsal veins / tendons, palm creases) and 4 (crowd05 brown iris - check whether still blue).
