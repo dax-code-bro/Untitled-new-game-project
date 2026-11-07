@@ -65,6 +65,9 @@ Mill Creek hydrants and corner bins, parked cars along town streets), contact sh
 and round every building's foot, gravel and dirt road shoulders, bare-soil footings round houses,
 saw palmetto clumps, and low ground mist at dawn, dusk and night: about 45 of the 30+ asked for.
 
+(O1-O5, ROADMAP Phase 1.57: performance. Distance detail for cars, people and camps; CPU-aware
+adaptive quality; ~60-72% fewer draw calls on High; stalls spread out; connection-aware loading with
+background downloads. Brand-new features: distance detail manager, connection-aware loading.)
 (G12: the owner's "lived-in streets, ground blending, lighting" list, see ROADMAP Phase 1.56.
 P1-P4: the owner's list after G11. P1 first-person/third-person gun holding and the run; P2 safe-only
 saves, arriving mid-activity, $50,000 start, dealership "Your cars"; P3 hideout defence, police cover

@@ -111,21 +111,27 @@ export function prepareLODs(root) {
 // Swaps each mesh to the level that suits its size on screen (found by sweeping the scene now and
 // then, so clones made anywhere are picked up).
 export function createLODManager(scene, quality) {
-  const tracked = [];
+  const tracked = new Set();
   const bias = { Phone: 0.6, Low: 0.75, Medium: 0.9, High: 1, Ultra: 1.3, Cinematic: 1.8 }[quality.label] || 1; // better presets keep detail further out
-  let sweepT = 0, t = 0;
+  let sweepI = 0, t = 0;
   const s = new THREE.Sphere(), cam = new THREE.Vector3();
   return {
     update(dt, camera) {
-      if ((sweepT -= dt) <= 0) {
-        sweepT = 1.5; tracked.length = 0;
-        scene.traverse((o) => { if (o.isMesh && o.geometry && o.geometry.userData.lodSet) tracked.push(o); });
+      // look for new models a few top-level objects at a time (a whole-scene walk every 1.5 s, 28k
+      // objects, was a 5-13 ms hitch); each object's own root is remembered so ones that leave the
+      // scene drop out
+      const kids = scene.children, per = Math.max(6, Math.ceil(kids.length / 90));
+      for (let k = 0; k < per && kids.length; k++) {
+        if (sweepI >= kids.length) sweepI = 0;
+        const r = kids[sweepI++];
+        r.traverse((o) => { if (o.isMesh && o.geometry && o.geometry.userData.lodSet) { tracked.add(o); o.userData.lodRoot = r; } });
       }
       if ((t -= dt) > 0) return;
       t = 0.2;
       cam.setFromMatrixPosition(camera.matrixWorld);
       const zoom = (camera.zoom || 1) * (50 / (camera.fov || 50)); // a scope's narrow view counts as closer
       for (const o of tracked) {
+        if (o.userData.lodRoot?.parent !== scene) { tracked.delete(o); continue; }
         const set = o.geometry.userData.lodSet;
         if (!set) continue;
         s.copy(set[0].boundingSphere).applyMatrix4(o.matrixWorld);
@@ -136,6 +142,6 @@ export function createLODManager(scene, quality) {
         if (o.geometry !== set[L]) o.geometry = set[L];
       }
     },
-    get tracked() { return tracked.length; },
+    get tracked() { return tracked.size; },
   };
 }

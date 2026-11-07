@@ -8,6 +8,7 @@ import { createDynamicLighting } from './core/gi.js';
 import { createAbrasion } from './core/abrasion.js';
 import { updateNearInstances, nearInstanceStats } from './core/nearinst.js';
 import { createLODManager, lodStats } from './core/lod.js';
+import { createDetailManager } from './core/detail.js';
 import { initKTX2 } from './assets/ktx2.js';
 import { setWorld as setSubstrateWorld, describe as describeSubstrate, SUBSTRATES } from './core/substrate.js';
 import { createFooting } from './systems/footing.js';
@@ -72,8 +73,9 @@ import { Career, loadProfile, newProfile } from './systems/career.js';
 import { Interactions } from './systems/interact.js';
 import { installSystems } from './systems/index.js';
 import { Police } from './entities/police.js';
-import { loadLibrary } from './assets/library.js';
-import { loadSurfaces } from './assets/textures.js';
+import { loadLibrary, PEOPLE_ALL, PEOPLE_LITE } from './assets/library.js';
+import { loadSurfaces, laterTextureUrls, LATER_MAPS } from './assets/textures.js';
+import { assessNetwork, backgroundFetch } from './core/net.js';
 import { installAtmosphere } from './world/atmosphere.js';
 import { Input } from './core/input.js';
 import { CameraRig } from './core/camera.js';
@@ -177,8 +179,12 @@ vec3 CustomToneMapping( vec3 color ) {
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(settings.fov, innerWidth / innerHeight, 0.3, 12000);
 
+  // ---- the connection: what to download now and what later (core/net.js)
+  const net = assessNetwork();
+  const slowNet = net.tier === 'slow';
+
   // ---- world
-  progress(0.02, 'Surveying Calvera');
+  progress(0.02, `Surveying Calvera · ${net.label()}`);
   await nextFrame();
   const hm = new Heightmap();
   const graph = buildRoadGraph();
@@ -193,7 +199,7 @@ vec3 CustomToneMapping( vec3 color ) {
   const collision = new CollisionWorld(hm);
   setSubstrateWorld({ hm, grids: [CITY, TOWN], paved: (x, z) => collision.paved(x, z) }); // the substrate scanner reads the ground from here
   progress(0.62, 'Loading photo-scanned surfaces');
-  const surf = await loadSurfaces(renderer, q, (p) => progress(0.62 + p * 0.04, 'Loading photo-scanned surfaces'));
+  const surf = await loadSurfaces(renderer, q, (p) => progress(0.62 + p * 0.04, slowNet ? 'Loading surfaces (slow connection: essentials first)' : 'Loading photo-scanned surfaces'), { skip: slowNet ? LATER_MAPS : [] });
   progress(0.66, 'Shaping the terrain');
   await nextFrame();
   const terrain = createTerrain(hm, q, scene, surf);
@@ -228,7 +234,7 @@ vec3 CustomToneMapping( vec3 color ) {
   const weather = createWeather(scene, q);
   sky.weather = weather;
   progress(0.93, 'Loading people and vehicles');
-  const lib = await loadLibrary(q, (p, t) => progress(0.93 + p * 0.04, t));
+  const lib = await loadLibrary(q, (p, t) => progress(0.93 + p * 0.04, t), { lite: slowNet });
 
   // ---- actors
   const player = new Player(scene, lib, 'hero');
@@ -315,6 +321,10 @@ vec3 CustomToneMapping( vec3 color ) {
   const abrasion = createAbrasion(scene, q);
   // simpler versions of people, the concept car, guns and furniture when they're small on screen
   const lods = createLODManager(scene, q);
+  // further away, cheaper: far cars' small parts and insides, far shadows, far camps' clutter,
+  // and no position updates for hidden things (core/detail.js)
+  const detail = createDetailManager(scene, q);
+  detail.keep(player.h.root);
 
   // ---- resolution / post
   let post = null;
@@ -403,7 +413,7 @@ vec3 CustomToneMapping( vec3 color ) {
   sky.hour = profile.hour; sky.day = profile.day;
   const interact = new Interactions(scene, hm);
   const game = {
-    S, scene, hm, graph, city, veg, yards, palms, clutter, player, combat, hud, sky, weather, career, interact, parked, lib, q, settings, camera, input, traffic, peds, police, collision, rig, surf, gi, abrasion, footing, lods, lodStats, nearInstanceStats,
+    S, scene, hm, graph, city, veg, yards, palms, clutter, player, combat, hud, sky, weather, career, interact, parked, lib, q, settings, camera, input, traffic, peds, police, collision, rig, surf, gi, abrasion, footing, lods, lodStats, nearInstanceStats, detail,
     pause: (b) => { S.frozen = b; },
     teleport: (x, z, heading = 0) => { api.teleport(x, z, heading); },
     enterVehicle: (v) => enterVehicle(v, null),
@@ -1148,6 +1158,7 @@ vec3 CustomToneMapping( vec3 color ) {
 
     // resize before drawing: resizing the canvas clears it, and a cleared canvas left
     // on screen is a black frame (this was the flicker during the first seconds)
+    detail.update(dt, camera);
     dynamicResolution(dt);
     perfGuard();
     if (!S.skipRender) render(); // tests can step the simulation without drawing
@@ -1168,7 +1179,7 @@ vec3 CustomToneMapping( vec3 color ) {
       ammo: combat.drawn ? (combat.reloading > 0 ? 'RELOADING' : combat.dual && combat.offhand && combat.offhand !== combat.weapon ? `${combat.ammo[combat.weapon].clip} · ${combat.ammo[combat.offhand].clip} / ${combat.ammo[combat.weapon].reserve}` : `${combat.ammo[combat.weapon].clip} / ${combat.ammo[combat.weapon].reserve}`) : '',
       weaponName: combat.def.name,
       aiming: S.mode === 'foot' && player.aiming && armed, hitMarker: S.hitMarker,
-      fpsText: `${Math.round(S.fps)} FPS · ${q.label} · ${renderer.domElement.width}×${renderer.domElement.height}\n${stats.drawCalls} draws · ${(stats.tris / 1e6).toFixed(2)}M tris\n${diagLine()}`,
+      fpsText: `${Math.round(S.fps)} FPS · ${q.label} · ${renderer.domElement.width}×${renderer.domElement.height}\n${stats.drawCalls} draws · ${(stats.tris / 1e6).toFixed(2)}M tris\n${diagLine()}\nresolution ${Math.round((S.renderScale ?? 1) * 100)}% · detail ${Math.round(detail.pressure * 100)}% · ${detail.stats.partsHidden} far parts off · ${detail.stats.shadowsOff} far shadows off${game.netTier ? ` · ${game.netTier}` : ''}`,
     });
     S.hitMarker = false;
   }
@@ -1327,9 +1338,24 @@ vec3 CustomToneMapping( vec3 color ) {
     if (S.resTimer < 1.0) return;
     S.resTimer = 0;
     const target = settings.targetFps;
-    if (S.fps < target * 0.9 && dynScale > q.minScale) { dynScale = Math.max(q.minScale, dynScale - 0.08); applySize(); S.highTimer = 0; }
-    else if (S.fps >= target * 0.98) { if (++S.highTimer >= 3 && dynScale < 1) { dynScale = Math.min(1, dynScale + 0.05); applySize(); S.highTimer = 0; } }
-    else S.highTimer = 0;
+    // where the time goes decides what to cut: fewer pixels only help when the card is the slow part.
+    // When the game's own work (and handing the frame over, one draw call at a time) takes most of the
+    // frame, a blurrier picture changes nothing: draw fewer things, nearer, instead (core/detail.js)
+    const frameMs = 1000 / Math.max(S.fps, 1), cpuBound = (S.cpuMs || 0) > frameMs * 0.6;
+    S.bound = cpuBound ? 'cpu' : 'gpu';
+    if (S.fps < target * 0.9) {
+      if ((cpuBound || dynScale <= q.minScale + 0.001) && detail.pressure > 0.46) detail.setPressure(detail.pressure - 0.1);
+      else if (dynScale > q.minScale) { dynScale = Math.max(q.minScale, dynScale - 0.08); applySize(); }
+      S.highTimer = 0;
+    } else if (S.fps >= target * 0.98) {
+      if (++S.highTimer >= 3) {
+        if (dynScale < 1 && !cpuBound) { dynScale = Math.min(1, dynScale + 0.05); applySize(); }
+        else if (detail.pressure < 1) detail.setPressure(detail.pressure + 0.05);
+        else if (dynScale < 1) { dynScale = Math.min(1, dynScale + 0.05); applySize(); }
+        S.highTimer = 0;
+      }
+    } else S.highTimer = 0;
+    S.renderScale = dynScale;
   }
 
   // Everything the systems added has shaders too: compile them, draw the world
@@ -1440,6 +1466,26 @@ vec3 CustomToneMapping( vec3 color ) {
   // a saved game: back within 20 m of where you saved, in the middle of something ordinary
   // (after the test API exists: game.teleport goes through it)
   if (profile.saved && Array.isArray(profile.pos) && profile.story?.prologue) game.arrival?.arrive();
+
+  // ---- downloads for later (core/net.js); never in test browsers
+  game.netTier = net.label();
+  if (!AUTOMATED) {
+    if (slowNet) {
+      // what the slow start left out: fetched quietly now, one at a time, and loaded properly next time
+      setTimeout(() => {
+        const later = [...laterTextureUrls(), ...PEOPLE_ALL.filter((p) => !PEOPLE_LITE.includes(p)).map((p) => `assets/people/${p}.glb`)];
+        backgroundFetch(later, { concurrency: 1, onDone: () => { try { localStorage.setItem('sb.net.full', '1'); } catch (e) { /* private window */ } game.netTier = net.label() + ' · the rest downloaded for next time'; } });
+      }, 8000);
+    } else if (net.tier === 'fast') {
+      // the models fetched on first use (shops' guns, animals, furniture), downloaded ahead
+      setTimeout(async () => {
+        try {
+          const list = await (await fetch('assets/open/manifest.json')).json();
+          backgroundFetch(list.map(([f]) => f), { concurrency: 2, onDone: () => { game.netTier = net.label() + ` · ${list.length} models fetched ahead`; } });
+        } catch (e) { /* offline: they load on first use as before */ }
+      }, 20000);
+    }
+  }
 
   return {
     applyLive(key) {

@@ -4,6 +4,7 @@
 import { build } from 'esbuild';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import fs from 'node:fs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const game = path.resolve(here, '../../site/southbound');
@@ -32,3 +33,13 @@ await build({
   plugins: [threeResolver],
   logLevel: 'info',
 });
+
+// the models fetched on first use, for core/net.js to download ahead on a fast connection
+{
+  const root = path.join(game, 'assets/open'), files = [];
+  const walk = (d) => { for (const f of fs.readdirSync(d, { withFileTypes: true })) { const p = path.join(d, f.name); if (f.isDirectory()) walk(p); else if (f.name.endsWith('.glb')) files.push([path.relative(game, p).split(path.sep).join('/'), fs.statSync(p).size]); } };
+  walk(root);
+  files.sort((a, b) => a[0].localeCompare(b[0]));
+  fs.writeFileSync(path.join(root, 'manifest.json'), JSON.stringify(files));
+  console.log(`  assets/open/manifest.json: ${files.length} models`);
+}

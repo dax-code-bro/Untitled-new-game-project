@@ -134,6 +134,7 @@ function makeReflection(renderer, scale) {
   const rot = new THREE.Matrix4(), plane = new THREE.Plane(), clip = new THREE.Vector4(), q = new THREE.Vector4();
   const size = new THREE.Vector2();
   const hidden = [];
+  let noRefl = [], scanT = 0; // what stays out of the mirror: found every 2 s, not by walking the scene every frame
   return {
     texture: rt.texture,
     render(scene, camera, waterGroup) {
@@ -168,7 +169,9 @@ function makeReflection(renderer, scale) {
       // hide the water itself and small ground clutter
       hidden.length = 0;
       waterGroup.visible = false;
-      scene.traverse((o) => { if (o.userData.noReflect && o.visible) { o.visible = false; hidden.push(o); } });
+      const now = performance.now();
+      if (now > scanT) { scanT = now + 2000; noRefl = []; scene.traverse((o) => { if (o.userData.noReflect) noRefl.push(o); }); }
+      for (const o of noRefl) if (o.visible) { o.visible = false; hidden.push(o); }
       const prevRT = renderer.getRenderTarget(), prevShadow = renderer.shadowMap.autoUpdate;
       renderer.shadowMap.autoUpdate = false;
       // the mirror must not sample itself while it is being drawn (feedback loop)

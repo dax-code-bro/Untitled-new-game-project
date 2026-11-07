@@ -351,6 +351,21 @@ async (opts) => {
     ok(cars.length > 0 && cars.length === G.parked.filter((v) => !v.isBoat && !v.isAir && v.group).length, 'every parked car has a contact shadow');
   });
 
+  await run('distance detail and connection tier', async () => {
+    const D = G.detail;
+    ok(D && typeof D.update === 'function', 'the distance detail manager is running');
+    for (let i = 0; i < 75; i++) SB.step(1, 1 / 30); // a few sweeps (each root is looked at every ~10 frames, the list every 2 s)
+    ok(D.stats.cars > 0 && D.stats.people > 0, 'it looks after cars and people (' + D.stats.cars + ' cars, ' + D.stats.people + ' people)');
+    ok(D.stats.partsHidden > 0 && D.stats.shadowsOff > 0, 'far parts and far shadows are thinned out (' + D.stats.partsHidden + ' parts, ' + D.stats.shadowsOff + ' shadows)');
+    let bad = 0; G.player.h.root.traverse((o) => { if (o.isMesh && !o.layers.isEnabled(0)) bad++; });
+    ok(bad === 0, 'the player is never thinned out');
+    const near = G.parked.filter((v) => v.group && v.group.visible && v.group.position.distanceTo(G.camera.position) < 15);
+    let hidden = 0; for (const v of near) v.group.traverse((o) => { if (o.isMesh && !o.layers.isEnabled(0)) hidden++; });
+    ok(hidden === 0, 'cars close by keep every part (' + near.length + ' within 15 m)');
+    const p0 = D.pressure; D.setPressure(0.5); ok(D.R.carSmall < 40, 'under CPU pressure the distances shrink'); D.setPressure(p0);
+    ok(typeof G.netTier === 'string' && /connection/.test(G.netTier), 'the connection tier is known (' + G.netTier + ')');
+  });
+
   // NaN sweep over everything in the scene
   await run('scene NaN sweep', async () => {
     let bad = [];

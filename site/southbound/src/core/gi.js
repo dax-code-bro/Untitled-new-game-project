@@ -38,7 +38,7 @@ export function createDynamicLighting({ renderer, scene, quality, sky, hm, lamps
   const cams = cube.children;
   for (const c of cams) c.layers.set(LAYER);
   const pmrem = new THREE.PMREMGenerator(renderer);
-  let face = -1, timer = 1.0, envRT = null, envK = 1, envKWant = 1;
+  let face = -1, timer = 1.0, envRT = null, envK = 1, envKWant = 1, tagN = 0;
   // How much open sky there is round the capture point (rays up through the street canyon). A
   // canyon's capture is honestly darker than open ground; the eye adapts to that, so part of it
   // is given back here (there's no auto-exposure to do it).
@@ -128,9 +128,11 @@ export function createDynamicLighting({ renderer, scene, quality, sky, hm, lamps
         timer -= dt;
         // on a timer, and straight away once you've moved well away from the last capture
         // (a fast drive, a teleport, leaving a building)
-        if (timer <= 0 || (cam.x - cube.position.x) ** 2 + (cam.z - cube.position.z) ** 2 > 28 * 28) {
+        // (but no closer together than 1.5 s: on a fast drive it was capturing back to back)
+        if (timer <= 0 || (timer < C.every - 1.5 && (cam.x - cube.position.x) ** 2 + (cam.z - cube.position.z) ** 2 > 28 * 28)) {
           face = 0; cube.position.set(cam.x, Math.max(cam.y, hm.height(cam.x, cam.z) + 1.4), cam.z); cube.updateMatrixWorld(true);
-          tagLayer();
+          // what goes in barely changes: tagged on the first capture and every fourth after (a whole-scene walk)
+          if (tagN++ % 4 === 0) tagLayer();
           envKWant = 1 + (1 - openness(cube.position)) * 0.6;
         }
       }
