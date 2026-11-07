@@ -38,7 +38,46 @@ export function createPowerLines(scene, graph, hm, collision, q) {
       }
     }
   }
-  if (!poles.length) return { count: 0 };
+  // ---- G11: Mill Creek's streets carry poles too, down one side
+  // just behind the kerb, with the houses' service wires running to them (world/yards.js)
+  const townMax = q.label === 'Phone' ? 60 : 220;
+  let townN = 0;
+  for (const e of graph.edges) {
+    if (townN >= townMax) break;
+    const town = e.a[0] === 't' && e.b[0] === 't';
+    if (!town) continue; // (the lanes out of the city already have the country poles)
+    const P = e.pts, side = (e.id % 2) ? 1 : -1;
+    let total = 0; for (let i = 1; i < P.length; i++) total += Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1]);
+    let acc = 0, prev = null, next = 9;
+    for (let i = 1; i < P.length && townN < townMax; i++) {
+      const [ax, az] = P[i - 1], [bx, bz] = P[i];
+      const L = Math.hypot(bx - ax, bz - az); if (L < 0.01) continue;
+      const tx = (bx - ax) / L, tz = (bz - az) / L;
+      while (next <= acc + L && next < total - 9) {
+        const s0 = next - acc; next += 36;
+        const off = (e.width || 10) / 2 + (town ? 0.45 : 1.8);
+        let x = ax + tx * s0 + tz * off * side, z = az + tz * s0 - tx * off * side;
+        // clear of street lamps, trees and the other poles: slide along a little if something's there
+        let ok = false;
+        for (const shift of [0, 2.5, -2.5, 5]) {
+          const xx = x + tx * shift, zz = z + tz * shift;
+          let hit = false;
+          collision.query(xx, zz, 3, (it) => { if (!hit && ((it.t === 1 && it.r > 0 && Math.hypot(it.x - xx, it.z - zz) < it.r + 1.0) || (it.t === 0 && xx > it.minX - 0.8 && xx < it.maxX + 0.8 && zz > it.minZ - 0.8 && zz < it.maxZ + 0.8))) hit = true; });
+          if (!hit) { x = xx; z = zz; ok = true; break; }
+        }
+        if (!ok) { prev = null; continue; }
+        const y = hm.height(x, z) + (town ? 0.2 : 0);
+        if (y < hm.waterLevel(x, z) + 0.3) { prev = null; continue; }
+        const p = { x, y, z, yaw: Math.atan2(tx, tz), town: true };
+        poles.push(p); townN++;
+        collision.addCircle?.(x, z, 0.16);
+        if (prev && Math.hypot(prev.x - x, prev.z - z) < 36 * 1.7) wires.push([prev, p]);
+        prev = p;
+      }
+      acc += L;
+    }
+  }
+  if (!poles.length) return { count: 0, poles };
   const wood = new THREE.MeshStandardMaterial({ color: 0x5a4632, roughness: 0.95 });
   const pole = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.11, 0.15, H + 0.4, 7).translate(0, (H + 0.4) / 2, 0), wood, poles.length);
   const arm = new THREE.InstancedMesh(new THREE.BoxGeometry(2.3, 0.12, 0.12).translate(0, H - 0.3, 0), wood, poles.length);
@@ -73,5 +112,5 @@ export function createPowerLines(scene, graph, hm, collision, q) {
   const lines = new THREE.LineSegments(lg, new THREE.LineBasicMaterial({ color: 0x1a1a1a, transparent: true, opacity: 0.8 }));
   lines.frustumCulled = false; lines.userData.noHit = true; scene.add(lines);
   scene.userData.powerlines = { poles, wires, H }; // for the placement audit
-  return { count: poles.length };
+  return { count: poles.length, poles, H };
 }

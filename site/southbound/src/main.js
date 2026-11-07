@@ -45,6 +45,8 @@ import { placeCivic } from './systems/civic.js';
 import { installNeeds } from './systems/needs.js';
 import { installStrays } from './systems/strays.js';
 import { createPowerLines } from './world/powerlines.js';
+import { planYards, buildYards } from './world/yards.js';
+import { createPalms } from './world/palms.js';
 import { createHoles } from './world/holes.js';
 import { installDemolition } from './systems/demolition.js';
 import { installWounds } from './systems/wounds.js';
@@ -149,8 +151,8 @@ vec3 CustomToneMapping( vec3 color ) {
   vec3 c = AgXToneMapping( color );
   float l = dot( c, vec3( 0.2126, 0.7152, 0.0722 ) );
   c = mix( vec3( l ), c, 1.05 + sbLook.x * 0.06 + sbLook.y * 0.08 );
-  c = 0.18 * pow( max( c, 0.0 ) / 0.18, vec3( 1.03 ) );
-  c = c * ( 1.0 - 0.025 * sbLook.x ) + vec3( 0.022, 0.016, 0.008 ) * sbLook.x;
+  c = 0.18 * pow( max( c, 0.0 ) / 0.18, vec3( 1.03 + sbLook.z * 0.08 ) ); // (z: clear daylight, a photo's contrast; G11)
+  c = c * ( 1.0 - 0.014 * sbLook.x ) + vec3( 0.012, 0.009, 0.004 ) * sbLook.x;
   float sbHi = smoothstep( 0.1, 0.75, l );
   c *= mix( mix( vec3( 1.0 ), vec3( 0.96 - sbLook.y * 0.02, 1.0, 1.04 + sbLook.y * 0.03 ), sbLook.x ), mix( vec3( 1.0 ), vec3( 1.07, 1.005, 0.88 ), sbLook.x ), sbHi );
   float sbGw = sbLook.y * mix( 0.3, 1.0, sbHi ); // the gold lands on what the sun lights, not the shadows
@@ -203,11 +205,14 @@ vec3 CustomToneMapping( vec3 color ) {
   const parks = roads.parkify(city.cityBlocks); // lawns and paths in the park blocks, stalls in the parking lots
   city.lotStalls = roads.lotStalls || [];
   const billboards = createBillboards(scene, graph, hm, collision, q);
-  createPowerLines(scene, graph, hm, collision, q);
+  const power = createPowerLines(scene, graph, hm, collision, q);
+  const yardPlan = planYards(city.buildings, { hm, graph }); // front yards (G11): the shrubs go in with the trees
   progress(0.84, 'Growing Pinewood Hollow');
   await nextFrame();
-  const veg = await createVegetation(hm, q, scene, collision, city.cityBlocks, (p) => progress(0.84 + p * 0.07, 'Growing forests'), surf, settings.grass === false ? 0 : 1); // dense painted-blade grass in the wild parts (off on Phone)
+  const veg = await createVegetation(hm, q, scene, collision, city.cityBlocks, (p) => progress(0.84 + p * 0.07, 'Growing forests'), surf, settings.grass === false ? 0 : 1, yardPlan.bushes); // dense painted-blade grass in the wild parts (off on Phone)
   addSidewalkColliders(collision, parks);
+  const yards = buildYards(yardPlan, { scene, hm, collision, quality: q, surf, power }); // walks, driveways, mailboxes, fences...
+  const palms = createPalms(scene, { hm, collision, quality: q, cityBlocks: city.cityBlocks, graph }); // cabbage palms on the coast (G11)
   veg.cover?.setLawns?.(city.buildings); // yards and lots round every building are mown
   veg.cover?.setParks?.(parks); // and no grass on the park paths
   progress(0.92, 'Lighting the sky');
@@ -387,7 +392,7 @@ vec3 CustomToneMapping( vec3 color ) {
   sky.hour = profile.hour; sky.day = profile.day;
   const interact = new Interactions(scene, hm);
   const game = {
-    S, scene, hm, graph, city, veg, player, combat, hud, sky, weather, career, interact, parked, lib, q, settings, camera, input, traffic, peds, police, collision, rig, surf, gi, abrasion, footing, lods, lodStats, nearInstanceStats,
+    S, scene, hm, graph, city, veg, yards, palms, player, combat, hud, sky, weather, career, interact, parked, lib, q, settings, camera, input, traffic, peds, police, collision, rig, surf, gi, abrasion, footing, lods, lodStats, nearInstanceStats,
     pause: (b) => { S.frozen = b; },
     teleport: (x, z, heading = 0) => { api.teleport(x, z, heading); },
     enterVehicle: (v) => enterVehicle(v, null),
@@ -1055,6 +1060,7 @@ vec3 CustomToneMapping( vec3 color ) {
     terrain.update(camera.position, dd);
     veg.update(camera.position, dd);
     city.facades?.update(camera.position, dt);
+    yards.update(sky.night); // door lanterns at dusk
     if (veg.cover.update) {
       veg.cover.update(camera.position, sky.sunDir, _sunC.copy(sky.sun.color).multiplyScalar(sky.sun.intensity), weather);
       const pp = S.mode === 'foot' ? player.pos : S.vehicle ? S.vehicle.pos : focus;
@@ -1111,15 +1117,18 @@ vec3 CustomToneMapping( vec3 color ) {
       LOOK.x = lookK * (1 - sky.night * 0.75);
       LOOK.y = lookK * golden * (1 - sky.night);
       sky.golden = LOOK.y; sky.lookK = lookK; // (world/sky.js reads lookK for the sun and haze)
+      // clear daylight gets a photograph's contrast and colour: deep, clean shadows instead of a grey
+      // wash (G11). Softer under cloud and at night
+      LOOK.z = (1 - sky.night) * (1 - weather.dark * 0.8) * (1 - (sky.diffuse || 0) * 0.7);
     }
     if (post) {
       post.grade.uniforms.uWarm.value = LOOK.y;
       post.grade.uniforms.uLook.value = LOOK.x;
       post.grade.uniforms.uNight.value = sky.night;
       // a little more saturation and contrast in clear sun, softer under cloud
-      const dayK = (1 - sky.night) * (1 - weather.dark * 0.8) * (1 - (sky.diffuse || 0) * 0.7);
-      post.grade.uniforms.uSat.value = 0.99 + dayK * 0.06 + LOOK.x * 0.05 + LOOK.y * 0.07;
-      post.grade.uniforms.uContrast.value = 1.0 + dayK * 0.04;
+      const dayK = LOOK.z;
+      post.grade.uniforms.uSat.value = 0.99 + dayK * 0.1 + LOOK.x * 0.05 + LOOK.y * 0.07;
+      post.grade.uniforms.uContrast.value = 1.0 + dayK * 0.11;
       const aimingNow = S.mode === 'foot' && player.aiming && armed;
       post.update(sky.sunDir, sky.sunDir.y > 0.02 && weather.cover < 0.75, aimingNow ? 18 : camera.position.distanceTo(focus) + 1, aimingNow);
     }

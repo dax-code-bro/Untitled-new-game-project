@@ -18,7 +18,7 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor)
   c = 0.18 * pow(max(c, 0.0) / 0.18, vec3(uContrast)); // contrast around mid-grey
   // the warm look (uLook 0 natural .. 1 warm), the same as the Low/Phone tone curve in main.js:
   // a film print's lifted, warm blacks; amber highlights over faintly teal shadows
-  c = c * (1.0 - 0.025 * uLook) + vec3(0.022, 0.016, 0.008) * uLook;
+  c = c * (1.0 - 0.014 * uLook) + vec3(0.012, 0.009, 0.004) * uLook;
   float hi = smoothstep(0.1, 0.75, l);
   c *= mix(mix(vec3(1.0), vec3(0.96 - uWarm * 0.02, 1.0, 1.04 + uWarm * 0.03), uLook), mix(vec3(1.0), vec3(1.07, 1.005, 0.88), uLook), hi);
   // the hours round sunrise and sunset (uWarm 0..1): an amber wash over everything

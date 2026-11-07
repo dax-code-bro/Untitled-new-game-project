@@ -322,6 +322,23 @@ async (opts) => {
     ok(raw && raw.v === 1 && Array.isArray(raw.garage) && typeof raw.money === 'number', 'save is valid JSON with the expected fields');
   });
 
+  // ---------------- front yards and town poles (G11) ----------------
+  await run('front yards and town poles', async () => {
+    const Y = G.yards, c = (Y && Y.counts) || {};
+    ok(c.houses >= 25, 'houses facing a street get a front yard (' + c.houses + ')');
+    ok(c.walks >= 20 && c.drives >= 15, 'front walks and driveways (' + c.walks + ', ' + c.drives + ')');
+    ok(Y.drives.filter((d) => d.car).length >= 6, 'most driveways have a car (' + Y.drives.filter((d) => d.car).length + ')');
+    ok(c.mailboxes >= 10 && c.bins >= 10 && c.fences >= 10 && c.lanterns >= 25 && c.ac >= 10, 'mailboxes, bins, picket fences, lanterns, AC units');
+    ok((c.drops || 0) >= 15, 'service wires run from the poles to the houses (' + c.drops + ')');
+    const B = G.city.buildings;
+    const inside = (x, z) => B.some((b) => Math.abs(x - b.x) < b.w / 2 - 0.2 && Math.abs(z - b.z) < b.d / 2 - 0.2);
+    ok(Y.drives.every((d) => Number.isFinite(d.x + d.y + d.z + d.heading) && !inside(d.x, d.z)), 'every driveway car spot is a real place, outside the houses');
+    SB.setHour(22); SB.step(2);
+    ok(Y.lampK() > 1, 'door lanterns are lit at night (' + Y.lampK().toFixed(2) + ')');
+    SB.setHour(12); SB.step(2);
+    ok(Y.lampK() === 0, 'and off by day');
+  });
+
   // NaN sweep over everything in the scene
   await run('scene NaN sweep', async () => {
     let bad = [];

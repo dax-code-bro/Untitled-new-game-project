@@ -99,7 +99,7 @@ function addWind(mat, strength) {
   mat.customProgramCacheKey = () => 'sbwind-' + strength;
 }
 
-export async function createVegetation(hm, quality, scene, collision, cityBlocks, progress = () => {}, surf = null, coverDensity = 1) {
+export async function createVegetation(hm, quality, scene, collision, cityBlocks, progress = () => {}, surf = null, coverDensity = 1, yardBushes = []) {
   const Q = QUALITY[quality.label] || QUALITY.Medium;
   setBodyShadeQuality(quality); // (leaf lighting is off on Phone)
   const gltf = withKTX2(new GLTFLoader());
@@ -211,6 +211,7 @@ export async function createVegetation(hm, quality, scene, collision, cityBlocks
     const y = hm.height(x, z);
     const f = forestMask(x, z), pl = plainsMask(x, z), b = bayouMask(x, z);
     const dCoast = coastZ(x) - z;
+    if (dCoast > -5 && dCoast < 45) continue; // the beach itself stays open sand (G11)
     let prob = 0.025 + f * 0.95 + b * 0.35 - pl * 0.02;
     if (y > 200) prob *= 0.3;
     if (rnd() > prob) continue;
@@ -252,6 +253,7 @@ export async function createVegetation(hm, quality, scene, collision, cityBlocks
       const x = bx0 - 420 + rnd() * (bx1 - bx0 + 840), z = bz0 - 420 + rnd() * (bz1 - bz0 + 840);
       const d = edgeD(x, z);
       if (d < 8 || d > 420) continue;
+      if (coastZ(x) - z < 55) continue; // no stands of pines out on the beach (G11)
       if (hm.splatAt(x, z, 3) > 0.12) continue; // not on roads
       if (rnd() > 0.12 + Math.min(1, d / 380) * 0.75) continue; // sparse at the edge, dense further out
       const f = forestMask(x, z);
@@ -317,6 +319,17 @@ export async function createVegetation(hm, quality, scene, collision, cityBlocks
         inst.push({ v: byId.liveoak, x, y: y - 0.15, z, rot: r2() * Math.PI * 2, k: (lh0 + r2() * (lh1 - lh0)) / LV.height });
         collision.addCircle(x, z, TRUNK.liveoak);
       }
+    }
+  }
+
+  // ---- front-yard shrubs and clipped hedges (G11, planned by world/yards.js): set right against the
+  // house or along the lot line, where the general placement would keep a bush away from a wall
+  if (byId.bush_c !== undefined && yardBushes.length) {
+    const BV = variants[byId.bush_c], r3 = mulberry32(7171);
+    for (const [x, z, h] of yardBushes) {
+      const y = hm.height(x, z);
+      if (y < hm.waterLevel(x, z) + 0.3) continue;
+      inst.push({ v: byId.bush_c, x, y: y - 0.1, z, rot: r3() * Math.PI * 2, k: h / BV.height });
     }
   }
 

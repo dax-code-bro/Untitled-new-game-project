@@ -140,6 +140,27 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 - [x] Loading screen with in-game art, tips and progress
 - [x] Fewer touch buttons: ◎ interact replaces the car button; map, phone, arsenal, free cam moved to pause
 
+## Phase 1.50 — Lived-in streets and the coast (graphics milestone G11)
+
+The owner: "it still does not look like GTA 6". A survey of street, downtown, beach and night
+shots found the biggest gaps that can be closed in a browser: empty yards and streets, a grey,
+low-contrast picture, and a coast with brown sand and pines on the beach.
+- [x] Front yards for every house that faces a street (`world/yards.js`, 104 houses): a concrete
+      walk from the porch steps, a driveway down one side (62 with a real, stealable car parked in
+      it: `systems/kerbside.js`), an oil stain where the car stands, a mailbox at the kerb, wheelie
+      bins against the side wall, a white picket fence or a clipped hedge along the front (or an
+      open lawn), shrubs along the foundation and in front of the porch, an AC unit on a pad,
+      a lantern by the door that lights at dusk, rocking chairs on some porches, basketball hoops,
+      hose reels, a kid's bike left on the lawn. Driveways and walks follow the slope of the lot
+- [x] Utility poles down Mill Creek's streets, with a service wire from a pole to each house
+- [x] Cabbage palms (`world/palms.js`, built from scratch): the native palm of the Gulf Coast, in
+      clumps on the dunes, along the Coast Highway, in the city parks and on the waterfront. Leaning
+      trunks with the criss-cross of old leaf bases, fan-shaped fronds that sway in the breeze,
+      a skirt of dead fronds; light comes through the leaves
+- [x] Gulf beaches are pale quartz sand, and no trees stand out on the beach itself
+- [x] A photograph's contrast in clear daylight: deeper, cleaner shadows and richer colour instead
+      of a grey wash (on every preset; softer under cloud and at night)
+
 ## Phase 1.49 — The warm, golden look (graphics milestone G10, part two)
 
 The owner found what was missing: "that slightly orange, yellow, nostalgic, sunset, warm and cozy
