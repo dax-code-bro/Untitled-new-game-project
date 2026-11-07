@@ -19,6 +19,7 @@ const DUSTY = {
   sand: { k: 1.1, c: [0.8, 0.73, 0.6] },
   litter: { k: 0.55, c: [0.5, 0.44, 0.35] },
   grass: { k: 0.3, c: [0.6, 0.55, 0.43] },
+  gravel: { k: 0.85, c: [0.74, 0.71, 0.65] }, // the county roads' crushed limestone (G10)
 };
 
 function puffTexture() {
@@ -93,7 +94,7 @@ export function installDust(game, opts = {}) {
   const groundAt = (who, x, z) => {
     let g = groundCache.get(who);
     if (!g || Math.abs(g.x - x) + Math.abs(g.z - z) > 1.5) {
-      const id = scanGround(x, z).sub?.id; g = { x, z, d: DUSTY[id] || null }; groundCache.set(who, g);
+      const id = scanGround(x, z).sub?.id; g = { x, z, d: game.roads?.gravelAt?.(x, z) ? DUSTY.gravel : DUSTY[id] || null }; groundCache.set(who, g);
     }
     return g.d;
   };

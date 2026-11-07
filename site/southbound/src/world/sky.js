@@ -63,6 +63,7 @@ export function createSky(renderer, scene, quality) {
   const state = {
     hour: 9.5, day: 1,
     sun, hemi, sky, sunDir, night: 0,
+    refreshClouds: () => clouds.refreshAll(), // all six faces of the cloud cube at once (tests, after a jump in time or place)
     // core/gi.js renders the surroundings into a cube: leave the sun disc out (the sun light
     // already draws its own highlight) and return what the capture changed afterwards
     captureBegin() { const k = [du.uSunDisc.value.clone(), du.uStars.value]; du.uSunDisc.value.setRGB(0, 0, 0); du.uStars.value = 0; return k; },
@@ -114,6 +115,12 @@ export function createSky(renderer, scene, quality) {
       const W = state.weather || { cover: 0.52, dark: 0, flash: 0, rain: 0 };
       sun.intensity *= 1 - W.dark * 0.85;
       hemi.intensity *= 1 - W.dark * 0.25 * day;
+      // a sun behind thin cloud doesn't go dark, it spreads: the light comes from the whole sky,
+      // shadows fade and soften, everything is evenly, gently lit (the Gulf on a humid evening)
+      const diffuse = smoothstep(0.4, 0.95, W.cover) * day;
+      sun.intensity *= 1 - diffuse * 0.5;
+      hemi.intensity *= 1 + diffuse * 0.55;
+      state.diffuse = diffuse;
       hemi.color.lerp(_grey.setRGB(0.55, 0.58, 0.62).multiplyScalar(0.3 + 0.7 * day), W.dark * 0.6 * day);
       if (W.flash > 0) { hemi.intensity += W.flash * 2.5; hemi.color.lerp(_grey.setRGB(0.75, 0.8, 1.0), W.flash); }
 
@@ -148,7 +155,7 @@ export function createSky(renderer, scene, quality) {
         0.8 * smoothstep(0.04, 0.2, sunDir.y) * (1 - smoothstep(0.75, 0.95, W.cover)) * (useMoon ? 0 : 1));
       u.uGround.value.setRGB(0.07 * day + 0.006, 0.07 * day + 0.007, 0.05 * day + 0.008);
       u.sunPosition.value.copy(sunDir);
-      scene.environmentIntensity = (state.envBase ?? 0.2) * (state.envK || 1); // envK: core/gi.js, more in enclosed streets
+      scene.environmentIntensity = (state.envBase ?? 0.2) * (state.envK || 1) * (1 + (state.diffuse || 0) * 0.5); // envK: core/gi.js, more in enclosed streets
       clouds.update();
 
       // Environment map: rebuilt from the cloud cube when the sun moves or clouds drift

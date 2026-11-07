@@ -140,6 +140,28 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 - [x] Loading screen with in-game art, tips and progress
 - [x] Fewer touch buttons: ◎ interact replaces the car button; map, phone, arsenal, free cam moved to pause
 
+## Phase 1.48 — The Gulf Coast as it really looks (graphics milestone G10)
+
+Aimed at a photo the owner took: a gravel county road on a humid, cloudy evening, live oaks,
+mown lawns, houses on big lots, a dusty car on the verge.
+- [x] Soft cloudy light: a sun behind thin cloud spreads instead of just dimming. Shadows fade
+      and soften, the sky lights everything evenly (`world/sky.js`)
+- [x] Humid Gulf haze: things a few hundred metres off pale and blue, more early and late in the
+      day and under cloud (aerial perspective)
+- [x] A photograph's colour, not a game's: the grade is close to neutral in sun and soft and muted
+      under cloud, on every preset (the Low/Phone tone curve too)
+- [x] Live oaks: the Gulf Coast's tree, wide and low on a short, thick trunk under a dense, dark
+      crown. A share of the broadleaf trees outside the woods became live oaks, and Mill Creek's
+      front yards got big shade oaks (`world/vegetation.js`)
+- [x] Gravel county roads: the lanes round the far edge of the outskirts are crushed white
+      limestone. Every stone its own size and shade close up, two packed tyre tracks, loose rock on
+      the crown, dirt and grass creeping in from the verges, darker when wet (`world/roads.js`)
+- [x] The terrain round those lanes is dirt and dry grass, not pavement (`world/heightmap.js`)
+- [x] Dust comes up off the gravel (G9's dust knows the county roads)
+- [x] Fixed: a whole frame could go black on Medium and up. One bad pixel value (a NaN) anywhere
+      on screen was blurred by the post-processing into every pixel. Every material now hands the
+      post chain a clean value (`main.js`)
+
 ## Phase 1.47 — Armour and medical, batch one (feature batch F14)
 
 Staying alive (`src/systems/medical.js`, with hooks in `armory.js` and `main.js`):

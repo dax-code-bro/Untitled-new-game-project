@@ -8,7 +8,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { loadTexture, withKTX2 } from '../assets/ktx2.js';
 import { simplified, thinCards, lodReady } from '../core/lod.js';
 import { cloudShadowUniforms, CLOUD_SHADOW_GLSL } from '../core/cloudshadow.js';
-import { WORLD, CITY, coastZ } from './layout.js';
+import { WORLD, CITY, TOWN, coastZ } from './layout.js';
 import { forestMask, plainsMask, bayouMask } from './heightmap.js';
 import { worldUniforms } from './terrain.js';
 import { mulberry32 } from '../util.js';
@@ -21,8 +21,9 @@ const BASE = 'assets/veg/';
 const HEIGHT = {
   pine_a: [19, 27], pine_b: [18, 25], pine_c: [11, 17], oak_a: [13, 18], oak_b: [9, 13],
   ash_a: [12, 17], ash_b: [8, 12], bush_a: [1.4, 2.4], bush_c: [1.1, 2.0],
+  liveoak: [13, 18], // before it's pressed down to 0.7: 9-13 m tall, 20-28 m across
 };
-const TRUNK = { pine: 0.35, oak: 0.45, ash: 0.35, bush: 0 };
+const TRUNK = { pine: 0.35, oak: 0.45, ash: 0.35, bush: 0, liveoak: 0.8 };
 
 const QUALITY = {
   Phone: { near: 32, cap: 50, rocks: 700 },
@@ -150,6 +151,18 @@ export async function createVegetation(hm, quality, scene, collision, cityBlocks
     variants.push(v);
     progress(++n / manifest.trees.length);
   }));
+  // live oaks (G10): the Gulf Coast's tree, wide and low on a short, thick trunk under a dense,
+  // dark crown that spreads wider than it's tall. Made from the large oak: half again as wide,
+  // pressed down to seven tenths, the leaves a deeper, greyer green
+  {
+    const oa = variants.find((v) => v.id === 'oak_a');
+    if (oa) {
+      const lv = { ...oa, id: 'liveoak', sx: 1.55, sy: 0.7 };
+      lv.leafMat = leafMat(oa.leafType, 0x7d9468); shadeLeaves(lv.leafMat);
+      lv.barkMat = barkMat(oa.barkType, 0x8c8074);
+      variants.push(lv);
+    }
+  }
   variants.sort((a, b) => a.id.localeCompare(b.id));
   const byId = Object.fromEntries(variants.map((v, i) => [v.id, i]));
 
@@ -275,6 +288,38 @@ export async function createVegetation(hm, quality, scene, collision, cityBlocks
     }
   }
 
+  // ---- live oaks (G10). They own the open ground of the Gulf Coast: yards, pastures, roadsides,
+  // the coast and the bayou edge, not the pine woods. Two passes, both drawing their randomness
+  // from the position or their own generator so every other tree stays exactly where it was:
+  // a share of the broadleaf trees outside the woods become live oaks (where the wide crown has
+  // room to spread), and Mill Creek's front yards get the big shade oaks a southern town is known by
+  if (byId.liveoak !== undefined) {
+    const LV = variants[byId.liveoak], [lh0, lh1] = HEIGHT.liveoak;
+    const hash = (x, z, s) => { const v = Math.sin(x * 12.9898 + z * 78.233 + s * 37.719) * 43758.5453; return v - Math.floor(v); };
+    const roomy = (x, z, r) => { let wall = false; collision.query(x, z, r + 4, (it) => { if (!wall && it.t === 0 && x > it.minX - r && x < it.maxX + r && z > it.minZ - r && z < it.maxZ + r) wall = true; }); return !wall; };
+    const broad = new Set(['oak_a', 'oak_b', 'ash_a'].map((id) => byId[id]));
+    for (const t of inst) {
+      if (!broad.has(t.v) || forestMask(t.x, t.z) > 0.35 || hash(t.x, t.z, 1) > 0.55 || !roomy(t.x, t.z, 7)) continue;
+      t.v = byId.liveoak; t.k = (lh0 + hash(t.x, t.z, 2) * (lh1 - lh0)) / LV.height;
+      collision.addCircle(t.x, t.z, TRUNK.liveoak);
+    }
+    const r2 = mulberry32(4242);
+    for (let i = 0; i <= TOWN.nx; i++) for (let j = 0; j < TOWN.nz; j++) for (const side of [-1, 1]) {
+      // along the north-south streets, set back into the yard on each side
+      // (in the front yard just behind the sidewalk, 9.5-11.5 m from the middle of the street: the crown
+      // spreads over the street and the roof the way a real yard oak does; further back is the house)
+      const x = TOWN.x0 + i * TOWN.pitch + side * (TOWN.street / 2 + 3 + 0.5 + r2() * 2);
+      for (let s = 0; s < 2; s++) {
+        const z = TOWN.z0 + j * TOWN.pitch + 14 + s * 34 + r2() * 10;
+        if (r2() > 0.62 || !roomy(x, z, 1.8)) continue;
+        const y = hm.height(x, z);
+        if (y < hm.waterLevel(x, z) + 0.4) continue;
+        inst.push({ v: byId.liveoak, x, y: y - 0.15, z, rot: r2() * Math.PI * 2, k: (lh0 + r2() * (lh1 - lh0)) / LV.height });
+        collision.addCircle(x, z, TRUNK.liveoak);
+      }
+    }
+  }
+
   // ---- spatial grid for picking the near set quickly
   const CELL = 48;
   const grid = new Map();
@@ -316,7 +361,7 @@ export async function createVegetation(hm, quality, scene, collision, cityBlocks
     const mat = new THREE.ShaderMaterial({
       uniforms: {
         ...grassUniforms, tImp: { value: v.imp }, uNear: { value: Q.near },
-        uSize: { value: new THREE.Vector3(v.half * 2, v.half * 4, v.top - v.half * 4) },
+        uSize: { value: new THREE.Vector3(v.half * 2 * (v.sx || 1), v.half * 4 * (v.sy || 1), (v.top - v.half * 4) * (v.sy || 1)) },
         sbFogA: { value: fogParams.a }, sbFogB: { value: fogParams.b },
         ...cloudShadowUniforms,
       },
@@ -451,7 +496,8 @@ export async function createVegetation(hm, quality, scene, collision, cityBlocks
         const n = far ? mids[t.v] : counts[t.v];
         if (n >= nearBark[t.v].instanceMatrix.count) continue;
         q.setFromAxisAngle(up, t.rot);
-        m4.compose(p.set(t.x, t.y, t.z), q, s.set(t.k, t.k, t.k));
+        const vv = variants[t.v]; // (live oaks are stretched wide and pressed low)
+        m4.compose(p.set(t.x, t.y, t.z), q, s.set(t.k * (vv.sx || 1), t.k * (vv.sy || 1), t.k * (vv.sx || 1)));
         (far ? midBark : nearBark)[t.v].setMatrixAt(n, m4);
         (far ? midLeaves : nearLeaves)[t.v].setMatrixAt(n, m4);
         if (far) mids[t.v] = n + 1; else counts[t.v] = n + 1;

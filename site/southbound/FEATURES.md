@@ -9,7 +9,7 @@ feature with the fewest additions next. Batches ship as F# (features) alternatin
 Counts are additions made in the "add to every feature" programme (F1 onwards, plus the S3/S4
 side batches where they extended a feature). The original build of each feature isn't counted.
 
-## Status (last updated: Phase 1.47, after F14)
+## Status (last updated: Phase 1.48, after G10)
 
 | # | Feature | Files | Added | Batches | Status |
 |---|---------|-------|------:|---------|--------|
@@ -57,7 +57,8 @@ side batches where they extended a feature). The original build of each feature 
 Brand-new features added this programme (not extensions): banking, news, contacts, cabs,
 legendary animals and fish, poaching, property market, burglaries, food spoilage, tracks in the
 ground, boat wakes, rain soak, crew jobs, hideout raids, 12 side jobs, flight school, laundromats,
-dirty/bloody clothes, dust (G9: cars, feet, aircraft, dust devils): about 30 of the 30+ asked for.
+dirty/bloody clothes, dust (G9: cars, feet, aircraft, dust devils), gravel county roads and live
+oaks (G10): about 32 of the 30+ asked for.
 
 ## Backlog: ideas per feature (take from here, strike when shipped)
 

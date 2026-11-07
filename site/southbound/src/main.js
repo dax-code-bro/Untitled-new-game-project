@@ -140,10 +140,16 @@ async function createGame(progress) {
     `vec3 CustomToneMapping( vec3 color ) {
   vec3 c = AgXToneMapping( color );
   float l = dot( c, vec3( 0.2126, 0.7152, 0.0722 ) );
-  c = mix( vec3( l ), c, 1.14 );
-  c = 0.18 * pow( max( c, 0.0 ) / 0.18, vec3( 1.08 ) );
+  c = mix( vec3( l ), c, 1.05 );
+  c = 0.18 * pow( max( c, 0.0 ) / 0.18, vec3( 1.03 ) );
   return clamp( c, 0.0, 1.0 );
 }`);
+  // Never hand the post chain a NaN or an infinity. One bad pixel (a vanishing derivative at a
+  // grazing angle, a zero-length vector somewhere in a long shader) is invisible on its own, but
+  // bloom and ambient occlusion blur it into every pixel around it and the whole frame goes black
+  // (it happened on Medium and up, where the post chain runs). The last step of every material.
+  THREE.ShaderChunk.dithering_fragment += `
+  if (any(isnan(gl_FragColor)) || any(isinf(gl_FragColor))) gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);`;
   initKTX2(renderer); // GPU-compressed textures in the models and trees (assets/ktx2.js)
   renderer.toneMapping = THREE.CustomToneMapping;
   renderer.toneMappingExposure = 1.0;
@@ -379,6 +385,7 @@ async function createGame(progress) {
   // a frozen picture or a page that just reloads (ui/recovery.js)
   const recovery = installRecovery({ canvas, settings, saveSettings, PRESETS, save: () => career.save(), pause: game.pause, automated: AUTOMATED });
   game.recovery = recovery;
+  game.roads = roads; // (gravelAt: the dust off the county roads)
   // public services first, so jobs, arrests and the hospital use the real buildings
   const HOSPITAL = { x: CITY.x0 + CITY.nx * CITY.pitch + 24, z: CITY.z0 + 2 * CITY.pitch, name: 'Port Calvera Medical Center' };
   const PRECINCT = { x: CITY.x0 - 24, z: CITY.z0 + 1 * CITY.pitch, name: 'Calvera PD · Central Precinct' };
@@ -1049,7 +1056,10 @@ async function createGame(progress) {
       for (const c of police.cars) vs.push({ v: c.v, police: true });
       beams.update(dt, camera.position, sky.night, Math.min(1, (weather.fog - 1) * 0.6 + weather.rain * 0.6), vs);
     } else if (beams.lampMesh) beams.lampMesh.visible = beams.beamMesh.visible = false;
-    scene.fog.density = 1.25 / Math.max(dd, 400) * (1 + sky.night * 0.5) * weather.fog * (0.6 + 0.4 * Math.max(sky.night, weather.dark));
+    // Gulf air is humid: a haze that pales and blues whatever's a few hundred metres off, thicker
+    // early and late in the day and under cloud (aerial perspective: the strongest cue for distance)
+    const humid = Math.max(1 - Math.min(1, Math.abs(sky.hour - 7) / 2.5), 1 - Math.min(1, Math.abs(sky.hour - 18.5) / 2.5)) * 0.45 + weather.cover * 0.3;
+    scene.fog.density = 1.25 / Math.max(dd, 400) * (1 + sky.night * 0.5) * weather.fog * (0.6 + 0.4 * Math.max(sky.night, weather.dark)) * (1 + humid * (1 - sky.night));
     grassUniforms.uSunDir.value.copy(sky.sunDir);
     grassUniforms.uSunColor.value.copy(sky.sun.color).multiplyScalar(sky.sun.intensity * 0.35);
     grassUniforms.uAmbient.value.copy(sky.hemi.color).multiplyScalar(0.12 + sky.hemi.intensity * 0.9);
@@ -1080,10 +1090,11 @@ async function createGame(progress) {
     if (post) {
       post.grade.uniforms.uWarm.value = sky.hour > 16.5 && sky.hour < 19.5 ? 0.05 * Math.sin((sky.hour - 16.5) / 3 * Math.PI) : 0;
       post.grade.uniforms.uNight.value = sky.night;
-      // clear daylight gets the punchier, more saturated grade; storms and night stay muted
-      const dayK = (1 - sky.night) * (1 - weather.dark * 0.8);
-      post.grade.uniforms.uSat.value = 1.02 + dayK * 0.12;
-      post.grade.uniforms.uContrast.value = 1.02 + dayK * 0.07;
+      // a photograph's colour, not a game's: only a touch more saturation and contrast in clear
+      // sun, and soft and muted under cloud (strong grading reads as "video game" straight away)
+      const dayK = (1 - sky.night) * (1 - weather.dark * 0.8) * (1 - (sky.diffuse || 0) * 0.7);
+      post.grade.uniforms.uSat.value = 0.97 + dayK * 0.06;
+      post.grade.uniforms.uContrast.value = 0.99 + dayK * 0.04;
       const aimingNow = S.mode === 'foot' && player.aiming && armed;
       post.update(sky.sunDir, sky.sunDir.y > 0.02 && weather.cover < 0.75, aimingNow ? 18 : camera.position.distanceTo(focus) + 1, aimingNow);
     }
@@ -1343,6 +1354,7 @@ async function createGame(progress) {
     pause: setPaused,
     freeze(f) { S.frozen = f; },
     renderNow() { render(); },
+    postOff() { post = null; renderer.toneMapping = THREE.CustomToneMapping; }, // (tests: is a black frame the post chain?)
     skipRender(b) { S.skipRender = !!b; },
     // Advance the game by exactly n fixed steps (used to capture smooth video on slow machines)
     step(n = 1, dt = 1 / 30) { S.stepping = true; for (let i = 0; i < n; i++) tick(dt); S.stepping = false; S.fps = 1 / dt; },
