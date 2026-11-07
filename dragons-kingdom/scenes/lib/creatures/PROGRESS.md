@@ -4,6 +4,43 @@ Owner paths: `scenes/lib/creatures/`, `scenes/lookdev/creatures-*.js` (+ creatur
 README.md in this folder is the full description of how the models are built; this file is
 only the state of the work.
 
+## REALISM ROUND 2 - session 13 (2026-11-07, short budgeted session: F4 hatchling, F5 Starlight)
+Stills under `scratchpad/eng1/creatures/r2s13/`: `before/f4.png`, `before/f5.png` (session 12 code), `v1/f4.png`
+(near leg footFwd 0.4), `v2/f4.png` (adopted, footFwd 1.0), `v1/f5.png` (adopted). Sheets: `f4_before_after.png`
+(x150-800 y170-440 x2, top before), `f4_hip_before_after.png`, `f5_before_after.png` (x380-580 y60-160 x3, left
+before), `f5_legs_before_after.png` (x430-530 y85-145 x6). Harness `h/legs.mjs <design> '<glide opts json>'...`
+(leg joint positions in glide + ankle -> finger V tip distance = membrane stretch check).
+Done (code):
+- poses.js lie() sprawl: `o.legSide = { L: {footOut, kneeUp, footFwd}, R: {...} }` per-leg overrides (defaults = old).
+- poses.js flightLegs: `o.fold` 0..1 (glide / flight pass `o.legFold`; default `design.flight.legFold`, else 0):
+  hip -0.35, knee +1.2, ankle -2.7 rad at 1 (LEGF), toes clenched x1.6. Starlight: ankle 8.8 -> 6.0 behind the hip,
+  toes from 11 m behind to 6 m; ankle -> finger V tip 37.1 -> 36.7 (shorter: no stretch).
+- anatomy.js hatchling: skull 0.19 -> 0.17, trunk 0.27 -> 0.29 (L stays 1.0), eye 0.042 -> 0.039 (same eye/skull),
+  push.fold curl [-70,10,20] (fingers +10), push.legSide.L { footOut 1.6, kneeUp 0.35, footFwd 1.0 } (L = the near
+  side in F4: sideA = local +x faces the lens). Starlight: `flight: { legFold: 1 }`.
+- materials.js: new `vent` palette entry -> uniform uVent (amount, flank share; default 0 = no change for others):
+  indirect diffuse + specular x (1 - amt * downFacing * mix(flank, 1, ventral midline)). Starlight vent [0.5, 0.45],
+  belly albedo 0.64 -> 0.59. Darkens only: no emission.
+RESULTS (looked at): F5 - the legs no longer hang with spread talons: two small clenched feet tucked up at the
+membrane's trailing edge beside the belly; the membrane runs on to them without a visible tear or stretch at draft.
+The underside now models: the chest / belly midline and neck underside mid grey, the flanks and wing roots pale -
+not one flat sheet, no glow. F4 - the head is a little smaller (still the biggest mass in this close framing);
+the trunk reads longer; the cloth flap that came up over the neck is gone in this pose (the hands' IK follows the
+longer chest, the drape lies flat under the chest) so no finger pokes through it; the near wing shows as crumpled
+gold membrane panels on the flank. The near hind leg is STILL NOT READABLE: v1 vs v2 (footFwd 0.4 vs 1.0) look the
+same - the leg is behind the near folded wing panels and/or Alexandria's right forearm (it crosses the hip band).
+REQUEST (director, style-f4): the right forearm lies across the hatchling's hips; move it back / lower (or the
+resting hand further forward on the back) so the near hip and leg are not covered.
+- npm test: 49 tests, 48 pass, 0 fail, 1 skipped. creatures-dev.json untouched.
+NEXT (exact):
+1. F4 near leg: confirm where it is - render with the membranes hidden (or tint hl_L bones) at --time 2 and at
+   --time 101 (high camera); if it sits under the near wing, lower the near wing's elbow (push.sprawlHum per side, add
+   to legSide-like `armSide`) or move the foot back of the forearm (footFwd -0.3, footOut 1.9).
+2. F4 head: if still dominant, skull 0.17 -> 0.16 and head widths ([0.15, 0.14] rows) -5%.
+3. F5: the feet sit out at the trailing edge; for "under the belly" try `together` 0.5 with fold (hl_0 y) and check
+   the membrane fold at the ankle at a closer still (creatures-dev glide view from below).
+4. Session 11 NEXT 1-2 (X3-15 octave boundary; Charcoal elbow flap) - not started.
+
 ## REALISM ROUND 2 - session 12 (2026-11-06, short budgeted session: F4 hatchling, F5 Starlight)
 Stills under `scratchpad/eng1/creatures/r2s12/` (scratchpad = the session's /tmp/claude-0/.../scratchpad): F4 before =
 `../../stylecheck/f4-birthing-chamber.png`, after `f4d.png` (draft, t 2), crop sheet `f4_crop_before_after.png` (top

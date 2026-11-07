@@ -159,6 +159,8 @@ export const DESIGNS = {
     wing: { humerus: 8.6, forearm: 16.4, d: [3.0, 2.0, 1.25, 0.85],
       fingers: [['II', 14.5, [5, 2.5], 2], ['III', 15.5, [11.5, 8.5, 5], -5], ['IV', 14, [10.5, 7.2, 3.4], -28], ['V', 12.8, [9, 6, 2.6], -52]],
       thumb: { mc: 1.3, ph: 0.9, claw: 1 }, to: 'ankle', glide: { humerus: -15, forearm: 12 }, legSplay: 30, thick: 0.014 },
+    // (r2 s13, F5 from below: the legs folded up in flight / glide - poses flightLegs fold)
+    flight: { legFold: 1 },
     eye: 0.39, snout: 0.6, teeth: [18, 17], toothMax: 0.36, jawMax: 45,
     body: { hump: 0.25, keel: 1.35, belly: 0.75, pec: 1.15, arm: 1.0, thigh: 1.05, tailbase: 1.0, neck: 1.0 },
     headX: { brow: 1.5, cheek: 1.0, jawMuscle: 1.0, nostril: 1.0, lipCover: 0.75, tympanum: 0.9, ridgeR: 0.022, long: 1 },
@@ -190,8 +192,9 @@ export const DESIGNS = {
     flapHz: 1.09, flapAmp: 95,
   },
   hatchling: {
-    name: 'Gold hatchling', L: 1.0, skull: 0.19, neck: 0.13, trunk: 0.27, tail: 0.41, neckBones: 8, tailBones: 20,
+    name: 'Gold hatchling', L: 1.0, skull: 0.17, neck: 0.13, trunk: 0.29, tail: 0.41, neckBones: 8, tailBones: 20,
     // (rev. 3: a flatter, longer-browed skull - the tall dome read as a toy's)
+    // (r2 s13, F4: skull 0.19 -> 0.17 and trunk 0.27 -> 0.29 - the head dominated the high camera)
     head: [[0, 0.15, 0.14], [0.3, 0.165, 0.145], [0.55, 0.14, 0.112], [0.8, 0.108, 0.08], [1, 0.078, 0.055]],
     neckP: [[0, 0.078, 0.088], [0.5, 0.086, 0.095], [1, 0.112, 0.128]],
     // (rev. 3: a slimmer hatchling-lizard trunk - as wide and deep as it was long it read as a gold ball / squeeze toy)
@@ -204,12 +207,15 @@ export const DESIGNS = {
     // arms and thighs; push = the newborn's pushUp / struggle: elbows and knees up, the fold the fingers lifted up
     // and back over the back as a loose wet tent, the membrane hanging between them)
     fold: { curl: [15, 70, 110] },
-    push: { fold: { curl: [-70, 0, 20], mcFan: 14, fanDown: 22, outUp: 0.5, wrap: 0.06 }, sprawlHum: [0.45, 0.6, 0.66], wristIn: 0.05, footOut: 0.75, kneeUp: 0.9 }, bulk: { leg: 1.3, arm: 1.3, neck: 1.0 },
+    // (r2 s13, F4 high camera: the near (left) leg splayed out sideways - legSide - and the fingers
+    // lifted 10 deg more so the tips clear the cloth edge)
+    push: { fold: { curl: [-70, 10, 20], mcFan: 14, fanDown: 22, outUp: 0.5, wrap: 0.06 }, sprawlHum: [0.45, 0.6, 0.66], wristIn: 0.05, footOut: 0.75, kneeUp: 0.9,
+      legSide: { L: { footOut: 1.6, kneeUp: 0.35, footFwd: 1.0 } } }, bulk: { leg: 1.3, arm: 1.3, neck: 1.0 },
     leg: { femur: 0.08, tibia: 0.085, mt: 0.048, toe: 0.07, claw: 0.02, d: [0.058, 0.04, 0.032, 0.024, 0.021], mtAng: 30, heelPad: 0.5, hallux: 0.45, toeR: 0.0095, soft: 1 },
     wing: { humerus: 0.085, forearm: 0.15, d: [0.046, 0.032, 0.024, 0.018],
       fingers: [['III', 0.11, [0.065, 0.045, 0.026], -10], ['IV', 0.095, [0.05, 0.03, 0.015], -48], ['V', 0.08, [0.035, 0.02, 0.011], -80]],
       thumb: { mc: 0.018, ph: 0.016, claw: 0.024 }, to: 'knee', glide: { humerus: -16, forearm: 12 }, legSplay: 22, thick: 0.0007 },
-    eye: 0.042, snout: 0.2, teeth: [0, 0], toothMax: 0, jawMax: 30, newborn: 1,
+    eye: 0.039, snout: 0.2, teeth: [0, 0], toothMax: 0, jawMax: 30, newborn: 1,
     body: { hump: 0, keel: 0.4, belly: 1.2, pec: 0.6, arm: 0.75, thigh: 0.85, tailbase: 0.7, neck: 0.7 },
     headX: { brow: 0.35, cheek: 0.45, jawMuscle: 0.35, nostril: 0.6, lipCover: 0.0, tympanum: 0.4, ridgeR: 0.026, soft: true, eggTooth: true },
     horns: 'buds', crest: { tail: 0.0, back: 0.0 },
