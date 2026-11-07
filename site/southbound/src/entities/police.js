@@ -185,17 +185,45 @@ export class Police {
         if (p.warnT !== undefined && (p.warnT -= dt) > 0) { if (p.h.locked <= 0) p.h.play('Pistol_Aim_Neutral', 0.15); this.poseGun(p, true); return; }
       } else p.warnT = undefined;
     }
-    // in a gunfight: one officer of each car behind it, the other working round the side
-    if (lethal && !pl.inCar && p.car && d < 45) {
-      const v = p.car.v, cx = v.pos.x - pl.pos.x, cz = v.pos.z - pl.pos.z, cd = Math.hypot(cx, cz) || 1;
-      let gx, gz;
-      if (p.side < 0 && Math.hypot(v.pos.x - p.pos.x, v.pos.z - p.pos.z) < 14) { gx = v.pos.x + (cx / cd) * (v.spec.width / 2 + 1); gz = v.pos.z + (cz / cd) * (v.spec.width / 2 + 1); }
-      else { const a = Math.atan2(p.pos.x - pl.pos.x, p.pos.z - pl.pos.z) + 0.5 * dt * p.side * 0.6, r = Math.min(Math.max(d, 11), 17); gx = pl.pos.x + Math.sin(a) * r; gz = pl.pos.z + Math.cos(a) * r; }
+    // in a gunfight: get behind something solid (a car, a tree, the corner of a building) and fight
+    // from it: duck down or stay hidden, peek out, fire a few rounds, duck back (no standing in the open)
+    if (lethal && !pl.inCar && d < 50) {
+      // stick with a spot until the fight moves (the player's gone more than 8 m from where it was
+      // chosen) or it can't be reached; then look again
+      const c0 = p.cover;
+      const stale = c0 && (Math.hypot(pl.pos.x - c0.px, pl.pos.z - c0.pz) > 8 || (!p.atCover && (c0.t = (c0.t || 0) + dt) > 6));
+      if ((!c0 || stale) && (p.coverCheck = (p.coverCheck ?? 0) - dt) <= 0) {
+        p.coverCheck = 1.5;
+        let c = this.findCover(p, pl);
+        // nothing solid near enough: get low where you are (kneel, pop up to fire, back down)
+        if (!c && d < 35) { const nx = (p.pos.x - pl.pos.x) / (d || 1), nz = (p.pos.z - pl.pos.z) / (d || 1); c = { x: p.pos.x, z: p.pos.z, low: true, open: true, sx: -nz, sz: nx }; }
+        p.cover = c ? { ...c, px: pl.pos.x, pz: pl.pos.z, t: 0 } : null; p.atCover = false;
+      }
+    } else if (p.cover && (d > 60 || pl.inCar)) p.cover = null;
+    if (lethal && !pl.inCar && p.cover) {
+      const c = p.cover;
+      // where to stand: right behind it, or (peeking round a tall one) a step out to the side
+      let gx = c.x, gz = c.z;
+      if (p.peek && !c.low) { gx += c.sx * 0.95; gz += c.sz * 0.95; }
       const mx = gx - p.pos.x, mz = gz - p.pos.z, md = Math.hypot(mx, mz);
-      if (md > 0.8) { const hd = p.heading; p.heading = Math.atan2(mx, mz); this.walkCop(p, dt, md > 6 ? 4.5 : 2.4); p.heading = hd + wrapAngle(Math.atan2(tx, tz) - hd); }
-    }
+      if (md > (p.atCover ? 0.25 : 0.7)) {
+        const hd = p.heading; p.heading = Math.atan2(mx, mz); this.walkCop(p, dt, p.atCover ? 2.0 : md > 6 ? 5.5 : 3); p.heading = hd + wrapAngle(Math.atan2(tx, tz) - hd);
+        if (!p.atCover) { p.peek = false; this.poseGun(p, false); return; }
+      } else p.atCover = true;
+      p.peekT = (p.peekT ?? 0) - dt;
+      if (p.peekT <= 0) {
+        p.peek = !p.peek;
+        p.peekT = p.peek ? 1.1 + this.rnd() * 1.1 : 1.2 + this.rnd() * 1.8;
+        if (p.peek) p.gunT = Math.max(p.gunT ?? 0, 0.3 + this.rnd() * 0.25); // a beat to aim before the first shot
+      }
+      if (!p.peek) {
+        if (p.h.locked <= 0) p.h.play(c.low ? 'Crouch_Idle_Loop' : 'Pistol_Aim_Neutral', 0.2);
+        this.poseGun(p, false);
+        return;
+      }
+    } else p.atCover = false;
     if ((p.react = (p.react || 0) - dt) > 0) { if (p.h.locked <= 0) p.h.play('Pistol_Aim_Neutral', 0.15); this.poseGun(p, true); return; }
-    const holding = lethal && !pl.inCar && p.car && d < 45; // in cover or flanking: they shoot from there
+    const holding = lethal && !pl.inCar && !!p.cover && p.atCover; // in cover: they shoot from there
     if (!lethal && !pl.inCar) {
       // not shooting: walk up to make the arrest, gun in hand only for felonies
       if (d > 1.7) {
@@ -267,6 +295,43 @@ export class Police {
     for (let w = t.id; prev.has(w);) { const { u, e } = prev.get(w); const P = e.a === u ? e.pts : [...e.pts].reverse(); pts.unshift(...P.slice(1)); w = u; }
     pts.unshift([s.x, s.z]); pts.push([to.x, to.z]);
     return pts;
+  }
+  // somewhere to fight from: the far side of a car, a tree trunk or a building's corner, between this
+  // officer and the player, close by, 7-40 m from the player, and not where a colleague already is.
+  // { x, z: where to stand; low: crouch behind it (a car); sx, sz: which way to step out to peek }
+  findCover(p, pl) {
+    let best = null, bs = 1e9;
+    const taken = (this.peds?.list || []).filter((o) => o !== p && o.role === 'cop' && o.cover && o.mode !== 'dead').map((o) => o.cover);
+    const inside = (x, z) => { let hit = false; this.collision.query(x, z, 2, (it) => { if (!hit && ((it.t === 0 && x > it.minX - 0.3 && x < it.maxX + 0.3 && z > it.minZ - 0.3 && z < it.maxZ + 0.3) || (it.t === 1 && it.r > 0 && Math.hypot(it.x - x, it.z - z) < it.r + 0.25))) hit = true; }); return hit; };
+    const consider = (cx, cz, rad, low, car = null) => {
+      const ux = cx - pl.pos.x, uz = cz - pl.pos.z, ud = Math.hypot(ux, uz) || 1;
+      if (ud < 7 || ud > 55) return;
+      const nx = ux / ud, nz = uz / ud;
+      // a car isn't round: how far its body reaches in this direction (long one way, narrow the other)
+      if (car) { const fx = Math.sin(car.heading), fz = Math.cos(car.heading); rad = Math.abs(nx * fx + nz * fz) * (car.spec.len || 4.5) / 2 + Math.abs(nx * fz - nz * fx) * (car.spec.width || 1.8) / 2; }
+      const gx = cx + nx * (rad + 0.55), gz = cz + nz * (rad + 0.55);
+      const md = Math.hypot(gx - p.pos.x, gz - p.pos.z);
+      if (md > 26) return;
+      if (taken.some((c) => Math.hypot(c.x - gx, c.z - gz) < 1.6)) return;
+      // closer is better; low cover (a car) a little better than a trunk; behind the player's back is worse
+      const score = md + (low ? -1.5 : 0) + (p.side > 0 ? -Math.abs(nx * Math.sin(p.heading) + nz * Math.cos(p.heading)) * 2 : 0);
+      if (score >= bs) return;
+      if (inside(gx, gz)) return;
+      // step out to the side for a look: perpendicular to the line of fire, away from the middle of the cover
+      let sx = -nz, sz = nx;
+      if ((gx + sx - cx) * sx + (gz + sz - cz) * sz < 0) { sx = -sx; sz = -sz; }
+      bs = score; best = { x: gx, z: gz, low, sx, sz };
+    };
+    for (const v of this.obstacles?.() || []) if (v && v.spec && !v.isBoat && !v.isAir && !v.wrecked && Math.abs(v.speed || 0) < 1) consider(v.pos.x, v.pos.z, 0, true, v);
+    this.collision.query(p.pos.x, p.pos.z, 26, (it) => {
+      if (it.t === 1 && it.r >= 0.28) consider(it.x, it.z, it.r, false);
+      else if (it.t === 0 && it.y1 - it.y0 > 1.6 && it.maxX - it.minX > 1.5 && it.maxZ - it.minZ > 1.5) {
+        // a wall: stand just past one of its corners, the wall between you and the player
+        const ex = pl.pos.x < (it.minX + it.maxX) / 2 ? it.maxX : it.minX, ez = pl.pos.z < (it.minZ + it.maxZ) / 2 ? it.maxZ : it.minZ;
+        for (const [x, z] of [[ex, it.minZ + 0.6], [ex, it.maxZ - 0.6], [it.minX + 0.6, ez], [it.maxX - 0.6, ez]]) consider(x, z, 0.1, false);
+      }
+    });
+    return best;
   }
   walkCop(p, dt, sp) {
     p.pos.x += Math.sin(p.heading) * sp * dt; p.pos.z += Math.cos(p.heading) * sp * dt;

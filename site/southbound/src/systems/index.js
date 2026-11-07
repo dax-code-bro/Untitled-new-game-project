@@ -27,6 +27,7 @@ import { installGrooming } from './grooming.js';
 import { installDust } from './dust.js';
 import { installMedical } from './medical.js';
 import { installSaves } from './saves.js';
+import { installDefense } from './defense.js';
 
 export function installSystems(game) {
   const list = [];
@@ -67,6 +68,7 @@ export function installSystems(game) {
   add('grooming', installGrooming(game)); // dirt, blood, washing, outfits, disguises, barber styles, Saturday sale
   add('medical', installMedical(game)); // infection, antibiotics, doctors, concussion, falls, snakebites, healing, Health tab
   add('saves', installSaves(game)); // safe-only saves; coming back near where you saved, mid-cigarette
+  add('hideoutDefense', installDefense(game)); // the crew fights off whoever you lead up to the hideout
   return {
     list,
     // systems may return a prompt; `free` says whether F is still unclaimed this frame

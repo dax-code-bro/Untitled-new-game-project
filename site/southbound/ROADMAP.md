@@ -140,6 +140,23 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 - [x] Loading screen with in-game art, tips and progress
 - [x] Fewer touch buttons: ◎ interact replaces the car button; map, phone, arsenal, free cam moved to pause
 
+## Phase 1.54 — The crew defends the hill; police fight from cover
+
+- [x] Lead armed enemies (raiders, a mission's gunmen, a rival crew, armed civilians, or the police
+      once they're shooting) up to the hideout and the Gulf Line fights them off
+      (`systems/defense.js`): up to eight of the crew pull their own guns (Rico's revolver, Big O's
+      and Wrench's shotguns, Tina's and Smoke's rifles, Jayden's marksman rifle...), turn on the
+      nearest threat and fire, with hit chances from distance and each member's shooting skill;
+      the cook, medic, hacker and pilot get down
+- [x] Gunmen shoot at whoever's closer, you or a crew member in the open; a crew member hit badly
+      goes down wounded (never dies) and Marisol patches them up after; guns away when it's quiet
+- [x] Raids no longer send the crew to hide in the bunkhouse: everyone stands and fights
+- [x] Police in a gunfight get behind something solid (`entities/police.js`): their stopped cruiser
+      or another car (using its real length and width), a tree trunk, a building's corner. They
+      duck down or stay hidden, peek out (stand up over a car, step out round a corner), fire a
+      shot or two, and duck back. They keep a spot until the fight moves, give up on one they can't
+      reach, don't crowd a colleague's, and with nothing near they kneel and pop up to fire
+
 ## Phase 1.53 — Saves that make sense, $50,000 to start, your car back from the dealer
 
 - [x] Save only when you're safe (`systems/saves.js`): F5 or the pause menu's "Save game". Not while

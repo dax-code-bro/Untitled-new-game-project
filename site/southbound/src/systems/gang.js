@@ -560,10 +560,12 @@ export function installGang(game) {
         m.h.root.visible = near && !m.away; // away on a crew job, an errand, asleep or locked up (systems/crew.js)
         if (!m.h.root.visible) continue;
         const dx = player.pos.x - m.pos.x, dz = player.pos.z - m.pos.z, d = Math.hypot(dx, dz);
-        const want = d < 6 && m.pose !== 'Sitting_Idle_Loop' ? Math.atan2(dx, dz) : m.look;
-        m.h.root.rotation.y += wrapAngle(want - m.h.root.rotation.y) * Math.min(1, dt * 3);
+        // (in a fight at the hideout, systems/defense.js turns them toward the threat and poses the gun)
+        const want = m.fightHeading != null ? m.fightHeading : d < 6 && m.pose !== 'Sitting_Idle_Loop' ? Math.atan2(dx, dz) : m.look;
+        m.h.root.rotation.y += wrapAngle(want - m.h.root.rotation.y) * Math.min(1, dt * (m.fightHeading != null ? 8 : 3));
         m.h.update(dt);
         placeAccessories(m.h);
+        if (m.fight) m.fight(dt);
       }
       return pro ? updatePrologue(dt, a) : '';
     },
