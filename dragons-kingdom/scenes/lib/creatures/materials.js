@@ -112,7 +112,9 @@ export function lookParams(THREE, look) {
       // the sun breaks into many small glints and the sky into a mosaic of cool and warm
       // reflections - never emission, never one chrome sheet. Albedo ~0.6 with faint warm/cool
       // variation; the crevices only a little darker than the scales (no plaster-cast AO).
-      base: lin(THREE, 0.66, 0.655, 0.65), belly: lin(THREE, 0.64, 0.625, 0.615), dorsal: lin(THREE, 0.68, 0.675, 0.68),
+      // (r2 s13, F5 from below: the underside read flat - a little darker belly and a ventral sky
+      // occlusion (vent: amount, share away from the ventral midline) so it models; still never a glow)
+      base: lin(THREE, 0.66, 0.655, 0.65), belly: lin(THREE, 0.59, 0.58, 0.57), dorsal: lin(THREE, 0.68, 0.675, 0.68), vent: [0.5, 0.45],
       wear: lin(THREE, 0.7, 0.7, 0.7), crev: 0.9, dust: lin(THREE, 0.45, 0.43, 0.4), salt: lin(THREE, 0.8, 0.8, 0.78),
       // (rev. 3: lower relief and a light crevice occlusion - domed plates with dark grout read as a pebble mosaic)
       // (fix round 1, canon "reflective crystal-like": the critics saw chalk under an overcast sky,
@@ -218,6 +220,7 @@ function skinMaterial(THREE, P, ctx) {
   mat.defines = { USE_TANGENT: '' };
   const lowY = (ctx.spec.hipY ?? 0.2) * ctx.L * 0.55;
   const U = {
+    uVent: { value: new THREE.Vector2(...(P.vent || [0, 0.5])) },
     uBase: { value: P.base }, uBelly: { value: P.belly }, uDorsal: { value: P.dorsal }, uWearCol: { value: P.wear },
     uDustCol: { value: P.dust }, uSaltCol: { value: P.salt }, uOral: { value: P.oral }, uOralDark: { value: P.oralDark },
     uRough: { value: new THREE.Vector4(...P.rough) },
@@ -294,6 +297,7 @@ varying vec4 vScale; varying vec4 vMask; varying vec4 vMask2; varying vec3 vRest
 uniform vec4 uScl, uScl2, uTub, uSkin2, uSkin3, uBellyZ, uVor, uHeadLk, uHeadLk2, uEyeC, uLook3; uniform float uHeadRel, uHeadSpec;
 float dkSpecK = 1.0;
 uniform vec3 uBase, uBelly, uDorsal, uWearCol, uDustCol, uSaltCol, uOral, uOralDark;
+uniform vec2 uVent;
 uniform vec4 uRough, uPat, uDirt, uMisc, uWound, uCrev, uWet, uBellyP, uDamp; uniform float uWoundR;
 uniform vec4 uScarA[4]; uniform vec4 uScarB[4]; uniform vec3 uScarCol; uniform vec4 uResidue;
 float dkResM;
@@ -668,6 +672,17 @@ material.specularF90 *= dkSpecK;
 {
   float ambientOcclusion = dkAO;
   reflectedLight.indirectDiffuse *= ambientOcclusion;
+  // (r2 s13) uVent.x: the underside's own sky occlusion - surfaces facing down see the ground and the
+  // body, deepest along the ventral midline (uVent.y = its share on the flanks), so a white belly
+  // models from below instead of reading as one flat lit sheet
+  if (uVent.x > 0.0) {
+    vec3 dkUpW = (viewMatrix * vec4(0.0, 1.0, 0.0, 0.0)).xyz;
+    float dkDn = smoothstep(0.25, -0.8, dot(geometryNormal, dkUpW));
+    float dkMid = smoothstep(0.45, 0.95, vScale.z / max(vScale.w, 1.0));
+    float dkV = 1.0 - uVent.x * dkDn * mix(uVent.y, 1.0, dkMid);
+    reflectedLight.indirectDiffuse *= dkV;
+    reflectedLight.indirectSpecular *= dkV;
+  }
   reflectedLight.directDiffuse *= mix(1.0, 1.0 - 0.5 * dkCav, 1.0) * mix(1.0, vMask2.x, 0.35);
   #if defined( USE_CLEARCOAT )
     // the wet film reflects the sky only where the sky is visible (crevices and the

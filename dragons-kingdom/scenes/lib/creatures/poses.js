@@ -776,7 +776,11 @@ export function lie(c, o = {}) {
     if (sprawl) {
       // splayed out to the sides, soles down, toes slack
       // (o.footOut / o.kneeUp, r2 s12: the newborn's frog sprawl - feet nearer, knees up above the flank)
-      legIK(pb, F, side, [sd * (d.hipX + d.fem * (o.footOut ?? 1.1)), d.toeL * 0.13, hip[2] + d.fem * 0.25], { mtAng: 10, fwd: [sd * 0.7, 0, 0.7], pole: [sd, 0.6 + (o.kneeUp ?? 0), 0.2], curl: -0.05 });
+      // (o.legSide = { L: {...}, R: {...} }, r2 s13: one leg's own footOut / kneeUp / footFwd - the
+      // hatchling's near (left) leg splayed out sideways so it reads from F4's high camera)
+      const ls = o.legSide?.[side] || {};
+      const fo = ls.footOut ?? o.footOut ?? 1.1, ku = ls.kneeUp ?? o.kneeUp ?? 0;
+      legIK(pb, F, side, [sd * (d.hipX + d.fem * fo), d.toeL * 0.13, hip[2] + d.fem * (ls.footFwd ?? 0.25)], { mtAng: 10, fwd: [sd * 0.7, 0, 0.7], pole: [sd, 0.6 + ku, 0.2], curl: -0.05 });
       // (fix round 1: the splayed arm showed the fingers as a rake beside a flat flap) the wing
       // folded back along the flank like the adults', the wrist and thumb down a little out to
       // the side (too weak to gather the elbows in)
@@ -958,11 +962,17 @@ function wingFlap(pb, cyc, o = {}) {
 function flightLegs(pb, o = {}) {
   const k = o.tuck ?? -1;          // toes clenched (negative x flexes them toward the sole)
   const s = o.stroke ?? 0;
+  // (r2 s13) o.fold 0..1 (default: the design's flight.legFold, else 0): the legs folded up - the
+  // thigh swung down / forward, the shank back up under the tail base, the foot folded forward
+  // against the shank, toes clenched harder (Starlight seen from below in F5: the legs hung)
+  const f = clamp(o.fold ?? pb.c.anatomy.design.flight?.legFold ?? 0, 0, 1);
   // the legs drawn together under the tail (the rest pose spreads them for the membrane)
-  pb.sym('hl_#_0', -0.06 * s, 0.18 * (o.together ?? 1), 0);
-  pb.sym('hl_#_1', 0.05 * s, 0, 0);
-  for (let i = 0; i < 4; i++) pb.sym(`hl_#_t${i}`, i === 0 ? -0.3 * k : 0.55 * k, 0, 0);
+  pb.sym('hl_#_0', -0.06 * s - LEGF[0] * f, 0.18 * (o.together ?? 1), 0);
+  pb.sym('hl_#_1', 0.05 * s + LEGF[1] * f, 0, 0);
+  if (f) pb.sym('hl_#_2', LEGF[2] * f, 0, 0);
+  for (let i = 0; i < 4; i++) pb.sym(`hl_#_t${i}`, (i === 0 ? -0.3 * k : 0.55 * k) * (1 + 0.6 * f), 0, 0);
 }
+const LEGF = [0.35, 1.2, -2.7];     // flightLegs fold at 1: hip, knee, ankle (rad)
 
 /** Flapping flight. Tempo from the creature's size (config.flapHz) unless o.hz is given. */
 export function flight(c, o = {}) {
@@ -974,7 +984,7 @@ export function flight(c, o = {}) {
   const asym = corr * 0.16 * wob(t * hz * 0.7, 5);
   const ampJ = 1 + corr * 0.15 * wob(t * hz * 0.9, 6);
   const w = wingFlap(pb, cyc, { amp: (o.amp ?? c.config.flapAmp ?? 0.8) * ampJ, center: o.center ?? 0.06, asym, flex: o.flex });
-  flightLegs(pb, { stroke: Math.cos(w.phi), tuck: o.legTuck, together: o.legsTogether });
+  flightLegs(pb, { stroke: Math.cos(w.phi), tuck: o.legTuck, together: o.legsTogether, fold: o.legFold });
   // the body: lifted during the downstroke, a slight pitch oscillation; the neck keeps the head steady
   const bob = Math.sin(w.phi - 0.7);
   const pitch = 0.04 * Math.cos(w.phi);
@@ -1020,7 +1030,7 @@ export function glide(c, o = {}) {
     for (let d = 0; d < nF; d++) pb.add(`w_${sd}_f${d}_1`, 0, 0, s * -0.03, 'YZX');
   }
   pb.u.billowL = 0.35; pb.u.billowR = 0.35;
-  flightLegs(pb, { tuck: o.legTuck, together: o.legsTogether });
+  flightLegs(pb, { tuck: o.legTuck, together: o.legsTogether, fold: o.legFold });
   pb.rig.rotation = [o.bodyPitch ?? 0, o.yaw ?? 0, bank];
   const cm = callMod(o, t);
   neckCurve(pb, (o.neckBase ?? 0.1) + (cm?.neckBase ?? 0), (o.neckTop ?? 0.05) + (cm?.neckTop ?? 0), (o.headPitch ?? -0.05) + (cm?.head ?? 0), -(o.bodyPitch ?? 0));
