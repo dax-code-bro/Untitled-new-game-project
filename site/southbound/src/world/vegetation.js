@@ -375,7 +375,7 @@ export async function createVegetation(hm, quality, scene, collision, cityBlocks
       uniforms: {
         ...grassUniforms, tImp: { value: v.imp }, uNear: { value: Q.near },
         uSize: { value: new THREE.Vector3(v.half * 2 * (v.sx || 1), v.half * 4 * (v.sy || 1), (v.top - v.half * 4) * (v.sy || 1)) },
-        sbFogA: { value: fogParams.a }, sbFogB: { value: fogParams.b },
+        sbFogA: { value: fogParams.a }, sbFogB: { value: fogParams.b }, sbFogC: { value: fogParams.c },
         ...cloudShadowUniforms,
       },
       vertexShader: /* glsl */`
@@ -393,7 +393,7 @@ export async function createVegetation(hm, quality, scene, collision, cityBlocks
         }`,
       fragmentShader: /* glsl */`
         uniform sampler2D tImp; uniform vec3 uSunColor; uniform vec3 uAmbient; uniform vec3 uFogColor; uniform float uFogDensity; uniform vec3 uSunDir;
-        uniform vec4 sbFogA; uniform vec4 sbFogB;
+        uniform vec4 sbFogA; uniform vec4 sbFogB; uniform vec4 sbFogC;
         varying vec2 vUv; varying vec3 vW; varying float vFade;
         ${FOG_GLSL}
         ${CLOUD_SHADOW_GLSL}
@@ -407,7 +407,7 @@ export async function createVegetation(hm, quality, scene, collision, cityBlocks
           // a far tree against the sun: light comes through the crown
           float back = pow(max(dot(normalize(vW - cameraPosition), uSunDir), 0.0), 5.0);
           lit += c.rgb * uSunColor * back * cs * vec3(0.85, 1.0, 0.4) * 0.9;
-          gl_FragColor = vec4(sbApplyFog(lit, vW, cameraPosition, uFogColor, uFogDensity, sbFogA, sbFogB), 1.0);
+          gl_FragColor = vec4(sbApplyFog(lit, vW, cameraPosition, uFogColor, uFogDensity, sbFogA, sbFogB, sbFogC), 1.0);
           #include <colorspace_fragment>
         }`,
     });

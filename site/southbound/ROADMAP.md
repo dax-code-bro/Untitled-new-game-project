@@ -140,6 +140,33 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 - [x] Loading screen with in-game art, tips and progress
 - [x] Fewer touch buttons: ◎ interact replaces the car button; map, phone, arsenal, free cam moved to pause
 
+## Phase 1.56 — Lived-in streets, grounded buildings, contact shadows, mist (graphics milestone G12)
+
+The owner: layered PBR and lighting, environmental clutter ("remove the empty, clean look"), foliage
+and ground blending where roads and buildings meet the ground, and post-processing (grading,
+volumetric fog, contact shadows under cars and buildings).
+- [x] Contact shadows on every preset: a soft dark patch under every car (hidden when it's in the
+      air), a dark band on the ground along the foot of every building (`world/contact.js`), and the
+      bottom of every wall darkened where it meets the ground (facade shader)
+- [x] Ambient occlusion on Medium too (half resolution), a little stronger on High and up
+- [x] Street clutter (`world/streetclutter.js`): stop signs on every approach to every junction in
+      the city, Mill Creek and the outer neighbourhoods, green street-name blades on one corner
+      (Main St, Pecan St, Magnolia St..., the city's numbered streets and avenues), manhole covers,
+      storm-drain grates with kerb inlets, litter (paper, newspaper, cans, cups, cigarette butts,
+      leaves, wrappers, bags: thick downtown, light in town, often in little piles against the kerb),
+      oil drips and old spills on the lanes and pavements, weeds in the kerb cracks and at the foot
+      of walls and fence posts, hydrants and corner bins in Mill Creek
+- [x] Parked cars along Mill Creek's streets too, never across a driveway
+- [x] Ground blending (`world/shoulders.js`): gravel-and-dirt shoulders along the highways and outer
+      lanes using the photo-scanned Gravel004 and Dirt01 sets (colour, normal, roughness, AO) in
+      layers, with a ragged cut-out edge into the grass; a band of bare soil and gravel round the
+      foot of houses, sheds and barns standing on open ground
+- [x] Mown lawns get short 3D grass blades (they were a flat texture) where the 3D grass is on
+- [x] Saw palmetto clumps (the low fan palms of Gulf pinewoods, dunes and ditches), three shapes,
+      built from the cabbage palm's frond code
+- [x] Ground mist: a second, shallow fog layer lying in the low places (coast, bayou, river, lake),
+      thickest round sunrise, lighter at dusk and through the night, heavier in damp weather
+
 ## Phase 1.55 — Every tool its own model
 
 The owner: "most of the items were just different colors or slightly different versions of other

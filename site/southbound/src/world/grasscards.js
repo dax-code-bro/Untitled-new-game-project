@@ -175,6 +175,9 @@ vec4 sp = texture(uSplatTex, huv);
 float e = 2.0 * uWorldHalf / (uHN - 1.0);
 float slope = length(vec2(texture(uHeightTex, gcUV(wxz + vec2(e, 0.0))).r - gy, texture(uHeightTex, gcUV(wxz + vec2(0.0, e))).r - gy)) / e;
 float dens = sbGrassMask(wxz, sp, slope * 0.7);
+// mown lawns (G12): short, dense grass on the yards and round the buildings, not a flat green picture
+float lawnK = smoothstep(0.2, 0.8, texture(uLawn, (wxz + uWorldHalf) / (2.0 * uWorldHalf)).r) * (1.0 - smoothstep(0.04, 0.3, sp.a)) * (1.0 - smoothstep(0.25, 0.6, sp.r)) * (1.0 - smoothstep(0.32, 0.6, slope));
+dens = max(dens, lawnK);
 float d = length(wxz - uCam.xz);
 // this ring's band (near cards inside, bigger far cards outside), cross-faded by height
 float band = (uR0 > 0.0 ? smoothstep(uR0 * 0.85, uR0, d) : 1.0) * (1.0 - smoothstep(uR1 * 0.82, uR1, d));
@@ -186,6 +189,7 @@ float keep = step(aOff.w, smoothstep(0.0, 0.22, dens) * 1.15) * step(fract(aOff.
 float hN = gmNoise(wxz * 0.09) * 0.6 + gmNoise(wxz * 0.37) * 0.4;
 float h = mix(0.26, 0.6, hN) + sp.b * 0.32;
 h *= mix(0.3, 1.0, smoothstep(0.08, 0.7, dens)) * keep;
+h = mix(h, (0.06 + hN * 0.04) * keep, lawnK); // a lawn: ankle-high at most
 ${blades ? `float ang = aOff.z, t = aSeg.x, side = aSeg.y, q = 0.0;
 // one strand: rooted in the tuft (turned with it), leaning out along its facing and curling a
 // little sideways, more towards the tip; tapering to a point. A tuft the mask removes (h = 0)
