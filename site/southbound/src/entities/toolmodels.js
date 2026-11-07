@@ -2,6 +2,7 @@
 // store can show what it sells turning on a stand (ui/shop.js showroom). Each tool is matched to
 // an archetype by its name: a rod, a knife, pliers, a power drill, a shovel, a kit, a bottle...
 import * as THREE from 'three';
+import { uniqueTools } from './toolunique.js';
 
 const mats = {};
 const mat = (key, color, rough = 0.6, metal = 0) => mats[key] || (mats[key] = new THREE.MeshStandardMaterial({ color, roughness: rough, metalness: metal }));
@@ -85,9 +86,11 @@ const RULES = [
 export function toolArchetype(t) { for (const [re, k] of RULES) if (re.test(t.name)) return k; return 'generic'; }
 
 // A tool, ready to put on a stand: centred, laid along x, real size
+let UNIQUE = null; // tools with a shape of their own (entities/toolunique.js), by name
 export function toolModel(t) {
   const g = new THREE.Group();
-  (A[toolArchetype(t)] || A.generic)(g, t);
+  if (!UNIQUE) UNIQUE = uniqueTools({ box, cyl, ball, ring, mat, STEEL, DARK, BLACK, RUBBER, WOOD, GLASS, BRASS, CHROME, CAMO, FABRIC, PLASTIC });
+  (UNIQUE[t.name] || A[toolArchetype(t)] || A.generic)(g, t);
   const bb = new THREE.Box3().setFromObject(g), c = bb.getCenter(new THREE.Vector3());
   for (const o of g.children) o.position.sub(c);
   g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });

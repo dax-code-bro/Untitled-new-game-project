@@ -111,7 +111,10 @@ export function installMissions(game) {
   // armed mission enemies: close in and shoot at the player
   game.peds.foeThink = (p, dt) => {
     if (p.mode === 'dead') return;
-    const tx = player.pos.x - p.pos.x, tz = player.pos.z - p.pos.z, d = Math.hypot(tx, tz);
+    // at the hideout the crew fights back, and gunmen shoot at whoever's closer (systems/defense.js)
+    const alt = game.defense?.targetFor?.(p);
+    const T = alt ? alt.pos : player.pos;
+    const tx = T.x - p.pos.x, tz = T.z - p.pos.z, d = Math.hypot(tx, tz);
     let da = Math.atan2(tx, tz) - p.heading; da = Math.atan2(Math.sin(da), Math.cos(da));
     p.heading += da * Math.min(1, dt * 6);
     if (d > 60) { p.h.play('Idle_Loop', 0.3); return; }
@@ -127,7 +130,7 @@ export function installMissions(game) {
         p.gunT = 0.8 + Math.random() * 0.9;
         p.h.play('Pistol_Shoot', 0.05, 1.4, true);
         game.combat.audio?.gunshot(0.5);
-        if (Math.random() < Math.max(0.12, 0.55 - d / 40) * (game.S.mode === 'car' ? 0.6 : 1)) game.police.onPlayerHit?.(5 + Math.random() * 7, p.pos);
+        if (Math.random() < Math.max(0.12, 0.55 - d / 40) * (alt ? 1 : game.S.mode === 'car' ? 0.6 : 1)) { if (alt) alt.hit(8 + Math.random() * 10); else game.police.onPlayerHit?.(5 + Math.random() * 7, p.pos); }
       } else if (p.h.locked <= 0) p.h.play('Pistol_Aim_Neutral', 0.15);
     }
     p.h.root.position.copy(p.pos); p.h.root.rotation.y = p.heading;

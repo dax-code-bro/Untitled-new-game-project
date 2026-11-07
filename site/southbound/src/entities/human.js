@@ -6,6 +6,31 @@ import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
 const ONCE = new Set(['Jump_Start', 'Jump_Land', 'Pistol_Shoot', 'Pistol_Reload', 'Punch_Jab', 'Punch_Cross', 'Hit_Chest', 'Death01', 'Interact']);
 
 const _fq = new THREE.Quaternion();
+// The run's arm swing, softened. The library's jog and sprint throw the arms through a huge arc and
+// pull the shoulders far back on every stride: stiff and robotic. Each frame the shoulders and upper
+// arms are drawn part of the way toward their average pose over the cycle, which shrinks the swing
+// around its middle (k: how much; shoulders more than arms) without changing the rhythm.
+const SWING = { Jog_Fwd_Loop: 0.42, Sprint_Loop: 0.36 };
+const SWING_BONES = [['clavicleL', 1.6], ['clavicleR', 1.6], ['shoulder01L', 1.6], ['shoulder01R', 1.6], ['upperarm01L', 1], ['upperarm01R', 1], ['upperarm02L', 1], ['upperarm02R', 1]];
+const MEANS = new WeakMap(); // clip -> { boneName: mean quaternion }
+function clipMeans(clip) {
+  let m = MEANS.get(clip);
+  if (m) return m;
+  m = {};
+  for (const [name] of SWING_BONES) {
+    const t = clip.tracks.find((tr) => tr.name === name + '.quaternion');
+    if (!t) continue;
+    const v = t.values, q = new THREE.Vector4(), q0 = new THREE.Vector4(v[0], v[1], v[2], v[3]);
+    for (let i = 0; i < v.length; i += 4) {
+      const s = v[i] * q0.x + v[i + 1] * q0.y + v[i + 2] * q0.z + v[i + 3] * q0.w < 0 ? -1 : 1;
+      q.x += v[i] * s; q.y += v[i + 1] * s; q.z += v[i + 2] * s; q.w += v[i + 3] * s;
+    }
+    q.normalize();
+    m[name] = new THREE.Quaternion(q.x, q.y, q.z, q.w);
+  }
+  MEANS.set(clip, m);
+  return m;
+}
 export class Human {
   constructor(lib, id, opts = {}) {
     const t = lib.people[id] || Object.values(lib.people)[0];
@@ -71,8 +96,19 @@ export class Human {
     if (this.ragdoll) { this.stepRagdoll(dt); return; }
     if (this.locked > 0) this.locked -= dt;
     this.mixer.update(dt);
+    this.softenSwing();
     if (this.post) this.post(dt); // pose tweaks on top of the clip (hands up, etc.)
     if (this.flinchT > 0) this.applyFlinch(dt);
+  }
+
+  softenSwing() {
+    const cur = this.current, clip = cur && cur.getClip(), k = clip && SWING[clip.name];
+    if (!k) return;
+    const w = cur.getEffectiveWeight();
+    if (w < 0.01) return;
+    const means = clipMeans(clip);
+    if (!this._swing) this._swing = SWING_BONES.map(([n, f]) => [this.model.getObjectByName(n), n, f]).filter((b) => b[0]);
+    for (const [bone, name, f] of this._swing) { const m = means[name]; if (m) bone.quaternion.slerp(m, Math.min(0.85, k * f) * w); }
   }
 
   // Physics takes over (entities/ragdoll.js). ground(x, z, y) -> height. Returns false if this

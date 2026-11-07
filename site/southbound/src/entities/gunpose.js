@@ -134,10 +134,20 @@ export class GunPose {
       if (s.state === 'aim') {
         dir.copy(aim);
         if (s.fp) {
-          // first person: line the sights up with the camera
-          pos.copy(s.eye).addScaledVector(dir, 0.18 + info.sightZ * 0.4).addScaledVector(F.up, -info.sightY);
+          // first person: line the sights up with the camera, the eye its eye relief behind the
+          // optic (a red dot ~12 cm, a scope ~8 cm behind its eyepiece; iron sights ~20 cm)
+          pos.copy(s.eye).addScaledVector(dir, info.eyeBack ?? 0.2).addScaledVector(F.up, -info.sightY);
           this.place(gun, pos, dir, F.up, 0, info.sight);
         } else this.place(gun, pocket, dir, F.up, 0, info.butt);
+      } else if (s.fp && (s.state === 'ready' || s.state === 'reload' || s.state === 'inspect')) {
+        // first person, not aiming: the rifle carried at the hip-ready, in the lower right of the
+        // view and pointing a little left of centre and down, the way it's seen from the eyes (the
+        // third-person low ready was below the bottom of the screen: no gun in view at all)
+        const fwH = _c1.copy(aim).setY(0).normalize(), rgt = _c2.set(-fwH.z, 0, fwH.x);
+        dir.copy(aim).addScaledVector(F.up, -0.1).addScaledVector(rgt, -0.09).normalize();
+        roll = s.state === 'reload' ? 0.6 * Math.sin(Math.min(1, s.reload * 1.2) * Math.PI) : s.state === 'inspect' ? Math.sin(s.inspect * Math.PI * 2) * 0.5 : 0;
+        pos.copy(s.eye).addScaledVector(aim, 0.34).addScaledVector(F.up, s.state === 'reload' ? -0.2 : -0.145).addScaledVector(rgt, 0.17);
+        this.place(gun, pos, dir, F.up, roll, info.sight);
       } else if (s.state === 'sprint') {
         // port arms: diagonally across the chest, muzzle up-left
         dir.copy(F.up).multiplyScalar(0.62).addScaledVector(F.right, -0.62).addScaledVector(F.fw, 0.45).normalize();
@@ -197,8 +207,15 @@ export class GunPose {
     if (s.state === 'aim') {
       // two-handed isosceles stance in front of the chest
       pos.copy(F.chest).addScaledVector(aim, 0.52).addScaledVector(F.up, 0.06).addScaledVector(F.right, 0.03);
-      if (s.fp) pos.copy(s.eye).addScaledVector(aim, 0.42).addScaledVector(F.up, -info.sightY - 0.005);
-      this.place(gun, pos, aim, F.up, 0, s.fp ? info.sight : null);
+      // first person: out at arm's length, the way a pistol is really aimed (at 42 cm the forearms
+      // filled the bottom of the screen), but never further than both hands can reach the grip
+      if (s.fp) {
+        for (let t = 0.55; t > 0.36; t -= 0.03) {
+          pos.copy(s.eye).addScaledVector(aim, t).addScaledVector(F.up, -info.sightY - 0.005);
+          this.place(gun, pos, aim, F.up, 0, info.sight);
+          if (gun.localToWorld(_g.set(0, 0, 0)).distanceTo(shR) < this.armLen(this.R) * 0.97 && gun.localToWorld(_g.set(0.045, -0.03, -0.01)).distanceTo(shL) < this.armLen(this.L) * 0.97) break;
+        }
+      } else this.place(gun, pos, aim, F.up, 0, null);
       this.reach(this.R, gun.localToWorld(_g.set(0, 0, 0)).clone(), F, 'R');
       orientHand(this.R, gunVec(gun, GRIP.pistol.F), gunVec(gun, GRIP.pistol.S));
       this.reach(this.L, gun.localToWorld(_g.set(0.045, -0.03, -0.01)).clone(), F, 'L');
@@ -219,8 +236,9 @@ export class GunPose {
     // first person, not aiming: a two-handed low ready in front of the chest (the third-person idle
     // clip seen from the eyes showed the pistol canted 60 degrees with the fingers off the grip)
     if (s.fp && s.state !== 'reload') {
-      dir.copy(aim).multiplyScalar(0.86).addScaledVector(F.up, -0.5).normalize();
-      pos.copy(s.eye).addScaledVector(aim, 0.4).addScaledVector(F.up, -0.3).addScaledVector(F.right, 0.07);
+      // (low enough to see past, high enough to be in the bottom of the view)
+      dir.copy(aim).multiplyScalar(0.9).addScaledVector(F.up, -0.42).normalize();
+      pos.copy(s.eye).addScaledVector(aim, 0.42).addScaledVector(F.up, -0.21).addScaledVector(F.right, 0.09);
       this.place(gun, pos, dir, F.up, 0);
       this.reach(this.R, gun.localToWorld(_g.set(0, 0, 0)).clone(), F, 'R');
       orientHand(this.R, gunVec(gun, GRIP.pistol.F), gunVec(gun, GRIP.pistol.S));
@@ -228,7 +246,19 @@ export class GunPose {
       orientHand(this.L, gunVec(gun, GRIP.cup.F), gunVec(gun, GRIP.cup.S));
       return;
     }
-    // relaxed / reload: the clip moves the right arm; the gun follows the hand
+    // third person, ready: a two-handed low ready in front of the belly, muzzle down at the ground a
+    // couple of metres ahead (the pistol idle clip held the gun up beside the face)
+    if (!s.fp && s.state === 'ready') {
+      dir.copy(F.fw).multiplyScalar(0.62).addScaledVector(F.up, -0.78).normalize();
+      pos.copy(F.chest).addScaledVector(F.fw, 0.3).addScaledVector(F.up, -0.34).addScaledVector(F.right, 0.04);
+      this.place(gun, pos, dir, F.fw, 0);
+      this.reach(this.R, gun.localToWorld(_g.set(0, 0, 0)).clone(), F, 'R');
+      orientHand(this.R, gunVec(gun, GRIP.pistol.F), gunVec(gun, GRIP.pistol.S));
+      this.reach(this.L, gun.localToWorld(_g.set(0.045, -0.03, -0.01)).clone(), F, 'L');
+      orientHand(this.L, gunVec(gun, GRIP.cup.F), gunVec(gun, GRIP.cup.S));
+      return;
+    }
+    // reload: the clip moves the right arm; the gun follows the hand
     this.attachToHand(gun, this.R);
     if (s.state === 'reload') {
       const k = s.reload;
@@ -289,6 +319,12 @@ export class GunPose {
     gun.quaternion.copy(handQ.multiply(gripQ.invert()));
     h.wrist.getWorldPosition(gun.position);
     gun.updateMatrixWorld(true);
+  }
+
+  // shoulder to wrist (bone lengths don't change, so measured once)
+  armLen(h) {
+    if (!h._len) { const a = h.upper.getWorldPosition(new THREE.Vector3()), b = h.lower.getWorldPosition(new THREE.Vector3()), c = h.wrist.getWorldPosition(new THREE.Vector3()); h._len = a.distanceTo(b) + b.distanceTo(c); }
+    return h._len;
   }
 
   // arm IK with a natural elbow: out to the side and down

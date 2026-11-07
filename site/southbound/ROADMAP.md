@@ -140,6 +140,75 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 - [x] Loading screen with in-game art, tips and progress
 - [x] Fewer touch buttons: ◎ interact replaces the car button; map, phone, arsenal, free cam moved to pause
 
+## Phase 1.55 — Every tool its own model
+
+The owner: "most of the items were just different colors or slightly different versions of other
+models, and the tools don't look unique at all". An audit found 244 tools drawn with only 124
+different shapes (twelve products, from bandages to a caulk gun, were the same bottle; the jigsaw
+was drawn as a fishing lure; the branding iron as a shovel).
+- [x] `entities/toolunique.js`: 120 tools get a model of their own, so all 244 are now different
+      shapes (checked by an automated geometry audit)
+- [x] Rods: spinning (open-face reel under the rod, bail, big first guide), baitcast (low-profile
+      reel on top, trigger grip), fly (large-arbor reel at the butt, snake guides), surf (3.4 m,
+      long two-hand grip, big reel), deep-sea (short and heavy, roller guides, trolling reel,
+      gimbal butt); Basic / Pro / Elite each their own blank, grip, reel seat and fittings
+- [x] The rest: scent dropper and spray, filler tin with spreader, aerosol, sunscreen tube, caulk
+      gun, bandage roll, pill bottle, gel tube, drink can, gauze pouch, auto-injector, tackle box
+      with trays, gun cleaning case, rolling repair case, belt and tensioner, nested mess kit,
+      cantilever toolbox, lures by type, multimeter with probes, oscilloscope, scanner, CB radio
+      with mic, crank weather radio, knives by blade shape, IFAK, SAM splint, tourniquet, tile
+      cutter, rebar bender, lockpick wallet, bait cup / aerated bucket / minnow bucket / cricket
+      tube, grease gun, brake bleeder, timing light, paint gun, nail gun, ghillie strands, plate
+      carriers by level, dome tent, hub blind, welder, two different phones...
+- [ ] Cars (93 from ~11 base bodies) and guns (233 on 20 base models) are still variants of a
+      smaller set of shapes: needs new models (see FEATURES backlog)
+
+## Phase 1.54 — The crew defends the hill; police fight from cover
+
+- [x] Lead armed enemies (raiders, a mission's gunmen, a rival crew, armed civilians, or the police
+      once they're shooting) up to the hideout and the Gulf Line fights them off
+      (`systems/defense.js`): up to eight of the crew pull their own guns (Rico's revolver, Big O's
+      and Wrench's shotguns, Tina's and Smoke's rifles, Jayden's marksman rifle...), turn on the
+      nearest threat and fire, with hit chances from distance and each member's shooting skill;
+      the cook, medic, hacker and pilot get down
+- [x] Gunmen shoot at whoever's closer, you or a crew member in the open; a crew member hit badly
+      goes down wounded (never dies) and Marisol patches them up after; guns away when it's quiet
+- [x] Raids no longer send the crew to hide in the bunkhouse: everyone stands and fights
+- [x] Police in a gunfight get behind something solid (`entities/police.js`): their stopped cruiser
+      or another car (using its real length and width), a tree trunk, a building's corner. They
+      duck down or stay hidden, peek out (stand up over a car, step out round a corner), fire a
+      shot or two, and duck back. They keep a spot until the fight moves, give up on one they can't
+      reach, don't crowd a colleague's, and with nothing near they kneel and pop up to fire
+
+## Phase 1.53 — Saves that make sense, $50,000 to start, your car back from the dealer
+
+- [x] Save only when you're safe (`systems/saves.js`): F5 or the pause menu's "Save game". Not while
+      wanted, with enemies within 120 m, within 20 s of being hurt or 15 s of a gunfight, indoors,
+      swimming or in a moving car; it says exactly why not
+- [x] The autosave still keeps money, guns and progress, but the place you come back to only moves
+      while you're safe, so a save never drops you back into a fight
+- [x] Loading puts you within 20 m of where you saved (open ground: no building, road or water),
+      already doing something: smoking a cigarette (smoke on the exhale), drinking a coffee, or
+      cleaning your gun with a rag. A close camera looks on; moving hands control back
+- [x] New games start with $50,000 (enough for a car and a gun); older saves topped up once
+- [x] Dealerships have a "Your cars" tab: any car you own, wherever it is (or lost, towed, sunk), is
+      brought round to the lot with its parts and paint, free
+
+## Phase 1.52 — Holding guns, first and third person, and a looser run
+
+The owner: first person is the main fix; holding guns and the run looked wrong ("too robotic, the
+shoulders come back way too far").
+- [x] First person, not aiming: rifles and shotguns carried at the hip in the lower right of the
+      view, pistols at a low ready in the bottom of the view (before, nothing was in sight)
+- [x] Optics you can see through: open tubes with clear glass and proper eye relief (a red dot
+      is a slim ring with the dot in it; it was a solid black disc filling the screen)
+- [x] First-person pistol aim out at arm's length, as far as both hands can reach the grip
+- [x] Reloads and weapon checks stay in view in first person
+- [x] Third person: drawn pistols held at a two-handed low ready in front of the belly, muzzle down
+      (the idle clip held the gun up beside the face); NPCs with pistols too
+- [x] The run: the shoulders and upper arms are drawn toward their average pose every frame, so the
+      swing is smaller and the shoulders no longer yank back on each stride (jog and sprint, everyone)
+
 ## Phase 1.51 — Is the game on the graphics card?
 
 The owner has an RTX 5090, but the game crawled: the readout said "Intel(R) Graphics". Windows and

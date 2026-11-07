@@ -9,26 +9,26 @@ feature with the fewest additions next. Batches ship as F# (features) alternatin
 Counts are additions made in the "add to every feature" programme (F1 onwards, plus the S3/S4
 side batches where they extended a feature). The original build of each feature isn't counted.
 
-## Status (last updated: Phase 1.50, after G11: lived-in streets and the coast)
+## Status (last updated: Phase 1.55, after the owner's list: guns in first person, saves, defence, cover, unique tools)
 
 | # | Feature | Files | Added | Batches | Status |
 |---|---------|-------|------:|---------|--------|
-| 1 | Gangs & the hideout | gang.js, crew.js | 35 | F10 | **done (35)** |
+| 1 | Gangs & the hideout | gang.js, crew.js | 38 | F10, P3 | **done (38)** |
 | 1a | Story missions | missions.js, missionsplus.js | 22 | F11 | 8 to go |
 | 1c | Aircraft & flying | craft.js, aviation.js | 20 | F12 | 10 to go |
 | 25 | Armory, armor & medical | armory.js, medical.js | 26 | F14 | 4 to go |
 | 24 | Clothing & barber | grooming.js, clothes.js, clothing.js, details.js | 20 | F13 | 10 to go |
 | 1b | Hunting | hunting.js, wilds.js | 12 | F5 | 18 to go |
-| 2 | Police & law | police.js, policeplus.js, law.js | 11 | S3, F4 | 19 to go |
+| 2 | Police & law | police.js, policeplus.js, law.js | 14 | S3, F4, P3 | 16 to go |
 | 3 | Phone | phone.js, phoneplus.js | 10 | F6 | 20 to go |
 | 4 | Residents / people | population.js, residents.js, peds.js | 8 | S3, S4 | 22 to go |
 | 5 | Jobs | jobs.js | 8 | F7 | 22 to go |
-| 6 | Driving & cars | driving.js, vehicle.js | 7 | F1, G4 | 23 to go |
+| 6 | Driving & cars | driving.js, vehicle.js | 8 | F1, G4, P2 | 22 to go |
 | 7 | Fishing | fishing.js | 7 | F5 | 23 to go |
 | 8 | Property | estate.js, propertyplus.js | 8 | S2, F8 | 22 to go |
 | 9 | Street life | ambient.js, streetlife.js | 5 | F3 | 25 to go |
 | 10 | Food & Gulf Marts | shops.js, foodplus.js | 4 | F9 | 26 to go |
-| 11 | Guns & combat | gunwork.js, combat.js | 5 | F2 | 25 to go |
+| 11 | Guns & combat | gunwork.js, combat.js | 11 | F2, P1 | 19 to go |
 | 12 | Robbery & street crime | robbery.js, streetcrime.js, kerbside.js | 4 | S2, S4, F5 | 26 to go |
 | 13 | Weather & time | weather.js, sky.js | 3 | F6, G8 | 27 to go |
 | 14 | Boats & water | marine-air.js, splashes.js | 2 | G5 | 28 to go |
@@ -37,7 +37,7 @@ side batches where they extended a feature). The original build of each feature 
 | 17 | HUD, map & UI | hud.js, ui/ | 2 | F5, F6 | 28 to go |
 | 18 | Needs (sleep, food, weight) | needs.js | 1 | F9 | 29 to go |
 | 19 | Wounds & health | wounds.js | 1 | F9 | 29 to go |
-| 20 | Tools & inventory | tools.js | 1 | F2 | 29 to go |
+| 20 | Tools & inventory | tools.js | 2 | F2, P4 | 28 to go |
 | 26 | Gunsmiths | gunstores.js | 0 | | 30 to go |
 | 27 | Stray & farm animals | strays.js | 0 | | 30 to go |
 | 28 | World events | world-events.js | 0 | | 30 to go |
@@ -45,13 +45,13 @@ side batches where they extended a feature). The original build of each feature 
 | 30 | Property auction | auction.js | 0 | | 30 to go |
 | 31 | Audio | core/audio.js | 0 | | 30 to go |
 | 32 | Camera & controls | core/camera.js, input.js | 0 | | 30 to go |
-| 33 | Career, stats & saving | career.js | 0 | | 30 to go |
+| 33 | Career, stats & saving | career.js | 5 | P2 | 25 to go |
 | 34 | Hospital & precinct | civic.js | 0 | | 30 to go |
 | 35 | Roadside (breakdowns, hitchhikers) | roadside.js | 0 | | 30 to go |
 | 36 | Physics props | props.js | 0 | | 30 to go |
 | 37 | Loot | loot.js | 0 | | 30 to go |
 | 38 | Car combat | carcombat.js | 0 | | 30 to go |
-| 39 | Movement & footing | footing.js, player.js | 0 | | 30 to go |
+| 39 | Movement & footing | footing.js, player.js | 1 | P1 | 29 to go |
 
 **Totals: about 228 additions across 25 features; 14 features untouched; 1 feature at 30+ (gangs).**
 Brand-new features added this programme (not extensions): banking, news, contacts, cabs,
@@ -60,6 +60,15 @@ ground, boat wakes, rain soak, crew jobs, hideout raids, 12 side jobs, flight sc
 dirty/bloody clothes, dust (G9: cars, feet, aircraft, dust devils), gravel county roads and live
 oaks (G10), front yards with driveways and parked cars, town utility poles with service wires,
 cabbage palms on the coast (G11): about 35 of the 30+ asked for.
+
+(P1-P4: the owner's list after G11. P1 first-person/third-person gun holding and the run; P2 safe-only
+saves, arriving mid-activity, $50,000 start, dealership "Your cars"; P3 hideout defence, police cover
+and peeking; P4 unique models for all 244 tools.)
+
+**Open from the owner's list:** cars (93 models from ~11 base bodies) and guns (233 catalogue guns on
+20 base models) are still "slightly different versions" of a smaller set of shapes. Needs new
+distinct bodies/models (new procedural car bodies: van, minivan, coupe, wagon, sports car...; more
+CC0 gun models), or a smaller gun catalogue of truly different guns. Ask the owner which.
 
 ## Backlog: ideas per feature (take from here, strike when shipped)
 

@@ -273,7 +273,7 @@ function hook(game) {
     for (const m of G.crew) {
       const c = C(m.M.id), id = m.M.id;
       let away = !!(c.away || c.jail > now());
-      if (!away && raid) away = id !== 'big-o' && id !== 'rico'; // everyone else in the bunkhouse till it's over
+      if (!away && raid) { /* a raid wakes everyone, and nobody hides: the crew stands and fights (systems/defense.js) */ }
       else if (!away) {
         if (night) away = !['rico', 'big-o', 'jayden', 'marisol'].includes(id); // asleep; Big O and Jayden keep watch, Marisol's on call
         else if (h > 10 && h < 16) away = ['smoke', 'sofia', 'lalo'].includes(id) && (bday(id) + sky.day) % 3 !== 0; // out on errands
