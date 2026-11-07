@@ -3,6 +3,43 @@
 Owner paths: `scenes/lib/director/`, `episodes/s01e01/final/scenes/`, `episodes/s01e01/final/cut/`.
 How it works: `README.md` in this folder. Latest state first.
 
+## Session 28 (2026-11-07, short budgeted session: F4 near hand 'cradle' under the cloth, near hind leg - STILLS only)
+
+Scratch: `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/dir27/`
+(`f4_before.png` = s27 file, `f4_a1..a3.png` tries, `f4_after.png` = committed, `f4_sheet.png` = before | after). All draft t=2 (CAMS 100).
+- F4 (scenes/lookdev/style-f4-birthing-chamber.js):
+  1. perf s14 change applied: the near hand `handShape(..., 'cradle')`. drapeCloth pads h 0.042 -> 0.03 and each pad starts
+     4 cm up the forearm (the cloth's near edge lies over the wrist). drapeCloth takes an optional `sides` list; the
+     scene passes only the near hand. WHY perf found the hand bare: the near wrist sits over the bed's dip, > 6.5 cm
+     over the linen, so the s27 "hand up on the hatchling" skip dropped it and the cloth lay flat under it.
+  2. The cloth now follows her ACTUAL near wrist: its near edge is wrist + 3 cm (0.23 -> 0.33 at t=2) and the fwd range
+     covers wrist / tip +-7 cm. RESULT (looked at): the linen drapes over the near hand. Only the thumb tip shows at
+     the cloth's top. The cloth rises fairly steeply onto the hand (a heightfield, so it reads a little like a lifted
+     sheet at draft).
+  3. Far (right) hand on its back: ray target fwd -0.06 -> +0.05 (FAR_FWD) and elbow pole up 0.3 (FAR_POLE_UP). The
+     wrist moved only ~10 px (reach-limited).
+  NEAR HIND LEG: NOT fixed. Debug projection (the scene logs `[f4] screen ...` at t=2, CAMS 100) puts hl_L
+  (the near leg) at hip (635,314) > knee (645,349) > ankle (639,433) > foot (625,454) px. The splayed leg's foot is
+  BELOW the wrist line on screen, so the forearm that hides it is her NEAR = LEFT forearm. It runs level from the
+  elbow (812,417) to the wrist (576,403). The right forearm is only on the back/hips at x 750+. Her shoulders sit
+  behind the hips (CAM_R is mostly toward its tail), so the near arm is at full stretch (wrist 14 cm short of wA)
+  and cannot bend down. Tried: shoulders 0.34/0.36/0.12 (a2: hands reach, but her face enters the frame at the
+  right, sleeves cover the leg). 0.36/0.38/0.30 with the near elbow pole up 0.5 (a3: the forearm comes down from
+  above, but the hand lifts the cloth into a tented sheet over the flank, the leg is still covered, and the
+  composition changes). Both were reverted (NEAR_POLE_UP 0).
+- Verify: npm test 48 pass / 0 fail / 1 skipped.
+- NEXT (exact, in order):
+  1. Leg: either (a) creatures pulls the near hind foot in under the hip (see REQUEST), or (b) the director restages
+     her near arm from the LOWER foreground. That needs the shoulders nearer the lens and lower, with her heading
+     turned toward its head (placeCharacter yaw) so her face stays out at the right, the elbow below frame and the
+     forearm rising to the chest. Check with the `[f4] screen` log: the forearm must cross x 640 below y ~470.
+     Or (c) use CAMS 104 for F4.
+  2. Cloth: soften the rise onto the near hand (pad r 0.05 -> 0.07, or more relax passes near the pad).
+  3. Final: `node render/render.mjs --still scenes/lookdev/style-f4-birthing-chamber.js --time 2 --preset final --png out.png`.
+- REQUESTS: creatures - F4 pushUp near hind leg (hl_L): the foot splays toward the lens to y 454 px at CAMS 100,
+  below her hands' line. Tuck it under the hip: ~8-10 cm less splay, so the foot lands near (630,400), next to the
+  body. That lets the shin read over her near forearm. Optionally `pushUp({ legSplay })`.
+
 ## Session 27 (2026-11-06, short budgeted session: F4 resting hand (perf s13 variant B) + cloth, X4-06 inland loop - STILLS only)
 
 Shot ids, lengths, line cue times UNCHANGED. No flight act got a phase / tOffset (X4-06: CHAR_FLY / LEAF_FLY, beats
