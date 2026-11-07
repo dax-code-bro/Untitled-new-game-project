@@ -663,6 +663,40 @@ else {
     ok(m.off < 1 && m.hgt > 0.7 && m.hgt < 1.7 && m.face > 0.85 && m.fan < m.fan0 * 0.75 && m.tips.every((h) => h > -0.6 && h < 1.6) && pure < 1e-6,
       `resting hand (alexandria R on a 11 cm-radius flank): palm ${m.off} cm off the point, ${m.hgt} cm over it (cupped), facing it ${m.face}; index-little tips ${m.fan} cm apart (drape ${m.fan0}); tips over the surface ${m.tips.join(' / ')} cm; pure ${pure.toExponential(1)} m`);
   }
+  // perf s14: the palm-up thumb lies alongside the index ('rest', 'cradle' adduct it: thumbAdd; < 25 deg, was 49), the
+  // flatter 'cradle' keeps the finger tops 1.2-2.4 cm over the palm line (wrist -> knuckles; 'rest' 6.1 cm showed
+  // through F4's cloth), the other shapes' thumbs unchanged (relaxed 26 deg), and restHand reports its tips against
+  // the sphere it settled them on (= the measured distance to the sphere centre - radius)
+  {
+    const { handShape, handFrame, restHand } = await import('./rig.js');
+    const ch = load('alexandria');
+    const W = (n) => ch.bone(n).getWorldPosition(new THREE.Vector3());
+    const tipOf = (f, sd) => { const b3 = ch.bone(`finger${f}-3.${sd}`); const h = W(`finger${f}-3.${sd}`), L = h.distanceTo(W(`finger${f}-2.${sd}`));
+      return h.addScaledVector(b3.position.clone().normalize().applyQuaternion(b3.getWorldQuaternion(new THREE.Quaternion())), 0.95 * L); };
+    const reset = () => { ch.update(1, {}); ch.root.position.set(0, 0, 0); ch.root.rotation.set(0, 0, 0); ch.root.updateMatrixWorld(true); };
+    const measure = (shape, sd) => {
+      reset(); handShape(ch, sd, shape); ch.root.updateMatrixWorld(true);
+      const hf = handFrame(ch, sd);
+      const td = tipOf(1, sd).sub(W(`finger1-2.${sd}`)).normalize(), id = tipOf(2, sd).sub(W(`finger2-1.${sd}`)).normalize();
+      let top = -1;
+      for (const f of [2, 3, 4, 5]) for (const q of [W(`finger${f}-2.${sd}`), W(`finger${f}-3.${sd}`), tipOf(f, sd)]) top = Math.max(top, q.sub(hf.wrist).dot(hf.palm));
+      return { thumb: +(Math.acos(td.dot(id)) * 180 / Math.PI).toFixed(1), top: +(top * 100).toFixed(2) };
+    };
+    const r = { rest: measure('rest', 'L'), restR: measure('rest', 'R'), cradle: measure('cradle', 'L'), cradleR: measure('cradle', 'R'), relaxed: measure('relaxed', 'L') };
+    ok(r.rest.thumb < 25 && r.restR.thumb < 25 && r.cradle.thumb < 25 && r.cradleR.thumb < 25 && r.relaxed.thumb > 22 && r.relaxed.thumb < 30,
+      `palm-up thumb alongside the index (thumbAdd): rest ${r.rest.thumb} / ${r.restR.thumb} deg, cradle ${r.cradle.thumb} / ${r.cradleR.thumb} deg (L / R; rest was 48.7); relaxed unchanged ${r.relaxed.thumb} deg`);
+    ok(r.cradle.top > 1.2 && r.cradle.top < 2.4 && Math.abs(r.cradle.top - r.cradleR.top) < 0.05 && r.rest.top > 4,
+      `'cradle' finger tops ${r.cradle.top} / ${r.cradleR.top} cm over the palm line (L / R; 'rest' ${r.rest.top} cm)`);
+    reset();
+    const at = new THREE.Vector3(-0.15, 0.92, 0.27), n = new THREE.Vector3(0, 0.95, -0.3).normalize(), rad = 0.11;
+    const out = restHand(ch, 'R', { at, normal: n, fingers: [0.35, 0, 1], radius: rad });
+    const ctr = at.clone().addScaledVector(n, -rad);
+    const meas = [2, 3, 4, 5].map((f) => tipOf(f, 'R').distanceTo(ctr) - rad);
+    const err = Math.max(...out.tips.map((h, i) => Math.abs(h - meas[i])));
+    const plane = [2, 3, 4, 5].map((f) => tipOf(f, 'R').sub(at).dot(n));
+    ok(err < 2e-4 && out.tips.every((h) => h > -0.006 && h < 0.016),
+      `restHand tips reported over the sphere: ${out.tips.map((h) => (h * 100).toFixed(1)).join(' / ')} cm (measured, max err ${(err * 1000).toFixed(2)} mm; over the plane they read ${plane.map((h) => (h * 100).toFixed(1)).join(' / ')})`);
+  }
   // worn props never follow a hand: no belt / buckle / purse vertex keeps an arm or hand weight
   {
     let bad = 0;

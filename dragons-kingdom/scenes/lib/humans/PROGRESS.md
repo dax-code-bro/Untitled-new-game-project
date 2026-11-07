@@ -1336,3 +1336,49 @@ KNOWN: palm-up hands (A, and the near hand in B): the thumb still stands off ~40
 Checked: selftest-perf all passed; npm test 48 pass / 0 fail / 1 skipped.
 NEXT (perf, in order): 1. the thumb adduction for 'rest' palm up (above); 2. s11 NEXT 1 (1C-16 pinky still),
    3 (REQUEST props: real hoe), 4 (remi_ride thumb).
+
+## perf s14 (2026-11-07, short session) - palm-up thumb alongside, a flatter 'cradle' hand (F4 near hand under the cloth)
+Done (rig.js, selftest-perf.mjs, scenes/lookdev/humans-anim-rest.js):
+1. handShape gained `thumbAdd` (rad, optional): thumb adduction - finger1-1 swung about the palm normal toward the
+   index (thumbIn's swing is about the hand's fwd: across the palm, which moved it little). Only 'rest' and the new
+   'cradle' use it; every other shape is unchanged (relaxed thumb-index still 26.2 deg). HAND_SHAPES.rest: thumbAdd 0.8.
+   Thumb (proximal -> tip) to index (knuckle -> tip), 3D: rest 48.7 -> 16.1 deg (in the palm plane 66.4 -> 20.5).
+2. New shape HAND_SHAPES.cradle (a flatter cupped hand, palm up under a body / cloth): knuckles lifted
+   (mcp [-0.38, -0.4, -0.42, -0.5]), soft curls [-0.05, 0.1, 0.12, 0.14, 0.18], together 0.92, thumbIn 0.1,
+   thumbAdd 0.85, dip 0.6; a shape's own `mcp` is now honoured (handShape already read s.mcp; restHand's settle starts
+   from it and never lifts a knuckle less than the shape asks). Finger-top height = the highest finger point
+   (middle / last joint centres, tip pads) along the palm normal over the palm line (wrist -> knuckles; the knuckle
+   line has height 0): rest 6.07 cm -> cradle 1.81 cm (target 1.5-2). (Over the wrist -> fingertip CHORD the
+   numbers are small for both, 0.44 / 0.52 cm: a curled finger lifts its own tip, so the chord rises with it - the
+   palm line is what a cloth over a palm-up hand sees. MakeHuman's straight fingers already droop: 'open' 3.9 cm,
+   all curls 0 3.3 cm - hence the negative mcp.) Thumb-index in cradle 16.3 deg.
+3. restHand's returned `tips` are now heights over the surface the fingers settled on (the sphere with `radius`,
+   surface(p), else the plane) - the same H() the settle uses. On the selftest's 11 cm flank: 0.6 cm each (over the
+   plane they had read -3.6 / -4.7 / -3.7 / -1.8 cm).
+4. selftests (selftest-perf): 'palm-up thumb alongside the index' (rest / cradle < 25 deg L and R, relaxed 22-30),
+   'cradle finger tops' (1.2-2.4 cm, L = R, rest > 4), 'restHand tips reported over the sphere' (= measured
+   distance to the sphere centre - radius, < 0.2 mm). The s13 'resting hand' test still passes unchanged.
+5. humans-anim-rest.js: duration 4; frame 3 = the left hand palm up in 'cradle' (restHand shape 'cradle',
+   settle false - as F4's near hand) seen level from her left with the flank hidden.
+LOOK (scratch eng1/perf14/, draft): rest14_sheet.png (left before, right after; rows: t=0.5 front, t=2.5 her right
+   low, t=3.5 the palm-up left hand in profile - before 'rest' via restHand, after 'cradle'). Palm down (rows 1-2):
+   the thumb now tucks alongside the index instead of standing off. Palm up (row 3): before the fingers curl up
+   ~6 cm and the thumb sticks up apart; after the fingers lie nearly flat with a soft cup and the thumb runs along
+   the index edge (seen from the side it still sits ~1-2 cm palm-side of the index: the thumb's own opposition).
+   F4 test (temporary copy, NOT committed, draft t=2): f4_sheet.png = f4_now.png (style-f4 as it is, near hand
+   'rest' with the new thumb) | f4_cradle.png (near hand 'cradle'): the near hand flatter, fingers open toward the
+   hatchling's chest, thumb alongside. NOTE: in the current style-f4 (s27 cloth) the near hand is NOT under the
+   cloth at t=2 - it lies bare in front of the folded linen in both renders (the cloth is behind / beside it).
+DIRECTOR - exact change for scenes/lookdev/style-f4-birthing-chamber.js (perf does not edit it), variant B block:
+   replace the line
+     `    handShape(alex, aIsR ? 'R' : 'L', 'rest');`
+   with
+     `    handShape(alex, aIsR ? 'R' : 'L', 'cradle');   // (perf s14) near hand flatter palm up: finger tops ~1.8 cm, thumb alongside`
+   (the import `handShape, restHand` from '../lib/humans/rig.js' is already there; the far hand's restHand call stays
+   'rest' - it now gets the adducted thumb automatically.) Optional, director's call: with the flatter hand the
+   drapeCloth pad (s27: `r: 0.05, h: 0.042`, raised for the curled 'rest' fingers) can go back down (~h 0.03), and
+   the cloth needs to reach over the near hand again (see NOTE above) if it should be under the linen.
+Checked: selftest-perf all passed; npm test fail 0 / skipped 1.
+NEXT (perf, in order): 1. s11 NEXT 1 (1C-16 pinky still), 3 (REQUEST props: real hoe), 4 (remi_ride thumb);
+   2. if the director wants it, a cradle with the thumb's opposition reduced (thumb curl -0.15 gives 12 deg, lies in
+   the index plane - looked stiff in theory, untested at full).
