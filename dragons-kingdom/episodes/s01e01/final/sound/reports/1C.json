@@ -46,7 +46,7 @@
   "I_full": -19.6,
   "TP": -1.6,
   "LRA": 9.9,
-  "sha256": "b83601d4bd3478f532254f6abc9bda06341103b18c0fb7b44b8c3e6cc44ecef7",
+  "sha256": "c7de89cb52b51fd317bb7cef5038c88a5c796439add556563ba3841aeaef1c41",
   "master_gain_db": 2,
   "limiter_ceiling_dbfs": -1.6,
   "dialogue_gain_db": 11.4,
@@ -60,7 +60,7 @@
   "aac_I": -17.2,
   "aac_I_full": -19.6,
   "aac_TP": -1.6,
-  "bytes": 56564633
+  "bytes": 56566728
  },
  "beds": {
   "grounds_wind": {
@@ -166,7 +166,7 @@
    "open",
    "stone_wall"
   ],
-  "sha256": "27d92601bdf63cf71201de36d260d6de2fcaf69741a06d72c76e1292a5dc9e01",
+  "sha256": "6ed8f3b1aa257fdffe728d38b5d4dca221c18a2a5749936b871c9936858c1635",
   "spot_rows_not_in_cut": 134,
   "by_sound": {
    "claws_turf": 1,

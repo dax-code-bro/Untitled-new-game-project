@@ -39,7 +39,10 @@ const SUN = new THREE.Vector3(0.72, 0.685, 0.06).normalize();
 const NEST_C = [-0.6, 0, 0.3];
 // (dir27) the far (right) hand on its back: further forward toward the chest (was fwd -0.06, on the hips) and the
 // elbow lifted, so her right forearm comes down onto the back from above and the near hind leg reads at CAMS 100
-const FAR_FWD = 0.05, FAR_POLE_UP = 0.3, NEAR_POLE_UP = 0;                                     // the chamber's nest centre (world)
+const FAR_FWD = 0.05, FAR_POLE_UP = 0.3, NEAR_POLE_UP = 0;
+// (dir29) cloth: the relax sag per pass, and how far the cloth reaches past her near wrist (its near edge then rests
+// on the bed under her forearm instead of standing over the wrist)
+const SAG = 0.0005, NEAR_EDGE = 0.1;                                     // the chamber's nest centre (world)
 const HATCH = new THREE.Vector3(0.33, 0, 0.02);                    // where the hatchling lies on the linen
 
 export const meta = {
@@ -290,7 +293,8 @@ function drapeCloth(mesh, c, across, along, w, d, ch, linenY, hatch, sides = nul
     // (dir27: the near hand is the flat palm-up 'cradle' (finger tops ~1.8 cm) -> h 0.042 -> 0.03; the pad starts
     // 4 cm up the forearm so the cloth's near edge lies over her wrist instead of dropping to the bed in front of it)
     const a = w.clone().addScaledVector(w.clone().sub(k).setY(0).normalize(), 0.04);
-    pads.push({ a, b: end, r: 0.05, h: 0.03 });
+    // (dir29: r 0.05 -> 0.065, h 0.03 -> 0.024 - a rounder, lower mound over the hand, not a flat-topped loaf)
+    pads.push({ a, b: end, r: 0.065, h: 0.024 });
   }
   // the hatchling's chest rests on it: the cloth never comes up through the body (its belly
   // presses it to the bed) - the body's lowest points are below the cloth anyway
@@ -328,7 +332,9 @@ function drapeCloth(mesh, c, across, along, w, d, ch, linenY, hatch, sides = nul
       if (i < CU) { m += T[k + 1]; n++; }
       if (j > 0) { m += T[k - CU - 1]; n++; }
       if (j < CV) { m += T[k + CU + 1]; n++; }
-      H[k] = Math.max(H0[k], m / n - 0.0001);
+      // (dir29: sag 0.0001 -> SAG: the old sag spread the near hand's height ~8 cm round it, so the cloth stood up off
+      // the bed like a lifted handkerchief; a heavier sag hugs the hand and lies down on the bed within ~4 cm of it)
+      H[k] = Math.max(H0[k], m / n - SAG);
     }
   }
   for (let j = 0; j <= CV; j++) for (let i = 0; i <= CU; i++) {
@@ -470,7 +476,7 @@ export function update(t, ctx) {
   let cn0 = -0.07, cn1 = 0.23, cf0 = -0.07, cf1 = 0.23;
   {
     const nw = bonePos(alex, `wrist.${aIsR ? 'R' : 'L'}`).sub(base), nt = bonePos(alex, `finger3-3.${aIsR ? 'R' : 'L'}`).sub(base);
-    cn1 = Math.max(cn1, nw.dot(near) + 0.03);
+    cn1 = Math.max(cn1, nw.dot(near) + NEAR_EDGE);                  // (dir29: + 0.03 -> NEAR_EDGE)
     cf0 = Math.min(cf0, Math.min(nw.dot(fwdP), nt.dot(fwdP)) - 0.07); cf1 = Math.max(cf1, Math.max(nw.dot(fwdP), nt.dot(fwdP)) + 0.07);
     if (T0 === 2) console.warn('[f4] near wrist (near,fwd,up)', nw.dot(near).toFixed(3), nw.dot(fwdP).toFixed(3), nw.y.toFixed(3), 'tip', nt.dot(near).toFixed(3), nt.dot(fwdP).toFixed(3), nt.y.toFixed(3), 'cloth', cn0, cn1.toFixed(3), cf0.toFixed(3), cf1.toFixed(3));
   }

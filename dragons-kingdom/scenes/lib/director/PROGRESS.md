@@ -3,6 +3,46 @@
 Owner paths: `scenes/lib/director/`, `episodes/s01e01/final/scenes/`, `episodes/s01e01/final/cut/`.
 How it works: `README.md` in this folder. Latest state first.
 
+## Session 29 (2026-11-07, short budgeted session: F4 cloth + near leg, X4-06 "no hoe / no lean" - STILLS only)
+
+Scratch: `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/dir29/` - `f4_before.png` (= s28 after), `f4_t2.png` (try 1), `f4_t104.png` (try 1 at CAMS 104),
+`f4_after.png` (committed, t=2 CAMS 100), `f4_sheet.png` (before | after); `x406_before.png` / `x406_after.png` (X4-06@0.6,
+frame 43), `x406_sheet.png` (before | after), `x406_red/` + `x406_red_crop.png` (debug: the hoe painted red),
+`x406_video_crop.png` (frame 1.8 s of the 11-06 23:59 video = identical to the before still). All draft.
+- F4 cloth (scenes/lookdev/style-f4-birthing-chamber.js): new consts SAG (relax sag per pass 0.0001 -> 0.0005) and
+  NEAR_EDGE (cloth's near edge past the near wrist 0.03 -> 0.1); near-hand pad r 0.05 -> 0.065, h 0.03 -> 0.024.
+  WHY: the light sag spread the hand's height ~8 cm round it (membrane curvature ~ sag / cell^2), so the linen stood
+  up off the bed like a lifted handkerchief, its near edge in the air over the wrist. RESULT (looked at): the folded
+  cloth lies flat on the bed under the chest, drapes over the cradle hand as a rounded mound, its near edge falls
+  past the wrist onto the bed under the sleeve. Still a fairly steep front face from the hand top to the bed (the
+  hand is 4.4 cm over the base, over the bed's dip) - acceptable at draft; the thumb tip still shows at the top.
+- F4 near hind leg: NOT readable. CAMS 104 tried (f4_t104.png): eye-level, the near forearm rises on screen and the
+  wing/back read worse; the leg is still hidden -> F4 stays on CAMS 100. After creatures s14 the `[f4] screen` log
+  puts hl_L at hip (635,314) knee (643,347) ankle (629,366) - at the sleeve's top edge (~y 365) and inside the
+  near-wing panels (x 540-620, y 280-350). The near arm is at full stretch (wrist 14 cm short), so a pole change does
+  not move the forearm; the lower-foreground restage (s28 NEXT 1b) was not attempted (budget).
+- X4-06 (episodes/s01e01/final/scenes/specs/verdor-aerial.spec.js): CAUSE - NOT a wiring bug. A temporary debug
+  log in stage.js (removed) at 0.6 showed the farmer's state: overlay ['gesture', w 1, {name:'tool', prop:'hoe',
+  stance:'R'}], posture lean 0.6, the humans 'gesture' hook registered, ch._tools.hoe in the scene, base 0.59 m ahead
+  of her root, wrists on its top (1.1 m up). Painted red, the hoe showed only its blade tip by her feet: from the lens
+  (her facing 44 deg off the lens ray) the shaft stood exactly behind her skirt's left edge, and a 0.12 rad forward
+  lean does not read from behind. FIX: she faces bearing -51 (face [113.1, 1799.1] -> [100.4, 1810.6]; 62 deg off
+  the lens ray, still back three-quarter, face away) and the 'tool' gesture gets ahead 0.7 (default 0.6). RESULT
+  (looked at): the hoe reads - shaft from the blade on the ground up to her stacked hands, left of her body - and
+  she leans onto it, right hip out. Same screen spot (foreground left), pair unchanged. Ready for video re-render.
+- Verify: npm test 48 pass / 0 fail / 1 skipped.
+- NEXT (exact, in order):
+  1. Re-render X4-06 video (session lead).
+  2. F4 leg: wait for creatures (REQUEST below); then re-run t=2 and read the `[f4] screen` log. If the haunch is
+     still under the sleeve, try s28 NEXT 1(b) (near arm from the lower foreground).
+  3. F4 cloth: if the front face still reads tall at final, lower the near hand onto the bed (wA down ~3 cm) or try
+     SAG 0.0008.
+  4. Final: `node render/render.mjs --still scenes/lookdev/style-f4-birthing-chamber.js --time 2 --preset final --png out.png`.
+- REQUESTS: creatures - F4 near wing (your s14 NEXT 1): fold the hatchling's near (L) wing up and forward, off the
+  hip band (screen x 560-700, y 280-370 at CAMS 100), e.g. a per-side `armSide` for lie() sprawl with sprawlHum.L y
+  0.6 -> 0.9, so the s14 tucked leg (hip (635,314), knee (643,347), ankle (629,366)) shows as a gold haunch + shin
+  above her sleeve. CAMS 104 does not help (tried). Written in creatures/PROGRESS.md too.
+
 ## Session 28 (2026-11-07, short budgeted session: F4 near hand 'cradle' under the cloth, near hind leg - STILLS only)
 
 Scratch: `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/dir27/`

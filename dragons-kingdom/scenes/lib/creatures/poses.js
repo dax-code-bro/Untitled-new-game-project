@@ -780,7 +780,9 @@ export function lie(c, o = {}) {
       // hatchling's near (left) leg splayed out sideways so it reads from F4's high camera)
       const ls = o.legSide?.[side] || {};
       const fo = ls.footOut ?? o.footOut ?? 1.1, ku = ls.kneeUp ?? o.kneeUp ?? 0;
-      legIK(pb, F, side, [sd * (d.hipX + d.fem * fo), d.toeL * 0.13, hip[2] + d.fem * (ls.footFwd ?? 0.25)], { mtAng: 10, fwd: [sd * 0.7, 0, 0.7], pole: [sd, 0.6 + ku, 0.2], curl: -0.05 });
+      // (r2 s14: ls.lift = foot height above the ground in femur lengths - a newborn's leg folded up
+      // against its flank, the foot tucked forward under the hip; ls.poleFwd = knee pole forward)
+      legIK(pb, F, side, [sd * (d.hipX + d.fem * fo), d.toeL * 0.13 + d.fem * (ls.lift ?? 0), hip[2] + d.fem * (ls.footFwd ?? 0.25)], { mtAng: 10, fwd: [sd * 0.7, 0, 0.7], pole: [sd, 0.6 + ku, 0.2 + (ls.poleFwd ?? 0)], curl: -0.05 });
       // (fix round 1: the splayed arm showed the fingers as a rake beside a flat flap) the wing
       // folded back along the flank like the adults', the wrist and thumb down a little out to
       // the side (too weak to gather the elbows in)

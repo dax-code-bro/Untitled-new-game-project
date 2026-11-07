@@ -1,5 +1,40 @@
 # Sound track: progress (for the next session)
 
+## State (2026-11-07, session 11: X4-06 inland loop re-spot, re-mix; short budgeted session)
+
+(The brief called this "sound s10"; s10 already exists below, so this is s11.)
+
+- **X4 sync re-check vs the spec** (`verdor-aerial.spec.js`, wired X4-01/02/03/06/11/14/20): since s10 the director
+  changed X4-01 (s26 reframe: pair enter left, no beat rows there), X4-02 (s24 low skim: Leaf's echoing beats row
+  unchanged) and X4-06 (s24 re-block, s27 INLAND LOOP: pair cross the town heading SW, right -> left, "NO phase /
+  tOffset"). X4-03/11/14/20 unchanged (X4-20 still exactly 5 s, M9 sync beat 0.5 = X4-20). CHAR_HZ still 0.625.
+- **X4-06** checked on the current render (`scratchpad/eng1/sound/s11/X4-06-strip.png`, every 6th frame): Charcoal is
+  now the big shape upper right (wingspan ~1/4 of the frame, x ~0.75 -> 0.6), wings level mid-downstroke at frames ~12 /
+  50 = the 1C phase -> `at` 0.2 every 1.6 kept; row `gain_db` -38 -> **-35**, pan 0.5 -> **0.6 -> 0.45** (follows him).
+  Leaf tiny below him: no beats. The farmer (crowd05, a WOMAN): the spec has `lean` + `gesture tool hoe`, but the
+  render shows her standing, hands folded, **no hoe and no lean** -> still no tool sound (note says: add a soft wooden
+  `knock` ~-40 at the lean once the hoe shows). Lark / goat / `terrace_farm` bed unchanged.
+- **M9**: the soft pre-lap was already done in s9 (pad from 0.375 s before the cut, expression 40 -> 72); the mix log
+  shows M9 at 184.13-190.10 s. Nothing changed.
+- **Loudness decision**: unchanged from s10 (KEEP -17.2 LUFS program, dialogue-anchored, +2 dB cap binds; revisit when
+  X4 is complete; the clean knob is a short score cue over X4-01..03). X4-06 region alone -22.9 LUFS (same as s10:
+  the +3 dB beats are short and far).
+- **Birthing-chamber room tone**: nothing to add. BIRTHING_CHAMBER already maps to `chamber_hush` in `beds.json`
+  (quiet stone room, faint wind through the high opening, lamp hiss + crackle), used by the PROLOGUE-TITLE-1A cut.
+  A straw-nest rustle belongs in spots when a shot shows the nest moving, not in the bed.
+- **1C re-mix** (`DK_DIRECTOR_WORK=scratchpad/eng1/director/work1B`, 1 m 57 s): program (123 s) **-17.2 LUFS** (whole
+  -19.6), TP -1.6 dBTP, LRA 9.9, AAC -17.2 / -1.6, min dialogue margin 12.5 LU, **PASS**, sha256 c7de89cb52b51fd3,
+  161 fx events. Dialogue unchanged -> ASR not re-run. NOT listened to by a person. `npm test`: 48 pass, 1 skipped.
+
+## Next steps (in order)
+
+1. **Listen** (PC): X4-06 (116.5-119.5 s: Charcoal's two beats at -35 now he is big in frame), plus the s10 items.
+2. REQUEST (director / humans, via their PROGRESS): X4-06 spec says the farmer leans on a hoe (perf s11 lean + tool
+   gesture) but the s27 render shows no hoe and no lean. Sound follows the picture; tell sound if the hoe is restored.
+3. s10 items 2-3 still stand (spot X4-04/05/07..10/12/13/15..19 when rendered; re-decide loudness when X4 is complete;
+   VO REQUESTS crew call X4-05, lookout laugh X4-10, instructor + Abby X4-13, recorded walla; flight_wind level for
+   1D/1E; M6 basses; Cling square bed + festival music; VSCO 2 CE; per-line voice treatment; episode-timeline mix).
+
 ## State (2026-11-06, session 10: sync on the rendered X4 shots + 1C loudness decision; short budgeted session)
 
 - **Picture**: director's draft renders of X4-03 (4 s), X4-06 (3 s), X4-11 (3.5 s), X4-14 (5 s), X4-20 (5 s) (all 24 fps,
