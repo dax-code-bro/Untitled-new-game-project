@@ -209,8 +209,10 @@ export const DESIGNS = {
     fold: { curl: [15, 70, 110] },
     // (r2 s13, F4 high camera: the near (left) leg splayed out sideways - legSide - and the fingers
     // lifted 10 deg more so the tips clear the cloth edge)
+    // (r2 s14, dir s28 REQUEST: the near leg tucked - foot ~10 cm less splay, forward under the hip and
+    // lifted against the flank, knee out toward the lens - so it sits above her near forearm at CAMS 100)
     push: { fold: { curl: [-70, 10, 20], mcFan: 14, fanDown: 22, outUp: 0.5, wrap: 0.06 }, sprawlHum: [0.45, 0.6, 0.66], wristIn: 0.05, footOut: 0.75, kneeUp: 0.9,
-      legSide: { L: { footOut: 1.6, kneeUp: 0.35, footFwd: 1.0 } } }, bulk: { leg: 1.3, arm: 1.3, neck: 1.0 },
+      legSide: { L: { footOut: 0.2, kneeUp: 0.6, footFwd: 0.2, lift: 0.7, poleFwd: 0.3 } } }, bulk: { leg: 1.3, arm: 1.3, neck: 1.0 },
     leg: { femur: 0.08, tibia: 0.085, mt: 0.048, toe: 0.07, claw: 0.02, d: [0.058, 0.04, 0.032, 0.024, 0.021], mtAng: 30, heelPad: 0.5, hallux: 0.45, toeR: 0.0095, soft: 1 },
     wing: { humerus: 0.085, forearm: 0.15, d: [0.046, 0.032, 0.024, 0.018],
       fingers: [['III', 0.11, [0.065, 0.045, 0.026], -10], ['IV', 0.095, [0.05, 0.03, 0.015], -48], ['V', 0.08, [0.035, 0.02, 0.011], -80]],

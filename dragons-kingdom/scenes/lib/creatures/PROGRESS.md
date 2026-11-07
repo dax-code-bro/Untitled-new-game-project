@@ -4,6 +4,35 @@ Owner paths: `scenes/lib/creatures/`, `scenes/lookdev/creatures-*.js` (+ creatur
 README.md in this folder is the full description of how the models are built; this file is
 only the state of the work.
 
+## REALISM ROUND 2 - session 14 (2026-11-07, short budgeted session: F4 hatchling near hind leg - director s28 REQUEST)
+Stills (draft, t=2, CAMS 100) under `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/cr14/`:
+`f4_before.png` (s13 code), `f4_v1.png`, `f4_v2.png` (= `f4_after.png`, adopted), `f4_v3.png`, crops `v2_crop.png` /
+`v3_crop.png` (x470-770 y220-460 x2, left before), sheet `cr14_sheet.png` (top: before | after full frame; bottom: the crop x3.2).
+Done (code):
+- poses.js lie() sprawl legSide: new per-leg `lift` (foot height above the ground, femur lengths) and `poleFwd`
+  (knee pole forward). Defaults 0 = unchanged for every other caller.
+- anatomy.js hatchling push.legSide.L: { footOut 1.6, kneeUp 0.35, footFwd 1.0 } -> { footOut 0.2, kneeUp 0.6, footFwd 0.2,
+  lift 0.7, poleFwd 0.3 } (foot ~11 cm less splay, ~5.6 cm up against the flank).
+Numbers (the scene's `[f4] screen` log, 960x540; her near forearm runs elbow (812,417) -> wrist (576,403), sleeve top ~y 370):
+  hl_L hip / knee / ankle / foot: before (635,314) (645,349) (639,433) (625,454);
+  v1 {fo .45, ku 1.2, ff .7, lift .4, pf .6}: (600,337) (618,378) (604,398) - foot behind her wrist;
+  v2 ADOPTED: (680,363) (643,347) (629,366) - every joint above the forearm line;
+  v3 {fo .35, ku 2.5, ff .45, lift .5, pf .4}: (609,354) (631,367) (618,386) - kneeUp does not lift the knee (the hip sits
+  too low over the foot: the leg is nearly straight hip->foot, the pole only turns it).
+RESULT (looked at): the leg is no longer under her forearm - the foot ended where the director asked (<= y 400, by the body).
+But it still does NOT read as a leg: it now lies folded inside the hatchling's own near wing panels / lower flank (the
+membrane runs to the knee, wing.to 'knee', and the crumpled near-wing panels cover the hip band x 560-700, y 280-370).
+At most a gold haunch shape over the sleeve. A weak newborn with the leg folded - acceptable, but not a readable leg.
+- npm test: 49 tests, 48 pass, 0 fail, 1 skipped. Not done: session 11 NEXT (X3-15 head-plate slab, Charcoal elbow flap) - no time.
+NEXT (exact):
+1. F4 near leg: the occluder is now the near WING. Add `armSide` to lie() sprawl (per-side sprawlHum / fold like legSide)
+   and fold the near wing higher / further forward (elbow up over the back, sprawlHum.L y 0.6 -> 0.9) so the hip band
+   clears; then re-check v2 leg numbers. Or raise the hip (push.raise per side) so kneeUp can lift the knee.
+2. Session 13 NEXT 2-3 (F4 head size, F5 feet under the belly); session 11 NEXT 1-2 (X3-15 slab, Charcoal elbow flap).
+REQUEST (director, style-f4): the near leg is now tucked above the forearm line (all hl_L joints y <= 366 at CAMS 100),
+so your forearm no longer covers it. To actually SEE it the camera must look under the near wing: try CAMS 104 for F4 or
+your s28 NEXT 1(b) (near arm from the lower foreground). Nothing else needed from the scene for now.
+
 ## REALISM ROUND 2 - session 13 (2026-11-07, short budgeted session: F4 hatchling, F5 Starlight)
 Stills under `scratchpad/eng1/creatures/r2s13/`: `before/f4.png`, `before/f5.png` (session 12 code), `v1/f4.png`
 (near leg footFwd 0.4), `v2/f4.png` (adopted, footFwd 1.0), `v1/f5.png` (adopted). Sheets: `f4_before_after.png`
