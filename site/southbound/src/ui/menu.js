@@ -1,5 +1,5 @@
 // Start screen (platform + GPU selection) and the settings panel.
-import { GPU_CHOICES, PRESETS, detectGPU, saveSettings, SOFTWARE_HINT, probeGPU, IDLE_CARD_HINT, presetOverReach } from '../settings.js';
+import { GPU_CHOICES, PRESETS, detectGPU, saveSettings, SOFTWARE_HINT, probeGPU, presetOverReach, DEDICATED_CHOICES, gpuFixBox, gpuShortName } from '../settings.js';
 
 const $ = (s) => document.querySelector(s);
 
@@ -31,15 +31,19 @@ export function setupMenu(settings, onPlay) {
     // the phone path shows it too
     const ph = document.getElementById('step-phone'); if (ph) { const w2 = warn.cloneNode(true); ph.insertBefore(w2, ph.children[1] || null); }
   }
-  // the browser may be on the built-in graphics with a faster card sitting idle: say so up front
-  probeGPU().then((p) => {
-    if (!p.idleCard || gpu.software) return;
-    const warn = document.createElement('p');
-    warn.className = 'swwarn';
-    warn.style.cssText = 'margin:10px 0;padding:10px 12px;border-radius:8px;background:rgba(190,140,30,0.2);border:1px solid rgba(255,200,90,0.55);color:#ffeccc;font-size:13px;line-height:1.45;max-width:640px';
-    warn.textContent = '⚠ ' + IDLE_CARD_HINT(p.card);
-    const det = $('#detected'); det.parentNode.insertBefore(warn, det.nextSibling);
-  });
+  // the browser may be on the built-in graphics with the graphics card sitting idle (gaming laptops
+  // and desktops with the monitor on the motherboard): say so up front, with how to fix it. Shown
+  // when WebGPU can see a faster card, or when the player picked a gaming card from the list
+  let idleCard = null, fixBox = null;
+  const updateFix = () => {
+    const c = GPU_CHOICES.find((g) => g.id === settings.gpuChoice);
+    const show = gpu.integrated && !gpu.software && (DEDICATED_CHOICES.has(settings.gpuChoice) || idleCard);
+    if (fixBox) { fixBox.remove(); fixBox = null; }
+    if (!show) return;
+    fixBox = gpuFixBox(DEDICATED_CHOICES.has(settings.gpuChoice) ? c.label.split('·')[0].split('/')[0].trim() + '-class card' : null, gpuShortName(gpu.name), idleCard);
+    const det = $('#detected'); det.parentNode.insertBefore(fixBox, det.nextSibling);
+  };
+  probeGPU().then((p) => { if (p.idleCard) { idleCard = p.card; updateFix(); } });
   const presetsEl = $('#presets');
   for (const k of ['low', 'medium', 'high', 'ultra', 'cinematic']) {
     const b = document.createElement('button');
@@ -65,11 +69,12 @@ export function setupMenu(settings, onPlay) {
     $('#newgame').disabled = !settings.platform;
   };
   sel.value = settings.gpuChoice;
+  updateFix();
   sel.onchange = () => {
     settings.gpuChoice = sel.value;
     const c = GPU_CHOICES.find((g) => g.id === sel.value);
     settings.preset = c.preset || (gpu.preset === 'phone' ? 'low' : gpu.preset);
-    refresh();
+    refresh(); updateFix();
   };
   $('#res').value = settings.resolution;
   $('#res').onchange = (e) => { settings.resolution = e.target.value; };
@@ -119,6 +124,7 @@ const SCHEMA = {
     { key: 'preset', label: 'Quality preset', type: 'select', options: Object.keys(PRESETS).map((k) => [k, PRESETS[k].label]), restart: true },
     { key: 'resolution', label: 'Resolution', type: 'select', options: [['native', 'Native (screen)'], ['2160', 'Up to 4K'], ['1440', 'Up to 1440p'], ['1080', '1080p'], ['720', '720p']] },
     { key: 'dynamicRes', label: 'Dynamic resolution', hint: 'Holds your target FPS', type: 'toggle' },
+    { key: 'warmLook', label: 'Warm golden look', hint: 'A warm film colour, and amber light round sunrise and sunset (off: neutral colour)', type: 'toggle' },
     { key: 'targetFps', label: 'Target FPS', type: 'select', options: [[30, '30'], [60, '60'], [90, '90'], [100, '100'], [120, '120'], [144, '144']] },
     { key: 'shadows', label: 'Shadows', type: 'select', options: [[null, 'Preset'], [0, 'Off'], [1, 'Low'], [2, 'Medium'], [3, 'High']], restart: true },
     { key: 'bloom', label: 'Bloom / glow', type: 'select', options: [[null, 'Preset'], [true, 'On'], [false, 'Off']], restart: true },

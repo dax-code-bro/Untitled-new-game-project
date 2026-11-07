@@ -118,6 +118,39 @@ export async function probeGPU() {
 }
 export const IDLE_CARD_HINT = (card) => `Your browser is drawing the game on the computer's built-in graphics, but this PC also has a faster card (${card}). ` +
   'Windows Settings › System › Display › Graphics › add your browser (Chrome / Edge / Firefox) › Options › "High performance", then restart the browser.';
+// the dedicated cards in the start screen's list (the GPU picker)
+export const DEDICATED_CHOICES = new Set(['rtx-top', 'rtx-high', 'rtx-mid', 'rtx-old', 'gtx']);
+// how to get the browser off the built-in graphics and onto the graphics card (Windows; most
+// gaming laptops and many desktops have both, and browsers default to the slow one)
+export const GPU_FIX_STEPS = [
+  'Windows Settings › System › Display › Graphics: find your browser (Chrome or Edge; "Add desktop app" if it isn\'t listed), Options › "High performance" (your NVIDIA / AMD card) › Save. Then close every browser window and open it again.',
+  'Or in Chrome / Edge: open chrome://flags (edge://flags), search "high-performance GPU", set "Force High-Performance GPU" to Enabled, Relaunch.',
+  'NVIDIA: NVIDIA Control Panel › Manage 3D settings › Program settings › your browser › "High-performance NVIDIA processor".',
+  'Laptop: plug in the charger. If it has a GPU mode switch (Armoury Crate, Legion Vantage, MSI Center, Alienware Command Center...), pick the dedicated GPU / "Ultimate" mode.',
+  'Desktop PC: plug the monitor cable into the graphics card (the ports low down on the back), not into the motherboard.',
+  'To check: chrome://gpu shows the card under GL_RENDERER, and the game\'s FPS readout names the graphics it is drawing on.',
+  'Or play the Southbound desktop app for Windows: it always uses the graphics card.',
+];
+// a box that says the game is on the built-in graphics while the graphics card sits idle, with the
+// steps to fix it (the start screen and the game both show it)
+export function gpuFixBox(chosen, onName, card) {
+  const box = document.createElement('div');
+  box.className = 'gpufix';
+  box.style.cssText = 'margin:10px 0;padding:12px 14px;border-radius:10px;background:rgba(150,30,20,0.32);border:1px solid rgba(255,120,80,0.7);color:#ffe2d6;font-size:13px;line-height:1.5;max-width:680px;text-align:left';
+  const h = document.createElement('div');
+  h.style.cssText = 'font-weight:700;font-size:14px;margin-bottom:6px;color:#fff';
+  const yours = chosen || card || 'graphics card';
+  h.textContent = `⚠ The game is running on ${onName} (the graphics built into the processor), not on your ${yours}.`;
+  const p = document.createElement('div');
+  p.textContent = `Windows and the browser picked the low-power graphics, so your ${yours} is sitting idle and the game crawls. To fix it:`;
+  const ol = document.createElement('ol');
+  ol.style.cssText = 'margin:6px 0 0 18px;padding:0';
+  for (const t of GPU_FIX_STEPS) { const li = document.createElement('li'); li.style.margin = '3px 0'; li.textContent = t; ol.appendChild(li); }
+  box.append(h, p, ol);
+  return box;
+}
+// a short name for the graphics the browser gave us ("Intel(R) Graphics")
+export const gpuShortName = (name) => String(name || '?').replace(/^ANGLE \(|\)$/g, '').replace(/Direct3D.*$|vs_.*$|\(0x[0-9A-F]+\)/gi, '').replace(/^(Intel|AMD|NVIDIA|Google Inc\.?)\s*,\s*/i, '').replace(/\s+/g, ' ').trim().slice(0, 56);
 
 export const SOFTWARE_HINT = 'Your browser is drawing the game without your graphics card, so it can only manage a few frames a second. ' +
   'Turn hardware acceleration on: Chrome / Edge: Settings › System › "Use graphics acceleration when available", then Relaunch. ' +
@@ -132,6 +165,7 @@ export const DEFAULTS = {
   preset: 'high',
   resolution: 'native',     // native | 2160 | 1440 | 1080 | 720
   dynamicRes: true,
+  warmLook: true, // the warm, golden film look (Settings > Graphics)
   targetFps: 60,
   fov: 70,
   sensitivity: 1.0,

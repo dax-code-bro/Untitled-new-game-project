@@ -266,6 +266,12 @@ vec3 layerN(sampler2D t, vec2 p, float scale){
   // under the water: caustics on the shallow bed; just above it: the dark, shiny wet line
   // (on the sea it creeps up and back with the swash)
   float wlv = texture2D(uHeightTex, clamp(wuv, 0.0, 1.0)).g, under = wlv - vWPos.y;
+  // Gulf beaches are pale quartz sand, not the brown of a riverbank (G11): low sand by the sea
+  {
+    float sbBeach = w.w * (1.0 - step(0.01, wlv)) * (1.0 - smoothstep(2.5, 6.0, vWPos.y)) * (1.0 - wR);
+    float sl = dot(c, vec3(0.299, 0.587, 0.114));
+    c = mix(c, vec3(sl) * vec3(1.12, 1.05, 0.9) * 1.55, sbBeach * 0.75);
+  }
   float shoreWet = 0.0;
   if (under > 0.0) {
     float k = smoothstep(0.0, 0.25, under) * (1.0 - smoothstep(0.8, 3.5, under)) * (1.0 - uNight) * (1.0 - uWet * 0.6) * (1.0 - sbFar);

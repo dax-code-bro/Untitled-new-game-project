@@ -140,6 +140,53 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 - [x] Loading screen with in-game art, tips and progress
 - [x] Fewer touch buttons: ◎ interact replaces the car button; map, phone, arsenal, free cam moved to pause
 
+## Phase 1.51 — Is the game on the graphics card?
+
+The owner has an RTX 5090, but the game crawled: the readout said "Intel(R) Graphics". Windows and
+the browser had put the game on the processor's built-in graphics and left the card idle.
+- [x] The start screen says so the moment a gaming card is picked from the list (or WebGPU can see
+      one) while the browser is on built-in graphics, with the steps to fix it: Windows graphics
+      settings, Chrome / Edge's "Force High-Performance GPU", NVIDIA Control Panel, a laptop's GPU
+      mode and charger, the monitor cable on a desktop, how to check (chrome://gpu)
+- [x] In the game, the same as a panel that stays until it's read (it used to be a 12-second toast)
+- [x] The FPS readout says "(built-in graphics)" after the name when that's what it's drawing on
+- The Windows desktop app already forces the graphics card (`force_high_performance_gpu`)
+
+## Phase 1.50 — Lived-in streets and the coast (graphics milestone G11)
+
+The owner: "it still does not look like GTA 6". A survey of street, downtown, beach and night
+shots found the biggest gaps that can be closed in a browser: empty yards and streets, a grey,
+low-contrast picture, and a coast with brown sand and pines on the beach.
+- [x] Front yards for every house that faces a street (`world/yards.js`, 104 houses): a concrete
+      walk from the porch steps, a driveway down one side (62 with a real, stealable car parked in
+      it: `systems/kerbside.js`), an oil stain where the car stands, a mailbox at the kerb, wheelie
+      bins against the side wall, a white picket fence or a clipped hedge along the front (or an
+      open lawn), shrubs along the foundation and in front of the porch, an AC unit on a pad,
+      a lantern by the door that lights at dusk, rocking chairs on some porches, basketball hoops,
+      hose reels, a kid's bike left on the lawn. Driveways and walks follow the slope of the lot
+- [x] Utility poles down Mill Creek's streets, with a service wire from a pole to each house
+- [x] Cabbage palms (`world/palms.js`, built from scratch): the native palm of the Gulf Coast, in
+      clumps on the dunes, along the Coast Highway, in the city parks and on the waterfront. Leaning
+      trunks with the criss-cross of old leaf bases, fan-shaped fronds that sway in the breeze,
+      a skirt of dead fronds; light comes through the leaves
+- [x] Gulf beaches are pale quartz sand, and no trees stand out on the beach itself
+- [x] A photograph's contrast in clear daylight: deeper, cleaner shadows and richer colour instead
+      of a grey wash (on every preset; softer under cloud and at night)
+
+## Phase 1.49 — The warm, golden look (graphics milestone G10, part two)
+
+The owner found what was missing: "that slightly orange, yellow, nostalgic, sunset, warm and cozy
+lighting". The look was too neutral, and the golden hour lasted minutes.
+- [x] A warm film colour all day: lifted, warm blacks; amber highlights over faintly cool shadows
+- [x] A real golden hour: the sun stays gold for about two hours after sunrise and before sunset,
+      and even at noon it's a warm white (`world/sky.js`)
+- [x] Round sunrise and sunset an amber glow lands on whatever the sun lights, while the shadows
+      stay cooler. It's warm light, not a sepia filter
+- [x] Warm light bouncing up off sunlit earth and dry grass; the haze turns amber toward a low sun
+- [x] The same look on every preset: the post-processing grade (Medium and up) and the tone curve
+      inside every material (Low and Phone, which have no post-processing)
+- [x] Settings > Graphics > "Warm golden look" (on by default; off for neutral colour)
+
 ## Phase 1.48 — The Gulf Coast as it really looks (graphics milestone G10)
 
 Aimed at a photo the owner took: a gravel county road on a humid, cloudy evening, live oaks,

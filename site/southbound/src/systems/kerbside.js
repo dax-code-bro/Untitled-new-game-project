@@ -103,6 +103,15 @@ export function installKerbside(game) {
     slots.push({ x: st.x, z: st.z, y: st.y, heading: st.heading + (h < 0.08 ? Math.PI : 0), seed: Math.floor(h * 1e6), v: null });
   }
 
+  // the driveways in front of the houses (world/yards.js decides which ones usually have a car)
+  if (cap) for (const st of game.yards?.drives || []) {
+    if (!st.car) continue;
+    const key = Math.floor(st.x / CELL) + ',' + Math.floor(st.z / CELL);
+    if (!grid.has(key)) grid.set(key, []);
+    grid.get(key).push(slots.length);
+    slots.push({ x: st.x, z: st.z, y: st.y, heading: st.heading, seed: st.seed, v: null, drive: true });
+  }
+
   // the meters and hydrants: two instanced meshes for the whole city, with a post to bump into
   const m4 = new THREE.Matrix4(), qq = new THREE.Quaternion(), one = new THREE.Vector3(1, 1, 1), at = new THREE.Vector3(), UP = new THREE.Vector3(0, 1, 0);
   for (const [list, geo, rough, metal, r] of [[meters, meterGeo(), 0.45, 0.6, 0.12], [hydrants, hydrantGeo(), 0.55, 0.2, 0.2]]) {

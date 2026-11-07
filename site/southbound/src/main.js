@@ -1,7 +1,7 @@
 // SOUTHBOUND — boot, world build, game loop.
 import * as THREE from 'three';
 import { scanGround } from './core/substrate.js';
-import { loadSettings, saveSettings, resolveQuality, PRESETS, detectGPU, SOFTWARE_HINT, probeGPU, IDLE_CARD_HINT, presetOverReach } from './settings.js';
+import { loadSettings, saveSettings, resolveQuality, PRESETS, detectGPU, SOFTWARE_HINT, probeGPU, presetOverReach, DEDICATED_CHOICES, GPU_CHOICES, gpuFixBox, gpuShortName } from './settings.js';
 import { installImperfections } from './core/imperfect.js';
 import { installCloudShadows, setCloudShadowBoost } from './core/cloudshadow.js';
 import { createDynamicLighting } from './core/gi.js';
@@ -45,6 +45,8 @@ import { placeCivic } from './systems/civic.js';
 import { installNeeds } from './systems/needs.js';
 import { installStrays } from './systems/strays.js';
 import { createPowerLines } from './world/powerlines.js';
+import { planYards, buildYards } from './world/yards.js';
+import { createPalms } from './world/palms.js';
 import { createHoles } from './world/holes.js';
 import { installDemolition } from './systems/demolition.js';
 import { installWounds } from './systems/wounds.js';
@@ -79,6 +81,8 @@ import { nextFrame, clamp, wrapAngle } from './util.js';
 
 const $ = (s) => document.querySelector(s);
 const settings = loadSettings();
+// the warm look, written once a frame and read by every material and the post grade (see createGame)
+const LOOK = { x: 1, y: 0, z: 0, w: 0 };
 settings.isTouch = matchMedia('(pointer: coarse)').matches;
 document.documentElement.style.setProperty('--hud', settings.hudScale);
 
@@ -135,13 +139,24 @@ async function createGame(progress) {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: q.aa === 'msaa', powerPreference: 'high-performance', stencil: false });
   // presets without the post chain (phone/low) get the filmic curve plus the
   // same saturation/contrast grade inside every material's tone mapping
+  // The warm look (sbLook: x = how much of it, 0 natural .. 1 warm; y = golden hour now, 0..1):
+  // a film print's colour. Lifted, warm blacks; amber highlights over faintly teal shadows; and
+  // round sunrise and sunset an amber wash over everything. Shared by every material (a plain
+  // object, so UniformsUtils.clone hands every material the same reference: one write a frame)
+  for (const k of Object.keys(THREE.ShaderLib)) { const u = THREE.ShaderLib[k].uniforms; if (u) u.sbLook = { value: LOOK }; }
   THREE.ShaderChunk.tonemapping_pars_fragment = THREE.ShaderChunk.tonemapping_pars_fragment.replace(
     'vec3 CustomToneMapping( vec3 color ) { return color; }',
-    `vec3 CustomToneMapping( vec3 color ) {
+    `uniform vec4 sbLook;
+vec3 CustomToneMapping( vec3 color ) {
   vec3 c = AgXToneMapping( color );
   float l = dot( c, vec3( 0.2126, 0.7152, 0.0722 ) );
-  c = mix( vec3( l ), c, 1.05 );
-  c = 0.18 * pow( max( c, 0.0 ) / 0.18, vec3( 1.03 ) );
+  c = mix( vec3( l ), c, 1.05 + sbLook.x * 0.06 + sbLook.y * 0.08 );
+  c = 0.18 * pow( max( c, 0.0 ) / 0.18, vec3( 1.03 + sbLook.z * 0.08 ) ); // (z: clear daylight, a photo's contrast; G11)
+  c = c * ( 1.0 - 0.014 * sbLook.x ) + vec3( 0.012, 0.009, 0.004 ) * sbLook.x;
+  float sbHi = smoothstep( 0.1, 0.75, l );
+  c *= mix( mix( vec3( 1.0 ), vec3( 0.96 - sbLook.y * 0.02, 1.0, 1.04 + sbLook.y * 0.03 ), sbLook.x ), mix( vec3( 1.0 ), vec3( 1.07, 1.005, 0.88 ), sbLook.x ), sbHi );
+  float sbGw = sbLook.y * mix( 0.3, 1.0, sbHi ); // the gold lands on what the sun lights, not the shadows
+  c *= vec3( 1.0 + sbGw * 0.16, 1.0 + sbGw * 0.05, 1.0 - sbGw * 0.14 ) * ( 1.0 + sbGw * 0.05 );
   return clamp( c, 0.0, 1.0 );
 }`);
   // Never hand the post chain a NaN or an infinity. One bad pixel (a vanishing derivative at a
@@ -190,11 +205,14 @@ async function createGame(progress) {
   const parks = roads.parkify(city.cityBlocks); // lawns and paths in the park blocks, stalls in the parking lots
   city.lotStalls = roads.lotStalls || [];
   const billboards = createBillboards(scene, graph, hm, collision, q);
-  createPowerLines(scene, graph, hm, collision, q);
+  const power = createPowerLines(scene, graph, hm, collision, q);
+  const yardPlan = planYards(city.buildings, { hm, graph }); // front yards (G11): the shrubs go in with the trees
   progress(0.84, 'Growing Pinewood Hollow');
   await nextFrame();
-  const veg = await createVegetation(hm, q, scene, collision, city.cityBlocks, (p) => progress(0.84 + p * 0.07, 'Growing forests'), surf, settings.grass === false ? 0 : 1); // dense painted-blade grass in the wild parts (off on Phone)
+  const veg = await createVegetation(hm, q, scene, collision, city.cityBlocks, (p) => progress(0.84 + p * 0.07, 'Growing forests'), surf, settings.grass === false ? 0 : 1, yardPlan.bushes); // dense painted-blade grass in the wild parts (off on Phone)
   addSidewalkColliders(collision, parks);
+  const yards = buildYards(yardPlan, { scene, hm, collision, quality: q, surf, power }); // walks, driveways, mailboxes, fences...
+  const palms = createPalms(scene, { hm, collision, quality: q, cityBlocks: city.cityBlocks, graph }); // cabbage palms on the coast (G11)
   veg.cover?.setLawns?.(city.buildings); // yards and lots round every building are mown
   veg.cover?.setParks?.(parks); // and no grass on the park paths
   progress(0.92, 'Lighting the sky');
@@ -374,7 +392,7 @@ async function createGame(progress) {
   sky.hour = profile.hour; sky.day = profile.day;
   const interact = new Interactions(scene, hm);
   const game = {
-    S, scene, hm, graph, city, veg, player, combat, hud, sky, weather, career, interact, parked, lib, q, settings, camera, input, traffic, peds, police, collision, rig, surf, gi, abrasion, footing, lods, lodStats, nearInstanceStats,
+    S, scene, hm, graph, city, veg, yards, palms, player, combat, hud, sky, weather, career, interact, parked, lib, q, settings, camera, input, traffic, peds, police, collision, rig, surf, gi, abrasion, footing, lods, lodStats, nearInstanceStats,
     pause: (b) => { S.frozen = b; },
     teleport: (x, z, heading = 0) => { api.teleport(x, z, heading); },
     enterVehicle: (v) => enterVehicle(v, null),
@@ -1042,6 +1060,7 @@ async function createGame(progress) {
     terrain.update(camera.position, dd);
     veg.update(camera.position, dd);
     city.facades?.update(camera.position, dt);
+    yards.update(sky.night); // door lanterns at dusk
     if (veg.cover.update) {
       veg.cover.update(camera.position, sky.sunDir, _sunC.copy(sky.sun.color).multiplyScalar(sky.sun.intensity), weather);
       const pp = S.mode === 'foot' ? player.pos : S.vehicle ? S.vehicle.pos : focus;
@@ -1087,14 +1106,29 @@ async function createGame(progress) {
       horn: a.horn && S.mode === 'car', impact: S.vehicle?.impact || 0, nature: reg.name !== 'Port Calvera' && weather.rain < 0.2,
       rain: weather.rain, thunder: weather.thunder,
     });
+    // the warm look (Settings > Graphics > Warm golden look, on by default): a film print's warmth
+    // all day, and for the hours round sunrise and sunset a strong amber glow (the sun's low and
+    // gold for a good two hours each end of the day, not a few minutes). Read by every material
+    // (the Low/Phone tone curve) and by the post grade
+    {
+      const lookK = settings.warmLook === false ? 0 : 1, e = sky.sunDir.y;
+      const rise = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+      const golden = (e > -0.05 ? 1 - rise(0.06, 0.5, e) : Math.max(0, 1 + (e + 0.05) * 10)) * (1 - weather.dark * 0.75);
+      LOOK.x = lookK * (1 - sky.night * 0.75);
+      LOOK.y = lookK * golden * (1 - sky.night);
+      sky.golden = LOOK.y; sky.lookK = lookK; // (world/sky.js reads lookK for the sun and haze)
+      // clear daylight gets a photograph's contrast and colour: deep, clean shadows instead of a grey
+      // wash (G11). Softer under cloud and at night
+      LOOK.z = (1 - sky.night) * (1 - weather.dark * 0.8) * (1 - (sky.diffuse || 0) * 0.7);
+    }
     if (post) {
-      post.grade.uniforms.uWarm.value = sky.hour > 16.5 && sky.hour < 19.5 ? 0.05 * Math.sin((sky.hour - 16.5) / 3 * Math.PI) : 0;
+      post.grade.uniforms.uWarm.value = LOOK.y;
+      post.grade.uniforms.uLook.value = LOOK.x;
       post.grade.uniforms.uNight.value = sky.night;
-      // a photograph's colour, not a game's: only a touch more saturation and contrast in clear
-      // sun, and soft and muted under cloud (strong grading reads as "video game" straight away)
-      const dayK = (1 - sky.night) * (1 - weather.dark * 0.8) * (1 - (sky.diffuse || 0) * 0.7);
-      post.grade.uniforms.uSat.value = 0.97 + dayK * 0.06;
-      post.grade.uniforms.uContrast.value = 0.99 + dayK * 0.04;
+      // a little more saturation and contrast in clear sun, softer under cloud
+      const dayK = LOOK.z;
+      post.grade.uniforms.uSat.value = 0.99 + dayK * 0.1 + LOOK.x * 0.05 + LOOK.y * 0.07;
+      post.grade.uniforms.uContrast.value = 1.0 + dayK * 0.11;
       const aimingNow = S.mode === 'foot' && player.aiming && armed;
       post.update(sky.sunDir, sky.sunDir.y > 0.02 && weather.cover < 0.75, aimingNow ? 18 : camera.position.distanceTo(focus) + 1, aimingNow);
     }
@@ -1193,10 +1227,30 @@ async function createGame(progress) {
   const guard = { level: 0, low: 0, next: performance.now() + 12000 };
   // a third line on the FPS readout that says where the time goes: the game's code (CPU) or
   // drawing (GPU), and which graphics device the browser is actually using
-  const GPU_NAME = (() => { try { const g = detectGPU(); return (g.name || '?').replace(/^ANGLE \(|\)$/g, '').replace(/Direct3D.*$|vs_.*$|\(0x[0-9A-F]+\)/gi, '').replace(/\s+/g, ' ').trim().slice(0, 56); } catch (e) { return '?'; } })();
+  const GPU_NAME = (() => { try { return gpuShortName(detectGPU().name) + (GPU_INFO.integrated ? ' (built-in graphics)' : ''); } catch (e) { return '?'; } })();
   // what WebGPU says the fastest card is (shown when it isn't the one drawing the game)
   let CARD = null;
-  probeGPU().then((p) => { if (p.idleCard) { CARD = p.card; hud.toast(IDLE_CARD_HINT(p.card), 12); } });
+  // on the built-in graphics while a gaming card sits idle (picked from the start screen's list, or
+  // seen by WebGPU): a panel that stays until it's read, with how to fix it (not a toast that's gone
+  // before anyone reads it). Once a session
+  const showGpuFix = () => {
+    if (AUTOMATED || !GPU_INFO.integrated || GPU_INFO.software) return;
+    try { if (sessionStorage.getItem('sb.gpufix')) return; sessionStorage.setItem('sb.gpufix', '1'); } catch (e) { /* */ }
+    const choice = GPU_CHOICES.find((g) => g.id === settings.gpuChoice);
+    const box = gpuFixBox(DEDICATED_CHOICES.has(settings.gpuChoice) ? choice.label.split('·')[0].split('/')[0].trim() + '-class card' : null, gpuShortName(GPU_INFO.name), CARD);
+    box.style.cssText += ';position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:9999;width:min(680px,calc(100vw - 32px));max-height:calc(100vh - 24px);overflow:auto;background:rgba(40,10,6,0.94);box-shadow:0 8px 30px rgba(0,0,0,0.6)';
+    const tip = document.createElement('div');
+    tip.style.cssText = 'margin-top:8px;color:#ffd0bf';
+    tip.textContent = 'Until then the game drops its settings to keep moving. Once the browser is on the graphics card, pick your card again on the start screen.';
+    const ok = document.createElement('button');
+    ok.textContent = 'Got it';
+    ok.style.cssText = 'margin-top:10px;padding:7px 18px;border-radius:7px;border:0;background:#ff8a5c;color:#200;font-weight:700;cursor:pointer';
+    ok.onclick = () => box.remove();
+    box.append(tip, ok);
+    document.body.appendChild(box);
+  };
+  if (DEDICATED_CHOICES.has(settings.gpuChoice)) setTimeout(showGpuFix, 2500);
+  probeGPU().then((p) => { if (p.idleCard) { CARD = p.card; showGpuFix(); } });
   function diagLine() {
     const frameMs = 1000 / Math.max(S.fps, 0.1), cpu = S.cpuMs || 0;
     const where = SOFTWARE ? 'NO GPU: software rendering' : frameMs > cpu * 2.2 + 8 ? 'GPU-bound' : 'CPU-bound';
