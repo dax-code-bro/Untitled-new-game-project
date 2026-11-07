@@ -122,7 +122,7 @@ export function buildRoadGraph() {
   // side, not only along the highways. (The west already has Route 9 and the Coast
   // Highway; the south is the port.) Flagged `lane` so the older outskirts generator
   // keeps placing exactly what it always did (saved homes stay where they are).
-  const lane = (a, b, w = 10) => { const e = addEdge(a, b, resample([[a.x, a.z], [b.x, b.z]], 8), 'street', w); e.lane = true; return e; };
+  const lane = (a, b, w = 10) => { const e = addEdge(a, b, resample([[a.x, a.z], [b.x, b.z]], 8), 'street', w); e.lane = true; e.gravel = a.id.startsWith('o_') && b.id.startsWith('o_'); return e; }; // (gravel: the far lanes, both ends out of town; G10)
   const o = (id, x, z) => node('o_' + id, x, z);
   const C = (i, j) => nodes.get(`c${i}_${j}`);
   const zN = CITY.z0 - 170, xE = CITY.x0 + CITY.nx * CITY.pitch + 170;

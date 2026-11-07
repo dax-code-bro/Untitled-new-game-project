@@ -198,6 +198,93 @@ float sbVN(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f)
     return m;
   };
   const hwMat = roadMat(hwTex, 4), stMat = roadMat(stTex, 2), ctMat = roadMat(ctTex, 2);
+
+  // Gravel county roads (G10): crushed white limestone, every stone its own size and shade. Two
+  // tyre tracks packed flat and smooth, loose rock heaped on the crown and spilling off the edges
+  // into dirt and grass, dust in the gaps. Close up you see the stones (each a little bump in the
+  // light); further off it settles into an even pale grey-cream so it never shimmers
+  const gravelMat = () => {
+    const m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.92, metalness: 0, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+    m.onBeforeCompile = (sh) => {
+      sh.uniforms.uWet = worldUniforms.uWet;
+      sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vRW; varying vec2 vGU;')
+        .replace('#include <begin_vertex>', '#include <begin_vertex>\nvRW = (modelMatrix * vec4(transformed, 1.0)).xyz; vGU = uv;');
+      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', `#include <common>
+varying vec3 vRW; varying vec2 vGU; uniform float uWet; float gvH; float gvRough; vec3 gvN = vec3(0.0, 1.0, 0.0);
+float gvHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float gvNoise(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(gvHash(i), gvHash(i + vec2(1, 0)), f.x), mix(gvHash(i + vec2(0, 1)), gvHash(i + vec2(1, 1)), f.x), f.y); }
+// the stone under p: (height of its rounded top, its id); stones of different sizes in a jittered grid
+vec2 gvStone(vec2 p, float loose) {
+  vec2 i = floor(p), f = fract(p); float best = 9.0, bid = 0.0, bh = 0.0;
+  for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) {
+    vec2 o = vec2(float(x), float(y)), c = i + o; float h = gvHash(c);
+    vec2 ctr = o + 0.5 + (vec2(gvHash(c + 7.1), gvHash(c + 3.7)) - 0.5) * 0.7;
+    float r = mix(0.32, 0.62, gvHash(c + 1.3)) * mix(0.85, 1.12, loose); // its size
+    vec2 d = (f - ctr) * vec2(1.0, mix(0.75, 1.3, gvHash(c + 9.9))); // and its shape
+    float dist = mix(length(d), max(abs(d.x), abs(d.y)) * 1.12, gvHash(c + 5.5) * 0.8) / r; // crushed rock: angular, not round
+    if (dist < best) { best = dist; bid = h; bh = 1.0 - dist; }
+  }
+  return vec2(clamp(bh, 0.0, 1.0), bid);
+}`)
+        .replace('#include <map_fragment>', `
+          // across the road: 0 at one edge, 1 at the other. Tyre tracks a third of the way in from each side
+          float u = vGU.x, wob = (gvNoise(vRW.xz * 0.35) - 0.5) * 0.06;
+          float track = smoothstep(0.1, 0.0, abs(u - 0.3 + wob)) + smoothstep(0.1, 0.0, abs(u - 0.7 + wob));
+          // (the outer metre and a half each side is verge: dirt and grass over thinning rock, so the
+          // driven road reads about 7 m wide, like a county road)
+          float edge = smoothstep(0.17, 0.02, min(u, 1.0 - u) + (gvNoise(vRW.xz * 1.7) - 0.5) * 0.12);
+          float loose = clamp(1.0 - track * 0.8 + edge * 0.3, 0.0, 1.0);
+          // how much stone detail this pixel can carry (far off it would only shimmer)
+          vec2 sp = vRW.xz * 32.0;
+          float detail = 1.0 - smoothstep(0.35, 0.9, length(fwidth(sp)));
+          vec2 st = gvStone(sp, loose), st2 = gvStone(sp * 0.53 + 17.0, loose);
+          float id = st.y;
+          // limestone: mostly pale cream-grey, some white, some tan, the odd dark one
+          vec3 stone = id < 0.5 ? mix(vec3(0.74, 0.72, 0.67), vec3(0.86, 0.84, 0.79), id * 2.0)
+                     : id < 0.82 ? mix(vec3(0.72, 0.66, 0.57), vec3(0.8, 0.76, 0.69), (id - 0.5) * 3.0)
+                     : mix(vec3(0.5, 0.49, 0.46), vec3(0.63, 0.61, 0.57), (id - 0.82) * 5.0);
+          stone *= 0.88 + 0.18 * st.x; // faces turned up catch a little more light
+          vec3 dust = vec3(0.58, 0.54, 0.47);
+          float gap = smoothstep(0.06, 0.0, st.x) * (0.3 + loose * 0.5);
+          vec3 near = mix(stone, dust, gap);
+          // a second, coarser layer of bigger stones where it's loose
+          near = mix(near, mix(vec3(0.6, 0.57, 0.52), vec3(0.74, 0.71, 0.66), st2.y) * (0.85 + 0.25 * st2.x), smoothstep(0.35, 0.5, st2.x) * loose * 0.6);
+          vec3 far = vec3(0.64, 0.61, 0.56) * (0.92 + 0.12 * gvNoise(vRW.xz * 0.6));
+          // between the two, the grain of the gravel: too small to draw stone by stone, still not smooth
+          float midDetail = 1.0 - smoothstep(0.3, 0.9, length(fwidth(vRW.xz * 7.0)));
+          vec3 mid = far * (0.8 + 0.4 * (gvNoise(vRW.xz * 7.0) * 0.55 + gvNoise(vRW.xz * 19.0) * 0.45));
+          vec3 col = mix(mix(far, mid, midDetail), near, detail);
+          // the tracks: packed, flatter, darker and smoother; dust worn into them (visible a long way off)
+          col *= 1.0 - track * 0.16;
+          col = mix(col, dust * 0.95, track * 0.3);
+          // the edges: dirt and grass growing into the spill
+          float grassy = edge * smoothstep(0.4, 0.7, gvNoise(vRW.xz * 2.3) * 0.6 + gvNoise(vRW.xz * 7.0) * 0.4);
+          col = mix(col, mix(vec3(0.36, 0.33, 0.26), vec3(0.32, 0.38, 0.2), grassy), edge * 0.75);
+          // big, soft mottling: wetter and drier patches, fresh rock dumped in places
+          col *= 0.9 + 0.2 * gvNoise(vRW.xz * 0.15);
+          gvH = (st.x * (1.0 - track * 0.6) + smoothstep(0.35, 0.5, st2.x) * loose * 0.5) * detail;
+          gvRough = mix(0.95, 0.82, track);
+          diffuseColor.rgb *= col * (1.0 - uWet * 0.4);`)
+        .replace('#include <roughnessmap_fragment>', 'float roughnessFactor = mix(gvRough, 0.35, uWet * 0.8);')
+        .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
+          {
+            // each stone a little dome: bend the normal by how its height changes across the pixel
+            // (surface-gradient bump mapping, the same sum three.js uses; a stone stands ~1.5 cm proud)
+            vec3 N0 = vec3(0.0, 1.0, 0.0), dpx = dFdx(vRW), dpy = dFdy(vRW);
+            float dhx = dFdx(gvH) * 0.015, dhy = dFdy(gvH) * 0.015;
+            vec3 r1 = cross(dpy, N0), r2 = cross(N0, dpx);
+            float det = dot(dpx, r1);
+            // (guarded: at a grazing angle the derivatives can vanish, and normalising a zero vector
+            // gives NaN, which the post blur spreads into a whole black frame)
+            vec3 nv = abs(det) * N0 - sign(det) * (dhx * r1 + dhy * r2);
+            vec3 nw = dot(nv, nv) > 1e-20 && gvH > 0.0 ? normalize(nv) : N0;
+            normal = normalize((viewMatrix * vec4(nw, 0.0)).xyz);
+          }`);
+    };
+    m.customProgramCacheKey = () => 'sb-gravel';
+    return m;
+  };
   const ixMat = roadMat(ixTex, 0);
 
   const ribbon = (pts, ys, width, trimStart, trimEnd, lift) => {
@@ -227,14 +314,18 @@ float sbVN(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f)
   };
 
   const lights = [];
-  const hwGeos = [], stGeos = [], ctGeos = [];
+  const hwGeos = [], stGeos = [], ctGeos = [], gvGeos = [], gravel = [];
   for (const e of graph.edges) {
     const isHw = e.kind === 'highway';
+    // the lanes round the far edge of the outskirts (both ends out of town) are gravel: county roads
+    // between houses on big lots, white limestone rock packed into two tyre tracks (G10)
+    // (e.gravel is set when the lane is laid out: world/layout.js)
     // Street ribbons stop short of intersections; intersections get their own tile.
     const gridTrim = (id) => (id[0] === 'c' ? CITY.street / 2 : id[0] === 't' ? TOWN.street / 2 : 0);
     const g = ribbon(e.pts, e.ys, e.width, gridTrim(e.a), gridTrim(e.b), 0.1);
     if (collision && collision.addRoad) collision.addRoad(e.pts, e.ys, e.width, !!e.lane);
-    (isHw ? hwGeos : e.width >= 14 ? ctGeos : stGeos).push(g);
+    (e.gravel ? gvGeos : isHw ? hwGeos : e.width >= 14 ? ctGeos : stGeos).push(g);
+    if (e.gravel) { gravel.push(e); continue; } // (and no street lights out there)
     // street lights every ~40 m on alternating sides
     const step = isHw ? 6 : 5;
     for (let i = 2; i < e.pts.length - 1; i += step) {
@@ -271,6 +362,7 @@ float sbVN(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f)
   hwMesh.receiveShadow = stMesh.receiveShadow = true;
   group.add(hwMesh, stMesh);
   if (ctGeos.length) { const ctMesh = new THREE.Mesh(merge(ctGeos), ctMat); ctMesh.receiveShadow = true; group.add(ctMesh); }
+  if (gvGeos.length) { const gvMesh = new THREE.Mesh(merge(gvGeos), gravelMat()); gvMesh.receiveShadow = true; gvMesh.userData.surf = 'gravel'; group.add(gvMesh); }
 
   // Intersection tiles for street grids
   const ixGeo = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
@@ -463,8 +555,22 @@ float sbH2(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); 
   group.add(streaks);
 
   scene.add(group);
+  // is (x, z) on a gravel road? (G9's dust comes up off it; the ground map calls it paved)
+  const gravelAt = (x, z) => {
+    for (const e of gravel) {
+      const hw = e.width / 2 + 0.5;
+      for (let i = 0; i < e.pts.length - 1; i++) {
+        const [ax, az] = e.pts[i], [bx, bz] = e.pts[i + 1];
+        if (Math.min(ax, bx) - hw > x || Math.max(ax, bx) + hw < x || Math.min(az, bz) - hw > z || Math.max(az, bz) + hw < z) continue;
+        const dx = bx - ax, dz = bz - az, L2 = dx * dx + dz * dz || 1, t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / L2));
+        if (Math.hypot(ax + dx * t - x, az + dz * t - z) < hw) return true;
+      }
+    }
+    return false;
+  };
+
   return {
-    group, lights,
+    group, lights, gravelAt, gravelRoads: gravel,
     // park blocks: a ring of pavement round a mown lawn crossed by two paths, with benches
     // (the block was a solid paved slab with trees growing out of it)
     parkify(blocks) {

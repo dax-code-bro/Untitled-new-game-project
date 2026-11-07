@@ -250,7 +250,10 @@ export class Heightmap {
       for (const [k, [d, y]] of near) {
         const w = 1 - smoothstep(hw + 1.5, reach, d);
         this.h[k] = lerp(this.h[k], y - 0.15, w);
-        if (d < hw + 1.5) this.splat[k * 4 + 3] = 255;
+        // (a gravel lane is only marked paved down the middle, where the gravel hides it: the 4 m terrain
+        // grid would smear pavement out past the edges as a dark strip; its verges are dry grass and dirt)
+        if (e.gravel) { if (d < hw - 4) this.splat[k * 4 + 3] = 255; else if (d < hw + 2) { this.splat[k * 4 + 2] = Math.max(this.splat[k * 4 + 2], 170); this.splat[k * 4] = Math.max(this.splat[k * 4], 60); } }
+        else if (d < hw + 1.5) this.splat[k * 4 + 3] = 255;
       }
     }
   }
