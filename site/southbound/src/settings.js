@@ -132,6 +132,7 @@ export const DEFAULTS = {
   preset: 'high',
   resolution: 'native',     // native | 2160 | 1440 | 1080 | 720
   dynamicRes: true,
+  warmLook: true, // the warm, golden film look (Settings > Graphics)
   targetFps: 60,
   fov: 70,
   sensitivity: 1.0,

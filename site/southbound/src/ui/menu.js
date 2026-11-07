@@ -119,6 +119,7 @@ const SCHEMA = {
     { key: 'preset', label: 'Quality preset', type: 'select', options: Object.keys(PRESETS).map((k) => [k, PRESETS[k].label]), restart: true },
     { key: 'resolution', label: 'Resolution', type: 'select', options: [['native', 'Native (screen)'], ['2160', 'Up to 4K'], ['1440', 'Up to 1440p'], ['1080', '1080p'], ['720', '720p']] },
     { key: 'dynamicRes', label: 'Dynamic resolution', hint: 'Holds your target FPS', type: 'toggle' },
+    { key: 'warmLook', label: 'Warm golden look', hint: 'A warm film colour, and amber light round sunrise and sunset (off: neutral colour)', type: 'toggle' },
     { key: 'targetFps', label: 'Target FPS', type: 'select', options: [[30, '30'], [60, '60'], [90, '90'], [100, '100'], [120, '120'], [144, '144']] },
     { key: 'shadows', label: 'Shadows', type: 'select', options: [[null, 'Preset'], [0, 'Off'], [1, 'Low'], [2, 'Medium'], [3, 'High']], restart: true },
     { key: 'bloom', label: 'Bloom / glow', type: 'select', options: [[null, 'Preset'], [true, 'On'], [false, 'Off']], restart: true },

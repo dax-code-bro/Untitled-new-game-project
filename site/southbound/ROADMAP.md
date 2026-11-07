@@ -140,6 +140,20 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 - [x] Loading screen with in-game art, tips and progress
 - [x] Fewer touch buttons: ◎ interact replaces the car button; map, phone, arsenal, free cam moved to pause
 
+## Phase 1.49 — The warm, golden look (graphics milestone G10, part two)
+
+The owner found what was missing: "that slightly orange, yellow, nostalgic, sunset, warm and cozy
+lighting". The look was too neutral, and the golden hour lasted minutes.
+- [x] A warm film colour all day: lifted, warm blacks; amber highlights over faintly cool shadows
+- [x] A real golden hour: the sun stays gold for about two hours after sunrise and before sunset,
+      and even at noon it's a warm white (`world/sky.js`)
+- [x] Round sunrise and sunset an amber glow lands on whatever the sun lights, while the shadows
+      stay cooler. It's warm light, not a sepia filter
+- [x] Warm light bouncing up off sunlit earth and dry grass; the haze turns amber toward a low sun
+- [x] The same look on every preset: the post-processing grade (Medium and up) and the tone curve
+      inside every material (Low and Phone, which have no post-processing)
+- [x] Settings > Graphics > "Warm golden look" (on by default; off for neutral colour)
+
 ## Phase 1.48 — The Gulf Coast as it really looks (graphics milestone G10)
 
 Aimed at a photo the owner took: a gravel county road on a humid, cloudy evening, live oaks,

@@ -101,16 +101,22 @@ export function createSky(renderer, scene, quality) {
       sun.target.position.z = Math.round(sun.target.position.z / texel) * texel;
       sun.position.x = sun.target.position.x + dir.x * 600;
       sun.position.z = sun.target.position.z + dir.z * 600;
-      const warm = smoothstep(0.0, 0.35, elev);
+      // the warm look (main.js sets lookK: Settings > Warm golden look): the sun stays gold for a good
+      // two hours after sunrise and before sunset, and even at noon it's a warm white, not a cold one
+      const lookK = state.lookK ?? 1;
+      const warm = smoothstep(0.0, lerp(0.35, 0.62, lookK), elev);
       if (useMoon) {
         sun.color.setRGB(0.55, 0.65, 1.0);
         sun.intensity = 0.6 * smoothstep(-0.05, -0.3, elev);
       } else {
-        sun.color.setRGB(1.0, lerp(0.55, 0.985, warm), lerp(0.3, 0.955, warm));
+        sun.color.setRGB(1.0, lerp(lerp(0.55, 0.52, lookK), lerp(0.985, 0.955, lookK), warm), lerp(lerp(0.3, 0.24, lookK), lerp(0.955, 0.885, lookK), warm));
         sun.intensity = 4.1 * day;
       }
       hemi.intensity = lerp(0.5, 0.58, day);
       hemi.color.setRGB(lerp(0.22, 0.62, day), lerp(0.28, 0.76, day), lerp(0.55, 1.0, day));
+      // what bounces up off sunlit ground is warm: earth and dry grass, more so in the gold hours
+      const gold = (1 - warm) * day * lookK;
+      hemi.groundColor.setRGB(lerp(0.23, 0.42, gold), lerp(0.19, 0.3, gold), lerp(0.13, 0.17, gold));
       // weather: clouds swallow the sun, light goes flat and grey
       const W = state.weather || { cover: 0.52, dark: 0, flash: 0, rain: 0 };
       sun.intensity *= 1 - W.dark * 0.85;
@@ -125,6 +131,8 @@ export function createSky(renderer, scene, quality) {
       if (W.flash > 0) { hemi.intensity += W.flash * 2.5; hemi.color.lerp(_grey.setRGB(0.75, 0.8, 1.0), W.flash); }
 
       fogColorAt(h, fogCol);
+      // in the gold hours the haze itself is warm: the low sun lights the whole sky amber
+      fogCol.lerp(_grey.setRGB(0.95, 0.74, 0.52).multiplyScalar(0.35 + 0.65 * day), gold * 0.4 * (1 - W.dark));
       fogCol.lerp(_grey.setRGB(0.42, 0.45, 0.48).multiplyScalar(0.08 + 0.92 * day), W.dark * 0.7);
       scene.fog.color.copy(fogCol);
       sky.position.copy(focus);

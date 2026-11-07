@@ -10,18 +10,20 @@ import {
 import { N8AOPostPass } from 'n8ao';
 
 const GRADE_FRAG = /* glsl */`
-uniform float uWarm; uniform float uDamage; uniform float uSat; uniform float uContrast; uniform float uNight;
+uniform float uWarm; uniform float uLook; uniform float uDamage; uniform float uSat; uniform float uContrast; uniform float uNight;
 void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor) {
   vec3 c = inputColor.rgb;
   float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
-  // split toning: cool teal shadows, warm highlights (the classic cinematic look)
-  // (kept very gentle: anything stronger reads as a yellow/brown cast)
-  vec3 shadows = vec3(0.99, 1.0, 1.015), highs = vec3(1.006, 1.0, 0.994);
-  c *= mix(shadows, highs, smoothstep(0.15, 0.75, l));
   c = mix(vec3(l), c, uSat);
   c = 0.18 * pow(max(c, 0.0) / 0.18, vec3(uContrast)); // contrast around mid-grey
-  // golden hour only: a multiplicative warm shift that leaves blacks and greys alone
-  c *= vec3(1.0 + uWarm, 1.0 + uWarm * 0.3, 1.0 - uWarm * 0.6);
+  // the warm look (uLook 0 natural .. 1 warm), the same as the Low/Phone tone curve in main.js:
+  // a film print's lifted, warm blacks; amber highlights over faintly teal shadows
+  c = c * (1.0 - 0.025 * uLook) + vec3(0.022, 0.016, 0.008) * uLook;
+  float hi = smoothstep(0.1, 0.75, l);
+  c *= mix(mix(vec3(1.0), vec3(0.96 - uWarm * 0.02, 1.0, 1.04 + uWarm * 0.03), uLook), mix(vec3(1.0), vec3(1.07, 1.005, 0.88), uLook), hi);
+  // the hours round sunrise and sunset (uWarm 0..1): an amber wash over everything
+  float gw = uWarm * mix(0.3, 1.0, hi); // the gold lands on what the sun lights; shadows stay cooler
+  c *= vec3(1.0 + gw * 0.16, 1.0 + gw * 0.05, 1.0 - gw * 0.14) * (1.0 + gw * 0.05);
   // moonlit nights lean blue
   c = mix(c, c * vec3(0.8, 0.9, 1.2), uNight * 0.6);
   vec2 d = uv - 0.5;
@@ -33,7 +35,7 @@ class GradeEffect extends Effect {
   constructor() {
     super('GradeEffect', GRADE_FRAG, {
       uniforms: new Map([
-        ['uWarm', new THREE.Uniform(0)], ['uDamage', new THREE.Uniform(0)],
+        ['uWarm', new THREE.Uniform(0)], ['uLook', new THREE.Uniform(1)], ['uDamage', new THREE.Uniform(0)],
         ['uSat', new THREE.Uniform(1.12)], ['uContrast', new THREE.Uniform(1.07)], ['uNight', new THREE.Uniform(0)],
       ]),
     });
@@ -85,7 +87,7 @@ export function createPost(renderer, scene, camera, quality) {
   composer.addPass(new EffectPass(camera, tone, grade, vignette, grain));
   if (quality.aa === 'smaa') composer.addPass(new EffectPass(camera, new SMAAEffect({ preset: SMAAPreset.HIGH })));
 
-  const gradeU = { uWarm: grade.uniforms.get('uWarm'), uDamage: grade.uniforms.get('uDamage'), uNight: grade.uniforms.get('uNight'), uSat: grade.uniforms.get('uSat'), uContrast: grade.uniforms.get('uContrast') };
+  const gradeU = { uLook: grade.uniforms.get('uLook'), uWarm: grade.uniforms.get('uWarm'), uDamage: grade.uniforms.get('uDamage'), uNight: grade.uniforms.get('uNight'), uSat: grade.uniforms.get('uSat'), uContrast: grade.uniforms.get('uContrast') };
   return {
     composer,
     grade: { uniforms: gradeU },

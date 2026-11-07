@@ -79,6 +79,8 @@ import { nextFrame, clamp, wrapAngle } from './util.js';
 
 const $ = (s) => document.querySelector(s);
 const settings = loadSettings();
+// the warm look, written once a frame and read by every material and the post grade (see createGame)
+const LOOK = { x: 1, y: 0, z: 0, w: 0 };
 settings.isTouch = matchMedia('(pointer: coarse)').matches;
 document.documentElement.style.setProperty('--hud', settings.hudScale);
 
@@ -135,13 +137,24 @@ async function createGame(progress) {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: q.aa === 'msaa', powerPreference: 'high-performance', stencil: false });
   // presets without the post chain (phone/low) get the filmic curve plus the
   // same saturation/contrast grade inside every material's tone mapping
+  // The warm look (sbLook: x = how much of it, 0 natural .. 1 warm; y = golden hour now, 0..1):
+  // a film print's colour. Lifted, warm blacks; amber highlights over faintly teal shadows; and
+  // round sunrise and sunset an amber wash over everything. Shared by every material (a plain
+  // object, so UniformsUtils.clone hands every material the same reference: one write a frame)
+  for (const k of Object.keys(THREE.ShaderLib)) { const u = THREE.ShaderLib[k].uniforms; if (u) u.sbLook = { value: LOOK }; }
   THREE.ShaderChunk.tonemapping_pars_fragment = THREE.ShaderChunk.tonemapping_pars_fragment.replace(
     'vec3 CustomToneMapping( vec3 color ) { return color; }',
-    `vec3 CustomToneMapping( vec3 color ) {
+    `uniform vec4 sbLook;
+vec3 CustomToneMapping( vec3 color ) {
   vec3 c = AgXToneMapping( color );
   float l = dot( c, vec3( 0.2126, 0.7152, 0.0722 ) );
-  c = mix( vec3( l ), c, 1.05 );
+  c = mix( vec3( l ), c, 1.05 + sbLook.x * 0.06 + sbLook.y * 0.08 );
   c = 0.18 * pow( max( c, 0.0 ) / 0.18, vec3( 1.03 ) );
+  c = c * ( 1.0 - 0.025 * sbLook.x ) + vec3( 0.022, 0.016, 0.008 ) * sbLook.x;
+  float sbHi = smoothstep( 0.1, 0.75, l );
+  c *= mix( mix( vec3( 1.0 ), vec3( 0.96 - sbLook.y * 0.02, 1.0, 1.04 + sbLook.y * 0.03 ), sbLook.x ), mix( vec3( 1.0 ), vec3( 1.07, 1.005, 0.88 ), sbLook.x ), sbHi );
+  float sbGw = sbLook.y * mix( 0.3, 1.0, sbHi ); // the gold lands on what the sun lights, not the shadows
+  c *= vec3( 1.0 + sbGw * 0.16, 1.0 + sbGw * 0.05, 1.0 - sbGw * 0.14 ) * ( 1.0 + sbGw * 0.05 );
   return clamp( c, 0.0, 1.0 );
 }`);
   // Never hand the post chain a NaN or an infinity. One bad pixel (a vanishing derivative at a
@@ -1087,14 +1100,26 @@ async function createGame(progress) {
       horn: a.horn && S.mode === 'car', impact: S.vehicle?.impact || 0, nature: reg.name !== 'Port Calvera' && weather.rain < 0.2,
       rain: weather.rain, thunder: weather.thunder,
     });
+    // the warm look (Settings > Graphics > Warm golden look, on by default): a film print's warmth
+    // all day, and for the hours round sunrise and sunset a strong amber glow (the sun's low and
+    // gold for a good two hours each end of the day, not a few minutes). Read by every material
+    // (the Low/Phone tone curve) and by the post grade
+    {
+      const lookK = settings.warmLook === false ? 0 : 1, e = sky.sunDir.y;
+      const rise = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+      const golden = (e > -0.05 ? 1 - rise(0.06, 0.5, e) : Math.max(0, 1 + (e + 0.05) * 10)) * (1 - weather.dark * 0.75);
+      LOOK.x = lookK * (1 - sky.night * 0.75);
+      LOOK.y = lookK * golden * (1 - sky.night);
+      sky.golden = LOOK.y; sky.lookK = lookK; // (world/sky.js reads lookK for the sun and haze)
+    }
     if (post) {
-      post.grade.uniforms.uWarm.value = sky.hour > 16.5 && sky.hour < 19.5 ? 0.05 * Math.sin((sky.hour - 16.5) / 3 * Math.PI) : 0;
+      post.grade.uniforms.uWarm.value = LOOK.y;
+      post.grade.uniforms.uLook.value = LOOK.x;
       post.grade.uniforms.uNight.value = sky.night;
-      // a photograph's colour, not a game's: only a touch more saturation and contrast in clear
-      // sun, and soft and muted under cloud (strong grading reads as "video game" straight away)
+      // a little more saturation and contrast in clear sun, softer under cloud
       const dayK = (1 - sky.night) * (1 - weather.dark * 0.8) * (1 - (sky.diffuse || 0) * 0.7);
-      post.grade.uniforms.uSat.value = 0.97 + dayK * 0.06;
-      post.grade.uniforms.uContrast.value = 0.99 + dayK * 0.04;
+      post.grade.uniforms.uSat.value = 0.99 + dayK * 0.06 + LOOK.x * 0.05 + LOOK.y * 0.07;
+      post.grade.uniforms.uContrast.value = 1.0 + dayK * 0.04;
       const aimingNow = S.mode === 'foot' && player.aiming && armed;
       post.update(sky.sunDir, sky.sunDir.y > 0.02 && weather.cover < 0.75, aimingNow ? 18 : camera.position.distanceTo(focus) + 1, aimingNow);
     }
