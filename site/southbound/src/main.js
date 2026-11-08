@@ -26,7 +26,8 @@ import { createBuildings } from './world/buildings.js';
 import { createVegetation, grassUniforms } from './world/vegetation.js';
 import { CollisionWorld } from './world/collision.js';
 import { Player } from './entities/player.js';
-import { Vehicle } from './entities/vehicle.js';
+import { Vehicle, initCarWarmup, warmCars, carsWarming } from './entities/vehicle.js';
+import { specOf } from './assets/carbuilder.js';
 import { locomotion } from './entities/human.js';
 import { Traffic } from './entities/traffic.js';
 import { Peds } from './entities/peds.js';
@@ -63,7 +64,8 @@ import { installRobbery } from './systems/robbery.js';
 import { installStreetLife } from './systems/streetlife.js';
 import { installWorldEvents } from './systems/world-events.js';
 import { installDetails } from './systems/details.js';
-import { buildWeaponModel, applyFinish } from './entities/arsenal.js';
+import { buildWeaponModel, applyFinish, gunModelFor } from './entities/arsenal.js';
+import { kitSignature } from './entities/gunkit.js';
 import { vehiclesOverlap } from './world/collision.js';
 import { LAND } from './assets/catalog.js';
 import { BOATS, AIRCRAFT } from './entities/craft.js';
@@ -324,6 +326,7 @@ vec3 CustomToneMapping( vec3 color ) {
   // further away, cheaper: far cars' small parts and insides, far shadows, far camps' clutter,
   // and no position updates for hidden things (core/detail.js)
   const detail = createDetailManager(scene, q);
+  initCarWarmup(lib);
   detail.keep(player.h.root);
 
   // ---- resolution / post
@@ -413,7 +416,7 @@ vec3 CustomToneMapping( vec3 color ) {
   sky.hour = profile.hour; sky.day = profile.day;
   const interact = new Interactions(scene, hm);
   const game = {
-    S, scene, hm, graph, city, veg, yards, palms, clutter, player, combat, hud, sky, weather, career, interact, parked, lib, q, settings, camera, input, traffic, peds, police, collision, rig, surf, gi, abrasion, footing, lods, lodStats, nearInstanceStats, detail,
+    S, scene, hm, graph, city, veg, yards, palms, clutter, player, combat, hud, sky, weather, career, interact, parked, lib, q, settings, camera, input, traffic, peds, police, collision, rig, surf, gi, abrasion, footing, lods, lodStats, nearInstanceStats, detail, carsWarming, specOf, gunKit: { modelFor: gunModelFor, signature: kitSignature, build: buildWeaponModel },
     pause: (b) => { S.frozen = b; },
     teleport: (x, z, heading = 0) => { api.teleport(x, z, heading); },
     enterVehicle: (v) => enterVehicle(v, null),
@@ -1159,6 +1162,9 @@ vec3 CustomToneMapping( vec3 color ) {
     // resize before drawing: resizing the canvas clears it, and a cleared canvas left
     // on screen is a black frame (this was the flicker during the first seconds)
     detail.update(dt, camera);
+    // the catalogue's car designs, built a few ms a frame in the background (fewer when the frame is short)
+    // (the time left in the frame after the game's own work, 1-8 ms; a car is ~400 slices of a few ms)
+    warmCars(S.paused ? 12 : Math.max(1, Math.min(8, 1000 / settings.targetFps - (S.cpuMs || 10) - 2)));
     dynamicResolution(dt);
     perfGuard();
     if (!S.skipRender) render(); // tests can step the simulation without drawing

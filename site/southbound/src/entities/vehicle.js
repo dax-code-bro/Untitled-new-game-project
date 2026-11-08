@@ -2,11 +2,37 @@
 import * as THREE from 'three';
 import { clamp, lerp } from '../util.js';
 import { VEHICLES } from '../assets/library.js';
-import { makeBodyMaterial, makeCabinDepthMaterial, randomPaint, FIXED_PAINT, SECOND_PAINT, buildCar, wheelGeometry, hasSpec } from '../assets/carbuilder.js';
+import { makeBodyMaterial, makeCabinDepthMaterial, randomPaint, FIXED_PAINT, SECOND_PAINT, buildCar, buildCarGen, wheelGeometry, hasSpec } from '../assets/carbuilder.js';
 import { cabinLayout, splitDoors, POSE } from '../assets/cabin.js';
 
+// ---- the catalogue warms up in the background: each design is built a few milliseconds at a time
+// across frames (a whole one is 100-350 ms, a stall if built when a car spawns), and traffic and
+// parked cars pick only from the ones already built
+let _lib = null, _gen = null, _genType = null;
+const _queue = [];
+export function initCarWarmup(lib) {
+  _lib = lib;
+  const todo = Object.entries(VEHICLES).filter(([k, v]) => v.weight > 0 && !lib.cars[k] && hasSpec(k)).map(([k]) => k);
+  for (let i = todo.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [todo[i], todo[j]] = [todo[j], todo[i]]; }
+  _queue.push(...todo);
+}
+export function warmCars(budgetMs = 3) {
+  if (!_lib) return;
+  const t0 = performance.now();
+  while (performance.now() - t0 < budgetMs) {
+    if (!_gen) {
+      _genType = _queue.shift();
+      if (!_genType) return;
+      if (_lib.cars[_genType]) continue;
+      _gen = buildCarGen(_genType, _lib.quality);
+    }
+    const r = _gen.next();
+    if (r.done) { if (!_lib.cars[_genType]) _lib.cars[_genType] = r.value; _gen = null; }
+  }
+}
+export const carsWarming = () => _queue.length + (_gen ? 1 : 0);
 export function randomCarType(rnd) {
-  const list = Object.entries(VEHICLES).filter(([, v]) => v.weight > 0);
+  const list = Object.entries(VEHICLES).filter(([k, v]) => v.weight > 0 && (!_lib || _lib.cars[k] || !hasSpec(k)));
   let t = rnd() * list.reduce((a, [, v]) => a + v.weight, 0);
   for (const [k, v] of list) { if ((t -= v.weight) <= 0) return k; }
   return 'sedan';
@@ -63,9 +89,10 @@ export class Vehicle {
       const pm = proto.getObjectByName('body').levels[0].object.material;
       this.bodyMat = makeBodyMaterial(spec, pm.isMeshPhysicalMaterial);
       const u = this.bodyMat.userData.u;
-      const paint = FIXED_PAINT[type] || randomPaint();
+      const paint = FIXED_PAINT[type] || spec.paint || randomPaint();
       u.uPaint.value.setRGB(paint[0], paint[1], paint[2]); u.uMetal.value = paint[3];
       if (SECOND_PAINT[type]) u.uPaint2.value.setRGB(...SECOND_PAINT[type]);
+      else if (spec.paint2) u.uPaint2.value.setRGB(...spec.paint2);
       model.getObjectByName('body').traverse((o) => { if (o.isMesh && o.userData.shell) o.material = this.bodyMat; });
       this.procSpec = spec;
       // the close-up level: clear glass and a cabin you can see into
@@ -149,6 +176,7 @@ export class Vehicle {
     sh.scale.set(this.spec.width + 0.55, 1, v.len + 0.7);
     sh.position.y = 0.035; sh.renderOrder = 1; sh.userData.noHit = true; sh.userData.noReflect = true; sh.castShadow = false;
     this.group.add(sh); this.contactShadow = sh;
+    if (this.procSpec?.spoiler) this.setSpoiler(this.procSpec.spoiler); // a factory spoiler (catalog.js designs)
   }
 
   forward() { return { x: Math.sin(this.heading), z: Math.cos(this.heading) }; }

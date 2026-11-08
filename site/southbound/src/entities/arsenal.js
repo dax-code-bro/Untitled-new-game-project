@@ -8,6 +8,7 @@
 import * as THREE from 'three';
 import { loadOpen, loaded, instance, Q } from '../assets/open.js';
 import { dressGun } from './gunparts.js';
+import { kitGun } from './gunkit.js';
 // open-source bow models (Quaternius CC0 medieval weapons pack)
 const BOW_MODELS = [Q('medieval_weapons_pack', 'Bow_Wooden'), Q('medieval_weapons_pack', 'Bow_Wooden2')];
 BOW_MODELS.forEach(loadOpen);
@@ -54,15 +55,22 @@ const PLATFORM_MODELS = {
   bolt: ['m24'], heavy: ['m24'], dmr: ['m24'], lever: ['shotgun2'], semi: ['m24', 'sniperB'],
   grenade: ['grenadel'],
 };
-export const gunRel = (G) => (G.m.startsWith('real/') ? G.m + '.glb' : Q(...G.m.split('/')));
+export const gunRel = (G) => (G.kit ? null : G.m.startsWith('real/') ? G.m + '.glb' : Q(...G.m.split('/')));
+// The photo-scanned models stay on the first guns of the platforms they fit; every other catalogue
+// gun is built by the gun kit as a firearm of its own (gunkit.js): 233 guns were drawn with 23 models
+const REAL_FIRST = { service: ['glock17', 'glock19'], compact: ['glock19'], magnum: ['python', 'navy'], target: ['python'], carbine: ['m4a1'], bolt: ['m24'], pump: ['remington'] };
 export function gunModelFor(w) {
   if (w.modelKey && GUN_MODELS[w.modelKey]) return GUN_MODELS[w.modelKey];
+  const real = REAL_FIRST[w.platform];
+  if (real && (w.tier || 0) < real.length) return GUN_MODELS[real[w.tier || 0]];
+  const kit = !w.melee && w.cat !== 'bow' ? kitGun(w) : null;
+  if (kit) return kit.G;
   const list = PLATFORM_MODELS[w.platform];
   if (!list) return null;
   let h = 0; for (const c of w.id) h = (h * 31 + c.charCodeAt(0)) >>> 0;
   return GUN_MODELS[list[h % list.length]];
 }
-for (const g of Object.values(GUN_MODELS)) loadOpen(gunRel(g));
+for (const g of Object.values(GUN_MODELS)) if (g.real) loadOpen(gunRel(g)); // (the stylised ones are no longer drawn)
 
 const MAKERS = ['Calvera Arms', 'Gulfline', 'Redgrass Works', 'Brazos Ordnance', 'Port Iron', 'Sabine & Co.', 'Mill Creek Forge', 'Arden Precision', 'Sierra Norte Arms', 'Bayou Tactical', 'Lone Heron', 'Cypress Armory'];
 const FINISH = [[0.03, 0.03, 0.035], [0.18, 0.16, 0.12], [0.24, 0.22, 0.17], [0.07, 0.09, 0.06], [0.32, 0.33, 0.35], [0.5, 0.5, 0.52], [0.14, 0.06, 0.03]];
@@ -118,14 +126,14 @@ for (const [cat, [count, , plats]] of Object.entries(CATS)) {
   const catEntry = CATEGORIES.find((c) => c.k === cat);
   for (let i = 0; i < count; i++) {
     const p = plats[i % plats.length];
-    const tier = Math.floor(i / plats.length);
+    const tier = Math.floor(i / plats.length); // (gunModelFor: the first guns of a platform keep a photo-scanned model)
     const maker = MAKERS[Math.floor(r() * MAKERS.length)];
     const nm = MODEL_NAMES[cat][Math.floor(r() * MODEL_NAMES[cat].length)];
     const num = (cat === 'pistol' ? 9 + Math.floor(r() * 40) : 10 + Math.floor(r() * 90)) + (tier > 2 && r() < 0.5 ? 'X' : '');
     const jit = (a) => 1 + (r() - 0.5) * a;
     const id = `${cat}_${String(i + 1).padStart(2, '0')}`;
     const w = {
-      id, cat, platform: p.k, name: `${maker} ${nm}${num}`,
+      id, cat, platform: p.k, tier, name: `${maker} ${nm}${num}`,
       damage: Math.round(p.dmg * jit(0.2) * (1 + tier * 0.025)), rate: +(p.rate * jit(0.18)).toFixed(3),
       clip: Math.max(1, Math.round(p.clip * (p.clip > 2 ? jit(0.35) : 1))), range: Math.round(p.range * jit(0.2)),
       spread: p.spread * jit(0.4), recoil: p.recoil * jit(0.3), pellets: p.pellets || 1,
@@ -303,7 +311,7 @@ function realMaterial(name, finish) {
 // Gun group in "hold space": origin at the shooting hand's wrist, +Z muzzle,
 // +Y up. userData.hold says where everything is for the pose system.
 function buildOpenGun(w, G) {
-  const src = loaded(gunRel(G));
+  const src = G.kit ? kitGun(w) : loaded(gunRel(G));
   if (!src) return null;
   const g = new THREE.Group();
   const inner = src.scene.clone(true);

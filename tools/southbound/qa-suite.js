@@ -354,7 +354,8 @@ async (opts) => {
   await run('distance detail and connection tier', async () => {
     const D = G.detail;
     ok(D && typeof D.update === 'function', 'the distance detail manager is running');
-    for (let i = 0; i < 75; i++) SB.step(1, 1 / 30); // a few sweeps (each root is looked at every ~10 frames, the list every 2 s)
+    // (simulation only: in the software-rendered test browser a rendered step can stall for seconds)
+    SB.skipRender(true); for (let i = 0; i < 75; i++) SB.step(1, 1 / 30); SB.skipRender(false); // a few sweeps (each root is looked at every ~10 frames, the list every 2 s)
     ok(D.stats.cars > 0 && D.stats.people > 0, 'it looks after cars and people (' + D.stats.cars + ' cars, ' + D.stats.people + ' people)');
     ok(D.stats.partsHidden > 0 && D.stats.shadowsOff > 0, 'far parts and far shadows are thinned out (' + D.stats.partsHidden + ' parts, ' + D.stats.shadowsOff + ' shadows)');
     let bad = 0; G.player.h.root.traverse((o) => { if (o.isMesh && !o.layers.isEnabled(0)) bad++; });
@@ -364,6 +365,30 @@ async (opts) => {
     ok(hidden === 0, 'cars close by keep every part (' + near.length + ' within 15 m)');
     const p0 = D.pressure; D.setPressure(0.5); ok(D.R.carSmall < 40, 'under CPU pressure the distances shrink'); D.setPressure(p0);
     ok(typeof G.netTier === 'string' && /connection/.test(G.netTier), 'the connection tier is known (' + G.netTier + ')');
+  });
+
+  await run('every catalogue car its own design', async () => {
+    const land = SB.catalogs.LAND.filter((c) => c.base !== 'concept');
+    // the shape that tells two cars apart: proportions, cabin, heights, edges and fittings
+    const sig = (id) => { const s = G.specOf(id); return s ? [s.L, s.zA0, s.zA1, s.zC1, s.zC0, s.roof, s.nose, s.hood, s.deck, s.belt, s.soft || 1, s.flare || 0, s.rack || 0, s.roofMode || 0, s.bus ? 1 : 0, s.bed ? 1 : 0].map((x) => Math.round(x * 20)).join(',') : null; };
+    const sigs = land.map((c) => sig(c.id)).filter(Boolean);
+    ok(sigs.length >= 90, 'every catalogue car has a body spec (' + sigs.length + ')');
+    ok(new Set(sigs).size === sigs.length, 'no two catalogue cars share a body (' + new Set(sigs).size + ' different of ' + sigs.length + ')');
+    const before = G.carsWarming();
+    SB.skipRender(true); for (let i = 0; i < 120; i++) SB.step(1, 1 / 30); SB.skipRender(false);
+    ok(G.carsWarming() < before || before === 0, 'the catalogue designs build in the background (' + before + ' -> ' + G.carsWarming() + ' left)');
+  });
+
+  await run('every catalogue gun its own model', async () => {
+    const all = Object.values(SB.catalogs.WEAPONS).filter((w) => !w.melee && w.cat !== 'bow' && w.id !== 'fists');
+    const kit = all.filter((w) => G.gunKit.modelFor(w)?.kit);
+    ok(kit.length >= all.length - 12, 'the gun kit builds every catalogue gun but the photo-scanned few (' + kit.length + ' of ' + all.length + ')');
+    const sigs = kit.map((w) => G.gunKit.signature(w));
+    ok(new Set(sigs).size === sigs.length, 'no two kit guns alike (' + new Set(sigs).size + ' different of ' + sigs.length + ')');
+    const m = G.gunKit.build(kit[0]);
+    ok(m && m.userData.hold && m.userData.muzzle && m.userData.hold.kind, 'a kit gun has its hold points and muzzle');
+    const fams = new Set(kit.map((w) => w.platform));
+    ok(fams.size >= 15, 'kit guns cover every platform (' + fams.size + ')');
   });
 
   // NaN sweep over everything in the scene
