@@ -1,5 +1,11 @@
 # Humans - progress log (for a successor)
 
+## REQUEST from director s32 (2026-11-07) - rider expression + per-act lean (X6 race)
+X6-10 (close 85 mm on Abby, "tucked down, laughing into the wind") has no way to make a rider laugh: please add a
+face/expression act for riders (`[t, 'face', { expr: 'laugh' | 'smile' | 'shout', amount }]` or similar). The race also
+wants the s30 per-act rider lean: OUTER_ROCKS sets abby_ride lean 0.55 / remi_ride 0.45 for the WHOLE set (createRider
+lean), so Abby still leans in the landed two-shot X6-17.
+
 ## REQUEST from director s31 (2026-11-07) - young seated riders (X4-13)
 The X4-13 riding school needs young riders (could be children per CHARACTERS.md: wholesome riding lesson only) on small
 dragons. The only seated builds are abby_ride / remi_ride / fall_ride / scout_ride (adult); the director uses scout_ride

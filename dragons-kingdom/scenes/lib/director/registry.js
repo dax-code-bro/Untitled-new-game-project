@@ -81,6 +81,12 @@ export const SETS = {
     from: 'VERDOR_AERIAL at quay level (session 31)',
     continuity: { '1C': { sun: sunDir(102, 31), tod: 'late morning at the harbour (continuous from 1B)', exposure: 1.1 } },
   },
+  OUTER_ROCKS: {
+    file: 'outer-rocks.js', builder: 'outer-rocks', frame: 'VERDOR',
+    libs: ['sets/sky-off-verdor.js (the coast, sea, sky, sun, scanned rocks: its build() as-is)', 'sea stacks, foam collars and instanced seabirds in sets/outer-rocks.js (procedural three.js; limestone = acg_rock26 as the cliffs)', 'scenes/lib/sets/kitbash.js (boulders at the feet)', 'scenes/lib/fx (water-downwash ring, water-spray on the stone)', 'scenes/lib/creatures (Leaf, Charcoal: flight / glide / dive / land / crouch)', 'scenes/lib/humans (remi_ride, abby_ride)', 'runtime/cinematic (physical sky, the sea-mist bank against the stacks)'],
+    from: 'SKY_OFF_VERDOR continued to the outer rocks off the south end of the coast (session 32)',
+    continuity: { '1C': { sun: sunDir(102, 31), tod: 'late morning at the outer rocks (continuous from 1B)', exposure: 1.1 } },
+  },
   BIRTHING_CHAMBER: {
     file: 'birthing-chamber.js', builder: 'birthing-chamber', frame: 'VERDOR',
     libs: ['scenes/lib/architecture/interiors.js (birthingChamber, nest, lamps)', 'scenes/lib/props/verdor.js (the egg: closed / cracked / opened)', 'scenes/lib/creatures (hatchling)', 'scenes/lib/humans (alexandria, attendant, abby, remi, young attendant = messenger)', 'runtime/cinematic (dust in the window shaft)'],

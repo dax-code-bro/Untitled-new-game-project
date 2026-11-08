@@ -3,6 +3,47 @@
 Owner paths: `scenes/lib/director/`, `episodes/s01e01/final/scenes/`, `episodes/s01e01/final/cut/`.
 How it works: `README.md` in this folder. Latest state first.
 
+## Session 32 (2026-11-07/08, budgeted batch 3 of the 1C slates: OUTER_ROCKS set + 14 X6 specs - STILLS only)
+
+Scratch: `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/build3/` - `r1/` .. `r5/` (all stills), `final/` (the kept still
+per shot), `contact-build3.png` (4x4 sheet, X6-01..18 in order, unlabelled). All draft.
+- NEW SET OUTER_ROCKS (registry entry, scene `episodes/s01e01/final/scenes/outer-rocks.js`, builder
+  `sets/outer-rocks.js`, spec `specs/outer-rocks.spec.js`): calls SKY_OFF_VERDOR's build() as-is (coast, sea, sky, sun,
+  scanned rocks) and adds, all procedural: 7 sea stacks (lathe-like rings with noise + ~4 m ledges, leaning; limestone =
+  worldMaterial acg_rock26 box-projected), boulders at the feet (kitbash rocks), foam collars round every foot (canvas
+  alpha texture, scrolled with t), a dark weed bed round the rocks (the shelf there is only ~4-5 m deep and read
+  turquoise), ~700 (draft) / 1300 instanced seabirds (gannet-sized V shapes; `set.birds.lift` = shot-local lift-off
+  time: they burst outward then wheel round the gap 20-100 m up; < -6 = already wheeling; 8 % always airborne), and its
+  own cinematic() with a dense low mist bank against the seaward faces + gap exit and a thin sheet further out.
+  GAP FRAME (spec `map`, builder DEF): u along heading 150 from the gap [700, 0, 3200], v seaward. A (64 m) + B (56 m)
+  lean together: gap 7.2 m at the water, 6.8 m at 10 m, 2.5 m at the top (checked numerically on the noisy rings).
+  C = the low flat-top stack (y 17, ~10 x 9 m); `ground` returns its top so Leaf lands on it. Marks: gap, gapIn, gapOut,
+  lowTop, topA, topB.
+- WIRED (ready for video): OUTER_ROCKS X6-01, 02, 03, 08, 09, 10, 11, 12, 13, 14, 15, 16, 17, 18. Durations = shot-list
+  frames = edl-1C slots. Lines X6-07..10 placed in X6-17 (no build-shots warnings).
+- Stills (looked at): r1 showed the cameras' Super 35 sensor (135 mm is only ~6 deg tall: X6-16 / 17 framed sky - aim
+  lower / go further), X6-11 looked into the sun (az 102) -> from the seaward side, X6-01's pair hid behind the stacks
+  -> camera on the coast side of the axis, X6-17's framing solver failed (1.53 off) -> fixed lens 60 m out, Charcoal
+  hovering at y 19 beside C. Kept: X6-01 stacks + mist right + Leaf small top left; X6-02 the gap slot; X6-03 mist on
+  the seaward face; X6-08 Leaf skimming, stacks ahead; X6-09 Leaf on his side in the gap (static in the gap); X6-10 Abby
+  close; X6-11 Charcoal climbing past the tops, birds; X6-12 the downwash spray + birds lifting between A and B; X6-13
+  Remi low in the saddle from ahead; X6-14 Charcoal folded, diving past the tops; X6-15 Leaf flaring onto C, mist at the
+  feet; X6-16 Charcoal's beat above C, Leaf small on it (size difference); X6-17 Abby on Leaf on C (lower left), Remi on
+  hovering Charcoal (upper right); X6-18 Leaf's head close, Abby's hands top right.
+- KNOWN ISSUES: rock reads blue-grey under the sky (tint warmed after r2, X6-02/08/09/10/14/18 not re-stilled); the
+  stacks are smooth tapered columns at distance (no strong overhangs / guano); seabirds are specks beyond ~150 m; X6-12's
+  downwash mist (FX water-downwash) is a white bank over the lower third - the pale ring itself is hard to see from the
+  water; X6-10 Abby not laughing (no expression act - REQUEST); riders lean for the whole set (also in X6-17); X6-08 water
+  still a little teal near the camera; X6-13 spray (water-spray x3) not in frame at 0.5 (the stacks' tops behind him);
+  X6-16 Leaf is small (honest 135 mm size difference); X6-17 faces small (50 mm at 60 m); X6-18 DEVIATION: "flies a
+  little higher than he needs to" not staged (he is landed). SKY_OFF_VERDOR distant stacks NOT added (would re-key its 6
+  rendered X6 shots + 1C-*; the same stacks can be added by importing outer-rocks' stack geometry later).
+- Verify: npm test 48 pass / 0 fail / 1 skipped (before + after); selftest 20 pass; build-shots: no X6 warnings.
+- NEXT: 1. Lead renders the 14 X6 videos (X6-12/13 carry FX particles; X6-16/17 cast both dragons + riders: --workers 1
+  is safest for OUTER_ROCKS). 2. Re-still X6-02/09 for the warmer rock. 3. Stack detail (overhang ledges, guano streaks)
+  and the downwash ring readable from above (a high X6-12 cutaway). 4. Distant stacks in SKY_OFF_VERDOR for X6-19/20.
+- REQUESTS: humans - a rider expression act (laugh) + per-act lean (humans/PROGRESS.md, s32).
+
 ## Session 31 (2026-11-07, budgeted batch 2 of the 1C slates: VERDOR_HARBOR set + 6 specs - STILLS only)
 
 Scratch: `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/build2/` - `r1/`, `r2/` (all stills), `final/` (the kept still
