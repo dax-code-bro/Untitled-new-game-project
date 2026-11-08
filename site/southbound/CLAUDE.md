@@ -50,6 +50,16 @@ the fewest additions next. Be honest in reports about what is and isn't done.
   camps) via camera layer 0; `setPressure` shrinks it when CPU-bound. `src/core/net.js`: connection
   tier (slow/medium/fast, `?net=` forces) and background downloads. Profile scripts that found the
   costs: `tools/southbound/perf-cpu.mjs` (per-system ms) and `perf-draws.mjs` (draw calls by pass and kind).
+- Cars: every catalogue model's design is in `src/assets/catalog.js` DESIGNS (fractions of half the
+  length for cabin positions, absolute heights, shape features drawn by `carbuilder.js` bodySDF).
+  Cars are built a slice at a time (`buildCarGen`, `vehicle.js` warmCars) and traffic only spawns built
+  ones. Render all of them with the contact-sheet approach (import catalog.js + carbuilder.js in a page).
+- Guns: `src/entities/gunkit.js` builds every catalogue gun except the photo-scanned first few
+  (`arsenal.js` REAL_FIRST); same hold description as downloaded models (g/f/w/b/t fractions).
+  The support-hand point sits ~1.5 cm under the handguard (buildOpenGun lowers it 4.5 cm).
+- Sketchfab: the "Untitled-new-game-project" cloud environment allows it, but the saved API token was
+  rejected; while a bad token is saved even search fails (the proxy adds it to every request). Never
+  use the sketchfab.com/i/ website endpoints (blocked by the safety check).
 - Performance rules learned: count draw calls, not triangles (WebGL pays CPU per call); never walk
   the whole scene (28k objects) in one frame, spread it over frames; three r170's
   `matrixWorldAutoUpdate=false` does not skip children (no gain from freezing hidden roots).
@@ -75,6 +85,9 @@ the fewest additions next. Be honest in reports about what is and isn't done.
   rest of the line: use `/* */`); check the build output says "Done" before starting a test;
   people removed from the scene must call `h.dispose()` (gone for good) or `h.freeGpu()` (may come
   back), or their skeleton's bone texture stays on the GPU (a long session piled up hundreds).
+  A system that hands a person back to ordinary street life (`p.role = undefined`) must leave them
+  somewhere to walk: `peds.home(p)` (people it created itself have no block/corner; that crashed the
+  game for the owner). `peds.update` isolates each person's AI with try/catch (logs `[peds] ...`).
 - Commit one batch at a time: if the next batch's edits are already in the tree, commit only the
   finished batch's files (and an `index.js` without the next batch's `add(...)` line), with the
   `game.js` that was built and QA'd for it.

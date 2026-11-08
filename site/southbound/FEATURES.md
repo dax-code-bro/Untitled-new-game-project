@@ -73,10 +73,10 @@ P1-P4: the owner's list after G11. P1 first-person/third-person gun holding and 
 saves, arriving mid-activity, $50,000 start, dealership "Your cars"; P3 hideout defence, police cover
 and peeking; P4 unique models for all 244 tools.)
 
-**Open from the owner's list:** cars (93 models from ~11 base bodies) and guns (233 catalogue guns on
-20 base models) are still "slightly different versions" of a smaller set of shapes. Needs new
-distinct bodies/models (new procedural car bodies: van, minivan, coupe, wagon, sports car...; more
-CC0 gun models), or a smaller gun catalogue of truly different guns. Ask the owner which.
+**Done (Phase 1.58):** every one of the 93 cars has its own design and all of them drive in traffic;
+every catalogue gun beyond the photo-scanned few is built as its own firearm by the gun kit. Still
+possible later: photo-real downloads from Sketchfab once a valid API token is saved in the
+"Untitled-new-game-project" environment (the one entered was rejected).
 
 ## Backlog: ideas per feature (take from here, strike when shipped)
 

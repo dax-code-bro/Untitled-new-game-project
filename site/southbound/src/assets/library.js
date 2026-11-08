@@ -16,15 +16,15 @@ export const PEOPLE_LITE = ['mh_m2', 'mh_f1', 'mh_cop'];
 
 // Real-world lengths + handling for each vehicle (bodies come from carbuilder.js)
 export const VEHICLES = {
-  sedan: { name: 'Meridian Sedan', len: 4.7, accel: 9, top: 50, grip: 7.5, weight: 6 },
-  'sedan-sports': { name: 'Vantor GT', len: 4.6, accel: 13, top: 72, grip: 9, weight: 2 },
-  'hatchback-sports': { name: 'Rivet Hatch', len: 4.2, accel: 12, top: 62, grip: 9, weight: 2 },
-  suv: { name: 'Brazos Trailhand', len: 4.9, accel: 8, top: 46, grip: 6.5, weight: 4 },
-  'suv-luxury': { name: 'Brazos Platinum', len: 5.0, accel: 9.5, top: 54, grip: 7, weight: 2 },
+  sedan: { name: 'Meridian Sedan', len: 4.7, accel: 9, top: 50, grip: 7.5, weight: 1.5 },
+  'sedan-sports': { name: 'Vantor GT', len: 4.6, accel: 13, top: 72, grip: 9, weight: 0.4 },
+  'hatchback-sports': { name: 'Rivet Hatch', len: 4.2, accel: 12, top: 62, grip: 9, weight: 0.6 },
+  suv: { name: 'Brazos Trailhand', len: 4.9, accel: 8, top: 46, grip: 6.5, weight: 1 },
+  'suv-luxury': { name: 'Brazos Platinum', len: 5.0, accel: 9.5, top: 54, grip: 7, weight: 0.5 },
   taxi: { name: 'Calvera Cab', len: 4.8, accel: 9, top: 50, grip: 7.5, weight: 2 },
-  van: { name: 'Coastline Hauler', len: 5.0, accel: 7, top: 40, grip: 6, weight: 2 },
+  van: { name: 'Coastline Hauler', len: 5.0, accel: 7, top: 40, grip: 6, weight: 0.6 },
   delivery: { name: 'Gulf Parcel Van', len: 5.8, accel: 6.5, top: 36, grip: 5.5, weight: 1.5 },
-  truck: { name: 'Ranchero 2500', len: 5.5, accel: 8, top: 46, grip: 6.2, weight: 3 },
+  truck: { name: 'Ranchero 2500', len: 5.5, accel: 8, top: 46, grip: 6.2, weight: 0.8 },
   police: { name: 'Calvera PD Cruiser', len: 5.0, accel: 12.5, top: 64, grip: 8.5, weight: 0 },
   ambulance: { name: 'Mercy Ambulance', len: 6.2, accel: 7.5, top: 44, grip: 6, weight: 0.4 },
   firetruck: { name: 'CFD Engine 9', len: 8.8, accel: 6, top: 36, grip: 5, weight: 0.2 },

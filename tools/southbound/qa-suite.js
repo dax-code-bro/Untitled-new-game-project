@@ -354,7 +354,8 @@ async (opts) => {
   await run('distance detail and connection tier', async () => {
     const D = G.detail;
     ok(D && typeof D.update === 'function', 'the distance detail manager is running');
-    for (let i = 0; i < 75; i++) SB.step(1, 1 / 30); // a few sweeps (each root is looked at every ~10 frames, the list every 2 s)
+    // (simulation only: in the software-rendered test browser a rendered step can stall for seconds)
+    SB.skipRender(true); for (let i = 0; i < 75; i++) SB.step(1, 1 / 30); SB.skipRender(false); // a few sweeps (each root is looked at every ~10 frames, the list every 2 s)
     ok(D.stats.cars > 0 && D.stats.people > 0, 'it looks after cars and people (' + D.stats.cars + ' cars, ' + D.stats.people + ' people)');
     ok(D.stats.partsHidden > 0 && D.stats.shadowsOff > 0, 'far parts and far shadows are thinned out (' + D.stats.partsHidden + ' parts, ' + D.stats.shadowsOff + ' shadows)');
     let bad = 0; G.player.h.root.traverse((o) => { if (o.isMesh && !o.layers.isEnabled(0)) bad++; });
@@ -364,6 +365,50 @@ async (opts) => {
     ok(hidden === 0, 'cars close by keep every part (' + near.length + ' within 15 m)');
     const p0 = D.pressure; D.setPressure(0.5); ok(D.R.carSmall < 40, 'under CPU pressure the distances shrink'); D.setPressure(p0);
     ok(typeof G.netTier === 'string' && /connection/.test(G.netTier), 'the connection tier is known (' + G.netTier + ')');
+  });
+
+  await run('every catalogue car its own design', async () => {
+    const land = SB.catalogs.LAND.filter((c) => c.base !== 'concept');
+    // the shape that tells two cars apart: proportions, cabin, heights, edges and fittings
+    const sig = (id) => { const s = G.specOf(id); return s ? [s.L, s.zA0, s.zA1, s.zC1, s.zC0, s.roof, s.nose, s.hood, s.deck, s.belt, s.soft || 1, s.flare || 0, s.rack || 0, s.roofMode || 0, s.bus ? 1 : 0, s.bed ? 1 : 0].map((x) => Math.round(x * 20)).join(',') : null; };
+    const sigs = land.map((c) => sig(c.id)).filter(Boolean);
+    ok(sigs.length >= 90, 'every catalogue car has a body spec (' + sigs.length + ')');
+    ok(new Set(sigs).size === sigs.length, 'no two catalogue cars share a body (' + new Set(sigs).size + ' different of ' + sigs.length + ')');
+    const before = G.carsWarming();
+    SB.skipRender(true); for (let i = 0; i < 120; i++) SB.step(1, 1 / 30); SB.skipRender(false);
+    ok(G.carsWarming() < before || before === 0, 'the catalogue designs build in the background (' + before + ' -> ' + G.carsWarming() + ' left)');
+  });
+
+  await run('every catalogue gun its own model', async () => {
+    const all = Object.values(SB.catalogs.WEAPONS).filter((w) => !w.melee && w.cat !== 'bow' && w.id !== 'fists');
+    const kit = all.filter((w) => G.gunKit.modelFor(w)?.kit);
+    ok(kit.length >= all.length - 12, 'the gun kit builds every catalogue gun but the photo-scanned few (' + kit.length + ' of ' + all.length + ')');
+    const sigs = kit.map((w) => G.gunKit.signature(w));
+    ok(new Set(sigs).size === sigs.length, 'no two kit guns alike (' + new Set(sigs).size + ' different of ' + sigs.length + ')');
+    const m = G.gunKit.build(kit[0]);
+    ok(m && m.userData.hold && m.userData.muzzle && m.userData.hold.kind, 'a kit gun has its hold points and muzzle');
+    const fams = new Set(kit.map((w) => w.platform));
+    ok(fams.size >= 15, 'kit guns cover every platform (' + fams.size + ')');
+  });
+
+  // The owner's crash: a hitchhiker dropped off in town (systems/roadside.js) went back to ordinary
+  // street life with no block or corner to walk to, and the pedestrian AI read `target[0]` of nothing
+  // every frame until the "Something went wrong" storm
+  await run('people handed back to the street always have somewhere to go', async () => {
+    const pp = G.player.pos, peds = G.peds;
+    const bare = (p) => { for (const k of ['G', 'i', 'j', 'corner', 'target', 'idleT', 'threat']) delete p[k]; return p; };
+    const a = bare(peds.spawnAt(pp.x + 5, pp.z + 3, null)); a.role = undefined; a.mode = 'walk'; // the dropped-off passenger
+    const b = bare(peds.spawnAt(pp.x - 5, pp.z + 3, null)); b.mode = 'flee'; b.timer = 0.2; // runs from trouble with no home block, then calms down
+    const c = peds.spawnAt(pp.x + 4, pp.z - 4, null); // and one whose own AI throws
+    const think = peds.think;
+    peds.think = function (p, dt, pl) { if (p === c) throw new Error('qa: deliberately broken person'); return think.call(this, p, dt, pl); };
+    let threw = null;
+    try { SB.skipRender(true); for (let i = 0; i < 20; i++) SB.step(1, 1 / 30); } catch (e) { threw = e; } finally { peds.think = think; SB.skipRender(false); }
+    ok(!threw, 'the frame goes on (' + (threw && threw.message) + ')');
+    ok(a.G && Array.isArray(a.target) && Number.isFinite(a.target[0]) && finite(a.pos), 'the dropped-off passenger picks a corner and walks to it');
+    ok(b.G && (b.mode === 'return' || b.mode === 'walk' || b.mode === 'idle') && finite(b.pos), 'someone with no home block runs, then heads back to the street (' + b.mode + ')');
+    ok(!peds.list.includes(c), 'a person whose thinking keeps failing is let go, not the game');
+    for (const p of [a, b]) { const k = peds.list.indexOf(p); if (k >= 0) { G.scene.remove(p.h.root); p.h.dispose(); peds.list.splice(k, 1); } }
   });
 
   // NaN sweep over everything in the scene

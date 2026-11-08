@@ -68,20 +68,27 @@ function roundBox(cx, cy, cz, hx, hy, hz, r) {
 const mirrorX = (f) => { const g = (x, y, z) => f(Math.abs(x), y, z); if (f.bound) g.bound = (x, y, z) => f.bound(Math.abs(x), y, z); return g; };
 
 // ------------------------------------------------------------ surface nets
-function surfaceNets(sdf, min, max, h) {
+// (a generator, so a car can be built a few milliseconds at a time across frames: catalog cars warm up
+// in the background while you play; surfaceNets() runs it straight through)
+const drain = (g) => { let r; while (!(r = g.next()).done); return r.value; };
+function surfaceNets(sdf, min, max, h) { return drain(surfaceNetsGen(sdf, min, max, h)); }
+function* surfaceNetsGen(sdf, min, max, h) {
   const nx = Math.ceil((max[0] - min[0]) / h) + 2, ny = Math.ceil((max[1] - min[1]) / h) + 2, nz = Math.ceil((max[2] - min[2]) / h) + 2;
   const F = new Float32Array(nx * ny * nz);
   const id = (i, j, k) => i + nx * (j + ny * k);
   // coarse pass (every 3rd point); fine points are only evaluated near the surface
   const C = 3, cx = Math.ceil(nx / C) + 1, cy = Math.ceil(ny / C) + 1, cz = Math.ceil(nz / C) + 1;
   const G = new Float32Array(cx * cy * cz);
-  for (let k = 0; k < cz; k++) for (let j = 0; j < cy; j++) for (let i = 0; i < cx; i++) G[i + cx * (j + cy * k)] = sdf(min[0] + i * C * h, min[1] + j * C * h, min[2] + k * C * h);
+  for (let k = 0; k < cz; k++) { for (let j = 0; j < cy; j++) for (let i = 0; i < cx; i++) G[i + cx * (j + cy * k)] = sdf(min[0] + i * C * h, min[1] + j * C * h, min[2] + k * C * h); yield; }
   const band = C * h * 1.9;
-  for (let k = 0; k < nz; k++) for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
-    if (i === 0 || j === 0 || k === 0 || i === nx - 1 || j === ny - 1 || k === nz - 1) { F[id(i, j, k)] = 1; continue; }
-    const gi = Math.round(i / C), gj = Math.round(j / C), gk = Math.round(k / C);
-    const g = G[gi + cx * (gj + cy * gk)];
-    F[id(i, j, k)] = Math.abs(g) > band ? g : sdf(min[0] + i * h, min[1] + j * h, min[2] + k * h);
+  for (let k = 0; k < nz; k++) {
+    for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+      if (i === 0 || j === 0 || k === 0 || i === nx - 1 || j === ny - 1 || k === nz - 1) { F[id(i, j, k)] = 1; continue; }
+      const gi = Math.round(i / C), gj = Math.round(j / C), gk = Math.round(k / C);
+      const g = G[gi + cx * (gj + cy * gk)];
+      F[id(i, j, k)] = Math.abs(g) > band ? g : sdf(min[0] + i * h, min[1] + j * h, min[2] + k * h);
+    }
+    yield;
   }
   const V = new Int32Array(nx * ny * nz).fill(-1);
   const pos = [];
@@ -101,9 +108,11 @@ function surfaceNets(sdf, min, max, h) {
     V[id(i, j, k)] = pos.length / 3;
     pos.push(min[0] + (i + sx / n) * h, min[1] + (j + sy / n) * h, min[2] + (k + sz / n) * h);
   }
+  yield;
   const nrm = new Float32Array(pos.length);
   const e = h * 0.5;
   for (let v = 0; v < pos.length; v += 3) {
+    if (v % 1500 === 0) yield;
     const x = pos[v], y = pos[v + 1], z = pos[v + 2];
     const gx = sdf(x + e, y, z) - sdf(x - e, y, z), gy = sdf(x, y + e, z) - sdf(x, y - e, z), gz = sdf(x, y, z + e) - sdf(x, y, z - e);
     const l = hyp3(gx, gy, gz) || 1;
@@ -209,16 +218,32 @@ export function deriveSpec(baseKey, o = {}) {
     s.axF = L / 2 - 2.3; s.axR = -L / 2 + 2.6; s.glassBack = -99; s.zB = -99; s.doorR = 99; s.Rw = 0.5; s.tw = 0.3; s.hwc = W / 2 - 0.02; s.tumble = 0.0;
     s.head = [W / 2 - 0.3, 0.7, 0.16, 0.08]; s.tail4 = [W / 2 - 0.15, 0.9, 0.08, 0.18]; s.stripe = 1.05; s.cabover = true; delete s.box; s.bus = true;
   }
+  // ---- a design of its own (catalog.js): positions as fractions of the half length (+ toward the
+  // nose), heights in metres, and the shape features bodySDF draws
+  if (o.ext && s.bed) { s.zC0 -= o.ext; s.zC1 -= o.ext; s.bed = [s.bed[0] - o.ext, s.bed[1], s.bed[2]]; s.zB = s.zA1 - 0.6; s.doorR = 99; } // extended cab
+  if (o.busHood && s.bus) { s.cabover = false; s.zA0 = L / 2 - 2.2; s.zA1 = L / 2 - 2.45; s.nose = 0.98; s.hood = s.belt - 0.38; s.head = [W / 2 - 0.38, 1.08, 0.12, 0.08]; } // a school bus' bonnet
+  if (o.f) { const h = L / 2; for (const k of ['zA0', 'zA1', 'zC1', 'zC0', 'axF', 'axR', 'zB', 'doorR', 'glassBack']) if (o.f[k] !== undefined) s[k] = o.f[k] * h; }
+  if (o.set) Object.assign(s, o.set);
+  for (const k of ['soft', 'bulge', 'scoop', 'waist', 'flare', 'rack', 'spare', 'bullbar', 'steps', 'roofMode', 'roofC', 'chrome', 'split', 'paint', 'paint2', 'grilleH', 'spoiler', 'tumble', 'ride', 'tw'])
+    if (o[k] !== undefined) s[k] = o[k];
+  if (o.flatbed && s.bed) s.bed = [s.bed[0], s.bed[1], s.belt - 0.1]; // a flat deck, not a tub
+  if (o.blunt) { s.nose = s.hood - 0.05; s.soft = Math.min(s.soft || 1, 0.6); s.grilleH = Math.max(s.grilleH || 0.075, 0.13); s.grille = Math.max(s.grille, 0.5); } // an upright truck front
+  if (o.coupe) { s.doorR = 99; s.zB = s.zC0 + (s.zA0 - s.zC0) * 0.38; }
+  // keep the cabin sane whatever the numbers: windscreen ahead of the rear window, roof above the belt
+  s.zA1 = Math.min(s.zA1, s.zA0 - 0.15); s.zC1 = Math.min(s.zC1, s.zA1 - 0.4); s.zC0 = Math.min(s.zC0, s.zC1 + 0.02);
+  s.roof = Math.max(s.roof, s.belt + 0.3); s.hood = Math.min(s.hood, s.belt); s.deck = Math.min(s.deck, s.belt + 0.02);
+  if (s.head) s.head = [Math.min(s.head[0], W / 2 - s.head[2] - 0.04), s.head[1], s.head[2], s.head[3]];
   return s;
 }
 export function registerSpec(id, spec) { P[id] = spec; }
 // Rico's '89 pickup: a short-bed workhorse on steel wheels, faded paint and rust
 P['rusty-pickup'] = { ...deriveSpec('truck', { L: 5.2, W: 1.95, hk: 0.97, spokes: 0 }), rust: 0.85 };
 export function hasSpec(id) { return !!P[id]; }
+export const specOf = (id) => P[id] || null;
 
 function bodySDF(s) {
   const L2 = s.L / 2, W2 = s.W / 2;
-  const parts = [];
+  const parts = [], extrasLater = [];
   // lower body: nose -> hood -> belt line -> deck -> tail
   const top = s.cabover
     ? [[L2, s.belt - 0.1], [L2 - 0.3, s.belt], [-L2, s.belt]]
@@ -226,7 +251,7 @@ function bodySDF(s) {
       [s.zC0 - 0.12, s.deck], [-L2 + 0.22, s.deck - 0.02], [-L2, s.tail]];
   const lowFront = s.ride + 0.1;
   parts.push(block({
-    top, kTop: s.cabover ? 0.12 : 0.13, kEnd: s.cabover ? 0.18 : 0.32,
+    top, kTop: (s.cabover ? 0.12 : 0.13) * (s.soft || 1), kEnd: (s.cabover ? 0.18 : 0.32) * (s.soft || 1),
     bot: [[L2, lowFront + 0.08], [L2 - 0.5, s.ride], [-L2 + 0.5, s.ride], [-L2, lowFront + 0.1]],
     front: [[0, L2 - 0.12], [lowFront + 0.15, L2], [s.nose, L2 - (s.cabover ? 0.02 : 0.06)], [s.nose + 0.4, L2 - 0.4]],
     rear: [[0, -L2 + 0.12], [lowFront + 0.15, -L2], [s.tail + 0.2, -L2 + 0.06]],
@@ -239,13 +264,43 @@ function bodySDF(s) {
     bot: [[-L2, s.belt - 0.25], [L2, s.belt - 0.25]],
     front: [[s.belt, s.zA0], [s.roof, s.zA1]], rear: [[s.belt, s.zC0], [s.roof, s.zC1]],
     side: [[s.belt, s.hwc], [s.roof, s.hwc - (s.roof - s.belt) * s.tumble]],
-    kTop: s.cabover ? 0.1 : 0.09, kEnd: s.cabover ? 0.12 : 0.05, kBot: 0.02,
+    kTop: (s.cabover ? 0.1 : 0.09) * (s.soft || 1), kEnd: (s.cabover ? 0.12 : 0.05) * (s.soft || 1), kBot: 0.02,
   }));
   // cargo box (box trucks)
   if (s.box) {
     const [z0, z1, yt] = s.box;
     parts.push(roundBox(0, (s.belt - 0.6 + yt) / 2, (z0 + z1) / 2, W2, (yt - (s.belt - 0.6)) / 2, (z0 - z1) / 2, 0.1));
   }
+  // ---- design features (each catalogue model has its own: core of the unique-designs pass)
+  const blend = []; // smoothly blended into the body
+  // a raised power dome down the middle of the bonnet
+  if (s.bulge) { const z0 = s.zA0 + 0.12, z1 = s.zA0 + (L2 - s.zA0) * 0.62; blend.push(roundBox(0, s.hood - 0.03, (z0 + z1) / 2, W2 * 0.3, 0.03 + s.bulge, (z1 - z0) / 2, 0.05)); }
+  // a bonnet scoop, open at the front
+  if (s.scoop) {
+    const zc = s.zA0 + 0.42, sc = roundBox(0, s.hood + 0.05, zc, 0.24, 0.07, 0.26, 0.035), mouth = roundBox(0, s.hood + 0.07, zc + 0.3, 0.19, 0.04, 0.12, 0.01);
+    extrasLater.push((x, y, z) => smax(sc(x, y, z), -mouth(x, y, z), 0.01));
+  }
+  // boxy wheel-arch flares (off-roaders, hot hatches)
+  if (s.flare) for (const za of [s.axF, s.axR]) blend.push(mirrorX(roundBox(W2 - 0.04 + s.flare / 2, s.Rw + 0.06, za, s.flare / 2 + 0.05, s.Rw * 0.62, s.Rw + 0.3, 0.05)));
+  // roof rails and crossbars
+  if (s.rack) {
+    const tw = s.hwc - (s.roof - s.belt) * s.tumble - 0.1, zc = (s.zA1 + s.zC1) / 2, hz = Math.max(0.3, (s.zA1 - s.zC1) / 2 * 0.86);
+    extrasLater.push(mirrorX(roundBox(tw, s.roof + 0.045, zc, 0.022, 0.03, hz, 0.012)));
+    if (s.rack > 1) for (const k of [-0.55, 0.0, 0.55]) extrasLater.push(roundBox(0, s.roof + 0.085, zc + k * hz, tw, 0.014, 0.022, 0.008));
+  }
+  // a spare wheel on the tailgate
+  if (s.spare) {
+    const cy = Math.max(s.ride + s.Rw + 0.2, s.tail - s.Rw - 0.05), r = s.Rw + 0.02;
+    extrasLater.push((x, y, z) => Math.max(hyp2(x, y - cy) - r, Math.abs(z - (-L2 - 0.11)) - 0.1));
+  }
+  // a tubular bull bar on the nose
+  if (s.bullbar) {
+    extrasLater.push(mirrorX(roundBox(0.42, s.ride + 0.3, L2 + 0.1, 0.028, 0.3, 0.028, 0.02)));
+    extrasLater.push(roundBox(0, s.ride + 0.58, L2 + 0.1, 0.45, 0.028, 0.028, 0.02));
+    extrasLater.push(roundBox(0, s.ride + 0.2, L2 + 0.06, 0.6, 0.05, 0.06, 0.02));
+  }
+  // running boards under the doors
+  if (s.steps) extrasLater.push(mirrorX(roundBox(W2 + 0.035, s.ride + 0.14, (s.axF + s.axR) / 2, 0.075, 0.022, Math.max(0.3, (s.axF - s.axR) / 2 - s.Rw - 0.22), 0.01)));
   // fender humps over the wheels
   const axles = [s.axF, s.axR];
   const fender = s.fender || 0.12;
@@ -257,7 +312,7 @@ function bodySDF(s) {
   // side mirrors and roof equipment
   const mirror = mirrorX(roundBox(s.hwc + 0.12, s.belt + 0.07, s.zA0 - 0.12, 0.1, 0.06, 0.05, 0.035));
   const mirrorArm = mirrorX(roundBox(s.hwc + 0.03, s.belt + 0.04, s.zA0 - 0.12, 0.06, 0.02, 0.025, 0.012));
-  const extras = [mirror, mirrorArm];
+  const extras = [mirror, mirrorArm, ...extrasLater];
   if (s.bar === 'siren') extras.push(roundBox(0, s.roof + 0.07, s.cabover ? s.zA1 - 0.5 : (s.zA1 + s.zC1) / 2 + 0.25, 0.62, 0.065, 0.13, 0.05));
   if (s.bar === 'taxi') extras.push(roundBox(0, s.roof + 0.1, (s.zA1 + s.zC1) / 2, 0.36, 0.1, 0.11, 0.04));
   if (s.tow) {
@@ -269,9 +324,13 @@ function bodySDF(s) {
     extras.push(mirrorX(roundBox(0.55, s.box[2] + 0.12, -1.0, 0.04, 0.05, 3.2, 0.02)));
     for (let z = -4.0; z <= 2.0; z += 0.5) extras.push(roundBox(0, s.box[2] + 0.12, z, 0.55, 0.025, 0.025, 0.012));
   }
+  // a pinched waist ("coke bottle"): narrower at the doors than over the wheels
+  const zm = (s.zA0 + s.zC0) / 2, wl = s.L * 0.2;
   return (x, y, z) => {
+    if (s.waist) x *= 1 + s.waist * Math.exp(-(((z - zm) / wl) ** 2));
     let d = smin(parts[0](x, y, z), parts[1](x, y, z), s.cabover ? 0.05 : 0.04);
     if (parts[2]) d = smin(d, parts[2](x, y, z), 0.04);
+    for (const b of blend) d = smin(d, b(x, y, z), 0.09);
     d = smin(d, fenders(x, y, z), 0.14);
     for (const e of extras) if (!e.bound || e.bound(x, y, z) < d) d = Math.min(d, e(x, y, z));
     // wheel arches (cut only through the outer shell so the wells stay closed)
@@ -294,7 +353,8 @@ const BODY_GLSL = /* glsl */ `
 uniform vec3 uPaint, uPaint2;
 uniform float uMetal, uLights, uBrake, uSirenR, uSirenB, uLivery, uTint, uLightK, uClear, uRust, uDirt, uWet;
 float sbFlake = 0.0;
-uniform vec4 uCab, uCabZ, uBody, uAxle, uHead, uTail, uMisc, uBar;
+uniform vec4 uCab, uCabZ, uBody, uAxle, uHead, uTail, uMisc, uBar, uStyle;
+uniform vec3 uRoofC; uniform float uGrilleH;
 varying vec3 vCarP; varying vec3 vCarN;
 vec3 sbAlb; vec3 sbEmit; float sbRough, sbMetal, sbCoat, sbGlassK;
 float sbHash(vec3 p){ p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
@@ -322,7 +382,7 @@ void sbZones(){
   if (p.y < uBody.w + 0.05 || n.y < -0.55) { sbAlb = vec3(0.022); sbRough = 0.75; sbMetal = 0.0; sbCoat = 0.0; paint = false; }
   // wheel wells
   float dW = min(length(vec2(p.z - uAxle.x, p.y - uAxle.z)), length(vec2(p.z - uAxle.y, p.y - uAxle.z)));
-  if (dW < uAxle.z + 0.09 && ax < uBody.x - 0.012) { sbAlb = vec3(0.01); sbRough = 0.92; sbMetal = 0.0; sbCoat = 0.0; paint = false; }
+  if (dW < uAxle.z + 0.09 && ax < uBody.x - 0.012 && n.y < 0.45) { sbAlb = vec3(0.01); sbRough = 0.92; sbMetal = 0.0; sbCoat = 0.0; paint = false; }
   // greenhouse: windscreen, rear window, side glass, pillars and trim
   if (p.y > belt + 0.02 && p.y < roof + 0.01) {
     float tw = clamp((p.y - belt) / (roof - belt), 0.0, 1.0);
@@ -338,11 +398,22 @@ void sbZones(){
         if (edge > 0.0) { glass = edge > 0.016 && abs(p.z - uAxle.w) > 0.045; trim = !glass; }
       }
     }
+    // two-tone body above the split line; a vinyl or fabric roof
+    if (!glass && !trim && uStyle.z > 0.0 && p.y > uStyle.z) sbAlb = uPaint2;
+    if (!glass && !trim && uStyle.x > 0.5 && p.y > mix(belt, roof, uStyle.x > 1.5 ? 0.3 : 0.82)) {
+      sbAlb = uRoofC; sbRough = uStyle.x > 1.5 ? 0.92 : 0.55; sbMetal = 0.0; sbCoat = uStyle.x > 1.5 ? 0.0 : 0.3; paint = false;
+      if (uStyle.x > 1.5) sbAlb *= 0.85 + 0.15 * sbNoise(p * 160.0); // woven cloth
+    }
     if (glass) { sbGlassK = 1.0; sbAlb = vec3(0.01, 0.012, 0.014) * (1.0 - uTint * 0.8) + vec3(0.03, 0.035, 0.04) * (1.0 - uTint) * step(p.y, belt + (roof - belt) * 0.45); sbRough = 0.025; sbMetal = 0.0; sbCoat = 1.0; paint = false; }
     else if (trim) { sbAlb = vec3(0.018); sbRough = 0.3; sbMetal = 0.0; sbCoat = 0.6; paint = false; }
   }
+  if (paint && uStyle.z > 0.0 && p.y > uStyle.z && p.y <= belt + 0.02) sbAlb = uPaint2;
+  // chrome bumpers
+  if (uStyle.y > 0.5 && (p.z > uBody.y - 0.16 || p.z < uBody.z + 0.16) && p.y > uBody.w + 0.07 && p.y < uBody.w + 0.3) { sbAlb = vec3(0.72); sbMetal = 1.0; sbRough = 0.1; sbCoat = 1.0; paint = false; }
+  // black accessories: roof rails, running boards, bull bar, spare wheel, flares' plastic cladding
+  if (uStyle.w > 0.5 && (p.y > roof + 0.025 || ax > uBody.x + 0.012 || p.z > uBody.y + 0.03 || p.z < uBody.z - 0.03)) { sbAlb = vec3(0.025); sbRough = 0.7; sbMetal = 0.2; sbCoat = 0.0; paint = false; }
   // front: headlights, grille, plate
-  if (n.z > 0.25 && p.z > uBody.y - 0.6) {
+  if (n.z > 0.25 && p.z > uBody.y - 0.6 && p.z < uBody.y + 0.025) {
     vec2 hp = vec2(ax, p.y) - uHead.xy;
     hp.y -= hp.x * 0.18; // lamps sweep up toward the corners
     float hl = sbRect(hp, vec2(0.0), uHead.zw, 0.025);
@@ -354,14 +425,15 @@ void sbZones(){
       sbEmit = vec3(1.0, 0.96, 0.9) * (led * (1.2 + uLights * 6.0) + proj * uLights * 12.0 + 0.04 * (1.0 - led)) * uLightK;
     } else if (hl < 0.008) { sbAlb = vec3(0.06); sbRough = 0.25; sbMetal = 0.6; paint = false; }
     vec2 gc = vec2(0.0, uHead.y - uHead.w - 0.075);
-    float gr = sbRect(p.xy, gc, vec2(uMisc.z, 0.075), 0.03);
+    gc.y -= uGrilleH - 0.075;
+    float gr = sbRect(p.xy, gc, vec2(uMisc.z, uGrilleH), 0.03);
     if (gr < 0.0) { float m = step(0.45, fract(p.x * 30.0)) * step(0.45, fract(p.y * 30.0 + step(0.5, fract(p.x * 15.0)) * 0.5));
       sbAlb = vec3(0.012 + m * 0.035); sbRough = 0.5; sbMetal = 0.4; sbCoat = 0.0; paint = false; }
     else if (gr < 0.014) { sbAlb = vec3(0.7); sbMetal = 1.0; sbRough = 0.12; paint = false; }
     sbPlate(p.xy, vec2(0.0, uBody.w + 0.2));
   }
   // rear: tail lights and plate
-  if (n.z < -0.25 && p.z < uBody.z + 0.6) {
+  if (n.z < -0.25 && p.z < uBody.z + 0.6 && p.z > uBody.z - 0.025) {
     float tl = sbRect(vec2(ax, p.y), uTail.xy, uTail.zw, 0.025);
     if (tl < 0.0) { sbAlb = vec3(0.22, 0.008, 0.008); sbRough = 0.08; sbMetal = 0.1; sbCoat = 1.0; paint = false;
       float inner = sbRect(vec2(ax, p.y), uTail.xy, uTail.zw - 0.025, 0.02);
@@ -447,6 +519,10 @@ function bodyUniforms(s) {
     uHead: V4(...s.head), uTail: V4(...s.tail4),
     uMisc: V4(s.glassBack, s.box ? 0 : 1, s.grille, s.doorR),
     uBar: V4(s.bar ? s.roof + 0.008 : 0, s.bar === 'taxi' ? 2 : 1, s.stripe || 0, s.twoTone ? 1 : 0),
+    // style: x roof (0 painted, 1 vinyl top, 2 fabric soft top), y chrome bumpers, z two-tone split height
+    // (above it: uPaint2), w black accessories (rails, steps, bull bar, spare wheel)
+    uStyle: V4(s.roofMode || 0, s.chrome ? 1 : 0, s.split || 0, s.rack || s.steps || s.bullbar || s.spare || s.flare ? 1 : 0),
+    uRoofC: { value: new THREE.Color(...(s.roofC || [0.02, 0.02, 0.022])) }, uGrilleH: { value: s.grilleH || 0.075 },
     uClear: { value: 0 }, uRust: { value: s.rust || 0 },
     uDirt: { value: 0 }, uWet: worldUniforms.uWet, // (shared: the weather's wetness)
   };
@@ -622,17 +698,19 @@ function getWheelMaterial() {
 // ------------------------------------------------------------ public API
 export const CAR_TYPES = Object.keys(P);
 
-export function buildCar(type, quality) {
+export function buildCar(type, quality) { return drain(buildCarGen(type, quality)); }
+// the same, a slice at a time (vehicle.js warms the catalogue up this way while you play)
+export function* buildCarGen(type, quality) {
   const s = P[type] || P.sedan;
   const phone = quality && (quality.key === 'phone' || quality.key === 'low');
   const h = Math.max(phone ? 0.065 : 0.045, s.L / (phone ? 100 : 150));
   const top = Math.max(s.roof, s.box ? s.box[2] : 0) + 0.25;
   const sdf = bodySDF(s);
-  const geo = surfaceNets(sdf, [-s.W / 2 - 0.3, 0.0, -s.L / 2 - 0.1], [s.W / 2 + 0.3, top, s.L / 2 + 0.1], h);
+  const geo = yield* surfaceNetsGen(sdf, [-s.W / 2 - 0.3, 0.0, -s.L / 2 - 0.1], [s.W / 2 + 0.3, top, s.L / 2 + 0.1], h);
   const root = new THREE.Group();
   const mat = makeBodyMaterial(s, quality ? quality.physicalPaint !== false : true);
   const hi = new THREE.Mesh(geo, mat);
-  const lo = new THREE.Mesh(surfaceNets(sdf, [-s.W / 2 - 0.3, 0.0, -s.L / 2 - 0.1], [s.W / 2 + 0.3, top, s.L / 2 + 0.1], Math.max(0.11, s.L / 60)), mat);
+  const lo = new THREE.Mesh(yield* surfaceNetsGen(sdf, [-s.W / 2 - 0.3, 0.0, -s.L / 2 - 0.1], [s.W / 2 + 0.3, top, s.L / 2 + 0.1], Math.max(0.11, s.L / 60)), mat);
   hi.castShadow = lo.castShadow = true; hi.receiveShadow = lo.receiveShadow = true;
   hi.userData.shell = lo.userData.shell = true;
   const body = new THREE.LOD();
@@ -642,6 +720,7 @@ export function buildCar(type, quality) {
     const cab = new THREE.Mesh(geo, mat);
     cab.name = 'cabin'; cab.castShadow = cab.receiveShadow = true; cab.userData.shell = true;
     const glass = new THREE.Mesh(geo, mat); glass.name = 'cabin-glass'; glass.userData.noHit = true; glass.renderOrder = 2;
+    yield;
     const inner = new THREE.Mesh(buildInterior(s), getWheelMaterial()); inner.name = 'cabin-int'; inner.userData.noHit = true; inner.receiveShadow = true;
     const wheel = new THREE.Group(); wheel.name = 'cabin-wheel'; wheel.position.set(L.wheel.x, L.wheel.y, L.wheel.z); wheel.rotation.x = L.wheel.tau;
     const spin = new THREE.Mesh(wheelGeometryCab(), getWheelMaterial()); spin.name = 'cabin-spin'; spin.userData.noHit = true; spin.receiveShadow = true; wheel.add(spin);
@@ -659,12 +738,14 @@ export function buildCar(type, quality) {
   } else body.addLevel(hi, 0);
   body.addLevel(lo, phone ? 25 : 45);
   // far away a car is a few dozen pixels: a coarse shell, ~1/5 of the low one, and no shadow detail lost
-  const far = new THREE.Mesh(surfaceNets(sdf, [-s.W / 2 - 0.3, 0.0, -s.L / 2 - 0.1], [s.W / 2 + 0.3, top, s.L / 2 + 0.1], Math.max(0.2, s.L / 26)), mat);
+  yield;
+  const far = new THREE.Mesh(yield* surfaceNetsGen(sdf, [-s.W / 2 - 0.3, 0.0, -s.L / 2 - 0.1], [s.W / 2 + 0.3, top, s.L / 2 + 0.1], Math.max(0.2, s.L / 26)), mat);
   far.castShadow = far.receiveShadow = true; far.userData.shell = true;
   body.addLevel(far, phone ? 60 : 95);
   body.name = 'body';
   body.material = mat; // shared by both levels
   root.add(body);
+  yield;
   const wgs = WHEEL_LOD.map((_, i) => wheelGeometry(s, undefined, i));
   const wm = getWheelMaterial();
   const wx = s.W / 2 - s.tw / 2 - 0.035;

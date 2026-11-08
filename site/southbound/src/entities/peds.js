@@ -14,6 +14,17 @@ function cornerPos(G, i, j, c) {
   const cx = G.x0 + i * G.pitch + G.pitch / 2, cz = G.z0 + j * G.pitch + G.pitch / 2;
   return [cx + CORNERS[c][0] * half, cz + CORNERS[c][1] * half];
 }
+// the block someone standing at (x, z) belongs to: the one they're in, or the nearest one when
+// they're out of town (a hitchhiker set down on a country road walks back towards the streets)
+function blockAt(x, z) {
+  let G = CITY, i = 0, j = 0, best = Infinity;
+  for (const g of [CITY, TOWN]) {
+    const gi = clamp(Math.floor((x - g.x0) / g.pitch), 0, g.nx - 1), gj = clamp(Math.floor((z - g.z0) / g.pitch), 0, g.nz - 1);
+    const d = Math.hypot(g.x0 + (gi + 0.5) * g.pitch - x, g.z0 + (gj + 0.5) * g.pitch - z);
+    if (d < best) { best = d; G = g; i = gi; j = gj; }
+  }
+  return { G, i, j };
+}
 
 export class Peds {
   constructor(lib, quality, scene, collision, settings) {
@@ -57,17 +68,37 @@ export class Peds {
   spawnAt(x, z, threat, human = null) {
     const id = this.lib.peopleIds[(this.rnd() * this.lib.peopleIds.length) | 0];
     const h = human || new Human(this.lib, id);
-    let G = CITY, i = 0, j = 0;
-    for (const g of [CITY, TOWN]) {
-      const gi = Math.floor((x - g.x0) / g.pitch), gj = Math.floor((z - g.z0) / g.pitch);
-      if (gi >= 0 && gj >= 0 && gi < g.nx && gj < g.nz) { G = g; i = gi; j = gj; }
-    }
-    const p = { h, G, i, j, corner: 0, dir: 1, mode: threat ? 'flee' : 'walk', hp: 100, pos: new THREE.Vector3(x, this.collision.surface(x, z, 300), z),
-      heading: 0, speed: 1.4, target: cornerPos(G, i, j, 0), timer: 9, threat: threat ? threat.clone() : null, idleT: 20, radius: 0.35, acc: 0 };
+    const p = { h, corner: 0, dir: 1, mode: threat ? 'flee' : 'walk', hp: 100, pos: new THREE.Vector3(x, this.collision.surface(x, z, 300), z),
+      heading: 0, speed: 1.4, timer: 9, threat: threat ? threat.clone() : null, idleT: 20, radius: 0.35, acc: 0 };
+    this.home(p);
     h.root.position.copy(p.pos);
     this.scene.add(h.root);
     this.list.push(p);
     return p;
+  }
+
+  // Somewhere to walk to: the nearest street corner of the block they're standing in. Other systems
+  // hand people back to ordinary street life (a hitchhiker dropped off, a mugger who gave up, a
+  // fighter who ran, a witness paid off); some of those never had a block or a corner of their own
+  home(p) {
+    const b = blockAt(p.pos.x, p.pos.z);
+    p.G = b.G; p.i = b.i; p.j = b.j;
+    let best = Infinity;
+    for (let c = 0; c < 4; c++) { const [cx, cz] = cornerPos(b.G, b.i, b.j, c), d = Math.hypot(cx - p.pos.x, cz - p.pos.z); if (d < best) { best = d; p.corner = c; } }
+    if (p.dir !== 1 && p.dir !== -1) p.dir = 1;
+    if (!(p.speed > 0)) p.speed = 1.4;
+    if (!(p.idleT > 0)) p.idleT = 15 + this.rnd() * 30;
+    if (!Number.isFinite(p.timer)) p.timer = 0;
+    p.target = cornerPos(p.G, p.i, p.j, p.corner);
+  }
+
+  // One person's thinking went wrong: say so once (in the console), put them back on the street,
+  // and if it keeps happening, let them go; never take the whole frame (and the game) down with it
+  fault(p, err, k) {
+    p.faults = (p.faults || 0) + 1;
+    if (p.faults === 1) console.error('[peds] a person\'s AI failed (role ' + (p.role || 'none') + ', mode ' + p.mode + '): ' + (err && err.message), err);
+    if (p.faults >= 3) { this.scene.remove(p.h.root); p.h.dispose(); this.list.splice(k, 1); return; }
+    try { p.role = p.role === 'cop' ? p.role : undefined; if (p.mode !== 'dead') { p.mode = 'walk'; p.scripted = false; } this.home(p); } catch (e) { /* removed next time */ }
   }
 
   nextTarget(p) {
@@ -195,7 +226,7 @@ export class Peds {
       if (d > (p.role === 'hunter' ? 450 : 150) || (p.mode === 'dead' && (p.timer -= dt) <= 0)) {
         this.scene.remove(p.h.root); p.h.dispose(); this.list.splice(k, 1); continue;
       }
-      this.think(p, dt, player);
+      try { this.think(p, dt, player); } catch (err) { this.fault(p, err, k); if (this.list[k] !== p) continue; }
       // cars: a person is a body in a car's way. Walking into one, they step round it; hit slowly,
       // they're knocked aside and hurt; hit fast, they're thrown (and above ~40 km/h, killed)
       if (p.mode !== 'dead' && p.mode !== 'riding') for (const v of cars) {
@@ -251,10 +282,11 @@ export class Peds {
     if (p.role === 'walker') { if (this.walkerThink) this.walkerThink(p, dt); return; }
     // a resident going about their day (systems/population.js); a scare still sends them running
     if (p.role === 'resident' && this.residentThink && p.mode !== 'flee' && p.mode !== 'return') { this.residentThink(p, dt, player); return; }
+    if (!p.G || !p.target) this.home(p); // handed back without a corner to walk to
     let want = 0;
     if (p.mode === 'flee') {
       p.timer -= dt;
-      const ax = p.pos.x - p.threat.x, az = p.pos.z - p.threat.z;
+      const th = p.threat || p.pos, ax = p.pos.x - th.x, az = p.pos.z - th.z;
       p.heading += wrapAngle(Math.atan2(ax, az) - p.heading) * Math.min(1, dt * 6);
       want = 6.2;
       if (p.timer <= 0) { p.mode = 'return'; p.target = cornerPos(p.G, p.i, p.j, p.corner); }

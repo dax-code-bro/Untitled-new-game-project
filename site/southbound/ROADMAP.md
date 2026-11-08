@@ -140,6 +140,57 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 - [x] Loading screen with in-game art, tips and progress
 - [x] Fewer touch buttons: ◎ interact replaces the car button; map, phone, arsenal, free cam moved to pause
 
+## Phase 1.58a — Crash fix: hitchhikers dropped off in town
+
+The owner hit "Something went wrong" (TypeError reading '0' in the pedestrian AI). A roadside walker
+given a ride and dropped off (or left when you got out) went back to ordinary street life with no
+block or street corner to walk to, so the pedestrian AI read the target of nothing every frame.
+- [x] `peds.home(p)`: anyone handed back to street life without a block/corner gets the nearest one
+      (the drop-off does it, and the pedestrian AI checks before walking or fleeing)
+- [x] Each person's AI is isolated: one that throws is logged once, put back on the street, and let go
+      after three failures, instead of stopping the frame and setting off the error dialog
+- [x] QA test reproduces the dropped-off passenger, a person fleeing with no home block, and a
+      person whose AI throws
+
+## Phase 1.58 — Every car and every gun its own design (the owner's option B, built in code)
+
+The owner: most items were "slightly different versions of other models"; asked for more free models
+(option B). Sketchfab, where realistic CC0/CC-BY cars and guns live, was blocked by the environment's
+network policy; a personal environment allowing it was set up, but the API token entered three times
+was rejected ("Invalid API token"), so downloads never worked. The owner then said "do whatever gets
+me there": the variety is built in code instead.
+- [x] Cars: 93 catalogue vehicles were ~13 base bodies scaled; traffic and parked cars only ever used
+      those 13 (the catalogue models had traffic weight 0). Every catalogue model now has its own
+      design (catalog.js DESIGNS): city hatch, hot hatch, 3-door, microcar, mini crossover, retro bubble,
+      kammback, compact sedan; family, long luxury, 4-door coupe, boxy 80s, rounded 90s, budget, limousine,
+      sports sedan, aero hybrid, 60s land yacht, notchback, 70s fastback; estate, shooting brake, lifted
+      wagon, hearse; grand tourer, vinyl-roof coupe, soft top, personal luxury, hatch coupe, targa;
+      seven muscle cars; mid-engine, roadster, 80s wedge, 60s curvy, rally hatch, GT, track car; six
+      supercars; ten SUVs (body-on-frame, crossover, full-size, compact, coupe-SUV, luxury, classic
+      off-roader, 3-row, mini, utility); regular/extended/crew/compact/heavy-duty/lifted/classic two-tone/
+      flatbed pickups; minivan, panel van, high-roof, passenger van, camper; box truck, step van, flatbed
+      truck, food truck; city bus and a school bus with a bonnet; three off-roaders
+- [x] New body features (carbuilder.js): boxy vs rounded edges, bonnet power dome and scoop, pinched
+      waist, wheel-arch flares with black cladding, roof rails and crossbars, tailgate spare wheel, bull
+      bar, running boards, vinyl and fabric roofs, chrome bumpers, two-tone paint, grille height, factory
+      spoilers, flatbeds, extended cabs, upright truck fronts; lamp styles (rect, slim LED, round, tall,
+      wide; light bars at the back)
+- [x] All of them in traffic and parked on the streets (weights by class: supercars rare)
+- [x] Built in the background a few ms a frame (a car takes 100-350 ms to mesh), so a new design never
+      stalls a frame; traffic picks only designs already built (vehicle.js warmCars)
+- [x] Guns (entities/gunkit.js): 233 catalogue guns were drawn with 23 models. Now the first one or two
+      guns of the platforms with a photo-scanned model keep it, and every other gun is built as its own
+      firearm from side-profile parts: polymer striker pistols, 1911-pattern pistols, revolvers (barrel
+      lengths, underlugs, fluting, grips), AR-pattern and AK-pattern rifles, battle rifles (carry handle or
+      cocking tube), bullpups, submachine guns (tube, boxy polymer, mag-in-grip), pump/semi-auto/double
+      (side-by-side, over-under, sawed-off) shotguns, bolt rifles (wood, synthetic, chassis, .50 heavy),
+      lever-actions, full-stocked semi-auto rifles, disposable and reloadable launcher tubes, break-open
+      and six-shot grenade launchers; each gun's own lengths, stocks, grips, handguards, magazines,
+      sights and finish. They use the same hold points, so holding, aiming, reloads and fittings work
+- [ ] Not done: downloaded photo-real cars/guns (needs a valid Sketchfab API token in the
+      "Untitled-new-game-project" environment's network secrets); procedural guns are simpler than the
+      photo-scanned ones up close
+
 ## Phase 1.57 — Performance: distance detail, fewer draw calls, connection-aware loading (O1-O5)
 
 The owner (on a 5090): lag and freezes; asked for quality that drops with distance, a lower render
