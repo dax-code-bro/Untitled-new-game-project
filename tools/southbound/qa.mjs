@@ -22,6 +22,7 @@ const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=sw
 const page = await browser.newPage({ viewport: { width: 960, height: 540 } });
 const consoleErrors = [];
 page.on('console', (m) => { if (process.env.QA_LIVE && /^QA[<>] /.test(m.text())) console.log(m.text());
+  if (/qa: deliberately broken/.test(m.text())) return; // the suite's own planted fault (people handed back to the street)
   if (m.type() === 'error' || (m.type() === 'warning' && /open model failed|NaN/.test(m.text()))) consoleErrors.push(`[${m.type()}] ${m.text().slice(0, 300)}`); });
 page.on('pageerror', (e) => consoleErrors.push('[pageerror] ' + e.message));
 // QA_TRACE=1: print each test as it starts (and any that take over 8 s), with the time

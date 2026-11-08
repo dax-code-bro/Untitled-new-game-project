@@ -83,7 +83,7 @@ export function installRoadside(game) {
         if (p.mode === 'board' && (!v || v !== ride.v)) { p.mode = 'walk'; ride = null; return ''; }
         if (p.mode === 'riding') {
           if (!v) { // you got out: they get out too
-            p.mode = 'walk'; p.h.root.visible = true; p.pos.copy(player.pos).add(new THREE.Vector3(1.2, 0, 0)); p.role = undefined; ride = null;
+            p.mode = 'walk'; p.h.root.visible = true; p.pos.copy(player.pos).add(new THREE.Vector3(1.2, 0, 0)); p.role = undefined; peds.home(p); ride = null;
             hud.toast('Your passenger got out', 2); return '';
           }
           p.pos.copy(v.pos);
@@ -96,6 +96,7 @@ export function installRoadside(game) {
             p.mode = 'walk'; p.role = undefined; p.h.root.visible = true;
             p.pos.set(v.pos.x + Math.cos(v.heading) * (v.spec.width / 2 + 0.9), v.pos.y, v.pos.z - Math.sin(v.heading) * (v.spec.width / 2 + 0.9));
             p.pos.y = collision.surface(p.pos.x, p.pos.z, p.pos.y + 1);
+            peds.home(p); // off to the nearest street corner, like anyone else in town
             game.career.p.stats.rides = (game.career.p.stats.rides || 0) + 1;
             ride = null;
             return '';

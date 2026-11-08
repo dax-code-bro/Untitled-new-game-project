@@ -85,6 +85,9 @@ the fewest additions next. Be honest in reports about what is and isn't done.
   rest of the line: use `/* */`); check the build output says "Done" before starting a test;
   people removed from the scene must call `h.dispose()` (gone for good) or `h.freeGpu()` (may come
   back), or their skeleton's bone texture stays on the GPU (a long session piled up hundreds).
+  A system that hands a person back to ordinary street life (`p.role = undefined`) must leave them
+  somewhere to walk: `peds.home(p)` (people it created itself have no block/corner; that crashed the
+  game for the owner). `peds.update` isolates each person's AI with try/catch (logs `[peds] ...`).
 - Commit one batch at a time: if the next batch's edits are already in the tree, commit only the
   finished batch's files (and an `index.js` without the next batch's `add(...)` line), with the
   `game.js` that was built and QA'd for it.

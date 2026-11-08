@@ -140,6 +140,18 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 - [x] Loading screen with in-game art, tips and progress
 - [x] Fewer touch buttons: ◎ interact replaces the car button; map, phone, arsenal, free cam moved to pause
 
+## Phase 1.58a — Crash fix: hitchhikers dropped off in town
+
+The owner hit "Something went wrong" (TypeError reading '0' in the pedestrian AI). A roadside walker
+given a ride and dropped off (or left when you got out) went back to ordinary street life with no
+block or street corner to walk to, so the pedestrian AI read the target of nothing every frame.
+- [x] `peds.home(p)`: anyone handed back to street life without a block/corner gets the nearest one
+      (the drop-off does it, and the pedestrian AI checks before walking or fleeing)
+- [x] Each person's AI is isolated: one that throws is logged once, put back on the street, and let go
+      after three failures, instead of stopping the frame and setting off the error dialog
+- [x] QA test reproduces the dropped-off passenger, a person fleeing with no home block, and a
+      person whose AI throws
+
 ## Phase 1.58 — Every car and every gun its own design (the owner's option B, built in code)
 
 The owner: most items were "slightly different versions of other models"; asked for more free models
