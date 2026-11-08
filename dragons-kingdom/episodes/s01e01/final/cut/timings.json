@@ -1557,6 +1557,33 @@
    "load": 4.49,
    "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.10GHz, SwiftShader",
    "measured_at": "2026-11-08T09:48"
+  },
+  "X5-01": {
+   "draft_s_per_frame": 14.049,
+   "frames_drawn": 72,
+   "cinematic": "velocity",
+   "twos": false,
+   "load": 4.58,
+   "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.10GHz, SwiftShader",
+   "measured_at": "2026-11-08T10:10"
+  },
+  "X5-02": {
+   "draft_s_per_frame": 15.747,
+   "frames_drawn": 120,
+   "cinematic": "velocity",
+   "twos": false,
+   "load": 4.68,
+   "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.10GHz, SwiftShader",
+   "measured_at": "2026-11-08T10:42"
+  },
+  "X5-03": {
+   "draft_s_per_frame": 14.345,
+   "frames_drawn": 192,
+   "cinematic": "velocity",
+   "twos": false,
+   "load": 4.69,
+   "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.10GHz, SwiftShader",
+   "measured_at": "2026-11-08T11:28"
   }
  },
  "sets": {
@@ -1619,6 +1646,11 @@
    "setup_s": 51.4,
    "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.10GHz, SwiftShader",
    "measured_at": "2026-11-08T09:23"
+  },
+  "CLING_SQUARE": {
+   "setup_s": 44.1,
+   "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.10GHz, SwiftShader",
+   "measured_at": "2026-11-08T09:53"
   }
  }
 }
