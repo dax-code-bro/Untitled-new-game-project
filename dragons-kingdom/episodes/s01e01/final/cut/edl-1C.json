@@ -1787,11 +1787,11 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 4.02,
-    "k4_cpu_s_per_frame": 53.57,
+    "draft_s_per_frame": 8.17,
+    "k4_cpu_s_per_frame": 108.89,
     "k4_gpu_s_per_frame": null,
-    "draft_minutes": 3.21,
-    "k4_cpu_hours": 0.71,
+    "draft_minutes": 6.53,
+    "k4_cpu_hours": 1.45,
     "k4_gpu_hours": null,
     "factors": {
      "people": 1.24,
@@ -1801,7 +1801,7 @@
      "move": 1.08,
      "total": 1.34
     },
-    "basis": "ESTIMATE: unknown set, generic; x 1.34 for the shot's content"
+    "basis": "MEASURED draft 8.17 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
    },
    "staging": "CLOSE 85 mm on Abby (screen left) from Leaf's right front three-quarter: she watches him doing it - looks screen RIGHT toward Remi. Silent.",
    "deviation": null,
@@ -2543,7 +2543,7 @@
    "seq": 157,
    "scene": "1C",
    "set": "CLING_SQUARE",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 120,
    "rec_in": 5556,
    "rec_out": 5676,
@@ -2552,12 +2552,32 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/cling-square-2.js",
+    "start_s": 1,
+    "start_frame": 24
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
-   "deviation": null,
+   "cost": {
+    "draft_s_per_frame": 3.72,
+    "k4_cpu_s_per_frame": 49.6,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 7.44,
+    "k4_cpu_hours": 1.65,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1,
+     "total": 1.24
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.24 for the shot's content"
+   },
+   "staging": "MEDIUM 50 mm STATIC through the OPEN door of the house by the stone arch (the door frame inside the frame): inside, the PARENT at the table wraps a parcel in undyed cloth and knots it; the CHILD stands at the right edge of the doorway watching. Warm light inside.",
+   "deviation": "the cloth is already round the parcel (no folding cloth sim): her hands work over it, then knot it; the warmth fogging the cloth is not drawn",
    "action": "Through the open door of a house near the stone arch, the PARENT wraps a parcel in cloth: something baked, still warm enough to fog the cloth.",
    "need": {
     "pre": 0,
@@ -2569,7 +2589,7 @@
    "seq": 158,
    "scene": "1C",
    "set": "CLING_SQUARE",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 72,
    "rec_in": 5676,
    "rec_out": 5748,
@@ -2578,11 +2598,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/cling-square-2.js",
+    "start_s": 8,
+    "start_frame": 192
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 3.72,
+    "k4_cpu_s_per_frame": 49.6,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 4.46,
+    "k4_cpu_hours": 0.99,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1,
+     "total": 1.24
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.24 for the shot's content"
+   },
+   "staging": "MEDIUM 50 mm STATIC through the doorway, a little nearer: the CHILD (right) reaches for the parcel; the PARENT slides it gently out of reach to her side of the table - not yet.",
    "deviation": null,
    "action": "The CHILD reaches for the parcel. The parent moves it gently out of reach: not yet.",
    "need": {
@@ -2595,7 +2635,7 @@
    "seq": 159,
    "scene": "1C",
    "set": "CLING_SQUARE",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 72,
    "rec_in": 5748,
    "rec_out": 5820,
@@ -2604,11 +2644,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/cling-square-2.js",
+    "start_s": 13,
+    "start_frame": 312
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 3.46,
+    "k4_cpu_s_per_frame": 46.14,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 4.15,
+    "k4_cpu_hours": 0.92,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.12,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1.03,
+     "move": 1,
+     "total": 1.15
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.15 for the shot's content"
+   },
+   "staging": "WIDE 35 mm STATIC from the square: the house by the arch, its door open; the CHILD comes to the doorway and stands on the step looking up across the square, where the banners are going up.",
    "deviation": null,
    "action": "The child accepts this and goes to the doorway to watch the banners go up.",
    "need": {
@@ -2621,7 +2681,7 @@
    "seq": 160,
    "scene": "1C",
    "set": "CLING_SQUARE",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 120,
    "rec_in": 5820,
    "rec_out": 5940,
@@ -2630,12 +2690,32 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/cling-square-2.js",
+    "start_s": 18,
+    "start_frame": 432
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
-   "deviation": null,
+   "cost": {
+    "draft_s_per_frame": 3.36,
+    "k4_cpu_s_per_frame": 44.8,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 6.72,
+    "k4_cpu_hours": 1.49,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.12,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1,
+     "total": 1.12
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.12 for the shot's content"
+   },
+   "staging": "MEDIUM 50 mm STATIC, three-quarter front: the MUSICIAN sits on the fountain rim with his lute across his lap, tilts his head to it and tests it (tuning notes are sound); one fastening is loose.",
+   "deviation": "the thumb on the loose fastening is not posed (both hands hold the lute); the instrument is a lute (characters.py: a proposal)",
    "action": "The MUSICIAN sits on the fountain rim to test his instrument. One fastening is loose. He presses it with his thumb.",
    "need": {
     "pre": 0,
@@ -2647,7 +2727,7 @@
    "seq": 161,
    "scene": "1C",
    "set": "CLING_SQUARE",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 120,
    "rec_in": 5940,
    "rec_out": 6060,
@@ -2656,11 +2736,126 @@
    "trans": [
     "cut"
    ],
-   "src": null,
-   "dialogue": [],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/cling-square-2.js",
+    "start_s": 25,
+    "start_frame": 600
+   },
+   "dialogue": [
+    {
+     "id": "X5-01",
+     "part": 0,
+     "ref": "X5-01",
+     "role": "MUSICIAN",
+     "file": "vo/X5-01.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.075,
+     "at_s": 0.32,
+     "speech_in_s": 0.35,
+     "speech_out_s": 1.365,
+     "words": [
+      {
+       "w": "that'll",
+       "start_s": 0.32,
+       "end_s": 0.8
+      },
+      {
+       "w": "hold",
+       "start_s": 0.8,
+       "end_s": 1.38
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 247.82
+    },
+    {
+     "id": "X5-02",
+     "part": 0,
+     "ref": "X5-02",
+     "role": "VENDOR",
+     "file": "vo/X5-02.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.67,
+     "at_s": 1.585,
+     "speech_in_s": 1.615,
+     "speech_out_s": 2.225,
+     "words": [
+      {
+       "w": "it",
+       "start_s": 1.585,
+       "end_s": 1.685
+      },
+      {
+       "w": "won't",
+       "start_s": 1.685,
+       "end_s": 2.175
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 249.085
+    },
+    {
+     "id": "X5-03",
+     "part": 0,
+     "ref": "X5-03",
+     "role": "MUSICIAN",
+     "file": "vo/X5-03.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.935,
+     "at_s": 2.445,
+     "speech_in_s": 2.475,
+     "speech_out_s": 4.35,
+     "words": [
+      {
+       "w": "it'll",
+       "start_s": 2.445,
+       "end_s": 2.705
+      },
+      {
+       "w": "hold",
+       "start_s": 2.705,
+       "end_s": 3.265
+      },
+      {
+       "w": "until",
+       "start_s": 3.475,
+       "end_s": 3.845
+      },
+      {
+       "w": "tonight",
+       "start_s": 3.845,
+       "end_s": 4.365
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 249.945
+    }
+   ],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 3.72,
+    "k4_cpu_s_per_frame": 49.6,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 7.44,
+    "k4_cpu_hours": 1.65,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1,
+     "total": 1.24
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.24 for the shot's content"
+   },
+   "staging": "MEDIUM 50 mm STATIC TWO-SHOT: the musician (left, seated on the rim with his lute) and the VENDOR (right, standing at his side) - an old conversation between friends; the vendor's stall in the background right.",
    "deviation": null,
    "action": "An old conversation between friends.",
    "need": {
@@ -2673,7 +2868,7 @@
    "seq": 162,
    "scene": "1C",
    "set": "CLING_SQUARE",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 60,
    "rec_in": 6060,
    "rec_out": 6120,
@@ -2682,11 +2877,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/cling-square-2.js",
+    "start_s": 32,
+    "start_frame": 768
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 3.94,
+    "k4_cpu_s_per_frame": 52.58,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 3.94,
+    "k4_cpu_hours": 0.88,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1.06,
+     "move": 1,
+     "total": 1.31
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.31 for the shot's content"
+   },
+   "staging": "WIDE 35 mm STATIC across the square: at the house by the arch (left) the PARENT in the doorway calls the CHILD in; the child goes inside, and the door swings shut.",
    "deviation": null,
    "action": "At the house near the arch, the parent calls the child in from the doorway, and the door swings shut.",
    "need": {
@@ -2699,7 +2914,7 @@
    "seq": 163,
    "scene": "1C",
    "set": "CLING_SQUARE",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 108,
    "rec_in": 6120,
    "rec_out": 6228,
@@ -2708,11 +2923,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/cling-square-2.js",
+    "start_s": 37,
+    "start_frame": 888
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 3.91,
+    "k4_cpu_s_per_frame": 52.08,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 7.03,
+    "k4_cpu_hours": 1.56,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1.05,
+     "walk": 1,
+     "move": 1,
+     "total": 1.3
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.3 for the shot's content"
+   },
+   "staging": "MEDIUM STATIC (40 mm, to hold the stall in the background): the musician (centre, lute laid across his knees) takes a small clay pipe from his coat, lights it and draws; a thin smoke drifts across the fountain. The VENDOR at his stall in the background right looks over - he knows what it is. No child in the shot or in sight of it.",
    "deviation": null,
    "action": "The musician takes a small pipe from his coat and lights it. The smoke that drifts across the fountain is thicker and sweeter than tobacco, and the vendor knows exactly what it is. No child is in the shot or in sight of it.",
    "need": {
@@ -2725,7 +2960,7 @@
    "seq": 164,
    "scene": "1C",
    "set": "CLING_SQUARE",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 180,
    "rec_in": 6228,
    "rec_out": 6408,
@@ -2734,11 +2969,179 @@
    "trans": [
     "cut"
    ],
-   "src": null,
-   "dialogue": [],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/cling-square-2.js",
+    "start_s": 44,
+    "start_frame": 1056
+   },
+   "dialogue": [
+    {
+     "id": "R3-01",
+     "part": 0,
+     "ref": "R3-01",
+     "role": "VENDOR",
+     "file": "vo/R3-01.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.05,
+     "at_s": 0.27,
+     "speech_in_s": 0.3,
+     "speech_out_s": 1.29,
+     "words": [
+      {
+       "w": "bit",
+       "start_s": 0.27,
+       "end_s": 0.4
+      },
+      {
+       "w": "early",
+       "start_s": 0.4,
+       "end_s": 0.63
+      },
+      {
+       "w": "for",
+       "start_s": 0.63,
+       "end_s": 0.78
+      },
+      {
+       "w": "that",
+       "start_s": 0.78,
+       "end_s": 1.21
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 259.77
+    },
+    {
+     "id": "R3-02",
+     "part": 0,
+     "ref": "R3-02",
+     "role": "MUSICIAN",
+     "file": "vo/R3-02.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.22,
+     "at_s": 1.41,
+     "speech_in_s": 1.44,
+     "speech_out_s": 2.6,
+     "words": [
+      {
+       "w": "it's",
+       "start_s": 1.41,
+       "end_s": 1.66
+      },
+      {
+       "w": "for",
+       "start_s": 1.66,
+       "end_s": 1.79
+      },
+      {
+       "w": "my",
+       "start_s": 1.79,
+       "end_s": 2.03
+      },
+      {
+       "w": "nerves",
+       "start_s": 2.03,
+       "end_s": 2.57
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 260.91
+    },
+    {
+     "id": "R3-03",
+     "part": 0,
+     "ref": "R3-03",
+     "role": "VENDOR",
+     "file": "vo/R3-03.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.335,
+     "at_s": 2.72,
+     "speech_in_s": 2.75,
+     "speech_out_s": 4.025,
+     "words": [
+      {
+       "w": "you",
+       "start_s": 2.72,
+       "end_s": 2.83
+      },
+      {
+       "w": "haven't",
+       "start_s": 2.83,
+       "end_s": 3.03
+      },
+      {
+       "w": "got",
+       "start_s": 3.03,
+       "end_s": 3.23
+      },
+      {
+       "w": "any",
+       "start_s": 3.23,
+       "end_s": 3.39
+      },
+      {
+       "w": "nerves",
+       "start_s": 3.39,
+       "end_s": 3.94
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 262.22
+    },
+    {
+     "id": "R3-04",
+     "part": 0,
+     "ref": "R3-04",
+     "role": "MUSICIAN",
+     "file": "vo/R3-04.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.06,
+     "at_s": 4.19,
+     "speech_in_s": 4.225,
+     "speech_out_s": 5.22,
+     "words": [
+      {
+       "w": "not",
+       "start_s": 4.19,
+       "end_s": 4.62
+      },
+      {
+       "w": "anymore",
+       "start_s": 4.62,
+       "end_s": 5.1
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 263.69
+    }
+   ],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 3.91,
+    "k4_cpu_s_per_frame": 52.08,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 11.72,
+    "k4_cpu_hours": 2.6,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1.05,
+     "walk": 1,
+     "move": 1,
+     "total": 1.3
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.3 for the shot's content"
+   },
+   "staging": "MEDIUM 50 mm STATIC TWO-SHOT, deadpan: the musician (left, pipe in his right hand at his knee, lute across his knees) and the vendor (right, standing at his side). No child in the shot.",
    "deviation": null,
    "action": "Deadpan.",
    "need": {
@@ -2751,7 +3154,7 @@
    "seq": 165,
    "scene": "1C",
    "set": "CLING_SQUARE",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 84,
    "rec_in": 6408,
    "rec_out": 6492,
@@ -2760,12 +3163,32 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/cling-square-2.js",
+    "start_s": 54,
+    "start_frame": 1296
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
-   "deviation": null,
+   "cost": {
+    "draft_s_per_frame": 4.02,
+    "k4_cpu_s_per_frame": 53.64,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 5.63,
+    "k4_cpu_hours": 1.25,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1.05,
+     "walk": 1.03,
+     "move": 1,
+     "total": 1.34
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.34 for the shot's content"
+   },
+   "staging": "MEDIUM 40 mm STATIC: the vendor shakes his head and walks back round the fountain to his stall (background right); the musician (centre) smokes with his eyes down and closed, the lute across his knees. Thin smoke. No child in the shot.",
+   "deviation": "eyes closed is read as the head and eyes down (no lid control from the director yet)",
    "action": "The vendor shakes his head and goes back to his stall. The musician smokes with his eyes closed and the instrument across his knees.",
    "need": {
     "pre": 0,
@@ -2777,7 +3200,7 @@
    "seq": 166,
    "scene": "1C",
    "set": "CLING_SQUARE",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 120,
    "rec_in": 6492,
    "rec_out": 6612,
@@ -2786,12 +3209,32 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/cling-square-2.js",
+    "start_s": 60,
+    "start_frame": 1440
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
-   "deviation": null,
+   "cost": {
+    "draft_s_per_frame": 3.83,
+    "k4_cpu_s_per_frame": 51.09,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 7.66,
+    "k4_cpu_hours": 1.7,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1.03,
+     "move": 1,
+     "total": 1.28
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.28 for the shot's content"
+   },
+   "staging": "WIDE 35 mm STATIC from the square, looking north-east at the town wall: the WATCHMAN climbs the last rungs of the ladder onto his raised platform on the wall, crosses to the parapet, turns to the fields and wraps his cloak round him against the chill. A guard below at the left.",
+   "deviation": "the climb is the last rungs only (no climbing cycle in the director: the root rises on keys, the hands reach rung to rung)",
    "action": "The WATCHMAN climbs to his post: a raised platform on the wall with a clear line of sight over the roofs. He wraps his cloak against the chill.",
    "need": {
     "pre": 0,
@@ -2803,7 +3246,7 @@
    "seq": 167,
    "scene": "1C",
    "set": "CLING_SQUARE",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 108,
    "rec_in": 6612,
    "rec_out": 6720,
@@ -2812,12 +3255,135 @@
    "trans": [
     "cut"
    ],
-   "src": null,
-   "dialogue": [],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/cling-square-2.js",
+    "start_s": 67,
+    "start_frame": 1608
+   },
+   "dialogue": [
+    {
+     "id": "X5-04",
+     "part": 0,
+     "ref": "X5-04",
+     "role": "GUARD",
+     "file": "vo/X5-04.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.84,
+     "at_s": 0.22,
+     "speech_in_s": 0.25,
+     "speech_out_s": 1.03,
+     "words": [
+      {
+       "w": "anything",
+       "start_s": 0.22,
+       "end_s": 0.91
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 275.72
+    },
+    {
+     "id": "X5-05",
+     "part": 0,
+     "ref": "X5-05",
+     "role": "WATCHMAN",
+     "file": "vo/X5-05.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.56,
+     "at_s": 1.15,
+     "speech_in_s": 1.18,
+     "speech_out_s": 1.685,
+     "words": [
+      {
+       "w": "weather",
+       "start_s": 1.15,
+       "end_s": 1.61
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 276.65
+    },
+    {
+     "id": "X5-06",
+     "part": 0,
+     "ref": "X5-06",
+     "role": "GUARD",
+     "file": "vo/X5-06.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.88,
+     "at_s": 1.81,
+     "speech_in_s": 1.835,
+     "speech_out_s": 2.655,
+     "words": [
+      {
+       "w": "good",
+       "start_s": 1.81,
+       "end_s": 2.08
+      },
+      {
+       "w": "weather",
+       "start_s": 2.08,
+       "end_s": 2.57
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 277.31
+    },
+    {
+     "id": "X5-07",
+     "part": 0,
+     "ref": "X5-07",
+     "role": "WATCHMAN",
+     "file": "vo/X5-07.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.78,
+     "at_s": 2.775,
+     "speech_in_s": 2.805,
+     "speech_out_s": 3.525,
+     "words": [
+      {
+       "w": "so",
+       "start_s": 2.775,
+       "end_s": 3.035
+      },
+      {
+       "w": "far",
+       "start_s": 3.035,
+       "end_s": 3.475
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 278.275
+    }
+   ],
    "captions": [],
-   "cost": null,
-   "staging": null,
-   "deviation": null,
+   "cost": {
+    "draft_s_per_frame": 3.72,
+    "k4_cpu_s_per_frame": 49.6,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 6.7,
+    "k4_cpu_hours": 1.49,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1,
+     "total": 1.24
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.24 for the shot's content"
+   },
+   "staging": "MEDIUM-WIDE 35 mm STATIC from the square: the GUARD below (left) calls up without much interest; the WATCHMAN above on the platform (right) answers, looking down. Over-the-shoulder-ish on the guard (his face three-quarter back).",
+   "deviation": "35 mm, not the listed 50 mm: on the Super 35 sensor a 50 mm cannot hold the guard below and the watchman 4.7 m above in one static frame",
    "action": "A guard calls up without much interest.",
    "need": {
     "pre": 0,
@@ -2829,7 +3395,7 @@
    "seq": 168,
    "scene": "1C",
    "set": "CLING_SQUARE",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 144,
    "rec_in": 6720,
    "rec_out": 6864,
@@ -2838,11 +3404,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/cling-square-2.js",
+    "start_s": 74,
+    "start_frame": 1776
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 3,
+    "k4_cpu_s_per_frame": 40,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 7.2,
+    "k4_cpu_hours": 1.6,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1,
+     "total": 1
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1 for the shot's content"
+   },
+   "staging": "POV 35 mm STATIC at the watchman's eyeline on the platform, looking east over the wall: roofs at the bottom, the fields, the broad road running away, and a wide, quiet sky with a few high clouds - nothing moves in it but birds. No foreshadowing.",
    "deviation": null,
    "action": "The watchman's view: roofs, fields, a road and a wide, quiet sky. Nothing moves in it but birds. No foreshadowing.",
    "need": {
@@ -2855,7 +3441,7 @@
    "seq": 169,
    "scene": "1C",
    "set": "CLING_SQUARE",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 96,
    "rec_in": 6864,
    "rec_out": 6960,
@@ -2864,11 +3450,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/cling-square-2.js",
+    "start_s": 82,
+    "start_frame": 1968
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 3,
+    "k4_cpu_s_per_frame": 40,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 4.8,
+    "k4_cpu_hours": 1.07,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1,
+     "total": 1
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1 for the shot's content"
+   },
+   "staging": "WIDE 35 mm STATIC from the south-east of the square: the FIRST BANNER unrolls along its rope from a house on the north side down to the fountain pillar - the roll slides down the rope paying out ochre and woad cloth - and then lifts in the breeze.",
    "deviation": null,
    "action": "The first banner unrolls across the square and lifts in the breeze.",
    "need": {
@@ -2898,11 +3504,11 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 4.8,
-    "k4_cpu_s_per_frame": 63.94,
+    "draft_s_per_frame": 5.79,
+    "k4_cpu_s_per_frame": 77.21,
     "k4_gpu_s_per_frame": null,
-    "draft_minutes": 11.51,
-    "k4_cpu_hours": 2.56,
+    "draft_minutes": 13.9,
+    "k4_cpu_hours": 3.09,
     "k4_gpu_hours": null,
     "factors": {
      "people": 1.48,
@@ -2912,7 +3518,7 @@
      "move": 1.08,
      "total": 1.6
     },
-    "basis": "ESTIMATE: unknown set, generic; x 1.6 for the shot's content"
+    "basis": "MEASURED draft 5.79 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
    },
    "staging": "EXTREME WIDE 100 mm from a camera ship far out SSE, slow drift: the outer rocks centre (the two leaning stacks and the gap opening toward us, birds on the ledges, white water), the mist bank against their seaward side right; Leaf and Charcoal small, left, coming down the coast toward them.",
    "deviation": null,
@@ -2944,11 +3550,11 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 3.24,
-    "k4_cpu_s_per_frame": 43.2,
+    "draft_s_per_frame": 2.6,
+    "k4_cpu_s_per_frame": 34.65,
     "k4_gpu_s_per_frame": null,
-    "draft_minutes": 3.89,
-    "k4_cpu_hours": 0.86,
+    "draft_minutes": 3.12,
+    "k4_cpu_hours": 0.69,
     "k4_gpu_hours": null,
     "factors": {
      "people": 1,
@@ -2958,7 +3564,7 @@
      "move": 1.08,
      "total": 1.08
     },
-    "basis": "ESTIMATE: unknown set, generic; x 1.08 for the shot's content"
+    "basis": "MEASURED draft 2.6 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
    },
    "staging": "WIDE 35 mm low over the water on the approach side, a slow push: the gap - two stone walls leaning together, a slot of bright mist and sea beyond, white water at their feet.",
    "deviation": null,
@@ -2990,11 +3596,11 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 3.24,
-    "k4_cpu_s_per_frame": 43.2,
+    "draft_s_per_frame": 3.06,
+    "k4_cpu_s_per_frame": 40.76,
     "k4_gpu_s_per_frame": null,
-    "draft_minutes": 3.89,
-    "k4_cpu_hours": 0.86,
+    "draft_minutes": 3.67,
+    "k4_cpu_hours": 0.82,
     "k4_gpu_hours": null,
     "factors": {
      "people": 1,
@@ -3004,7 +3610,7 @@
      "move": 1.08,
      "total": 1.08
     },
-    "basis": "ESTIMATE: unknown set, generic; x 1.08 for the shot's content"
+    "basis": "MEASURED draft 3.06 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
    },
    "staging": "WIDE 35 mm on the seaward side: the low bank of sea mist lying against the stacks' seaward faces, the gap's exit half lost in it; muffled surf.",
    "deviation": null,

@@ -1,5 +1,13 @@
 # Humans - progress log (for a successor)
 
+## REQUEST from director s34 (2026-11-08) - climbing, eyes closed, a thumb on an instrument (Cling X5 / R3)
+CLING_SQUARE_2 (X5-15) has the watchman climbing the last rungs of a ladder: there is no climb cycle, the director raises
+the root on keys and reaches the hands rung to rung (feet hang). R3-04 wants the musician's eyes CLOSED (no lid control
+from the director: read as head + eyes down). X5-13 wants a thumb pressing a loose fastening on the lute (both hands only
+hold it). Please add any of: a ladder-climb pose/cycle (`climb` with rung spacing), an eyelid act or face hook option
+(`blink`/`lids: 0..1`), a thumb-press hand shape. The musician / parent / guard1 builds also carry their pose props (lute,
+parcel, spear): hidden by name in the set's afterCast as for the vendor (s33 request).
+
 ## REQUEST from director s33 (2026-11-08) - builds without their pose prop (Cling vendor)
 The 'vendor' build (pose 'crate') carries its empty crate as part of the character: in CLING_SQUARE (X5-04..09) the
 director's arm acts lift it over his head. The director hides it by mesh name in sets/cling-square.js afterCast (a

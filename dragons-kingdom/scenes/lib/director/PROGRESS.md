@@ -3,6 +3,52 @@
 Owner paths: `scenes/lib/director/`, `episodes/s01e01/final/scenes/`, `episodes/s01e01/final/cut/`.
 How it works: `README.md` in this folder. Latest state first.
 
+## Session 34 (2026-11-08, budgeted batch 5 of the 1C slates: CLING_SQUARE_2 + X5-10..18, R3-01..04 - STILLS only)
+
+Scratch: `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/build5/` - `work/` (r1, all 13), `work2/` (r2, 12
+after fixes), `work3/` (X5-14, R3-02 after the seat move), `contact-build5.png` (4x4, unlabelled, in priority order:
+X5-18, X5-13, X5-14, X5-15, X5-16, X5-17, R3-02, R3-03, R3-04, X5-10, X5-11, X5-12, R3-01). Stills by
+`render-shots.mjs --stills 0.55 --sets CLING_SQUARE_2 --work <scratch>` (ONE browser builds the set once, ~1 min, then
+~1 min per still - far cheaper than still.mjs, which rebuilds the set per shot).
+- CLING_SQUARE / X5-01..09 were being rendered: cling-square.spec.js, sets/cling-square.js, cling-square.js and
+  cling-square.shots.json are UNTOUCHED (byte-identical table). New mechanism instead: a registry entry with
+  `shotSet: 'CLING_SQUARE'` (CLING_SQUARE_2) is a SECOND SPEC on that set's shots - own scene file
+  (scenes/cling-square-2.js), table (cling-square-2.shots.json), spec (specs/cling-square-2.spec.js) and builder
+  (sets/cling-square-2.js, a wrapper over sets/cling-square.js's build()). build-shots.mjs: `specSetOf(shot)` finds the
+  spec that authors a shot (edl src / cost / reviewOk / the line check). render-shots / still.mjs / previs work through
+  the tables unchanged (`--sets CLING_SQUARE_2`). LIMIT: masters (render/lib/shots.mjs, not ours) look a shot up in the
+  render-jobs.json command's scene table (cling-square.js) - REQUEST render owners: also try the sibling tables.
+- sets/cling-square-2.js adds: the west-row house door 5 m south of the arch ([-19.81, 21.68]) - the house's own leaf and
+  painted portal dropped by triangle (opening: any vertex / centroid; room volume: whole triangles; non-indexed meshes
+  collapsed), a hinged plank leaf (`set.door` keys 0..1, swings inward), a ROOM (plaster walls, floor, beams, table,
+  bench, shelf with crocks, `set.room.lamp` warm light), the parcel (`set.parcel` door-frame keys), the first BANNER on a
+  rope north-row front -> fountain pillar top (`set.banner.unroll` / `lift` keys: a roll slides down the rope, the cloth
+  billows), a lute (hand prop) + `luteLap` (across the knees), a clay pipe (hand prop; smoke = FX smoke-wisp), far birds
+  (`set.flock`). Ground returns the floor inside the room.
+- WIRED (ready for video): X5-10, X5-11, X5-12, X5-13, X5-14, X5-15, X5-16, X5-17, X5-18, R3-01, R3-02, R3-03, R3-04
+  (durations = shot-list frames = edl-1C slots; no line warnings). Cast = the characters.py role builds: parent (woman),
+  child (the CHILD build), musician, vendor, watchman, guard1 (adult men). RATING: no child cast in R3-02..04; R3-01
+  takes the child inside and shuts the door first; the pipe is small, held below the chin, a thin wisp, no close-up.
+- LEARNED: the lens is Super 35 (24.9 mm wide): 50 mm frames ~1.45x tighter than a full-frame guess. r1 had every medium
+  too tight; r2 pulled the cameras back x1.45. X5-16 is 35 mm (deviation: 50 mm cannot hold a guard below and a watchman
+  4.7 m up). r1 bug: the room's front-wall panel covered the doorway (fixed). The musician's root 3.15 m from the fountain
+  centre puts the sit seat on the coping (3.35 floated in front of it; r3 checked X5-14 / R3-02).
+- Stills (looked at): X5-18 the banner across the square, woad/ochre, billowing - reads. X5-10 parent at the table with
+  the parcel through the door, child at the right - reads (warm room). X5-11 parcel slid to her side; her arms swing wide
+  (handsTo spread) - readable, not pretty. X5-12 child on the step - reads, small. R3-01 parent in the doorway, door
+  begins to close - reads, small (wide). X5-13/14 musician with the lute on the rim, vendor at his side (vendor's back to
+  the lens; X5-14 audit: musician's speaking face reads at 40 deg). R3-02 pipe at the chin, vendor at his stall bg right.
+  R3-03 two-shot. R3-04 vendor walking off. X5-15 watchman on the platform (small, top right). X5-16 watchman up, guard
+  down-left, both small. X5-17 POV reads as a street opening onto fields and a road; the birds are not visible at 0.55.
+- KNOWN ISSUES: X5-13/R3-03/R3-04 stills are from before the seat move (0.2 m) - check in the video; lute hands spread
+  wide (no fingering); the thumb on the fastening and closed eyes not posed (deviations); the climb is keyed root + hand
+  reaches; X5-17 roofs at the bottom only at the edges; parcel warmth not drawn; the watchman shots are small figures.
+- NOT DONE: X4-10 (VERDOR_AERIAL, still in `plans`; s30's notes stand). The same `shotSet` mechanism would let it go into
+  a VERDOR_AERIAL_2 spec without touching verdor-aerial.spec.js.
+- Verify: npm test pass; build-shots: no X5-10..18 / R3 warnings.
+- REQUESTS: humans - climb cycle, eyelid control, thumb-press hand (humans/PROGRESS.md s34); render - masters for a
+  `shotSet` spec's shots (render/lib/shots.mjs).
+
 ## Session 33 (2026-11-08, budgeted batch 4 of the 1C slates: CLING_SQUARE set + X5-01..09 - STILLS only)
 
 Scratch: `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/build4/` - `r1/` (all 9), `r2/` (X5-04/05/07 after fixes),

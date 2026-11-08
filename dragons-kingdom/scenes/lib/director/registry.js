@@ -95,6 +95,16 @@ export const SETS = {
     from: 'style frame F5 (scenes/lookdev/style-f5-cling-square.js) layout: CLING (architecture/cling.js), sun behind the king\'s steps (south-east in the morning); session 33',
     continuity: { '1C': { sun: sunDir(132, 12), tod: 'early morning in Cling before the festival: low sun from the south-east, long shadows', exposure: 1.5 } },
   },
+  // a SECOND spec on the CLING_SQUARE shots (session 34): the shot list's set stays CLING_SQUARE (`shotSet`); its own
+  // scene file + shot table + spec, and a builder that wraps sets/cling-square.js and adds dressing (the open-door house +
+  // room near the arch, the banner, the parcel, the pipe, the lute). The CLING_SQUARE files are untouched, so shots
+  // queued on them are not re-keyed. Same light as CLING_SQUARE (continuity copied, keep the two in step).
+  CLING_SQUARE_2: {
+    file: 'cling-square-2.js', builder: 'cling-square-2', frame: 'CLING', shotSet: 'CLING_SQUARE',
+    libs: ['sets/cling-square.js (the whole CLING_SQUARE set: its build() as-is)', 'procedural three.js in sets/cling-square-2.js (the house by the arch: its door leaf replaced by a hinged leaf + a room behind with a table; the parcel in cloth; the first banner on its rope; the musician\'s lute; a small clay pipe)', 'scenes/lib/fx (smoke-wisp: the pipe)', 'scenes/lib/humans (parent, child, musician, vendor, watchman, guard1)'],
+    from: 'CLING_SQUARE (session 33) + dressing; session 34',
+    continuity: { '1C': { sun: sunDir(132, 12), tod: 'early morning in Cling before the festival: low sun from the south-east, long shadows', exposure: 1.5 } },
+  },
   BIRTHING_CHAMBER: {
     file: 'birthing-chamber.js', builder: 'birthing-chamber', frame: 'VERDOR',
     libs: ['scenes/lib/architecture/interiors.js (birthingChamber, nest, lamps)', 'scenes/lib/props/verdor.js (the egg: closed / cracked / opened)', 'scenes/lib/creatures (hatchling)', 'scenes/lib/humans (alexandria, attendant, abby, remi, young attendant = messenger)', 'runtime/cinematic (dust in the window shaft)'],
