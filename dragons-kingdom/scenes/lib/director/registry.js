@@ -11,6 +11,8 @@
 // World frames
 //   VERDOR: one frame for every Verdor set (riding grounds, palace interiors, chamber): +x = EAST
 //           (the sea side: the shot list's "sun over the sea side"), -z = NORTH, y up, metres.
+//   CLING: the CLING layout of scenes/lib/architecture/cling.js (the square at the origin, -z = NORTH, +x = EAST,
+//          y = 0 on the paving; the king's steps south, the gate east onto the broad road).
 //   PROLOGUE: style frame F1's frame (camera near the origin looking north, the island 2 km out).
 //
 // Sun direction: a unit vector TOWARD the sun in the set's world frame, from azimuth (degrees,
@@ -74,6 +76,42 @@ export const SETS = {
     libs: ['dk/ocean.js (the grounds\' sea)', 'scenes/lib/sets/terrain.js (SKY_OFF_VERDOR\'s coast pulled into the harbour bay, terraced town ground)', 'scenes/lib/architecture/verdor.js (harbor: quay + warehouses, palace) + house.js (terrace rows)', 'scenes/lib/props/santa-maria.js (the Santa Maria at the quay)', 'scenes/lib/creatures (Leaf, Charcoal)', 'scenes/lib/humans (remi_ride, abby_ride, crowd05 farmer)', 'runtime/cinematic (physical sky, sea mist banks, cloud shadows)'],
     from: 'SKY_OFF_VERDOR continued south to the harbour town (spec MAP, session 17 plan)',
     continuity: { '1C': { sun: sunDir(102, 31), tod: 'morning (continuous from 1B)', exposure: 1.1 } },
+  },
+  // a SECOND spec on the VERDOR_AERIAL shots (session 35, the CLING_SQUARE_2 mechanism): X4-10 at the Santa Maria's
+  // mainmast; the shot list's set stays VERDOR_AERIAL (`shotSet`); verdor-aerial.spec.js / sets/verdor-aerial.js untouched
+  VERDOR_AERIAL_2: {
+    file: 'verdor-aerial-2.js', builder: 'verdor-aerial-2', frame: 'VERDOR', shotSet: 'VERDOR_AERIAL',
+    libs: ['sets/verdor-aerial.js (the whole harbour town + the Santa Maria: its build() as-is, the verdor-aerial spec MAP)', 'procedural three.js in sets/verdor-aerial-2.js (a crow\'s nest on the mainmast, measured from the ship model)', 'scenes/lib/creatures (Leaf)', 'scenes/lib/humans (abby_ride, crowd08 = the lookout)'],
+    from: 'VERDOR_AERIAL + dressing; session 35',
+    continuity: { '1C': { sun: sunDir(102, 31), tod: 'morning (continuous from 1B)', exposure: 1.1 } },
+  },
+  VERDOR_HARBOR: {
+    file: 'verdor-harbor.js', builder: 'verdor-harbor', frame: 'VERDOR',
+    libs: ['sets/verdor-aerial.js (the whole harbour town: terrain, sea, basin, breakwater, quay + warehouses, terraces, palace, the Santa Maria) from the SAME map', 'quay-level dressing in sets/verdor-harbor.js (procedural three.js: bollards, slipway, boats, hauled net + haul lines, fish baskets, market stalls)', 'scenes/lib/creatures (working dragons: Leaf builds in the scout look; Charcoal for his shadow)', 'scenes/lib/humans (sailor1/2, vendor, crowd extras)'],
+    from: 'VERDOR_AERIAL at quay level (session 31)',
+    continuity: { '1C': { sun: sunDir(102, 31), tod: 'late morning at the harbour (continuous from 1B)', exposure: 1.1 } },
+  },
+  OUTER_ROCKS: {
+    file: 'outer-rocks.js', builder: 'outer-rocks', frame: 'VERDOR',
+    libs: ['sets/sky-off-verdor.js (the coast, sea, sky, sun, scanned rocks: its build() as-is)', 'sea stacks, foam collars and instanced seabirds in sets/outer-rocks.js (procedural three.js; limestone = acg_rock26 as the cliffs)', 'scenes/lib/sets/kitbash.js (boulders at the feet)', 'scenes/lib/fx (water-downwash ring, water-spray on the stone)', 'scenes/lib/creatures (Leaf, Charcoal: flight / glide / dive / land / crouch)', 'scenes/lib/humans (remi_ride, abby_ride)', 'runtime/cinematic (physical sky, the sea-mist bank against the stacks)'],
+    from: 'SKY_OFF_VERDOR continued to the outer rocks off the south end of the coast (session 32)',
+    continuity: { '1C': { sun: sunDir(102, 31), tod: 'late morning at the outer rocks (continuous from 1B)', exposure: 1.1 } },
+  },
+  CLING_SQUARE: {
+    file: 'cling-square.js', builder: 'cling-square', frame: 'CLING',
+    libs: ['scenes/lib/architecture/cling.js clingSquare (the square, its houses + roofs from house.js / roof.js / masonry and archMaterials stone + oak + clay: the builders VERDOR_AERIAL / VERDOR_HARBOR use; fountain, king\'s steps, stone arch, gate + town wall, alley, paving)', 'scenes/lib/nature/farmland.js loadClingLand (fields, hedges, woods, the broad road east)', 'scenes/lib/props/containers.js handcart + wheel (the vendor\'s cart, wheels rolling)', 'procedural three.js in sets/cling-square.js (the vendor\'s stall: poles, crossbars, cloth roof, wedge stones; the ladder; the music dais; the watchman\'s platform on the wall; pigeons)', 'scenes/lib/humans (vendor, crowd extras)', 'runtime/cinematic (physical sky, morning mist over the fields)'],
+    from: 'style frame F5 (scenes/lookdev/style-f5-cling-square.js) layout: CLING (architecture/cling.js), sun behind the king\'s steps (south-east in the morning); session 33',
+    continuity: { '1C': { sun: sunDir(132, 12), tod: 'early morning in Cling before the festival: low sun from the south-east, long shadows', exposure: 1.5 } },
+  },
+  // a SECOND spec on the CLING_SQUARE shots (session 34): the shot list's set stays CLING_SQUARE (`shotSet`); its own
+  // scene file + shot table + spec, and a builder that wraps sets/cling-square.js and adds dressing (the open-door house +
+  // room near the arch, the banner, the parcel, the pipe, the lute). The CLING_SQUARE files are untouched, so shots
+  // queued on them are not re-keyed. Same light as CLING_SQUARE (continuity copied, keep the two in step).
+  CLING_SQUARE_2: {
+    file: 'cling-square-2.js', builder: 'cling-square-2', frame: 'CLING', shotSet: 'CLING_SQUARE',
+    libs: ['sets/cling-square.js (the whole CLING_SQUARE set: its build() as-is)', 'procedural three.js in sets/cling-square-2.js (the house by the arch: its door leaf replaced by a hinged leaf + a room behind with a table; the parcel in cloth; the first banner on its rope; the musician\'s lute; a small clay pipe)', 'scenes/lib/fx (smoke-wisp: the pipe)', 'scenes/lib/humans (parent, child, musician, vendor, watchman, guard1)'],
+    from: 'CLING_SQUARE (session 33) + dressing; session 34',
+    continuity: { '1C': { sun: sunDir(132, 12), tod: 'early morning in Cling before the festival: low sun from the south-east, long shadows', exposure: 1.5 } },
   },
   BIRTHING_CHAMBER: {
     file: 'birthing-chamber.js', builder: 'birthing-chamber', frame: 'VERDOR',

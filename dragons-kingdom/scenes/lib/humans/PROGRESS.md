@@ -1,5 +1,31 @@
 # Humans - progress log (for a successor)
 
+## REQUEST from director s34 (2026-11-08) - climbing, eyes closed, a thumb on an instrument (Cling X5 / R3)
+CLING_SQUARE_2 (X5-15) has the watchman climbing the last rungs of a ladder: there is no climb cycle, the director raises
+the root on keys and reaches the hands rung to rung (feet hang). R3-04 wants the musician's eyes CLOSED (no lid control
+from the director: read as head + eyes down). X5-13 wants a thumb pressing a loose fastening on the lute (both hands only
+hold it). Please add any of: a ladder-climb pose/cycle (`climb` with rung spacing), an eyelid act or face hook option
+(`blink`/`lids: 0..1`), a thumb-press hand shape. The musician / parent / guard1 builds also carry their pose props (lute,
+parcel, spear): hidden by name in the set's afterCast as for the vendor (s33 request).
+
+## REQUEST from director s33 (2026-11-08) - builds without their pose prop (Cling vendor)
+The 'vendor' build (pose 'crate') carries its empty crate as part of the character: in CLING_SQUARE (X5-04..09) the
+director's arm acts lift it over his head. The director hides it by mesh name in sets/cling-square.js afterCast (a
+workaround). Please add a load option (`loadCharacter(id, { props: false })`) or a prop-free variant for vendor / sailor2.
+
+## REQUEST from director s32 (2026-11-07) - rider expression + per-act lean (X6 race)
+X6-10 (close 85 mm on Abby, "tucked down, laughing into the wind") has no way to make a rider laugh: please add a
+face/expression act for riders (`[t, 'face', { expr: 'laugh' | 'smile' | 'shout', amount }]` or similar). The race also
+wants the s30 per-act rider lean: OUTER_ROCKS sets abby_ride lean 0.55 / remi_ride 0.45 for the WHOLE set (createRider
+lean), so Abby still leans in the landed two-shot X6-17.
+
+## REQUEST from director s31 (2026-11-07) - young seated riders (X4-13)
+The X4-13 riding school needs young riders (could be children per CHARACTERS.md: wholesome riding lesson only) on small
+dragons. The only seated builds are abby_ride / remi_ride / fall_ride / scout_ride (adult); the director uses scout_ride
+(outfit 'scout', ride lean 0.6 = "clinging on") for the one rider and crowd13 standing by. Please add 1-2 young seated
+builds (e.g. `student_ride`, `student2_ride`, plain riding clothes, not the scout's outfit) and a rider "cling" pose
+(both arms round the neck / grip, chest down).
+
 ## State (2026-10-08, session 4 - see the newest section at the end first)
 
 Done (code committed; caches are git-ignored and rebuilt with offline/build.py)
@@ -1415,3 +1441,9 @@ NEXT (look, in order):
 1. After the full rebuild: hero hand check at draft (abby_injured, remi, a rider in 1C-16); tune fingertip_pad.
 2. 2m NEXT 1-3 unchanged (kerchief tails in motion, optional tie band, G_kirtle defaults).
 3. 2g NEXT 3 (dorsal veins / tendons, palm creases) and 4 (crowd05 brown iris - check whether still blue).
+
+## REQUEST from the director (session 30, 2026-11-07)
+- Riders: a per-ACT forward lean for a seated rider (e.g. `[t, 'lean', { to: 0.4, dur: 0.6 }]` on a `*_ride` build, today only
+  `ride.lean` at createRider). Needed by X6-07 (Remi "leans forward, and Charcoal goes after them") and X6-06 (Abby leans
+  before Leaf drops). Also a short PAT for a rider's free hand on the mount's neck (X4-12: `touch` at `leaf.neck_2` +12 cm
+  is used now; unchecked whether the hand leaves the grip bar - verify in the video).

@@ -1032,11 +1032,11 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 16.96,
-    "k4_cpu_s_per_frame": 226.11,
+    "draft_s_per_frame": 9.12,
+    "k4_cpu_s_per_frame": 121.56,
     "k4_gpu_s_per_frame": null,
-    "draft_minutes": 47.48,
-    "k4_cpu_hours": 10.55,
+    "draft_minutes": 25.53,
+    "k4_cpu_hours": 5.67,
     "k4_gpu_hours": null,
     "factors": {
      "people": 1.48,
@@ -1046,7 +1046,7 @@
      "move": 1.08,
      "total": 1.6
     },
-    "basis": "MEASURED draft 16.96 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
+    "basis": "MEASURED draft 9.12 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
    },
    "staging": "EXTREME WIDE: 24 mm (s21; was 180 mm) from a camera ship high and inland over the north shore, slow travel: the coast bends, the harbour opens below - curved wall, pale quay, boats on the slipway, nets on frames; the pair enter LEFT, Leaf near/behind, Charcoal right/ahead.",
    "deviation": null,
@@ -1153,7 +1153,7 @@
    "seq": 131,
    "scene": "1C",
    "set": "VERDOR_HARBOR",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 96,
    "rec_in": 2556,
    "rec_out": 2652,
@@ -1162,11 +1162,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/verdor-harbor.js",
+    "start_s": 1,
+    "start_frame": 24
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 4.44,
+    "k4_cpu_s_per_frame": 59.2,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 7.1,
+    "k4_cpu_hours": 1.58,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.48,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1,
+     "total": 1.48
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.48 for the shot's content"
+   },
+   "staging": "MEDIUM 50 mm STATIC from the quay, looking north along it (the Santa Maria soft beyond, right): a working dragon about Leaf's size (slate grey) crouches low and level, wrists of the folded wings on the stones, head toward the catch; the crew sort fish into baskets at left, full baskets right; it waits for its share.",
    "deviation": null,
    "action": "On the quay, a working dragon about Leaf's size crouches low and level beside a fishing crew, folded wings' wrists on the stones, watching the catch being sorted and waiting for its share.",
    "need": {
@@ -1179,7 +1199,7 @@
    "seq": 132,
    "scene": "1C",
    "set": "VERDOR_HARBOR",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 144,
    "rec_in": 2652,
    "rec_out": 2796,
@@ -1188,11 +1208,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/verdor-harbor.js",
+    "start_s": 7,
+    "start_frame": 168
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 4.94,
+    "k4_cpu_s_per_frame": 65.92,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 11.87,
+    "k4_cpu_hours": 2.64,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.6,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1.03,
+     "move": 1,
+     "total": 1.65
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.65 for the shot's content"
+   },
+   "staging": "WIDE 35 mm STATIC from the slipway (the quay's south end, looking south-east down the slip, the sun high left): two boats bring in a heavy net between them out on the basin (background); a second, smaller working dragon (slate grey) walks the slack line up the slipway (centre, toward screen right), low on its two legs and the wrists of its folded wings, the line running from its jaws back to the net; the crew (right) haul a second line from the near boat in time.",
    "deviation": null,
    "action": "Two boats bring in a heavy net between them; a second small dragon takes the slack line in its jaws and walks it up the slipway, low on its two legs and the wrists of its folded wings, in time with the crew's pull.",
    "need": {
@@ -1222,11 +1262,11 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 9.54,
-    "k4_cpu_s_per_frame": 127.24,
+    "draft_s_per_frame": 9.02,
+    "k4_cpu_s_per_frame": 120.25,
     "k4_gpu_s_per_frame": null,
-    "draft_minutes": 11.45,
-    "k4_cpu_hours": 2.54,
+    "draft_minutes": 10.82,
+    "k4_cpu_hours": 2.41,
     "k4_gpu_hours": null,
     "factors": {
      "people": 1.6,
@@ -1236,7 +1276,7 @@
      "move": 1,
      "total": 1.6
     },
-    "basis": "MEASURED draft 9.54 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
+    "basis": "MEASURED draft 9.02 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
    },
    "staging": "35 mm STATIC on the terrace farm (s24; was 50): a farmer (a woman) rests on a hoe (foreground left, back three-quarter, face turned away), the town's upper rows behind her, watches the riders pass high over the town (background right), unimpressed.",
    "deviation": null,
@@ -1251,7 +1291,7 @@
    "seq": 134,
    "scene": "1C",
    "set": "VERDOR_HARBOR",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 120,
    "rec_in": 2868,
    "rec_out": 2988,
@@ -1260,11 +1300,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/verdor-harbor.js",
+    "start_s": 15,
+    "start_frame": 360
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 5.74,
+    "k4_cpu_s_per_frame": 76.57,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 11.49,
+    "k4_cpu_hours": 2.55,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.72,
+     "creatures": 1,
+     "fx": 1.05,
+     "walk": 1.06,
+     "move": 1,
+     "total": 1.91
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.91 for the shot's content"
+   },
+   "staging": "WIDE 35 mm STATIC at street level in the market street (terrace 1), looking north along the stalls: Charcoal's shadow sweeps across the cloth roofs and the people (right to left, ~2.7 s); they glance up, know him, go back to business; two lift a hand. Nobody runs. Charcoal himself stays above the frame.",
    "deviation": null,
    "action": "In the market street, Charcoal's shadow crosses the stalls. People glance up, recognize him and go back to their business. One or two lift a hand. Nobody runs.",
    "need": {
@@ -1277,7 +1337,7 @@
    "seq": 135,
    "scene": "1C",
    "set": "VERDOR_AERIAL",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 84,
    "rec_in": 2988,
    "rec_out": 3072,
@@ -1286,11 +1346,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/verdor-aerial.js",
+    "start_s": 27,
+    "start_frame": 648
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 18.38,
+    "k4_cpu_s_per_frame": 245.01,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 25.73,
+    "k4_cpu_hours": 5.72,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.34
+    },
+    "basis": "MEASURED draft 18.38 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
+   },
+   "staging": "MEDIUM-WIDE 120 mm air-to-air off Leaf's right, a little above: low over the harbour basin, Leaf gives a quick bright call (neck up, jaw open), then back to the line; the quay dragon's answer is OFF (sound). Charcoal does not call (not in frame).",
    "deviation": null,
    "action": "Leaf gives a quick, bright call. The quay dragon answers from below. Charcoal does not call.",
    "need": {
@@ -1303,7 +1383,7 @@
    "seq": 136,
    "scene": "1C",
    "set": "VERDOR_HARBOR",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 120,
    "rec_in": 3072,
    "rec_out": 3192,
@@ -1312,11 +1392,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/verdor-harbor.js",
+    "start_s": 22,
+    "start_frame": 528
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 4.67,
+    "k4_cpu_s_per_frame": 62.28,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 9.34,
+    "k4_cpu_hours": 2.08,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.36,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1.06,
+     "move": 1.08,
+     "total": 1.56
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.56 for the shot's content"
+   },
+   "staging": "WIDE 35 mm slow aerial pass from over the basin (camera ship ~20 m up, ~60 m out): the Santa Maria moored at the quay, sails furled on the yards, the town terraces rising behind; crew at work on the quay by her side. Name not held on.",
    "deviation": null,
    "action": "Moored at the quay is the largest ship in the harbor: the Santa Maria. Her name may be glimpsed on the hull (on-screen text T12, optional); do not hold on it.",
    "need": {
@@ -1329,7 +1429,7 @@
    "seq": 137,
    "scene": "1C",
    "set": "VERDOR_AERIAL",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 168,
    "rec_in": 3192,
    "rec_out": 3360,
@@ -1338,12 +1438,71 @@
    "trans": [
     "cut"
    ],
-   "src": null,
-   "dialogue": [],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/verdor-aerial-2.js",
+    "start_s": 1,
+    "start_frame": 24
+   },
+   "dialogue": [
+    {
+     "id": "X4-01",
+     "part": 0,
+     "ref": "X4-01",
+     "role": "ABBY",
+     "file": "vo/X4-01.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.02,
+     "at_s": 4.57,
+     "speech_in_s": 4.6,
+     "speech_out_s": 5.56,
+     "words": [
+      {
+       "w": "they",
+       "start_s": 4.57,
+       "end_s": 4.74
+      },
+      {
+       "w": "wave",
+       "start_s": 4.74,
+       "end_s": 5
+      },
+      {
+       "w": "at",
+       "start_s": 5,
+       "end_s": 5.1
+      },
+      {
+       "w": "leaf",
+       "start_s": 5.1,
+       "end_s": 5.53
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 137.57
+    }
+   ],
    "captions": [],
-   "cost": null,
-   "staging": null,
-   "deviation": null,
+   "cost": {
+    "draft_s_per_frame": 4.41,
+    "k4_cpu_s_per_frame": 58.75,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 12.34,
+    "k4_cpu_hours": 2.74,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.36,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.47
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.47 for the shot's content"
+   },
+   "staging": "MEDIUM 50 mm air-to-air past the Santa Maria's mainmast: the camera ship flies ahead of Leaf on the inland side, looking back at Abby (left, face three-quarter); Leaf passes close beside the mast (10 m inland of it, just below the crow's nest). The LOOKOUT in the nest (beyond her, right) ducks as the wings sweep by, comes back up laughing and waves; Abby waves back with her LEFT hand (no attention drawn to it: a plain wave, her right stays on the grip). Line X4-01 (Abby), said as she turns back to the front.",
+   "deviation": "a slowed close pass (7 m/s) so one medium holds both; the laugh is a quick head bob (no laugh face in the humans library) + the sound; the crow's nest is set dressing (the ship model has none)",
    "action": "Leaf passes close beside her mast. A LOOKOUT at the masthead ducks, then laughs and waves. Abby waves back with her LEFT hand (no attention drawn to which hand).",
    "need": {
     "pre": 0,
@@ -1366,8 +1525,8 @@
    ],
    "src": {
     "scene_file": "episodes/s01e01/final/scenes/verdor-aerial.js",
-    "start_s": 27,
-    "start_frame": 648
+    "start_s": 33,
+    "start_frame": 792
    },
    "dialogue": [],
    "captions": [],
@@ -1401,7 +1560,7 @@
    "seq": 139,
    "scene": "1C",
    "set": "VERDOR_AERIAL",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 96,
    "rec_in": 3444,
    "rec_out": 3540,
@@ -1410,11 +1569,70 @@
    "trans": [
     "cut"
    ],
-   "src": null,
-   "dialogue": [],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/verdor-aerial.js",
+    "start_s": 39,
+    "start_frame": 936
+   },
+   "dialogue": [
+    {
+     "id": "X4-02",
+     "part": 0,
+     "ref": "X4-02",
+     "role": "REMI",
+     "file": "vo/X4-02.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.085,
+     "at_s": 0.32,
+     "speech_in_s": 0.35,
+     "speech_out_s": 1.375,
+     "words": [
+      {
+       "w": "they",
+       "start_s": 0.32,
+       "end_s": 0.5
+      },
+      {
+       "w": "wave",
+       "start_s": 0.5,
+       "end_s": 0.87
+      },
+      {
+       "w": "at",
+       "start_s": 0.87,
+       "end_s": 1.08
+      },
+      {
+       "w": "you",
+       "start_s": 1.08,
+       "end_s": 1.32
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 143.82
+    }
+   ],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 10.08,
+    "k4_cpu_s_per_frame": 134.41,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 16.13,
+    "k4_cpu_hours": 3.58,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.34
+    },
+    "basis": "MEASURED draft 10.08 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
+   },
+   "staging": "MEDIUM 50 mm on Abby from Leaf's right front three-quarter (Remi's line X4-02 \"They wave at you.\" OFF / over, he is 30 m away seaward): she pretends not to hear and pats Leaf's neck with her right hand; face three-quarter.",
    "deviation": null,
    "action": "Abby pretends not to hear and pats Leaf's neck.",
    "need": {
@@ -1427,7 +1645,7 @@
    "seq": 140,
    "scene": "1C",
    "set": "VERDOR_AERIAL",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 192,
    "rec_in": 3540,
    "rec_out": 3732,
@@ -1436,11 +1654,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/verdor-aerial.js",
+    "start_s": 45,
+    "start_frame": 1080
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 5.54,
+    "k4_cpu_s_per_frame": 73.87,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 17.73,
+    "k4_cpu_hours": 3.94,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.72,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.86
+    },
+    "basis": "MEASURED draft 5.54 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
+   },
+   "staging": "AERIAL 35 mm looking down (~60 m) on the riding school on the grass terraces south of the town: the INSTRUCTOR (left) calls; a young dragon makes a wobbling takeoff with its rider clinging on with both arms (lean); another student stands by a crouched young dragon; one young dragon lies down flat in the middle of the lesson and will not move (right). Abby's laugh is OFF (sound). No rider named or aged.",
    "deviation": null,
    "action": "On a grassy field above the harbor, young riders learn on small dragons under an INSTRUCTOR: a wobbling takeoff, a rider clinging on with both arms, one young dragon lying down flat in the middle of the lesson and refusing to move. Abby laughs. No rider is named or given an age.",
    "need": {
@@ -1464,8 +1702,8 @@
    ],
    "src": {
     "scene_file": "episodes/s01e01/final/scenes/verdor-aerial.js",
-    "start_s": 33,
-    "start_frame": 792
+    "start_s": 55,
+    "start_frame": 1320
    },
    "dialogue": [],
    "captions": [],
@@ -1499,7 +1737,7 @@
    "seq": 142,
    "scene": "1C",
    "set": "VERDOR_AERIAL",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 108,
    "rec_in": 3852,
    "rec_out": 3960,
@@ -1508,11 +1746,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/verdor-aerial.js",
+    "start_s": 62,
+    "start_frame": 1488
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 12.42,
+    "k4_cpu_s_per_frame": 165.64,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 22.36,
+    "k4_cpu_hours": 4.97,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.36,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.47
+    },
+    "basis": "MEASURED draft 12.42 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
+   },
+   "staging": "POV 300 mm from Remi's eyeline (on Charcoal, passing ~67 m east of the palace keep, heading south): Alexandria stands in the chamber's high opening on the keep's east face, watching them pass - still, unreadable, hands folded; she does not wave. Remi lifts his right hand (his act; the REVERSE on him is not staged - DEVIATION: one POV set-up, no cut inside the shot).",
    "deviation": null,
    "action": "Remi looks up at the opening and sees Alexandria standing in it, watching them pass. He lifts a hand. She does not wave back. She watches until they are past.",
    "need": {
@@ -1525,7 +1783,7 @@
    "seq": 143,
    "scene": "1C",
    "set": "VERDOR_AERIAL",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 144,
    "rec_in": 3960,
    "rec_out": 4104,
@@ -1534,11 +1792,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/verdor-aerial.js",
+    "start_s": 69,
+    "start_frame": 1656
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 16.62,
+    "k4_cpu_s_per_frame": 221.57,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 39.88,
+    "k4_cpu_hours": 8.86,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.34
+    },
+    "basis": "MEASURED draft 16.62 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
+   },
+   "staging": "MEDIUM 50 mm off Charcoal's right front: Remi (screen right) looks down over the town longer than he needs to - roofs, harbour, people working below-left; face three-quarter AWAY (down-left).",
    "deviation": null,
    "action": "Remi looks down over the town for longer than he needs to: the roofs, the harbor, the people working.",
    "need": {
@@ -1551,7 +1829,7 @@
    "seq": 144,
    "scene": "1C",
    "set": "VERDOR_AERIAL",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 48,
    "rec_in": 4104,
    "rec_out": 4152,
@@ -1560,11 +1838,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/verdor-aerial.js",
+    "start_s": 77,
+    "start_frame": 1848
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 8.17,
+    "k4_cpu_s_per_frame": 108.89,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 6.53,
+    "k4_cpu_hours": 1.45,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.34
+    },
+    "basis": "MEASURED draft 8.17 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
+   },
+   "staging": "CLOSE 85 mm on Abby (screen left) from Leaf's right front three-quarter: she watches him doing it - looks screen RIGHT toward Remi. Silent.",
    "deviation": null,
    "action": "Abby watches him doing it.",
    "need": {
@@ -1577,7 +1875,7 @@
    "seq": 145,
    "scene": "1C",
    "set": "VERDOR_AERIAL",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 192,
    "rec_in": 4152,
    "rec_out": 4344,
@@ -1586,11 +1884,197 @@
    "trans": [
     "cut"
    ],
-   "src": null,
-   "dialogue": [],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/verdor-aerial.js",
+    "start_s": 81,
+    "start_frame": 1944
+   },
+   "dialogue": [
+    {
+     "id": "X4-03",
+     "part": 0,
+     "ref": "X4-03",
+     "role": "ABBY",
+     "file": "vo/X4-03.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.055,
+     "at_s": 0.47,
+     "speech_in_s": 0.5,
+     "speech_out_s": 1.495,
+     "words": [
+      {
+       "w": "you're",
+       "start_s": 0.47,
+       "end_s": 0.69
+      },
+      {
+       "w": "doing",
+       "start_s": 0.69,
+       "end_s": 0.97
+      },
+      {
+       "w": "it",
+       "start_s": 0.97,
+       "end_s": 1.04
+      },
+      {
+       "w": "again",
+       "start_s": 1.04,
+       "end_s": 1.43
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 173.47
+    },
+    {
+     "id": "X4-04",
+     "part": 0,
+     "ref": "X4-04",
+     "role": "REMI",
+     "file": "vo/X4-04.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.915,
+     "at_s": 1.815,
+     "speech_in_s": 1.845,
+     "speech_out_s": 2.7,
+     "words": [
+      {
+       "w": "doing",
+       "start_s": 1.815,
+       "end_s": 2.255
+      },
+      {
+       "w": "what",
+       "start_s": 2.255,
+       "end_s": 2.715
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 174.815
+    },
+    {
+     "id": "X4-05",
+     "part": 0,
+     "ref": "X4-05",
+     "role": "ABBY",
+     "file": "vo/X4-05.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.975,
+     "at_s": 2.97,
+     "speech_in_s": 3,
+     "speech_out_s": 3.915,
+     "words": [
+      {
+       "w": "counting",
+       "start_s": 2.97,
+       "end_s": 3.45
+      },
+      {
+       "w": "roofs",
+       "start_s": 3.45,
+       "end_s": 3.93
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 175.97
+    },
+    {
+     "id": "X4-06",
+     "part": 0,
+     "ref": "X4-06",
+     "role": "REMI",
+     "file": "vo/X4-06.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.57,
+     "at_s": 4.235,
+     "speech_in_s": 4.265,
+     "speech_out_s": 5.775,
+     "words": [
+      {
+       "w": "i'm",
+       "start_s": 4.345,
+       "end_s": 4.495
+      },
+      {
+       "w": "not",
+       "start_s": 4.495,
+       "end_s": 4.735
+      },
+      {
+       "w": "counting",
+       "start_s": 4.735,
+       "end_s": 5.255
+      },
+      {
+       "w": "roofs",
+       "start_s": 5.255,
+       "end_s": 5.745
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 177.235
+    },
+    {
+     "id": "X4-07",
+     "part": 0,
+     "ref": "X4-07",
+     "role": "ABBY",
+     "file": "vo/X4-07.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.205,
+     "at_s": 6.095,
+     "speech_in_s": 6.125,
+     "speech_out_s": 7.27,
+     "words": [
+      {
+       "w": "you're",
+       "start_s": 6.095,
+       "end_s": 6.245
+      },
+      {
+       "w": "counting",
+       "start_s": 6.245,
+       "end_s": 6.685
+      },
+      {
+       "w": "something",
+       "start_s": 6.685,
+       "end_s": 7.245
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 179.095
+    }
+   ],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 4.8,
+    "k4_cpu_s_per_frame": 63.94,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 15.34,
+    "k4_cpu_hours": 3.41,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.48,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.6
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.6 for the shot's content"
+   },
+   "staging": "TWO-SHOT 180 mm air-to-air from inland: the exchange X4-03..X4-07 (\"You're doing it again.\" ... \"You're counting something.\"); Leaf / Abby left and near, Charcoal / Remi right and beyond; the sea below and behind them.",
    "deviation": null,
    "action": "Counting roofs.",
    "need": {
@@ -1603,7 +2087,7 @@
    "seq": 146,
    "scene": "1C",
    "set": "VERDOR_AERIAL",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 84,
    "rec_in": 4344,
    "rec_out": 4428,
@@ -1612,11 +2096,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/verdor-aerial.js",
+    "start_s": 91,
+    "start_frame": 2184
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 4.02,
+    "k4_cpu_s_per_frame": 53.57,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 5.62,
+    "k4_cpu_hours": 1.25,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.34
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.34 for the shot's content"
+   },
+   "staging": "CLOSE 85 mm on Remi (screen right) from Charcoal's right front: he does not answer; looks away from the town (down-left) toward the sea (screen right), like someone caught.",
    "deviation": null,
    "action": "He does not answer. He looks away from the town toward the sea, like someone caught.",
    "need": {
@@ -1640,8 +2144,8 @@
    ],
    "src": {
     "scene_file": "episodes/s01e01/final/scenes/verdor-aerial.js",
-    "start_s": 40,
-    "start_frame": 960
+    "start_s": 97,
+    "start_frame": 2328
    },
    "dialogue": [],
    "captions": [],
@@ -1675,7 +2179,7 @@
    "seq": 148,
    "scene": "1C",
    "set": "CLING_SQUARE",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 72,
    "rec_in": 4548,
    "rec_out": 4620,
@@ -1684,11 +2188,40 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/cling-square.js",
+    "start_s": 1,
+    "start_frame": 24
+   },
    "dialogue": [],
-   "captions": [],
-   "cost": null,
-   "staging": null,
+   "captions": [
+    {
+     "text": "CLING — SCRAPPER",
+     "style": "location",
+     "from_s": 0.25,
+     "to_s": 2.95,
+     "rec_from_s": 189.75,
+     "rec_to_s": 192.45
+    }
+   ],
+   "cost": {
+    "draft_s_per_frame": 3,
+    "k4_cpu_s_per_frame": 40,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 3.6,
+    "k4_cpu_hours": 0.8,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1,
+     "total": 1
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1 for the shot's content"
+   },
+   "staging": "INSERT 100 mm STATIC, low on the paving east of the alley line: the cart's iron-tyred wheel rolls through frame south over the uneven setts and jolts on a proud stone (~1.35 s), a smaller knock at ~2.3 s. The vendor (out of frame) pushes. Location caption T11 over it (from the edit list).",
    "deviation": null,
    "action": "ON-SCREEN LOCATION: CLING — SCRAPPER (T11). A cart wheel jolts over uneven paving stones.",
    "need": {
@@ -1701,7 +2234,7 @@
    "seq": 149,
    "scene": "1C",
    "set": "CLING_SQUARE",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 120,
    "rec_in": 4620,
    "rec_out": 4740,
@@ -1710,11 +2243,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/cling-square.js",
+    "start_s": 6,
+    "start_frame": 144
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 3,
+    "k4_cpu_s_per_frame": 40,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 6,
+    "k4_cpu_hours": 1.33,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1,
+     "total": 1
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1 for the shot's content"
+   },
+   "staging": "WIDE 35 mm STATIC from the king's steps looking north: the square nearly empty, the fountain running round its stone pillar at the centre, long morning shadows of the south-east sun stretching north-west across the setts; a pigeon on a ridge. The festival has not begun (no stall yet).",
    "deviation": null,
    "action": "The square is nearly empty; long morning shadows; the fountain runs quietly around its stone pillar. The festival has not begun.",
    "need": {
@@ -1727,7 +2280,7 @@
    "seq": 150,
    "scene": "1C",
    "set": "CLING_SQUARE",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 192,
    "rec_in": 4740,
    "rec_out": 4932,
@@ -1736,11 +2289,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/cling-square.js",
+    "start_s": 13,
+    "start_frame": 312
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 3.24,
+    "k4_cpu_s_per_frame": 43.2,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 10.37,
+    "k4_cpu_hours": 2.3,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.08
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.08 for the shot's content"
+   },
+   "staging": "WIDE 35 mm slow TRAVELING PAN round the square from beside the fountain (the camera drifts 6 m east): the king's steps, then left across the south-west corner to the stone arch, the alley behind the stall place, over the fountain to the music space (the empty dais) and on to the gate onto the broad road. Unlabelled: the map of the attack.",
    "deviation": null,
    "action": "The camera passes each fixed landmark naturally, unlabelled: the steps, the stone arch, the gate onto the broad road, the alley, the music space. This is the map the attack depends on.",
    "need": {
@@ -1753,7 +2326,7 @@
    "seq": 151,
    "scene": "1C",
    "set": "CLING_SQUARE",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 144,
    "rec_in": 4932,
    "rec_out": 5076,
@@ -1762,11 +2335,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/cling-square.js",
+    "start_s": 23,
+    "start_frame": 552
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 3.46,
+    "k4_cpu_s_per_frame": 46.14,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 8.31,
+    "k4_cpu_hours": 1.85,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.12,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1.03,
+     "move": 1,
+     "total": 1.15
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.15 for the shot's content"
+   },
+   "staging": "MEDIUM 50 mm STATIC from the south-west of the stall place: the VENDOR pushes his handcart in from the alley side and parks it (~2.4 s), then stands the back poles, tips up the front frame (two poles and the crossbar), drops the back crossbar on and throws the cloth roof forward over them.",
    "deviation": null,
    "action": "The VENDOR pushes his cart into place and builds his stall: poles, a crossbar, a cloth roof.",
    "need": {
@@ -1779,7 +2372,7 @@
    "seq": 152,
    "scene": "1C",
    "set": "CLING_SQUARE",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 120,
    "rec_in": 5076,
    "rec_out": 5196,
@@ -1788,11 +2381,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/cling-square.js",
+    "start_s": 31,
+    "start_frame": 744
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 3.36,
+    "k4_cpu_s_per_frame": 44.8,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 6.72,
+    "k4_cpu_hours": 1.49,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.12,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1,
+     "total": 1.12
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.12 for the shot's content"
+   },
+   "staging": "INSERT 100 mm STATIC, low at the front-left leg: the leg rocks on the uneven setts; the vendor's hand slides a flat stone under it (~1.4 s), his other hand tests the pole (it still rocks a little), and a second, thinner stone goes in (~3.1 s). Still.",
    "deviation": null,
    "action": "One leg rocks on the uneven stones. He wedges a flat stone under it, tests it, and wedges a second.",
    "need": {
@@ -1805,7 +2418,7 @@
    "seq": 153,
    "scene": "1C",
    "set": "CLING_SQUARE",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 72,
    "rec_in": 5196,
    "rec_out": 5268,
@@ -1814,11 +2427,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/cling-square.js",
+    "start_s": 38,
+    "start_frame": 912
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 3.36,
+    "k4_cpu_s_per_frame": 44.8,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 4.03,
+    "k4_cpu_hours": 0.9,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.12,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1,
+     "total": 1.12
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.12 for the shot's content"
+   },
+   "staging": "MEDIUM 50 mm STATIC from the south-west: the vendor ties the back-left corner of the cloth to its pole (right of frame, arms up); in the foreground the front-left corner hangs lower than the rest, at the height of a passing shoulder.",
    "deviation": null,
    "action": "He ties the cloth. One corner hangs lower than the rest, at the height of a passing shoulder.",
    "need": {
@@ -1831,7 +2464,7 @@
    "seq": 154,
    "scene": "1C",
    "set": "CLING_SQUARE",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 108,
    "rec_in": 5268,
    "rec_out": 5376,
@@ -1840,11 +2473,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/cling-square.js",
+    "start_s": 43,
+    "start_frame": 1032
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 4.32,
+    "k4_cpu_s_per_frame": 57.66,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 7.78,
+    "k4_cpu_hours": 1.73,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.36,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1.06,
+     "move": 1,
+     "total": 1.44
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.44 for the shot's content"
+   },
+   "staging": "WIDE 35 mm STATIC from the square, looking north at the stall: two VILLAGERS carry a long ladder on their shoulders across the square left to right (to hang banners); its front end catches the low front-left corner (~1.2 s), drags it a metre and pulls the cloth half off its frame (it falls in a fold, ~2 s). They do not notice and walk on. The vendor, behind the cart with his back to them, does not see it.",
    "deviation": null,
    "action": "Two VILLAGERS carry a long ladder across the square to hang banners. The end of the ladder catches the low corner and drags the cloth half off its frame. They do not notice.",
    "need": {
@@ -1857,7 +2510,7 @@
    "seq": 155,
    "scene": "1C",
    "set": "CLING_SQUARE",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 84,
    "rec_in": 5376,
    "rec_out": 5460,
@@ -1866,11 +2519,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/cling-square.js",
+    "start_s": 50,
+    "start_frame": 1200
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 4.32,
+    "k4_cpu_s_per_frame": 57.66,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 6.05,
+    "k4_cpu_hours": 1.35,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.36,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1.06,
+     "move": 1,
+     "total": 1.44
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.44 for the shot's content"
+   },
+   "staging": "MEDIUM 50 mm STATIC from the south-west: the vendor stands at the dragged corner watching the two with the ladder go (screen right), then turns and reties the corner without a word (the cloth back on its frame, the corner still hanging low). The first time.",
    "deviation": null,
    "action": "The vendor watches them go, then reties the corner without a word. That is the first time.",
    "need": {
@@ -1883,7 +2556,7 @@
    "seq": 156,
    "scene": "1C",
    "set": "CLING_SQUARE",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 96,
    "rec_in": 5460,
    "rec_out": 5556,
@@ -1892,12 +2565,32 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/cling-square.js",
+    "start_s": 56,
+    "start_frame": 1344
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
-   "deviation": null,
+   "cost": {
+    "draft_s_per_frame": 3.83,
+    "k4_cpu_s_per_frame": 51.09,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 6.13,
+    "k4_cpu_hours": 1.36,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1.03,
+     "move": 1,
+     "total": 1.28
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.28 for the shot's content"
+   },
+   "staging": "WIDE 35 mm STATIC from the east side of the square by the music dais, looking west-north-west over the fountain: early life, few and distinct - the fountain running, pigeons on the north roofs (one hops, one pecks), a woman crossing from the alley, the vendor at his stall (cloth corner low). Sound carries the door and the shutter.",
+   "deviation": "the door opening and the shutter thrown back are SOUND only (no animated door / shutter leaf in the set yet); the bird is on the roof",
    "action": "Early sounds, few and distinct: the fountain, the cart, a door opening, a bird on a roof, a shutter thrown back.",
    "need": {
     "pre": 0,
@@ -1909,7 +2602,7 @@
    "seq": 157,
    "scene": "1C",
    "set": "CLING_SQUARE",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 120,
    "rec_in": 5556,
    "rec_out": 5676,
@@ -1918,12 +2611,32 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/cling-square-2.js",
+    "start_s": 1,
+    "start_frame": 24
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
-   "deviation": null,
+   "cost": {
+    "draft_s_per_frame": 3.72,
+    "k4_cpu_s_per_frame": 49.6,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 7.44,
+    "k4_cpu_hours": 1.65,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1,
+     "total": 1.24
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.24 for the shot's content"
+   },
+   "staging": "MEDIUM 50 mm STATIC through the OPEN door of the house by the stone arch (the door frame inside the frame): inside, the PARENT at the table wraps a parcel in undyed cloth and knots it; the CHILD stands at the right edge of the doorway watching. Warm light inside.",
+   "deviation": "the cloth is already round the parcel (no folding cloth sim): her hands work over it, then knot it; the warmth fogging the cloth is not drawn",
    "action": "Through the open door of a house near the stone arch, the PARENT wraps a parcel in cloth: something baked, still warm enough to fog the cloth.",
    "need": {
     "pre": 0,
@@ -1935,7 +2648,7 @@
    "seq": 158,
    "scene": "1C",
    "set": "CLING_SQUARE",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 72,
    "rec_in": 5676,
    "rec_out": 5748,
@@ -1944,11 +2657,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/cling-square-2.js",
+    "start_s": 8,
+    "start_frame": 192
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 3.72,
+    "k4_cpu_s_per_frame": 49.6,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 4.46,
+    "k4_cpu_hours": 0.99,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1,
+     "total": 1.24
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.24 for the shot's content"
+   },
+   "staging": "MEDIUM 50 mm STATIC through the doorway, a little nearer: the CHILD (right) reaches for the parcel; the PARENT slides it gently out of reach to her side of the table - not yet.",
    "deviation": null,
    "action": "The CHILD reaches for the parcel. The parent moves it gently out of reach: not yet.",
    "need": {
@@ -1961,7 +2694,7 @@
    "seq": 159,
    "scene": "1C",
    "set": "CLING_SQUARE",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 72,
    "rec_in": 5748,
    "rec_out": 5820,
@@ -1970,11 +2703,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/cling-square-2.js",
+    "start_s": 13,
+    "start_frame": 312
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 3.46,
+    "k4_cpu_s_per_frame": 46.14,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 4.15,
+    "k4_cpu_hours": 0.92,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.12,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1.03,
+     "move": 1,
+     "total": 1.15
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.15 for the shot's content"
+   },
+   "staging": "WIDE 35 mm STATIC from the square: the house by the arch, its door open; the CHILD comes to the doorway and stands on the step looking up across the square, where the banners are going up.",
    "deviation": null,
    "action": "The child accepts this and goes to the doorway to watch the banners go up.",
    "need": {
@@ -1987,7 +2740,7 @@
    "seq": 160,
    "scene": "1C",
    "set": "CLING_SQUARE",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 120,
    "rec_in": 5820,
    "rec_out": 5940,
@@ -1996,12 +2749,32 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/cling-square-2.js",
+    "start_s": 18,
+    "start_frame": 432
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
-   "deviation": null,
+   "cost": {
+    "draft_s_per_frame": 3.36,
+    "k4_cpu_s_per_frame": 44.8,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 6.72,
+    "k4_cpu_hours": 1.49,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.12,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1,
+     "total": 1.12
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.12 for the shot's content"
+   },
+   "staging": "MEDIUM 50 mm STATIC, three-quarter front: the MUSICIAN sits on the fountain rim with his lute across his lap, tilts his head to it and tests it (tuning notes are sound); one fastening is loose.",
+   "deviation": "the thumb on the loose fastening is not posed (both hands hold the lute); the instrument is a lute (characters.py: a proposal)",
    "action": "The MUSICIAN sits on the fountain rim to test his instrument. One fastening is loose. He presses it with his thumb.",
    "need": {
     "pre": 0,
@@ -2013,7 +2786,7 @@
    "seq": 161,
    "scene": "1C",
    "set": "CLING_SQUARE",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 120,
    "rec_in": 5940,
    "rec_out": 6060,
@@ -2022,11 +2795,126 @@
    "trans": [
     "cut"
    ],
-   "src": null,
-   "dialogue": [],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/cling-square-2.js",
+    "start_s": 25,
+    "start_frame": 600
+   },
+   "dialogue": [
+    {
+     "id": "X5-01",
+     "part": 0,
+     "ref": "X5-01",
+     "role": "MUSICIAN",
+     "file": "vo/X5-01.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.075,
+     "at_s": 0.32,
+     "speech_in_s": 0.35,
+     "speech_out_s": 1.365,
+     "words": [
+      {
+       "w": "that'll",
+       "start_s": 0.32,
+       "end_s": 0.8
+      },
+      {
+       "w": "hold",
+       "start_s": 0.8,
+       "end_s": 1.38
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 247.82
+    },
+    {
+     "id": "X5-02",
+     "part": 0,
+     "ref": "X5-02",
+     "role": "VENDOR",
+     "file": "vo/X5-02.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.67,
+     "at_s": 1.585,
+     "speech_in_s": 1.615,
+     "speech_out_s": 2.225,
+     "words": [
+      {
+       "w": "it",
+       "start_s": 1.585,
+       "end_s": 1.685
+      },
+      {
+       "w": "won't",
+       "start_s": 1.685,
+       "end_s": 2.175
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 249.085
+    },
+    {
+     "id": "X5-03",
+     "part": 0,
+     "ref": "X5-03",
+     "role": "MUSICIAN",
+     "file": "vo/X5-03.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.935,
+     "at_s": 2.445,
+     "speech_in_s": 2.475,
+     "speech_out_s": 4.35,
+     "words": [
+      {
+       "w": "it'll",
+       "start_s": 2.445,
+       "end_s": 2.705
+      },
+      {
+       "w": "hold",
+       "start_s": 2.705,
+       "end_s": 3.265
+      },
+      {
+       "w": "until",
+       "start_s": 3.475,
+       "end_s": 3.845
+      },
+      {
+       "w": "tonight",
+       "start_s": 3.845,
+       "end_s": 4.365
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 249.945
+    }
+   ],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 3.72,
+    "k4_cpu_s_per_frame": 49.6,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 7.44,
+    "k4_cpu_hours": 1.65,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1,
+     "total": 1.24
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.24 for the shot's content"
+   },
+   "staging": "MEDIUM 50 mm STATIC TWO-SHOT: the musician (left, seated on the rim with his lute) and the VENDOR (right, standing at his side) - an old conversation between friends; the vendor's stall in the background right.",
    "deviation": null,
    "action": "An old conversation between friends.",
    "need": {
@@ -2039,7 +2927,7 @@
    "seq": 162,
    "scene": "1C",
    "set": "CLING_SQUARE",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 60,
    "rec_in": 6060,
    "rec_out": 6120,
@@ -2048,11 +2936,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/cling-square-2.js",
+    "start_s": 32,
+    "start_frame": 768
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 3.94,
+    "k4_cpu_s_per_frame": 52.58,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 3.94,
+    "k4_cpu_hours": 0.88,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1.06,
+     "move": 1,
+     "total": 1.31
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.31 for the shot's content"
+   },
+   "staging": "WIDE 35 mm STATIC across the square: at the house by the arch (left) the PARENT in the doorway calls the CHILD in; the child goes inside, and the door swings shut.",
    "deviation": null,
    "action": "At the house near the arch, the parent calls the child in from the doorway, and the door swings shut.",
    "need": {
@@ -2065,7 +2973,7 @@
    "seq": 163,
    "scene": "1C",
    "set": "CLING_SQUARE",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 108,
    "rec_in": 6120,
    "rec_out": 6228,
@@ -2074,11 +2982,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/cling-square-2.js",
+    "start_s": 37,
+    "start_frame": 888
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 3.91,
+    "k4_cpu_s_per_frame": 52.08,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 7.03,
+    "k4_cpu_hours": 1.56,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1.05,
+     "walk": 1,
+     "move": 1,
+     "total": 1.3
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.3 for the shot's content"
+   },
+   "staging": "MEDIUM STATIC (40 mm, to hold the stall in the background): the musician (centre, lute laid across his knees) takes a small clay pipe from his coat, lights it and draws; a thin smoke drifts across the fountain. The VENDOR at his stall in the background right looks over - he knows what it is. No child in the shot or in sight of it.",
    "deviation": null,
    "action": "The musician takes a small pipe from his coat and lights it. The smoke that drifts across the fountain is thicker and sweeter than tobacco, and the vendor knows exactly what it is. No child is in the shot or in sight of it.",
    "need": {
@@ -2091,7 +3019,7 @@
    "seq": 164,
    "scene": "1C",
    "set": "CLING_SQUARE",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 180,
    "rec_in": 6228,
    "rec_out": 6408,
@@ -2100,11 +3028,179 @@
    "trans": [
     "cut"
    ],
-   "src": null,
-   "dialogue": [],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/cling-square-2.js",
+    "start_s": 44,
+    "start_frame": 1056
+   },
+   "dialogue": [
+    {
+     "id": "R3-01",
+     "part": 0,
+     "ref": "R3-01",
+     "role": "VENDOR",
+     "file": "vo/R3-01.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.05,
+     "at_s": 0.27,
+     "speech_in_s": 0.3,
+     "speech_out_s": 1.29,
+     "words": [
+      {
+       "w": "bit",
+       "start_s": 0.27,
+       "end_s": 0.4
+      },
+      {
+       "w": "early",
+       "start_s": 0.4,
+       "end_s": 0.63
+      },
+      {
+       "w": "for",
+       "start_s": 0.63,
+       "end_s": 0.78
+      },
+      {
+       "w": "that",
+       "start_s": 0.78,
+       "end_s": 1.21
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 259.77
+    },
+    {
+     "id": "R3-02",
+     "part": 0,
+     "ref": "R3-02",
+     "role": "MUSICIAN",
+     "file": "vo/R3-02.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.22,
+     "at_s": 1.41,
+     "speech_in_s": 1.44,
+     "speech_out_s": 2.6,
+     "words": [
+      {
+       "w": "it's",
+       "start_s": 1.41,
+       "end_s": 1.66
+      },
+      {
+       "w": "for",
+       "start_s": 1.66,
+       "end_s": 1.79
+      },
+      {
+       "w": "my",
+       "start_s": 1.79,
+       "end_s": 2.03
+      },
+      {
+       "w": "nerves",
+       "start_s": 2.03,
+       "end_s": 2.57
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 260.91
+    },
+    {
+     "id": "R3-03",
+     "part": 0,
+     "ref": "R3-03",
+     "role": "VENDOR",
+     "file": "vo/R3-03.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.335,
+     "at_s": 2.72,
+     "speech_in_s": 2.75,
+     "speech_out_s": 4.025,
+     "words": [
+      {
+       "w": "you",
+       "start_s": 2.72,
+       "end_s": 2.83
+      },
+      {
+       "w": "haven't",
+       "start_s": 2.83,
+       "end_s": 3.03
+      },
+      {
+       "w": "got",
+       "start_s": 3.03,
+       "end_s": 3.23
+      },
+      {
+       "w": "any",
+       "start_s": 3.23,
+       "end_s": 3.39
+      },
+      {
+       "w": "nerves",
+       "start_s": 3.39,
+       "end_s": 3.94
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 262.22
+    },
+    {
+     "id": "R3-04",
+     "part": 0,
+     "ref": "R3-04",
+     "role": "MUSICIAN",
+     "file": "vo/R3-04.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.06,
+     "at_s": 4.19,
+     "speech_in_s": 4.225,
+     "speech_out_s": 5.22,
+     "words": [
+      {
+       "w": "not",
+       "start_s": 4.19,
+       "end_s": 4.62
+      },
+      {
+       "w": "anymore",
+       "start_s": 4.62,
+       "end_s": 5.1
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 263.69
+    }
+   ],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 3.91,
+    "k4_cpu_s_per_frame": 52.08,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 11.72,
+    "k4_cpu_hours": 2.6,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1.05,
+     "walk": 1,
+     "move": 1,
+     "total": 1.3
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.3 for the shot's content"
+   },
+   "staging": "MEDIUM 50 mm STATIC TWO-SHOT, deadpan: the musician (left, pipe in his right hand at his knee, lute across his knees) and the vendor (right, standing at his side). No child in the shot.",
    "deviation": null,
    "action": "Deadpan.",
    "need": {
@@ -2117,7 +3213,7 @@
    "seq": 165,
    "scene": "1C",
    "set": "CLING_SQUARE",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 84,
    "rec_in": 6408,
    "rec_out": 6492,
@@ -2126,12 +3222,32 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/cling-square-2.js",
+    "start_s": 54,
+    "start_frame": 1296
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
-   "deviation": null,
+   "cost": {
+    "draft_s_per_frame": 4.02,
+    "k4_cpu_s_per_frame": 53.64,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 5.63,
+    "k4_cpu_hours": 1.25,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1.05,
+     "walk": 1.03,
+     "move": 1,
+     "total": 1.34
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.34 for the shot's content"
+   },
+   "staging": "MEDIUM 40 mm STATIC: the vendor shakes his head and walks back round the fountain to his stall (background right); the musician (centre) smokes with his eyes down and closed, the lute across his knees. Thin smoke. No child in the shot.",
+   "deviation": "eyes closed is read as the head and eyes down (no lid control from the director yet)",
    "action": "The vendor shakes his head and goes back to his stall. The musician smokes with his eyes closed and the instrument across his knees.",
    "need": {
     "pre": 0,
@@ -2143,7 +3259,7 @@
    "seq": 166,
    "scene": "1C",
    "set": "CLING_SQUARE",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 120,
    "rec_in": 6492,
    "rec_out": 6612,
@@ -2152,12 +3268,32 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/cling-square-2.js",
+    "start_s": 60,
+    "start_frame": 1440
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
-   "deviation": null,
+   "cost": {
+    "draft_s_per_frame": 3.83,
+    "k4_cpu_s_per_frame": 51.09,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 7.66,
+    "k4_cpu_hours": 1.7,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1.03,
+     "move": 1,
+     "total": 1.28
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.28 for the shot's content"
+   },
+   "staging": "WIDE 35 mm STATIC from the square, looking north-east at the town wall: the WATCHMAN climbs the last rungs of the ladder onto his raised platform on the wall, crosses to the parapet, turns to the fields and wraps his cloak round him against the chill. A guard below at the left.",
+   "deviation": "the climb is the last rungs only (no climbing cycle in the director: the root rises on keys, the hands reach rung to rung)",
    "action": "The WATCHMAN climbs to his post: a raised platform on the wall with a clear line of sight over the roofs. He wraps his cloak against the chill.",
    "need": {
     "pre": 0,
@@ -2169,7 +3305,7 @@
    "seq": 167,
    "scene": "1C",
    "set": "CLING_SQUARE",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 108,
    "rec_in": 6612,
    "rec_out": 6720,
@@ -2178,12 +3314,135 @@
    "trans": [
     "cut"
    ],
-   "src": null,
-   "dialogue": [],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/cling-square-2.js",
+    "start_s": 67,
+    "start_frame": 1608
+   },
+   "dialogue": [
+    {
+     "id": "X5-04",
+     "part": 0,
+     "ref": "X5-04",
+     "role": "GUARD",
+     "file": "vo/X5-04.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.84,
+     "at_s": 0.22,
+     "speech_in_s": 0.25,
+     "speech_out_s": 1.03,
+     "words": [
+      {
+       "w": "anything",
+       "start_s": 0.22,
+       "end_s": 0.91
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 275.72
+    },
+    {
+     "id": "X5-05",
+     "part": 0,
+     "ref": "X5-05",
+     "role": "WATCHMAN",
+     "file": "vo/X5-05.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.56,
+     "at_s": 1.15,
+     "speech_in_s": 1.18,
+     "speech_out_s": 1.685,
+     "words": [
+      {
+       "w": "weather",
+       "start_s": 1.15,
+       "end_s": 1.61
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 276.65
+    },
+    {
+     "id": "X5-06",
+     "part": 0,
+     "ref": "X5-06",
+     "role": "GUARD",
+     "file": "vo/X5-06.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.88,
+     "at_s": 1.81,
+     "speech_in_s": 1.835,
+     "speech_out_s": 2.655,
+     "words": [
+      {
+       "w": "good",
+       "start_s": 1.81,
+       "end_s": 2.08
+      },
+      {
+       "w": "weather",
+       "start_s": 2.08,
+       "end_s": 2.57
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 277.31
+    },
+    {
+     "id": "X5-07",
+     "part": 0,
+     "ref": "X5-07",
+     "role": "WATCHMAN",
+     "file": "vo/X5-07.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.78,
+     "at_s": 2.775,
+     "speech_in_s": 2.805,
+     "speech_out_s": 3.525,
+     "words": [
+      {
+       "w": "so",
+       "start_s": 2.775,
+       "end_s": 3.035
+      },
+      {
+       "w": "far",
+       "start_s": 3.035,
+       "end_s": 3.475
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 278.275
+    }
+   ],
    "captions": [],
-   "cost": null,
-   "staging": null,
-   "deviation": null,
+   "cost": {
+    "draft_s_per_frame": 3.72,
+    "k4_cpu_s_per_frame": 49.6,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 6.7,
+    "k4_cpu_hours": 1.49,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1,
+     "total": 1.24
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.24 for the shot's content"
+   },
+   "staging": "MEDIUM-WIDE 35 mm STATIC from the square: the GUARD below (left) calls up without much interest; the WATCHMAN above on the platform (right) answers, looking down. Over-the-shoulder-ish on the guard (his face three-quarter back).",
+   "deviation": "35 mm, not the listed 50 mm: on the Super 35 sensor a 50 mm cannot hold the guard below and the watchman 4.7 m above in one static frame",
    "action": "A guard calls up without much interest.",
    "need": {
     "pre": 0,
@@ -2195,7 +3454,7 @@
    "seq": 168,
    "scene": "1C",
    "set": "CLING_SQUARE",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 144,
    "rec_in": 6720,
    "rec_out": 6864,
@@ -2204,11 +3463,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/cling-square-2.js",
+    "start_s": 74,
+    "start_frame": 1776
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 3,
+    "k4_cpu_s_per_frame": 40,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 7.2,
+    "k4_cpu_hours": 1.6,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1,
+     "total": 1
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1 for the shot's content"
+   },
+   "staging": "POV 35 mm STATIC at the watchman's eyeline on the platform, looking east over the wall: roofs at the bottom, the fields, the broad road running away, and a wide, quiet sky with a few high clouds - nothing moves in it but birds. No foreshadowing.",
    "deviation": null,
    "action": "The watchman's view: roofs, fields, a road and a wide, quiet sky. Nothing moves in it but birds. No foreshadowing.",
    "need": {
@@ -2221,7 +3500,7 @@
    "seq": 169,
    "scene": "1C",
    "set": "CLING_SQUARE",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 96,
    "rec_in": 6864,
    "rec_out": 6960,
@@ -2230,11 +3509,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/cling-square-2.js",
+    "start_s": 82,
+    "start_frame": 1968
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 3,
+    "k4_cpu_s_per_frame": 40,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 4.8,
+    "k4_cpu_hours": 1.07,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1,
+     "total": 1
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1 for the shot's content"
+   },
+   "staging": "WIDE 35 mm STATIC from the south-east of the square: the FIRST BANNER unrolls along its rope from a house on the north side down to the fountain pillar - the roll slides down the rope paying out ochre and woad cloth - and then lifts in the breeze.",
    "deviation": null,
    "action": "The first banner unrolls across the square and lifts in the breeze.",
    "need": {
@@ -2247,7 +3546,7 @@
    "seq": 170,
    "scene": "1C",
    "set": "OUTER_ROCKS",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 144,
    "rec_in": 6960,
    "rec_out": 7104,
@@ -2256,11 +3555,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/outer-rocks.js",
+    "start_s": 1,
+    "start_frame": 24
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 5.79,
+    "k4_cpu_s_per_frame": 77.21,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 13.9,
+    "k4_cpu_hours": 3.09,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.48,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.6
+    },
+    "basis": "MEASURED draft 5.79 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
+   },
+   "staging": "EXTREME WIDE 100 mm from a camera ship far out SSE, slow drift: the outer rocks centre (the two leaning stacks and the gap opening toward us, birds on the ledges, white water), the mist bank against their seaward side right; Leaf and Charcoal small, left, coming down the coast toward them.",
    "deviation": null,
    "action": "Off the end of the coast stand the outer rocks: tall sea stacks, white water at their feet, seabirds on every ledge. Two stacks lean close together, leaving a narrow gap that opens seaward; on the seaward side a low bank of sea mist lies against the rocks. One clear wide; it must match 1F.",
    "need": {
@@ -2273,7 +3592,7 @@
    "seq": 171,
    "scene": "1C",
    "set": "OUTER_ROCKS",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 72,
    "rec_in": 7104,
    "rec_out": 7176,
@@ -2282,11 +3601,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/outer-rocks.js",
+    "start_s": 9,
+    "start_frame": 216
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 2.6,
+    "k4_cpu_s_per_frame": 34.65,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 3.12,
+    "k4_cpu_hours": 0.69,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.08
+    },
+    "basis": "MEASURED draft 2.6 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
+   },
+   "staging": "WIDE 35 mm low over the water on the approach side, a slow push: the gap - two stone walls leaning together, a slot of bright mist and sea beyond, white water at their feet.",
    "deviation": null,
    "action": "The gap.",
    "need": {
@@ -2299,7 +3638,7 @@
    "seq": 172,
    "scene": "1C",
    "set": "OUTER_ROCKS",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 72,
    "rec_in": 7176,
    "rec_out": 7248,
@@ -2308,11 +3647,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/outer-rocks.js",
+    "start_s": 14,
+    "start_frame": 336
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 3.06,
+    "k4_cpu_s_per_frame": 40.76,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 3.67,
+    "k4_cpu_hours": 0.82,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.08
+    },
+    "basis": "MEASURED draft 3.06 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
+   },
+   "staging": "WIDE 35 mm on the seaward side: the low bank of sea mist lying against the stacks' seaward faces, the gap's exit half lost in it; muffled surf.",
    "deviation": null,
    "action": "The mist lying against the seaward side.",
    "need": {
@@ -2325,7 +3684,7 @@
    "seq": 173,
    "scene": "1C",
    "set": "SKY_OFF_VERDOR",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 48,
    "rec_in": 7248,
    "rec_out": 7296,
@@ -2334,11 +3693,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/sky-off-verdor.js",
+    "start_s": 91,
+    "start_frame": 2184
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 4.53,
+    "k4_cpu_s_per_frame": 60.35,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 3.62,
+    "k4_cpu_hours": 0.8,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.34
+    },
+    "basis": "MEASURED draft 4.53 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
+   },
+   "staging": "MEDIUM 50 mm air-to-air off Leaf's right front: Abby (screen left) looks ahead at the gap (off frame right, far), then across at Remi (screen right). He already knows what she is going to say.",
    "deviation": null,
    "action": "Abby looks at the gap, then at Remi. He already knows what she is going to say.",
    "need": {
@@ -2351,7 +3730,7 @@
    "seq": 174,
    "scene": "1C",
    "set": "SKY_OFF_VERDOR",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 288,
    "rec_in": 7296,
    "rec_out": 7584,
@@ -2360,11 +3739,247 @@
    "trans": [
     "cut"
    ],
-   "src": null,
-   "dialogue": [],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/sky-off-verdor.js",
+    "start_s": 95,
+    "start_frame": 2280
+   },
+   "dialogue": [
+    {
+     "id": "X6-01",
+     "part": 0,
+     "ref": "X6-01",
+     "role": "ABBY",
+     "file": "vo/X6-01.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.135,
+     "at_s": 0.77,
+     "speech_in_s": 0.8,
+     "speech_out_s": 1.875,
+     "words": [
+      {
+       "w": "first",
+       "start_s": 0.77,
+       "end_s": 1.2
+      },
+      {
+       "w": "through",
+       "start_s": 1.2,
+       "end_s": 1.37
+      },
+      {
+       "w": "the",
+       "start_s": 1.37,
+       "end_s": 1.45
+      },
+      {
+       "w": "gap",
+       "start_s": 1.45,
+       "end_s": 1.89
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 304.77
+    },
+    {
+     "id": "X6-02",
+     "part": 0,
+     "ref": "X6-02",
+     "role": "REMI",
+     "file": "vo/X6-02.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.62,
+     "at_s": 2.445,
+     "speech_in_s": 2.475,
+     "speech_out_s": 4.035,
+     "words": [
+      {
+       "w": "he",
+       "start_s": 2.445,
+       "end_s": 2.605
+      },
+      {
+       "w": "doesn't",
+       "start_s": 2.605,
+       "end_s": 2.905
+      },
+      {
+       "w": "fit",
+       "start_s": 2.905,
+       "end_s": 3.185
+      },
+      {
+       "w": "through",
+       "start_s": 3.185,
+       "end_s": 3.425
+      },
+      {
+       "w": "the",
+       "start_s": 3.425,
+       "end_s": 3.505
+      },
+      {
+       "w": "gap",
+       "start_s": 3.505,
+       "end_s": 4.055
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 306.445
+    },
+    {
+     "id": "X6-03",
+     "part": 0,
+     "ref": "X6-03",
+     "role": "ABBY",
+     "file": "vo/X6-03.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.62,
+     "at_s": 4.505,
+     "speech_in_s": 4.535,
+     "speech_out_s": 5.095,
+     "words": [
+      {
+       "w": "i",
+       "start_s": 4.505,
+       "end_s": 4.655
+      },
+      {
+       "w": "know",
+       "start_s": 4.655,
+       "end_s": 5.045
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 308.505
+    },
+    {
+     "id": "X6-04",
+     "part": 0,
+     "ref": "X6-04",
+     "role": "REMI",
+     "file": "vo/X6-04.wav",
+     "file_in_s": 0,
+     "file_out_s": 2.28,
+     "at_s": 5.765,
+     "speech_in_s": 5.795,
+     "speech_out_s": 8.015,
+     "words": [
+      {
+       "w": "mother",
+       "start_s": 5.765,
+       "end_s": 6.075
+      },
+      {
+       "w": "said",
+       "start_s": 6.075,
+       "end_s": 6.435
+      },
+      {
+       "w": "within",
+       "start_s": 6.435,
+       "end_s": 6.835
+      },
+      {
+       "w": "reach",
+       "start_s": 6.835,
+       "end_s": 7.215
+      },
+      {
+       "w": "of",
+       "start_s": 7.215,
+       "end_s": 7.315
+      },
+      {
+       "w": "the",
+       "start_s": 7.315,
+       "end_s": 7.455
+      },
+      {
+       "w": "island",
+       "start_s": 7.455,
+       "end_s": 7.995
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 309.765
+    },
+    {
+     "id": "X6-05",
+     "part": 0,
+     "ref": "X6-05",
+     "role": "ABBY",
+     "file": "vo/X6-05.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.64,
+     "at_s": 8.585,
+     "speech_in_s": 8.615,
+     "speech_out_s": 10.195,
+     "words": [
+      {
+       "w": "they're",
+       "start_s": 8.585,
+       "end_s": 8.835
+      },
+      {
+       "w": "within",
+       "start_s": 8.835,
+       "end_s": 9.135
+      },
+      {
+       "w": "reach",
+       "start_s": 9.135,
+       "end_s": 9.485
+      },
+      {
+       "w": "of",
+       "start_s": 9.485,
+       "end_s": 9.565
+      },
+      {
+       "w": "the",
+       "start_s": 9.565,
+       "end_s": 9.695
+      },
+      {
+       "w": "island",
+       "start_s": 9.695,
+       "end_s": 10.165
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 312.585
+    }
+   ],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 6.48,
+    "k4_cpu_s_per_frame": 86.4,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 31.1,
+    "k4_cpu_hours": 6.91,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.48,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.6
+    },
+    "basis": "MEASURED draft 6.48 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
+   },
+   "staging": "TWO-SHOT 180 mm air-to-air from inland (the X4-18 set-up): Leaf / Abby left and near, Charcoal / Remi right and beyond, the sea behind. The challenge: \"First through the gap.\" ... \"They're within reach of the island.\"",
    "deviation": null,
    "action": "The challenge.",
    "need": {
@@ -2377,7 +3992,7 @@
    "seq": 175,
    "scene": "1C",
    "set": "SKY_OFF_VERDOR",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 72,
    "rec_in": 7584,
    "rec_out": 7656,
@@ -2386,11 +4001,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/sky-off-verdor.js",
+    "start_s": 109,
+    "start_frame": 2616
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 3.67,
+    "k4_cpu_s_per_frame": 48.93,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 4.4,
+    "k4_cpu_hours": 0.98,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.34
+    },
+    "basis": "MEASURED draft 3.67 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
+   },
+   "staging": "WIDE 120 mm from a camera ship inland and a little above: she does not wait - Leaf (Abby up) tips over and drops away toward the rocks (off frame right) with quick, eager beats.",
    "deviation": null,
    "action": "She does not wait. She leans, and Leaf drops away toward the rocks with quick, eager wingbeats.",
    "need": {
@@ -2403,7 +4038,7 @@
    "seq": 176,
    "scene": "1C",
    "set": "SKY_OFF_VERDOR",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 96,
    "rec_in": 7656,
    "rec_out": 7752,
@@ -2412,11 +4047,70 @@
    "trans": [
     "cut"
    ],
-   "src": null,
-   "dialogue": [],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/sky-off-verdor.js",
+    "start_s": 114,
+    "start_frame": 2736
+   },
+   "dialogue": [
+    {
+     "id": "X6-06",
+     "part": 0,
+     "ref": "X6-06",
+     "role": "REMI",
+     "file": "vo/X6-06.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.385,
+     "at_s": 0.37,
+     "speech_in_s": 0.4,
+     "speech_out_s": 1.725,
+     "words": [
+      {
+       "w": "we're",
+       "start_s": 0.37,
+       "end_s": 0.56
+      },
+      {
+       "w": "going",
+       "start_s": 0.56,
+       "end_s": 0.94
+      },
+      {
+       "w": "to",
+       "start_s": 0.94,
+       "end_s": 1.06
+      },
+      {
+       "w": "lose",
+       "start_s": 1.06,
+       "end_s": 1.68
+      }
+     ],
+     "gain_db": -2,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 319.37
+    }
+   ],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 3.03,
+    "k4_cpu_s_per_frame": 40.33,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 4.84,
+    "k4_cpu_hours": 1.08,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.34
+    },
+    "basis": "MEASURED draft 3.03 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
+   },
+   "staging": "MEDIUM 50 mm off Charcoal's right front: Remi, resigned (\"We're going to lose.\"), looks after them; Charcoal goes after them - out of the glide into a deep beat, nose down.",
    "deviation": null,
    "action": "Remi, resigned, leans forward, and Charcoal goes after them.",
    "need": {
@@ -2429,7 +4123,7 @@
    "seq": 177,
    "scene": "1C",
    "set": "OUTER_ROCKS",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 96,
    "rec_in": 7752,
    "rec_out": 7848,
@@ -2438,11 +4132,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/outer-rocks.js",
+    "start_s": 19,
+    "start_frame": 456
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 5.57,
+    "k4_cpu_s_per_frame": 74.2,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 8.9,
+    "k4_cpu_hours": 1.98,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.34
+    },
+    "basis": "MEASURED draft 5.57 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
+   },
+   "staging": "WIDE 35 mm tracking low over the water from behind-right: Leaf skims the sea a few metres up, short quick beats, small corrections; Abby tucked down; the stacks ahead right.",
    "deviation": null,
    "action": "Leaf goes low and fast, skimming the water, making small quick corrections.",
    "need": {
@@ -2455,7 +4169,7 @@
    "seq": 178,
    "scene": "1C",
    "set": "OUTER_ROCKS",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 96,
    "rec_in": 7848,
    "rec_out": 7944,
@@ -2464,11 +4178,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/outer-rocks.js",
+    "start_s": 25,
+    "start_frame": 600
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 3.31,
+    "k4_cpu_s_per_frame": 44.09,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 5.29,
+    "k4_cpu_hours": 1.18,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1,
+     "total": 1.24
+    },
+    "basis": "MEASURED draft 3.31 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
+   },
+   "staging": "WIDE 35 mm static INSIDE the gap looking out (NNW): Leaf comes in low and fast, tilts almost onto his side and threads the gap toward the lens, wingtips passing close to both walls; Abby tucked down.",
    "deviation": null,
    "action": "He tilts almost onto his side and threads the gap, wingtips passing close to the rock.",
    "need": {
@@ -2481,7 +4215,7 @@
    "seq": 179,
    "scene": "1C",
    "set": "OUTER_ROCKS",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 48,
    "rec_in": 7944,
    "rec_out": 7992,
@@ -2490,11 +4224,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/outer-rocks.js",
+    "start_s": 31,
+    "start_frame": 744
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 3.58,
+    "k4_cpu_s_per_frame": 47.69,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 2.86,
+    "k4_cpu_hours": 0.64,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.34
+    },
+    "basis": "MEASURED draft 3.58 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
+   },
+   "staging": "CLOSE 85 mm air-to-air on Abby from her right front: tucked down against Leaf, both hands on the grips, laughing into the wind; sea and spray behind.",
    "deviation": null,
    "action": "Abby is tucked down against him, both hands on the straps, laughing into the wind.",
    "need": {
@@ -2507,7 +4261,7 @@
    "seq": 180,
    "scene": "1C",
    "set": "OUTER_ROCKS",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 120,
    "rec_in": 7992,
    "rec_out": 8112,
@@ -2516,11 +4270,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/outer-rocks.js",
+    "start_s": 35,
+    "start_frame": 840
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 4.02,
+    "k4_cpu_s_per_frame": 53.57,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 8.04,
+    "k4_cpu_hours": 1.79,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.34
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.34 for the shot's content"
+   },
+   "staging": "WIDE 35 mm from low on the water by the stacks' seaward feet looking up: Charcoal cannot follow - he climbs and goes over the top of the stacks, slow and enormous, Remi low on his back.",
    "deviation": null,
    "action": "Charcoal cannot follow. He climbs and goes over the top of the stacks, slow and enormous.",
    "need": {
@@ -2533,7 +4307,7 @@
    "seq": 181,
    "scene": "1C",
    "set": "OUTER_ROCKS",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 96,
    "rec_in": 8112,
    "rec_out": 8208,
@@ -2542,11 +4316,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/outer-rocks.js",
+    "start_s": 42,
+    "start_frame": 1008
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 3.91,
+    "k4_cpu_s_per_frame": 52.08,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 6.25,
+    "k4_cpu_hours": 1.39,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1.05,
+     "walk": 1,
+     "move": 1,
+     "total": 1.3
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.3 for the shot's content"
+   },
+   "staging": "WIDE 35 mm static at the foot of the stacks looking up at them: his downwash (from above, off frame top) flattens the water round the rocks into a pale ring and lifts every seabird off its ledge at once.",
    "deviation": null,
    "action": "His downwash flattens the water around the rocks into a pale ring and lifts every seabird off its ledge at once.",
    "need": {
@@ -2559,7 +4353,7 @@
    "seq": 182,
    "scene": "1C",
    "set": "OUTER_ROCKS",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 72,
    "rec_in": 8208,
    "rec_out": 8280,
@@ -2568,11 +4362,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/outer-rocks.js",
+    "start_s": 48,
+    "start_frame": 1152
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 4.62,
+    "k4_cpu_s_per_frame": 61.6,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 5.54,
+    "k4_cpu_hours": 1.23,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1.15,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.54
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.54 for the shot's content"
+   },
+   "staging": "MEDIUM 50 mm air-to-air from Charcoal's left front as he comes down past the stacks: Remi stays low in the saddle; behind him spray climbs the stone and the birds wheel.",
    "deviation": null,
    "action": "Spray climbs the stone. Remi stays low in the saddle.",
    "need": {
@@ -2585,7 +4399,7 @@
    "seq": 183,
    "scene": "1C",
    "set": "OUTER_ROCKS",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 96,
    "rec_in": 8280,
    "rec_out": 8376,
@@ -2594,11 +4408,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/outer-rocks.js",
+    "start_s": 53,
+    "start_frame": 1272
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 4.02,
+    "k4_cpu_s_per_frame": 53.57,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 6.43,
+    "k4_cpu_hours": 1.43,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.34
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.34 for the shot's content"
+   },
+   "staging": "WIDE 35 mm from the far side: Charcoal folds his wings and comes down the slope of the air past the stacks toward the low stack; for a moment it looks as if he might get there first.",
    "deviation": null,
    "action": "On the far side Charcoal folds his wings and comes down the slope of the air; for a moment it looks as if he might get there first.",
    "need": {
@@ -2611,7 +4445,7 @@
    "seq": 184,
    "scene": "1C",
    "set": "OUTER_ROCKS",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 144,
    "rec_in": 8376,
    "rec_out": 8520,
@@ -2620,11 +4454,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/outer-rocks.js",
+    "start_s": 59,
+    "start_frame": 1416
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 3.72,
+    "k4_cpu_s_per_frame": 49.6,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 8.93,
+    "k4_cpu_hours": 1.98,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1,
+     "total": 1.24
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.24 for the shot's content"
+   },
+   "staging": "WIDE 35 mm static from the top of a lower stack (F): Leaf bursts out of the gap on the seaward side through the mist, swings up in a tight climbing right turn and lands on the flat top of the low stack, settling low and level, wrists down, Abby on his back - the whole of him fitting with room to spare.",
    "deviation": null,
    "action": "Leaf bursts out of the gap on the seaward side, swings up in a tight turn and lands on the flat top of a lower stack. He settles there low and level, the wrists of his folded wings braced on the rock, Abby on his back, the whole of him fitting with room to spare.",
    "need": {
@@ -2637,7 +4491,7 @@
    "seq": 185,
    "scene": "1C",
    "set": "OUTER_ROCKS",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 96,
    "rec_in": 8520,
    "rec_out": 8616,
@@ -2646,11 +4500,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/outer-rocks.js",
+    "start_s": 67,
+    "start_frame": 1608
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 4.44,
+    "k4_cpu_s_per_frame": 59.2,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 7.1,
+    "k4_cpu_hours": 1.58,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.48,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1,
+     "total": 1.48
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.48 for the shot's content"
+   },
+   "staging": "WIDE 135 mm static, low over the water from ~400 m SSW: Leaf crouched on the low stack (left); Charcoal arrives out of his dive above it from the ESE and checks with one huge beat that sends the last birds wheeling; his shadow covers the whole stack and the dragon on it.",
    "deviation": null,
    "action": "Charcoal arrives a moment later, out of his dive, and checks above the stack with one huge beat that sends the last birds wheeling. His shadow covers the whole stack and the dragon crouched on it.",
    "need": {
@@ -2663,7 +4537,7 @@
    "seq": 186,
    "scene": "1C",
    "set": "OUTER_ROCKS",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 168,
    "rec_in": 8616,
    "rec_out": 8784,
@@ -2672,11 +4546,159 @@
    "trans": [
     "cut"
    ],
-   "src": null,
-   "dialogue": [],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/outer-rocks.js",
+    "start_s": 73,
+    "start_frame": 1752
+   },
+   "dialogue": [
+    {
+     "id": "X6-07",
+     "part": 0,
+     "ref": "X6-07",
+     "role": "ABBY",
+     "file": "vo/X6-07.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.59,
+     "at_s": 0.27,
+     "speech_in_s": 0.3,
+     "speech_out_s": 0.83,
+     "words": [
+      {
+       "w": "again",
+       "start_s": 0.27,
+       "end_s": 0.78
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 359.27
+    },
+    {
+     "id": "X6-08",
+     "part": 0,
+     "ref": "X6-08",
+     "role": "REMI",
+     "file": "vo/X6-08.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.73,
+     "at_s": 0.95,
+     "speech_in_s": 0.98,
+     "speech_out_s": 1.65,
+     "words": [
+      {
+       "w": "you",
+       "start_s": 0.95,
+       "end_s": 1.19
+      },
+      {
+       "w": "won",
+       "start_s": 1.19,
+       "end_s": 1.58
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 359.95
+    },
+    {
+     "id": "X6-09",
+     "part": 0,
+     "ref": "X6-09",
+     "role": "ABBY",
+     "file": "vo/X6-09.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.195,
+     "at_s": 1.77,
+     "speech_in_s": 1.8,
+     "speech_out_s": 2.935,
+     "words": [
+      {
+       "w": "say",
+       "start_s": 1.77,
+       "end_s": 2.04
+      },
+      {
+       "w": "it",
+       "start_s": 2.04,
+       "end_s": 2.14
+      },
+      {
+       "w": "so",
+       "start_s": 2.14,
+       "end_s": 2.28
+      },
+      {
+       "w": "he",
+       "start_s": 2.28,
+       "end_s": 2.41
+      },
+      {
+       "w": "can",
+       "start_s": 2.41,
+       "end_s": 2.58
+      },
+      {
+       "w": "hear",
+       "start_s": 2.58,
+       "end_s": 2.91
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 360.77
+    },
+    {
+     "id": "X6-10",
+     "part": 0,
+     "ref": "X6-10",
+     "role": "REMI",
+     "file": "vo/X6-10.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.68,
+     "at_s": 3.095,
+     "speech_in_s": 3.135,
+     "speech_out_s": 3.745,
+     "words": [
+      {
+       "w": "you",
+       "start_s": 3.095,
+       "end_s": 3.305
+      },
+      {
+       "w": "won",
+       "start_s": 3.305,
+       "end_s": 3.665
+      }
+     ],
+     "gain_db": 3,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 362.095
+    }
+   ],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 4.44,
+    "k4_cpu_s_per_frame": 59.2,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 12.43,
+    "k4_cpu_hours": 2.76,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.48,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1,
+     "total": 1.48
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.48 for the shot's content"
+   },
+   "staging": "MEDIUM 50 mm static two-shot, Remi above: from 60 m out beyond Abby's right shoulder, level with the low stack (Abby left, three-quarter back) up to Remi on the hovering Charcoal (right, top). \"Again?\" - \"You won.\" - \"Say it so he can hear.\" - \"You won.\" (louder).",
    "deviation": null,
    "action": "Say it so he can hear.",
    "need": {
@@ -2689,7 +4711,7 @@
    "seq": 187,
    "scene": "1C",
    "set": "OUTER_ROCKS",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 72,
    "rec_in": 8784,
    "rec_out": 8856,
@@ -2698,12 +4720,32 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/outer-rocks.js",
+    "start_s": 82,
+    "start_frame": 1968
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
-   "deviation": null,
+   "cost": {
+    "draft_s_per_frame": 4.02,
+    "k4_cpu_s_per_frame": 53.57,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 4.82,
+    "k4_cpu_hours": 1.07,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.34
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.34 for the shot's content"
+   },
+   "staging": "CLOSE 85 mm static on Leaf's head from his front-left, on the stack: he turns one eye up toward Charcoal (off frame, above left) without any fear at all.",
+   "deviation": "Leaf stays on the stack (the shot list's \"and flies a little higher than he needs to\" is not staged: he has just landed in X6-15/16/17).",
    "action": "Leaf turns one eye toward Charcoal without any fear at all and flies a little higher than he needs to.",
    "need": {
     "pre": 0,
@@ -2715,7 +4757,7 @@
    "seq": 188,
    "scene": "1C",
    "set": "SKY_OFF_VERDOR",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 120,
    "rec_in": 8856,
    "rec_out": 8976,
@@ -2724,11 +4766,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/sky-off-verdor.js",
+    "start_s": 120,
+    "start_frame": 2880
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 3.52,
+    "k4_cpu_s_per_frame": 46.99,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 7.05,
+    "k4_cpu_hours": 1.57,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.48,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.6
+    },
+    "basis": "MEASURED draft 3.52 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
+   },
+   "staging": "WIDE 160 mm from a camera ship high, behind and seaward, looking north-west up the coast: they turn back along the coast side by side (travel screen L -> R), Leaf a little behind on the inland side (left), Charcoal right; sea below, the island's cliffs beyond.",
    "deviation": null,
    "action": "They turn back along the coast side by side, Leaf a little behind on the near side, as for 1D. Behind them the mist still lies against the rocks.",
    "need": {
@@ -2741,7 +4803,7 @@
    "seq": 189,
    "scene": "1C",
    "set": "SKY_OFF_VERDOR",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 192,
    "rec_in": 8976,
    "rec_out": 9168,
@@ -2750,11 +4812,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/sky-off-verdor.js",
+    "start_s": 127,
+    "start_frame": 3048
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 5.8,
+    "k4_cpu_s_per_frame": 77.33,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 18.56,
+    "k4_cpu_hours": 4.12,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.48,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.6
+    },
+    "basis": "MEASURED draft 5.8 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
+   },
+   "staging": "EXTREME WIDE 135 mm aerial travel from high behind them on the seaward side: ahead, the island in the morning light, the coast running away north; Leaf left, Charcoal right. Nobody speaks; the camera travels with them, not around them.",
    "deviation": null,
    "action": "Ahead, the whole island in the morning light. For a while nobody speaks. The camera travels with them, not around them.",
    "need": {

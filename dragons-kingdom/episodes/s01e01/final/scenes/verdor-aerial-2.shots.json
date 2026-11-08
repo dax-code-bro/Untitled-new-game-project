@@ -1,0 +1,80 @@
+{
+ "set": "VERDOR_AERIAL_2",
+ "scene_file": "episodes/s01e01/final/scenes/verdor-aerial-2.js",
+ "spec": "episodes/s01e01/final/scenes/specs/verdor-aerial-2.spec.js",
+ "fps": 24,
+ "handles": 12,
+ "generated_by": "scenes/lib/director/tools/build-shots.mjs",
+ "note": "start_s / frames are the render-jobs.json contract (episode.mjs); pre/post are handle frames the editor may render around each shot.",
+ "shots": [
+  {
+   "job": "X4-10",
+   "seq": 137,
+   "scene": "1C",
+   "set": "VERDOR_AERIAL_2",
+   "start_s": 1,
+   "start_frame": 24,
+   "frames": 168,
+   "pre": 12,
+   "post": 12,
+   "seconds": 7,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [
+    {
+     "id": "X4-01",
+     "part": 0,
+     "ref": "X4-01",
+     "role": "ABBY",
+     "file": "vo/X4-01.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.02,
+     "at_s": 4.57,
+     "speech_in_s": 4.6,
+     "speech_out_s": 5.56,
+     "words": [
+      {
+       "w": "they",
+       "start_s": 4.57,
+       "end_s": 4.74
+      },
+      {
+       "w": "wave",
+       "start_s": 4.74,
+       "end_s": 5
+      },
+      {
+       "w": "at",
+       "start_s": 5,
+       "end_s": 5.1
+      },
+      {
+       "w": "leaf",
+       "start_s": 5.1,
+       "end_s": 5.53
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    }
+   ],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "morning (continuous from 1B)",
+    "weather": "clear; the last mist over the water and against the seaward side of the outer rocks; light breeze off the sea",
+    "notes": "CONTINUOUS from 1B-15: Leaf launches first (Abby), then Charcoal (Remi) tears the cleared launch space (the launch scar mended in X19). Same sun as 1B (east, ~31 deg up). The flight line (1C-10/11) runs along the coast with Leaf behind and on the near (inland) side; screen direction L -> R held through 1E.",
+    "sun": [
+     0.8384361386092437,
+     0.5150380749100542,
+     0.17821510280267075
+    ],
+    "exposure": 1.1
+   },
+   "staging": "MEDIUM 50 mm air-to-air past the Santa Maria's mainmast: the camera ship flies ahead of Leaf on the inland side, looking back at Abby (left, face three-quarter); Leaf passes close beside the mast (10 m inland of it, just below the crow's nest). The LOOKOUT in the nest (beyond her, right) ducks as the wings sweep by, comes back up laughing and waves; Abby waves back with her LEFT hand (no attention drawn to it: a plain wave, her right stays on the grip). Line X4-01 (Abby), said as she turns back to the front.",
+   "deviation": "a slowed close pass (7 m/s) so one medium holds both; the laugh is a quick head bob (no laugh face in the humans library) + the sound; the crow's nest is set dressing (the ship model has none)"
+  }
+ ]
+}

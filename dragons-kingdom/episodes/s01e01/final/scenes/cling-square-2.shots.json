@@ -1,0 +1,767 @@
+{
+ "set": "CLING_SQUARE_2",
+ "scene_file": "episodes/s01e01/final/scenes/cling-square-2.js",
+ "spec": "episodes/s01e01/final/scenes/specs/cling-square-2.spec.js",
+ "fps": 24,
+ "handles": 12,
+ "generated_by": "scenes/lib/director/tools/build-shots.mjs",
+ "note": "start_s / frames are the render-jobs.json contract (episode.mjs); pre/post are handle frames the editor may render around each shot.",
+ "shots": [
+  {
+   "job": "X5-10",
+   "seq": 157,
+   "scene": "1C",
+   "set": "CLING_SQUARE_2",
+   "start_s": 1,
+   "start_frame": 24,
+   "frames": 120,
+   "pre": 12,
+   "post": 12,
+   "seconds": 5,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "early morning in Cling before the festival: low sun from the south-east, long shadows",
+    "weather": "clear; the last mist over the water and against the seaward side of the outer rocks; light breeze off the sea",
+    "notes": "CONTINUOUS from 1B-15: Leaf launches first (Abby), then Charcoal (Remi) tears the cleared launch space (the launch scar mended in X19). Same sun as 1B (east, ~31 deg up). The flight line (1C-10/11) runs along the coast with Leaf behind and on the near (inland) side; screen direction L -> R held through 1E.",
+    "sun": [
+     0.726905328038456,
+     0.20791169081775931,
+     0.6545084971874737
+    ],
+    "exposure": 1.5
+   },
+   "staging": "MEDIUM 50 mm STATIC through the OPEN door of the house by the stone arch (the door frame inside the frame): inside, the PARENT at the table wraps a parcel in undyed cloth and knots it; the CHILD stands at the right edge of the doorway watching. Warm light inside.",
+   "deviation": "the cloth is already round the parcel (no folding cloth sim): her hands work over it, then knot it; the warmth fogging the cloth is not drawn"
+  },
+  {
+   "job": "X5-11",
+   "seq": 158,
+   "scene": "1C",
+   "set": "CLING_SQUARE_2",
+   "start_s": 8,
+   "start_frame": 192,
+   "frames": 72,
+   "pre": 12,
+   "post": 12,
+   "seconds": 3,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "early morning in Cling before the festival: low sun from the south-east, long shadows",
+    "weather": "clear; the last mist over the water and against the seaward side of the outer rocks; light breeze off the sea",
+    "notes": "CONTINUOUS from 1B-15: Leaf launches first (Abby), then Charcoal (Remi) tears the cleared launch space (the launch scar mended in X19). Same sun as 1B (east, ~31 deg up). The flight line (1C-10/11) runs along the coast with Leaf behind and on the near (inland) side; screen direction L -> R held through 1E.",
+    "sun": [
+     0.726905328038456,
+     0.20791169081775931,
+     0.6545084971874737
+    ],
+    "exposure": 1.5
+   },
+   "staging": "MEDIUM 50 mm STATIC through the doorway, a little nearer: the CHILD (right) reaches for the parcel; the PARENT slides it gently out of reach to her side of the table - not yet.",
+   "deviation": null
+  },
+  {
+   "job": "X5-12",
+   "seq": 159,
+   "scene": "1C",
+   "set": "CLING_SQUARE_2",
+   "start_s": 13,
+   "start_frame": 312,
+   "frames": 72,
+   "pre": 12,
+   "post": 12,
+   "seconds": 3,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "early morning in Cling before the festival: low sun from the south-east, long shadows",
+    "weather": "clear; the last mist over the water and against the seaward side of the outer rocks; light breeze off the sea",
+    "notes": "CONTINUOUS from 1B-15: Leaf launches first (Abby), then Charcoal (Remi) tears the cleared launch space (the launch scar mended in X19). Same sun as 1B (east, ~31 deg up). The flight line (1C-10/11) runs along the coast with Leaf behind and on the near (inland) side; screen direction L -> R held through 1E.",
+    "sun": [
+     0.726905328038456,
+     0.20791169081775931,
+     0.6545084971874737
+    ],
+    "exposure": 1.5
+   },
+   "staging": "WIDE 35 mm STATIC from the square: the house by the arch, its door open; the CHILD comes to the doorway and stands on the step looking up across the square, where the banners are going up.",
+   "deviation": null
+  },
+  {
+   "job": "X5-13",
+   "seq": 160,
+   "scene": "1C",
+   "set": "CLING_SQUARE_2",
+   "start_s": 18,
+   "start_frame": 432,
+   "frames": 120,
+   "pre": 12,
+   "post": 12,
+   "seconds": 5,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "early morning in Cling before the festival: low sun from the south-east, long shadows",
+    "weather": "clear; the last mist over the water and against the seaward side of the outer rocks; light breeze off the sea",
+    "notes": "CONTINUOUS from 1B-15: Leaf launches first (Abby), then Charcoal (Remi) tears the cleared launch space (the launch scar mended in X19). Same sun as 1B (east, ~31 deg up). The flight line (1C-10/11) runs along the coast with Leaf behind and on the near (inland) side; screen direction L -> R held through 1E.",
+    "sun": [
+     0.726905328038456,
+     0.20791169081775931,
+     0.6545084971874737
+    ],
+    "exposure": 1.5
+   },
+   "staging": "MEDIUM 50 mm STATIC, three-quarter front: the MUSICIAN sits on the fountain rim with his lute across his lap, tilts his head to it and tests it (tuning notes are sound); one fastening is loose.",
+   "deviation": "the thumb on the loose fastening is not posed (both hands hold the lute); the instrument is a lute (characters.py: a proposal)"
+  },
+  {
+   "job": "X5-14",
+   "seq": 161,
+   "scene": "1C",
+   "set": "CLING_SQUARE_2",
+   "start_s": 25,
+   "start_frame": 600,
+   "frames": 120,
+   "pre": 12,
+   "post": 12,
+   "seconds": 5,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [
+    {
+     "id": "X5-01",
+     "part": 0,
+     "ref": "X5-01",
+     "role": "MUSICIAN",
+     "file": "vo/X5-01.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.075,
+     "at_s": 0.32,
+     "speech_in_s": 0.35,
+     "speech_out_s": 1.365,
+     "words": [
+      {
+       "w": "that'll",
+       "start_s": 0.32,
+       "end_s": 0.8
+      },
+      {
+       "w": "hold",
+       "start_s": 0.8,
+       "end_s": 1.38
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    },
+    {
+     "id": "X5-02",
+     "part": 0,
+     "ref": "X5-02",
+     "role": "VENDOR",
+     "file": "vo/X5-02.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.67,
+     "at_s": 1.585,
+     "speech_in_s": 1.615,
+     "speech_out_s": 2.225,
+     "words": [
+      {
+       "w": "it",
+       "start_s": 1.585,
+       "end_s": 1.685
+      },
+      {
+       "w": "won't",
+       "start_s": 1.685,
+       "end_s": 2.175
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    },
+    {
+     "id": "X5-03",
+     "part": 0,
+     "ref": "X5-03",
+     "role": "MUSICIAN",
+     "file": "vo/X5-03.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.935,
+     "at_s": 2.445,
+     "speech_in_s": 2.475,
+     "speech_out_s": 4.35,
+     "words": [
+      {
+       "w": "it'll",
+       "start_s": 2.445,
+       "end_s": 2.705
+      },
+      {
+       "w": "hold",
+       "start_s": 2.705,
+       "end_s": 3.265
+      },
+      {
+       "w": "until",
+       "start_s": 3.475,
+       "end_s": 3.845
+      },
+      {
+       "w": "tonight",
+       "start_s": 3.845,
+       "end_s": 4.365
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    }
+   ],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "early morning in Cling before the festival: low sun from the south-east, long shadows",
+    "weather": "clear; the last mist over the water and against the seaward side of the outer rocks; light breeze off the sea",
+    "notes": "CONTINUOUS from 1B-15: Leaf launches first (Abby), then Charcoal (Remi) tears the cleared launch space (the launch scar mended in X19). Same sun as 1B (east, ~31 deg up). The flight line (1C-10/11) runs along the coast with Leaf behind and on the near (inland) side; screen direction L -> R held through 1E.",
+    "sun": [
+     0.726905328038456,
+     0.20791169081775931,
+     0.6545084971874737
+    ],
+    "exposure": 1.5
+   },
+   "staging": "MEDIUM 50 mm STATIC TWO-SHOT: the musician (left, seated on the rim with his lute) and the VENDOR (right, standing at his side) - an old conversation between friends; the vendor's stall in the background right.",
+   "deviation": null
+  },
+  {
+   "job": "R3-01",
+   "seq": 162,
+   "scene": "1C",
+   "set": "CLING_SQUARE_2",
+   "start_s": 32,
+   "start_frame": 768,
+   "frames": 60,
+   "pre": 12,
+   "post": 12,
+   "seconds": 2.5,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "early morning in Cling before the festival: low sun from the south-east, long shadows",
+    "weather": "clear; the last mist over the water and against the seaward side of the outer rocks; light breeze off the sea",
+    "notes": "CONTINUOUS from 1B-15: Leaf launches first (Abby), then Charcoal (Remi) tears the cleared launch space (the launch scar mended in X19). Same sun as 1B (east, ~31 deg up). The flight line (1C-10/11) runs along the coast with Leaf behind and on the near (inland) side; screen direction L -> R held through 1E.",
+    "sun": [
+     0.726905328038456,
+     0.20791169081775931,
+     0.6545084971874737
+    ],
+    "exposure": 1.5
+   },
+   "staging": "WIDE 35 mm STATIC across the square: at the house by the arch (left) the PARENT in the doorway calls the CHILD in; the child goes inside, and the door swings shut.",
+   "deviation": null
+  },
+  {
+   "job": "R3-02",
+   "seq": 163,
+   "scene": "1C",
+   "set": "CLING_SQUARE_2",
+   "start_s": 37,
+   "start_frame": 888,
+   "frames": 108,
+   "pre": 12,
+   "post": 12,
+   "seconds": 4.5,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [
+    {
+     "kind": "smoke-wisp",
+     "from": 1.7,
+     "to": null
+    }
+   ],
+   "continuity": {
+    "tod": "early morning in Cling before the festival: low sun from the south-east, long shadows",
+    "weather": "clear; the last mist over the water and against the seaward side of the outer rocks; light breeze off the sea",
+    "notes": "CONTINUOUS from 1B-15: Leaf launches first (Abby), then Charcoal (Remi) tears the cleared launch space (the launch scar mended in X19). Same sun as 1B (east, ~31 deg up). The flight line (1C-10/11) runs along the coast with Leaf behind and on the near (inland) side; screen direction L -> R held through 1E.",
+    "sun": [
+     0.726905328038456,
+     0.20791169081775931,
+     0.6545084971874737
+    ],
+    "exposure": 1.5
+   },
+   "staging": "MEDIUM STATIC (40 mm, to hold the stall in the background): the musician (centre, lute laid across his knees) takes a small clay pipe from his coat, lights it and draws; a thin smoke drifts across the fountain. The VENDOR at his stall in the background right looks over - he knows what it is. No child in the shot or in sight of it.",
+   "deviation": null
+  },
+  {
+   "job": "R3-03",
+   "seq": 164,
+   "scene": "1C",
+   "set": "CLING_SQUARE_2",
+   "start_s": 44,
+   "start_frame": 1056,
+   "frames": 180,
+   "pre": 12,
+   "post": 12,
+   "seconds": 7.5,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [
+    {
+     "id": "R3-01",
+     "part": 0,
+     "ref": "R3-01",
+     "role": "VENDOR",
+     "file": "vo/R3-01.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.05,
+     "at_s": 0.27,
+     "speech_in_s": 0.3,
+     "speech_out_s": 1.29,
+     "words": [
+      {
+       "w": "bit",
+       "start_s": 0.27,
+       "end_s": 0.4
+      },
+      {
+       "w": "early",
+       "start_s": 0.4,
+       "end_s": 0.63
+      },
+      {
+       "w": "for",
+       "start_s": 0.63,
+       "end_s": 0.78
+      },
+      {
+       "w": "that",
+       "start_s": 0.78,
+       "end_s": 1.21
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    },
+    {
+     "id": "R3-02",
+     "part": 0,
+     "ref": "R3-02",
+     "role": "MUSICIAN",
+     "file": "vo/R3-02.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.22,
+     "at_s": 1.41,
+     "speech_in_s": 1.44,
+     "speech_out_s": 2.6,
+     "words": [
+      {
+       "w": "it's",
+       "start_s": 1.41,
+       "end_s": 1.66
+      },
+      {
+       "w": "for",
+       "start_s": 1.66,
+       "end_s": 1.79
+      },
+      {
+       "w": "my",
+       "start_s": 1.79,
+       "end_s": 2.03
+      },
+      {
+       "w": "nerves",
+       "start_s": 2.03,
+       "end_s": 2.57
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    },
+    {
+     "id": "R3-03",
+     "part": 0,
+     "ref": "R3-03",
+     "role": "VENDOR",
+     "file": "vo/R3-03.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.335,
+     "at_s": 2.72,
+     "speech_in_s": 2.75,
+     "speech_out_s": 4.025,
+     "words": [
+      {
+       "w": "you",
+       "start_s": 2.72,
+       "end_s": 2.83
+      },
+      {
+       "w": "haven't",
+       "start_s": 2.83,
+       "end_s": 3.03
+      },
+      {
+       "w": "got",
+       "start_s": 3.03,
+       "end_s": 3.23
+      },
+      {
+       "w": "any",
+       "start_s": 3.23,
+       "end_s": 3.39
+      },
+      {
+       "w": "nerves",
+       "start_s": 3.39,
+       "end_s": 3.94
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    },
+    {
+     "id": "R3-04",
+     "part": 0,
+     "ref": "R3-04",
+     "role": "MUSICIAN",
+     "file": "vo/R3-04.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.06,
+     "at_s": 4.19,
+     "speech_in_s": 4.225,
+     "speech_out_s": 5.22,
+     "words": [
+      {
+       "w": "not",
+       "start_s": 4.19,
+       "end_s": 4.62
+      },
+      {
+       "w": "anymore",
+       "start_s": 4.62,
+       "end_s": 5.1
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    }
+   ],
+   "captions": [],
+   "fx": [
+    {
+     "kind": "smoke-wisp",
+     "from": 0,
+     "to": null
+    }
+   ],
+   "continuity": {
+    "tod": "early morning in Cling before the festival: low sun from the south-east, long shadows",
+    "weather": "clear; the last mist over the water and against the seaward side of the outer rocks; light breeze off the sea",
+    "notes": "CONTINUOUS from 1B-15: Leaf launches first (Abby), then Charcoal (Remi) tears the cleared launch space (the launch scar mended in X19). Same sun as 1B (east, ~31 deg up). The flight line (1C-10/11) runs along the coast with Leaf behind and on the near (inland) side; screen direction L -> R held through 1E.",
+    "sun": [
+     0.726905328038456,
+     0.20791169081775931,
+     0.6545084971874737
+    ],
+    "exposure": 1.5
+   },
+   "staging": "MEDIUM 50 mm STATIC TWO-SHOT, deadpan: the musician (left, pipe in his right hand at his knee, lute across his knees) and the vendor (right, standing at his side). No child in the shot.",
+   "deviation": null
+  },
+  {
+   "job": "R3-04",
+   "seq": 165,
+   "scene": "1C",
+   "set": "CLING_SQUARE_2",
+   "start_s": 54,
+   "start_frame": 1296,
+   "frames": 84,
+   "pre": 12,
+   "post": 12,
+   "seconds": 3.5,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [
+    {
+     "kind": "smoke-wisp",
+     "from": 0,
+     "to": null
+    }
+   ],
+   "continuity": {
+    "tod": "early morning in Cling before the festival: low sun from the south-east, long shadows",
+    "weather": "clear; the last mist over the water and against the seaward side of the outer rocks; light breeze off the sea",
+    "notes": "CONTINUOUS from 1B-15: Leaf launches first (Abby), then Charcoal (Remi) tears the cleared launch space (the launch scar mended in X19). Same sun as 1B (east, ~31 deg up). The flight line (1C-10/11) runs along the coast with Leaf behind and on the near (inland) side; screen direction L -> R held through 1E.",
+    "sun": [
+     0.726905328038456,
+     0.20791169081775931,
+     0.6545084971874737
+    ],
+    "exposure": 1.5
+   },
+   "staging": "MEDIUM 40 mm STATIC: the vendor shakes his head and walks back round the fountain to his stall (background right); the musician (centre) smokes with his eyes down and closed, the lute across his knees. Thin smoke. No child in the shot.",
+   "deviation": "eyes closed is read as the head and eyes down (no lid control from the director yet)"
+  },
+  {
+   "job": "X5-15",
+   "seq": 166,
+   "scene": "1C",
+   "set": "CLING_SQUARE_2",
+   "start_s": 60,
+   "start_frame": 1440,
+   "frames": 120,
+   "pre": 12,
+   "post": 12,
+   "seconds": 5,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "early morning in Cling before the festival: low sun from the south-east, long shadows",
+    "weather": "clear; the last mist over the water and against the seaward side of the outer rocks; light breeze off the sea",
+    "notes": "CONTINUOUS from 1B-15: Leaf launches first (Abby), then Charcoal (Remi) tears the cleared launch space (the launch scar mended in X19). Same sun as 1B (east, ~31 deg up). The flight line (1C-10/11) runs along the coast with Leaf behind and on the near (inland) side; screen direction L -> R held through 1E.",
+    "sun": [
+     0.726905328038456,
+     0.20791169081775931,
+     0.6545084971874737
+    ],
+    "exposure": 1.5
+   },
+   "staging": "WIDE 35 mm STATIC from the square, looking north-east at the town wall: the WATCHMAN climbs the last rungs of the ladder onto his raised platform on the wall, crosses to the parapet, turns to the fields and wraps his cloak round him against the chill. A guard below at the left.",
+   "deviation": "the climb is the last rungs only (no climbing cycle in the director: the root rises on keys, the hands reach rung to rung)"
+  },
+  {
+   "job": "X5-16",
+   "seq": 167,
+   "scene": "1C",
+   "set": "CLING_SQUARE_2",
+   "start_s": 67,
+   "start_frame": 1608,
+   "frames": 108,
+   "pre": 12,
+   "post": 12,
+   "seconds": 4.5,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [
+    {
+     "id": "X5-04",
+     "part": 0,
+     "ref": "X5-04",
+     "role": "GUARD",
+     "file": "vo/X5-04.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.84,
+     "at_s": 0.22,
+     "speech_in_s": 0.25,
+     "speech_out_s": 1.03,
+     "words": [
+      {
+       "w": "anything",
+       "start_s": 0.22,
+       "end_s": 0.91
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    },
+    {
+     "id": "X5-05",
+     "part": 0,
+     "ref": "X5-05",
+     "role": "WATCHMAN",
+     "file": "vo/X5-05.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.56,
+     "at_s": 1.15,
+     "speech_in_s": 1.18,
+     "speech_out_s": 1.685,
+     "words": [
+      {
+       "w": "weather",
+       "start_s": 1.15,
+       "end_s": 1.61
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    },
+    {
+     "id": "X5-06",
+     "part": 0,
+     "ref": "X5-06",
+     "role": "GUARD",
+     "file": "vo/X5-06.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.88,
+     "at_s": 1.81,
+     "speech_in_s": 1.835,
+     "speech_out_s": 2.655,
+     "words": [
+      {
+       "w": "good",
+       "start_s": 1.81,
+       "end_s": 2.08
+      },
+      {
+       "w": "weather",
+       "start_s": 2.08,
+       "end_s": 2.57
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    },
+    {
+     "id": "X5-07",
+     "part": 0,
+     "ref": "X5-07",
+     "role": "WATCHMAN",
+     "file": "vo/X5-07.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.78,
+     "at_s": 2.775,
+     "speech_in_s": 2.805,
+     "speech_out_s": 3.525,
+     "words": [
+      {
+       "w": "so",
+       "start_s": 2.775,
+       "end_s": 3.035
+      },
+      {
+       "w": "far",
+       "start_s": 3.035,
+       "end_s": 3.475
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    }
+   ],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "early morning in Cling before the festival: low sun from the south-east, long shadows",
+    "weather": "clear; the last mist over the water and against the seaward side of the outer rocks; light breeze off the sea",
+    "notes": "CONTINUOUS from 1B-15: Leaf launches first (Abby), then Charcoal (Remi) tears the cleared launch space (the launch scar mended in X19). Same sun as 1B (east, ~31 deg up). The flight line (1C-10/11) runs along the coast with Leaf behind and on the near (inland) side; screen direction L -> R held through 1E.",
+    "sun": [
+     0.726905328038456,
+     0.20791169081775931,
+     0.6545084971874737
+    ],
+    "exposure": 1.5
+   },
+   "staging": "MEDIUM-WIDE 35 mm STATIC from the square: the GUARD below (left) calls up without much interest; the WATCHMAN above on the platform (right) answers, looking down. Over-the-shoulder-ish on the guard (his face three-quarter back).",
+   "deviation": "35 mm, not the listed 50 mm: on the Super 35 sensor a 50 mm cannot hold the guard below and the watchman 4.7 m above in one static frame"
+  },
+  {
+   "job": "X5-17",
+   "seq": 168,
+   "scene": "1C",
+   "set": "CLING_SQUARE_2",
+   "start_s": 74,
+   "start_frame": 1776,
+   "frames": 144,
+   "pre": 12,
+   "post": 12,
+   "seconds": 6,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "early morning in Cling before the festival: low sun from the south-east, long shadows",
+    "weather": "clear; the last mist over the water and against the seaward side of the outer rocks; light breeze off the sea",
+    "notes": "CONTINUOUS from 1B-15: Leaf launches first (Abby), then Charcoal (Remi) tears the cleared launch space (the launch scar mended in X19). Same sun as 1B (east, ~31 deg up). The flight line (1C-10/11) runs along the coast with Leaf behind and on the near (inland) side; screen direction L -> R held through 1E.",
+    "sun": [
+     0.726905328038456,
+     0.20791169081775931,
+     0.6545084971874737
+    ],
+    "exposure": 1.5
+   },
+   "staging": "POV 35 mm STATIC at the watchman's eyeline on the platform, looking east over the wall: roofs at the bottom, the fields, the broad road running away, and a wide, quiet sky with a few high clouds - nothing moves in it but birds. No foreshadowing.",
+   "deviation": null
+  },
+  {
+   "job": "X5-18",
+   "seq": 169,
+   "scene": "1C",
+   "set": "CLING_SQUARE_2",
+   "start_s": 82,
+   "start_frame": 1968,
+   "frames": 96,
+   "pre": 12,
+   "post": 12,
+   "seconds": 4,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "early morning in Cling before the festival: low sun from the south-east, long shadows",
+    "weather": "clear; the last mist over the water and against the seaward side of the outer rocks; light breeze off the sea",
+    "notes": "CONTINUOUS from 1B-15: Leaf launches first (Abby), then Charcoal (Remi) tears the cleared launch space (the launch scar mended in X19). Same sun as 1B (east, ~31 deg up). The flight line (1C-10/11) runs along the coast with Leaf behind and on the near (inland) side; screen direction L -> R held through 1E.",
+    "sun": [
+     0.726905328038456,
+     0.20791169081775931,
+     0.6545084971874737
+    ],
+    "exposure": 1.5
+   },
+   "staging": "WIDE 35 mm STATIC from the south-east of the square: the FIRST BANNER unrolls along its rope from a house on the north side down to the fountain pillar - the roll slides down the rope paying out ochre and woad cloth - and then lifts in the breeze.",
+   "deviation": null
+  }
+ ]
+}

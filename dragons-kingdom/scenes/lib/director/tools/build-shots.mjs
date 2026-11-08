@@ -61,12 +61,15 @@ for (const [setId, s] of Object.entries(SETS)) {
 
 const out = new Map();                                             // file -> content (string)
 const warnings = [];
+/** the set id whose spec authors shot s: its own set, or a set entry that takes its shots (`shotSet`) */
+const specSetOf = (s) => (specs[s.set]?.spec.shots?.[s.id] ? s.set : Object.keys(specs).find((k) => SETS[k].shotSet === s.set && specs[k].spec.shots?.[s.id]) || s.set);
 const merge = (d = {}, s = {}) => ({ ...d, ...s, cast: { ...(d.cast || {}), ...(s.cast || {}) } });
 
 // --------------------------------------------------- the set shot tables ---
 const tables = {};
 for (const [setId, { spec }] of Object.entries(specs)) {
-  const setShots = shotlist.shots.filter((s) => s.set === setId && spec.shots?.[s.id]);
+  // a set entry with `shotSet` takes shots the shot list puts on that other set (a second spec on one set)
+  const setShots = shotlist.shots.filter((s) => (s.set === setId || SETS[setId].shotSet === s.set) && spec.shots?.[s.id]);
   const laid = layoutSet(setShots.map((s) => ({ job: s.id, frames: jobFrames.get(s.id) ?? s.frames_at_24fps, pre: HANDLE, post: HANDLE })), { fps: FPS, gapS: 1 });
   const rows = laid.map((l, i) => {
     const s = setShots[i];
@@ -77,7 +80,7 @@ for (const [setId, { spec }] of Object.entries(specs)) {
     // every line the shot list puts in this shot must be placed somewhere (here or in a shot it runs over)
     for (const d of s.dialogue || []) {
       const here = placed.some((p) => p.id === d.id);
-      const elsewhere = shotlist.shots.some((o) => o.id !== s.id && (o.dialogue || []).some((x) => x.id === d.id) && specs[o.set]?.spec.shots?.[o.id]?.lines?.some((c) => String(c[0]).split('#')[0] === d.id));
+      const elsewhere = shotlist.shots.some((o) => o.id !== s.id && (o.dialogue || []).some((x) => x.id === d.id) && specs[specSetOf(o)]?.spec.shots?.[o.id]?.lines?.some((c) => String(c[0]).split('#')[0] === d.id));
       if (!here && !elsewhere) warnings.push(`${s.id}: shot-list line ${d.id} (${d.speaker}) is not placed in any shot`);
     }
     const captions = (sp.captions || []).map((c) => {
@@ -109,24 +112,25 @@ for (const [setId, { spec }] of Object.entries(specs)) {
 function buildCut(cut) {
   const SCENE_LIST = cut.scenes;
   const cutShots = shotlist.shots.filter((s) => SCENE_LIST.includes(s.scene));
-  if (!cut.always && !cutShots.some((s) => tables[s.set]?.shots.some((r) => r.job === s.id))) return null;
+  if (!cut.always && !cutShots.some((s) => tables[specSetOf(s)]?.shots.some((r) => r.job === s.id))) return null;
   let rec = 0;
   const edl = [];
   for (const s of cutShots) {
     const frames = jobFrames.get(s.id) ?? s.frames_at_24fps;
-    const row = tables[s.set]?.shots.find((r) => r.job === s.id) || null;
+    const ss = specSetOf(s);
+    const row = tables[ss]?.shots.find((r) => r.job === s.id) || null;
     const kind = s.render === 'black' ? 'black' : row ? '3d' : 'missing';
     if (kind === 'missing') warnings.push(`${s.id}: no spec yet (${s.set}) - the cut shows a slate`);
     const trans = row?.trans || (s.render === 'black' ? ['cut'] : ['cut']);
     edl.push({
       job: s.id, seq: s.seq, scene: s.scene, set: s.set, kind, frames, rec_in: rec, rec_out: rec + frames,
       tc_in: timecode(rec / FPS), tc_out: timecode((rec + frames) / FPS),
-      trans, src: row ? { scene_file: tables[s.set].scene_file, start_s: row.start_s, start_frame: row.start_frame } : null,
+      trans, src: row ? { scene_file: tables[ss].scene_file, start_s: row.start_s, start_frame: row.start_frame } : null,
       dialogue: (row?.dialogue || []).map((p) => ({ ...p, rec_s: +(rec / FPS + p.at_s).toFixed(3) })),
       captions: (row?.captions || []).map((c) => ({ ...c, rec_from_s: +(rec / FPS + c.from_s).toFixed(3), rec_to_s: +(rec / FPS + c.to_s).toFixed(3) })),
-      cost: row ? estimateShot(s.set, frames, merge(specs[s.set].spec.defaults, specs[s.set].spec.shots[s.id]), { measured: measured[s.id], gpuRatio }) : null, staging: row?.staging || null, deviation: row?.deviation || null, action: s.action,
+      cost: row ? estimateShot(s.set, frames, merge(specs[ss].spec.defaults, specs[ss].spec.shots[s.id]), { measured: measured[s.id], gpuRatio }) : null, staging: row?.staging || null, deviation: row?.deviation || null, action: s.action,
       // spec.reviewOk['<shot>']: the render's review flags were looked at in the pictures and the shot kept (why)
-      ...(row && specs[s.set].spec.reviewOk?.[s.id] ? { review_ok: specs[s.set].spec.reviewOk[s.id] } : {}),
+      ...(row && specs[ss].spec.reviewOk?.[s.id] ? { review_ok: specs[ss].spec.reviewOk[s.id] } : {}),
     });
     rec += frames;
   }

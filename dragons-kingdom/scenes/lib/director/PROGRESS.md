@@ -3,6 +3,247 @@
 Owner paths: `scenes/lib/director/`, `episodes/s01e01/final/scenes/`, `episodes/s01e01/final/cut/`.
 How it works: `README.md` in this folder. Latest state first.
 
+## Session 35 (2026-11-08, budgeted batch 6 of the 1C slates: VERDOR_AERIAL_2 + X4-10 - STILLS only)
+
+Scratch: `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/build6/` - `X4-10_050.png` (t 2.1), `X4-10_092.png` (t 3.85),
+`contact-build6.png` (the two side by side), `pv/` (previs sheets). Stills by `render-shots.mjs --stills 0.3,0.55
+--preset draft --sets VERDOR_AERIAL_2 --only X4-10 --work <scratch>/work` (set build 53 s, 2.3 min in all).
+- VERDOR_AERIAL / VERDOR_HARBOR shots were queued for rendering: verdor-aerial.spec.js, sets/verdor-aerial.js,
+  verdor-aerial.js / .shots.json and every verdor-harbor file are UNTOUCHED. X4-10 goes into a SECOND spec on the
+  VERDOR_AERIAL shots (the s34 `shotSet` mechanism): registry VERDOR_AERIAL_2 (`shotSet: 'VERDOR_AERIAL'`), scene
+  scenes/verdor-aerial-2.js, table verdor-aerial-2.shots.json, spec specs/verdor-aerial-2.spec.js (imports the
+  verdor-aerial spec's MAP, so the harbour is the same), builder sets/verdor-aerial-2.js (a wrapper over
+  sets/verdor-aerial.js's build()). The old `plans` X4-10 entry in verdor-aerial.spec.js stays (build-shots reads only
+  `shots`; it is superseded by VERDOR_AERIAL_2). Render with `--sets VERDOR_AERIAL_2`.
+- MEASURED (gltf probe of ph_dutch_ship_medium's rigging mesh, ship frame +x bow): mainmast at ship x -1.15, z 0 ->
+  world [267, 1591.15]; masthead y 22.66 (MAP.santaMaria.mastTop 28 was a guess); main top / yards y 15-18 (yard ends
+  world x 264.5 / 269.5); foremast ship x 6.5 (world z 1583.5), top 20.2.
+- sets/verdor-aerial-2.js adds a CROW'S NEST (procedural: staved tub r 0.85, waist-high wall, rim, floor, four cheek
+  brackets) parented to the ship at the mainmast, floor y 18.3; marks `crowsNest`, `mainmastTop`.
+- WIRED (ready for video): X4-10 (168 frames = shot list = edl-1C slot; line X4-01 at 4.6 s; build-shots: no warnings).
+  Staging: camera ship AHEAD of Leaf on the inland side (bearing 192, 17 m, 50 mm, explicit pos/look keys) looking
+  back: Abby left, the mast + nest beyond her right; Leaf 10 m inland of the mast, ~3 m below the nest; lookout =
+  crowd08 (adult man) in the nest: ducks 0.95-2.0 (crouch 0.85), laughs (nod 3.6 Hz) and waves R 2.6-5.4; Abby looks
+  at him, waves LEFT 3.0-4.75 (right stays on the grip), turns back to the front for the line (face 19 deg at 4.9).
+- Stills (looked at): t 2.1 - Abby (both hands on the grip) left, Leaf's wing sweeping up, the mast + nest right with
+  the lookout's head just over the rim (coming up from the duck) - reads. t 3.85 - lookout waving from the nest, Abby
+  waving back with her left hand, face three-quarter - reads. Background: sea + breakwater (looking NE).
+- DEVIATION: a slowed close pass (Leaf 7 m/s, cruise 16) so one medium holds both; the laugh is a head bob + sound
+  (no laugh face); the crow's nest is dressing (the ship model has none).
+- KNOWN ISSUES: the duck itself (0.95-2.0) happens while the lookout enters frame right - mostly seen as him coming
+  back up; the tub hides him below the chest; crowd08 warns "mouth shapes not attached" (he does not speak).
+- Verify: npm test 48 pass / 0 fail / 1 skipped; build-shots: no X4-10 warnings.
+- REQUESTS: none new (render: masters for a `shotSet` spec's shots, as s34).
+
+## Session 34 (2026-11-08, budgeted batch 5 of the 1C slates: CLING_SQUARE_2 + X5-10..18, R3-01..04 - STILLS only)
+
+Scratch: `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/build5/` - `work/` (r1, all 13), `work2/` (r2, 12
+after fixes), `work3/` (X5-14, R3-02 after the seat move), `contact-build5.png` (4x4, unlabelled, in priority order:
+X5-18, X5-13, X5-14, X5-15, X5-16, X5-17, R3-02, R3-03, R3-04, X5-10, X5-11, X5-12, R3-01). Stills by
+`render-shots.mjs --stills 0.55 --sets CLING_SQUARE_2 --work <scratch>` (ONE browser builds the set once, ~1 min, then
+~1 min per still - far cheaper than still.mjs, which rebuilds the set per shot).
+- CLING_SQUARE / X5-01..09 were being rendered: cling-square.spec.js, sets/cling-square.js, cling-square.js and
+  cling-square.shots.json are UNTOUCHED (byte-identical table). New mechanism instead: a registry entry with
+  `shotSet: 'CLING_SQUARE'` (CLING_SQUARE_2) is a SECOND SPEC on that set's shots - own scene file
+  (scenes/cling-square-2.js), table (cling-square-2.shots.json), spec (specs/cling-square-2.spec.js) and builder
+  (sets/cling-square-2.js, a wrapper over sets/cling-square.js's build()). build-shots.mjs: `specSetOf(shot)` finds the
+  spec that authors a shot (edl src / cost / reviewOk / the line check). render-shots / still.mjs / previs work through
+  the tables unchanged (`--sets CLING_SQUARE_2`). LIMIT: masters (render/lib/shots.mjs, not ours) look a shot up in the
+  render-jobs.json command's scene table (cling-square.js) - REQUEST render owners: also try the sibling tables.
+- sets/cling-square-2.js adds: the west-row house door 5 m south of the arch ([-19.81, 21.68]) - the house's own leaf and
+  painted portal dropped by triangle (opening: any vertex / centroid; room volume: whole triangles; non-indexed meshes
+  collapsed), a hinged plank leaf (`set.door` keys 0..1, swings inward), a ROOM (plaster walls, floor, beams, table,
+  bench, shelf with crocks, `set.room.lamp` warm light), the parcel (`set.parcel` door-frame keys), the first BANNER on a
+  rope north-row front -> fountain pillar top (`set.banner.unroll` / `lift` keys: a roll slides down the rope, the cloth
+  billows), a lute (hand prop) + `luteLap` (across the knees), a clay pipe (hand prop; smoke = FX smoke-wisp), far birds
+  (`set.flock`). Ground returns the floor inside the room.
+- WIRED (ready for video): X5-10, X5-11, X5-12, X5-13, X5-14, X5-15, X5-16, X5-17, X5-18, R3-01, R3-02, R3-03, R3-04
+  (durations = shot-list frames = edl-1C slots; no line warnings). Cast = the characters.py role builds: parent (woman),
+  child (the CHILD build), musician, vendor, watchman, guard1 (adult men). RATING: no child cast in R3-02..04; R3-01
+  takes the child inside and shuts the door first; the pipe is small, held below the chin, a thin wisp, no close-up.
+- LEARNED: the lens is Super 35 (24.9 mm wide): 50 mm frames ~1.45x tighter than a full-frame guess. r1 had every medium
+  too tight; r2 pulled the cameras back x1.45. X5-16 is 35 mm (deviation: 50 mm cannot hold a guard below and a watchman
+  4.7 m up). r1 bug: the room's front-wall panel covered the doorway (fixed). The musician's root 3.15 m from the fountain
+  centre puts the sit seat on the coping (3.35 floated in front of it; r3 checked X5-14 / R3-02).
+- Stills (looked at): X5-18 the banner across the square, woad/ochre, billowing - reads. X5-10 parent at the table with
+  the parcel through the door, child at the right - reads (warm room). X5-11 parcel slid to her side; her arms swing wide
+  (handsTo spread) - readable, not pretty. X5-12 child on the step - reads, small. R3-01 parent in the doorway, door
+  begins to close - reads, small (wide). X5-13/14 musician with the lute on the rim, vendor at his side (vendor's back to
+  the lens; X5-14 audit: musician's speaking face reads at 40 deg). R3-02 pipe at the chin, vendor at his stall bg right.
+  R3-03 two-shot. R3-04 vendor walking off. X5-15 watchman on the platform (small, top right). X5-16 watchman up, guard
+  down-left, both small. X5-17 POV reads as a street opening onto fields and a road; the birds are not visible at 0.55.
+- KNOWN ISSUES: X5-13/R3-03/R3-04 stills are from before the seat move (0.2 m) - check in the video; lute hands spread
+  wide (no fingering); the thumb on the fastening and closed eyes not posed (deviations); the climb is keyed root + hand
+  reaches; X5-17 roofs at the bottom only at the edges; parcel warmth not drawn; the watchman shots are small figures.
+- NOT DONE: X4-10 (VERDOR_AERIAL, still in `plans`; s30's notes stand). The same `shotSet` mechanism would let it go into
+  a VERDOR_AERIAL_2 spec without touching verdor-aerial.spec.js.
+- Verify: npm test pass; build-shots: no X5-10..18 / R3 warnings.
+- REQUESTS: humans - climb cycle, eyelid control, thumb-press hand (humans/PROGRESS.md s34); render - masters for a
+  `shotSet` spec's shots (render/lib/shots.mjs).
+
+## Session 33 (2026-11-08, budgeted batch 4 of the 1C slates: CLING_SQUARE set + X5-01..09 - STILLS only)
+
+Scratch: `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/build4/` - `r1/` (all 9), `r2/` (X5-04/05/07 after fixes),
+`contact-build4.png` (3x3 sheet, X5-01..09 in order, unlabelled). All draft (~4-6 min per still on the shared CPU).
+- NEW SET CLING_SQUARE (registry entry with a new world frame CLING, scene `episodes/s01e01/final/scenes/cling-square.js`,
+  builder `sets/cling-square.js`, spec `specs/cling-square.spec.js`). Built from the libraries, nothing else edited: the
+  square = architecture `clingSquare()` (the CLING layout of style frame F5: uneven sett paving with worn paths + the
+  fountain kennel, the fountain round its stone pillar, the king's steps + stone support, the stone arch through a west
+  house, the gate + town wall onto the broad road, the alley; its houses / roofs / stone are house.js + roof.js + masonry
+  + archMaterials, the same builders and materials VERDOR_AERIAL / VERDOR_HARBOR use); the land = nature `loadClingLand()`
+  (fields, hedges, woods, the road east); weeds at the wall feet. Added procedurally (arch Kit blocks in the arch oak):
+  the MUSIC SPACE dais (bench + stools) at [7, 1.5]; the WATCHMAN'S PLATFORM on the wall north of the gate (deck 4.7 m,
+  x 18.6..21.8, z -2.4..0.6, rail, braces, ladder from the square; `ground` returns the deck for X5-15/16). Moving
+  pieces (set state `stall`, `ladder`, `birds`): the vendor's handcart = props `handcart()` with its wheels dropped and
+  rebuilt as rolling `wheel()`s, `stall.cart: 'follow'` runs it 2.35 m ahead of the vendor's own blocking (actorState),
+  shafts lifted while it moves, `jolt` keys; stall poles / crossbars ride on the bed and swing up per key; a cloth roof
+  (14x10 grid on the four pole tops) with `low` (front-left corner drop), `off` (dragged half off), `snag` (the ladder's
+  front end, found from the carriers' blocking, catches the low corner, drags it 1 m and lets it fall); `rock` (the
+  front-left leg rocking) + `stones` (two wedges slide under it); the ladder on two carriers' left shoulders; pigeons on
+  north-row ridges. Sun 1C here: sunDir(132, 12) (south-east behind the steps, long shadows), exposure 1.5.
+  NOT YET: the house near the arch with an OPEN door (+ its interior for X5-10/11/12, R3-01) - clingSquare's own doors
+  open at random; plan: pick the west-row house next to the arch, drop its door-leaf triangles (as F5's dropTriangles)
+  and add a hinged leaf + a room box. Shutter leaf, banners (X5-18) also not yet.
+- WIRED (ready for video): CLING_SQUARE X5-01, X5-02, X5-03, X5-04, X5-05, X5-06, X5-07, X5-08, X5-09. Durations =
+  shot-list frames = edl-1C slots. X5-01 carries T11 "CLING — SCRAPPER" as a spec caption (0.25-2.95 s; the cut burns
+  it in - nothing drawn in 3D). Casting: vendor (adult man), crowd02 + crowd08 with the ladder (adult men), crowd03
+  crossing in X5-09 (adult woman). No children in X5-01..09.
+- Stills (looked at): X5-01 iron-tyred wheel on the setts, low, cloth roll on the bed - reads. X5-02 the empty square from
+  the steps, fountain + pillar centre, long shadow across the foreground - reads (tight-ish wide). X5-03 @0.3 the stone
+  arch, strong pan blur (the look keys sweep ~280 deg in 8 s: judge in the video; ease the keys if it strobes). X5-04 r1
+  showed (a) the vendor build's own CRATE prop floating over his hands -> hidden by name in the builder's afterCast,
+  (b) per-pole keys parsed as one key list (poles stayed on the bed) -> fixed, (c) cart too near -> lens back 2.3 m; r2
+  re-stilled. X5-05 the leg + first wedge at 100 mm (hands above frame at 0.45) -> lens back a little; r2 @0.28: the first wedge sliding in, the vendor's shoe + apron at left, but his HAND does not reach the setts (kneel + bow IK stops short) - the stone moves on its own key. X5-06
+  the vendor tying the back-left corner, the front-left corner hanging low mid-frame. X5-07 r1 ladder edge-on at eye
+  height (a thin line) -> lens up to 3.1 m; snag reads (the corner pulled to the ladder end). X5-08 vendor (back to us)
+  reties the corner. X5-09 square from the east: fountain, the woman crossing, vendor at his stall left; the pigeons on
+  the north ridges are not in this frame (sound carries the bird).
+- KNOWN ISSUES: the cloth is a flat dark-red sheet (no weave, no valance; the ties render pale); the cart has no goods;
+  carriers' hands do not grip the ladder (reach to a shoulder point); vendor's 'handsTo' raising the frame is a gesture
+  (poles swing up by key, not by his hands); X5-09 DEVIATION door + shutter are sound only; X5-06 / X5-08 the vendor is
+  seen from behind / three-quarter back; the fountain jets are fine strands (barely read in the wides).
+- Verify: npm test 48 pass / 0 fail / 1 skipped; selftest 20 pass; build-shots: no X5-01..09 warnings.
+- NEXT: 1. Lead renders the 9 X5 videos (one browser setup builds the whole town + land: ~4-6 min to the first frame at
+  draft; X5-07 casts three humans; --workers 1 is safest). 2. The open-door house near the arch + interior, the musician
+  on the fountain rim (X5-13/14), the watchman on the platform (X5-15/16) and his POV (X5-17), banners (X5-18), R3-01..04
+  (NO_CHILD_IN_FRAME for the pipe shots).
+- REQUESTS: humans - a load option (or build) for the vendor / sailor2 without the pose's built-in crate (humans/PROGRESS.md, s33).
+
+## Session 32 (2026-11-07/08, budgeted batch 3 of the 1C slates: OUTER_ROCKS set + 14 X6 specs - STILLS only)
+
+Scratch: `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/build3/` - `r1/` .. `r5/` (all stills), `final/` (the kept still
+per shot), `contact-build3.png` (4x4 sheet, X6-01..18 in order, unlabelled). All draft.
+- NEW SET OUTER_ROCKS (registry entry, scene `episodes/s01e01/final/scenes/outer-rocks.js`, builder
+  `sets/outer-rocks.js`, spec `specs/outer-rocks.spec.js`): calls SKY_OFF_VERDOR's build() as-is (coast, sea, sky, sun,
+  scanned rocks) and adds, all procedural: 7 sea stacks (lathe-like rings with noise + ~4 m ledges, leaning; limestone =
+  worldMaterial acg_rock26 box-projected), boulders at the feet (kitbash rocks), foam collars round every foot (canvas
+  alpha texture, scrolled with t), a dark weed bed round the rocks (the shelf there is only ~4-5 m deep and read
+  turquoise), ~700 (draft) / 1300 instanced seabirds (gannet-sized V shapes; `set.birds.lift` = shot-local lift-off
+  time: they burst outward then wheel round the gap 20-100 m up; < -6 = already wheeling; 8 % always airborne), and its
+  own cinematic() with a dense low mist bank against the seaward faces + gap exit and a thin sheet further out.
+  GAP FRAME (spec `map`, builder DEF): u along heading 150 from the gap [700, 0, 3200], v seaward. A (64 m) + B (56 m)
+  lean together: gap 7.2 m at the water, 6.8 m at 10 m, 2.5 m at the top (checked numerically on the noisy rings).
+  C = the low flat-top stack (y 17, ~10 x 9 m); `ground` returns its top so Leaf lands on it. Marks: gap, gapIn, gapOut,
+  lowTop, topA, topB.
+- WIRED (ready for video): OUTER_ROCKS X6-01, 02, 03, 08, 09, 10, 11, 12, 13, 14, 15, 16, 17, 18. Durations = shot-list
+  frames = edl-1C slots. Lines X6-07..10 placed in X6-17 (no build-shots warnings).
+- Stills (looked at): r1 showed the cameras' Super 35 sensor (135 mm is only ~6 deg tall: X6-16 / 17 framed sky - aim
+  lower / go further), X6-11 looked into the sun (az 102) -> from the seaward side, X6-01's pair hid behind the stacks
+  -> camera on the coast side of the axis, X6-17's framing solver failed (1.53 off) -> fixed lens 60 m out, Charcoal
+  hovering at y 19 beside C. Kept: X6-01 stacks + mist right + Leaf small top left; X6-02 the gap slot; X6-03 mist on
+  the seaward face; X6-08 Leaf skimming, stacks ahead; X6-09 Leaf on his side in the gap (static in the gap); X6-10 Abby
+  close; X6-11 Charcoal climbing past the tops, birds; X6-12 the downwash spray + birds lifting between A and B; X6-13
+  Remi low in the saddle from ahead; X6-14 Charcoal folded, diving past the tops; X6-15 Leaf flaring onto C, mist at the
+  feet; X6-16 Charcoal's beat above C, Leaf small on it (size difference); X6-17 Abby on Leaf on C (lower left), Remi on
+  hovering Charcoal (upper right); X6-18 Leaf's head close, Abby's hands top right.
+- KNOWN ISSUES: rock reads blue-grey under the sky (tint warmed after r2, X6-02/08/09/10/14/18 not re-stilled); the
+  stacks are smooth tapered columns at distance (no strong overhangs / guano); seabirds are specks beyond ~150 m; X6-12's
+  downwash mist (FX water-downwash) is a white bank over the lower third - the pale ring itself is hard to see from the
+  water; X6-10 Abby not laughing (no expression act - REQUEST); riders lean for the whole set (also in X6-17); X6-08 water
+  still a little teal near the camera; X6-13 spray (water-spray x3) not in frame at 0.5 (the stacks' tops behind him);
+  X6-16 Leaf is small (honest 135 mm size difference); X6-17 faces small (50 mm at 60 m); X6-18 DEVIATION: "flies a
+  little higher than he needs to" not staged (he is landed). SKY_OFF_VERDOR distant stacks NOT added (would re-key its 6
+  rendered X6 shots + 1C-*; the same stacks can be added by importing outer-rocks' stack geometry later).
+- Verify: npm test 48 pass / 0 fail / 1 skipped (before + after); selftest 20 pass; build-shots: no X6 warnings.
+- NEXT: 1. Lead renders the 14 X6 videos (X6-12/13 carry FX particles; X6-16/17 cast both dragons + riders: --workers 1
+  is safest for OUTER_ROCKS). 2. Re-still X6-02/09 for the warmer rock. 3. Stack detail (overhang ledges, guano streaks)
+  and the downwash ring readable from above (a high X6-12 cutaway). 4. Distant stacks in SKY_OFF_VERDOR for X6-19/20.
+- REQUESTS: humans - a rider expression act (laugh) + per-act lean (humans/PROGRESS.md, s32).
+
+## Session 31 (2026-11-07, budgeted batch 2 of the 1C slates: VERDOR_HARBOR set + 6 specs - STILLS only)
+
+Scratch: `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/build2/` - `r1/`, `r2/` (all stills), `final/` (the kept still
+per shot), `contact-build2.png` (3x2 sheet). All draft.
+- NEW SET VERDOR_HARBOR (registry entry, scene `episodes/s01e01/final/scenes/verdor-harbor.js`, builder
+  `sets/verdor-harbor.js`, spec `specs/verdor-harbor.spec.js`): a thin WRAPPER that calls VERDOR_AERIAL's build() with
+  the same MAP (the harbour spec imports the aerial spec's MAP) and adds procedural quay dressing: bollards, a stone
+  slipway (MAP.slipway, the ground follows it), boats (two hauled out; `boatA` / `boatB` set objects keyed per shot in
+  `set.boats`, actors can ride them via `parent` + groundIn), the hauled net + haul lines (`set.net`, `set.haul` = a
+  cast point, `set.haul2`), fish baskets + heap, crates, a paved market street and stalls with cloth roofs, a
+  shadow-only dragon silhouette (`shadowDragon`, for the FX 'shadow-pass'). `ground` returns the quay paving (2.8) /
+  slipway height. The Santa Maria is the existing props santaMaria() (3 masts, furled sails) - no new ship needed.
+- WIRED (ready for video): VERDOR_HARBOR X4-09, X4-07, X4-04, X4-05; VERDOR_AERIAL X4-13, X4-15 (moved out of
+  `plans`). Durations = shot-list frames = edl-1C slots (X4-04 96, X4-05 144, X4-07 120, X4-09 120, X4-13 192, X4-15 108).
+- Stills (looked at): X4-09 ok (ship moored, town terraces + warehouse behind, crew on the quay). X4-04 ok (grey
+  Leaf-size dragon crouched low between the crew sorting fish (L) and baskets (R), Santa Maria right); two crates by
+  the lens blocked the bottom -> moved behind (not re-stilled). X4-07 r1: grass street, too far, NO Charcoal shadow
+  (Charcoal cast at draft quality - his shadow did not show; cause not found) -> r2: paved street, lens 11 m nearer,
+  Charcoal not cast, his shadow = FX 'shadow-pass' on his line (heading 224, 41 m, continuing X4-06): a big shade over
+  the mid-street at 0.54, a woman looks up with a raised hand. Paving darkened after r2 (read near-white; not re-stilled).
+  X4-05 r1 from the slip head looking ENE: dragon walked out left, boats sank in the swell -> lens on the quay end NW
+  of the slip looking SE, boats ride +0.28: r2 reads (boats + boatmen + net line left, grey dragon centre walking up
+  the slip, crew hauling right). The slipway's side wall is a plain slab (darkened after r2, not re-stilled).
+  X4-13 ok (top-down 35 mm over the terrace-3 grass: instructor, takeoff dragon + shadow, a student by a crouched young
+  dragon, one lying flat). X4-15 ok (300 mm POV from remiR.head: Alexandria in the keep's top-row east window, hands
+  folded - the window = MAP.palace.chamberOpening corrected to [61.0, 75.7, 1427.5]).
+- KNOWN ISSUES: the harbour basin carries the open-sea FFT swell (looks like open water at quay level; the boats ride
+  +0.28 to stay above it) - a calm-basin mask in dk/ocean.js is wanted. X4-05: the net bag is mostly under the swell
+  (only floats / top rope read); no jaw-hold pose (the line just ends at the head bone). X4-07: Charcoal's real shadow
+  from the cast did not render in r1 (check X4-03's shadow in its video for the same cause); the FX shadow is a flat
+  silhouette (no wingbeat). X4-13: the student rider is scout_ride (adult build, outfit 'scout'); the pair's shadows
+  are not staged; rider "clinging" = ride lean 0.6. X4-15: one POV set-up only (DEVIATION: no reverse on Remi; his
+  raiseHand act is off screen); the window interior shows a dark moire (keep far lod has no interior). All working /
+  young dragons are Leaf's design in the 'scout' look (same grey).
+- NOT DONE: X4-10 (still in `plans`: the mainmast top must be measured in the santaMaria model and a lookout needs a
+  platform; budget).
+- Verify: npm test 48 pass / 0 fail / 1 skipped; selftest 20 pass; build-shots: no X4 warnings except X4-10 (slate).
+- NEXT: 1. Lead renders X4-04/05/07/09/13/15 (harbor set loads ~11 humans + 2 dragons: use --workers 1 for VERDOR_HARBOR;
+  X4-13 adds 3 small dragons + 3 humans to the aerial set). 2. Re-still X4-05/X4-07 after the material darkening if wanted.
+  3. X4-10 (s30 NEXT 2). 4. Calm harbour water. 5. Investigate the cast-creature shadow in VERDOR_AERIAL / HARBOR.
+- REQUESTS: creatures - working / young dragon looks + walking jaw-hold (creatures/PROGRESS.md); humans - young seated
+  rider builds + a cling pose (humans/PROGRESS.md).
+
+## Session 30 (2026-11-07, budgeted batch 1 of the 1C slates: 12 new specs on existing sets - STILLS only)
+
+Scratch: `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/build1/` - `r1..r4/` (all stills),
+`final/` (the kept still per shot), `contact-build1.png` (4x3 sheet). All draft.
+- WIRED (ready for video): VERDOR_AERIAL X4-08, X4-12, X4-16, X4-17, X4-18, X4-19 (moved from `plans` to `shots`);
+  SKY_OFF_VERDOR X6-04, X6-05, X6-06, X6-07, X6-19, X6-20. Durations = shot-list frames = the edl-1C slots (unchanged).
+  Lines placed from the takes: X4-12 (X4-02, OFF), X4-18 (X4-03..07), X6-05 (X6-01..05), X6-07 (X6-06); build-shots: no warnings.
+- New helpers (both specs): `fly`, `pair(p, h, dur, {lat, lead})` (the 1C TALK formation on any heading; negative lat =
+  Charcoal to Leaf's right), `SH` / `shTrack` (shadow box centred so its sun axis passes through a flyer - the 1C close
+  shots used the default box far away), `posAt`; sky-off-verdor also `shipCam` (a long-lens camera ship riding with a pair).
+- Stills (looked at): X4-16 r1 (from 212 over x 298) showed sea + a bare apron -> pair moved inland over the town, lens from
+  AHEAD (185) looking back down: roofs + harbour wall read. X6-05 r1/r2 (the 1C-14 shoulder set-up rotated to heading 158,
+  rise 3.2 then 5, Leaf +3 then +6) hid Abby behind his wing both times -> the X4-18 long-lens two-shot from inland (180 mm,
+  230 m). X6-19 r1 (abeam from the seaward side): cliff face filled the frame, Leaf on his tail -> from behind / high
+  (bearing 140, 600 m, 110 m up), Leaf back on the INLAND side (convention), Charcoal 24 m right + 20 m ahead; X6-20 same.
+- KNOWN ISSUES: X4-18 / X6-05 faces small (180 mm two-shots: lip-sync barely visible; the framer reports 0.4 off - it
+  cannot hold both heads at +-0.4, the read is fine). X4-12: the pat (rider `touch` at leaf.neck_2) did not show at
+  1.8 s - check in video. X4-12 plays Remi's line OFF (medium on Abby; shot list puts him R). X4-08: no quay dragon
+  (answer OFF, sound only), sea background. X6: no OUTER_ROCKS set - the rocks / gap / mist are kept OFF FRAME in every
+  shot (approach shots look NE, return shots have the rocks behind the lens); X6-20's island is SKY_OFF_VERDOR's coast and
+  hills only (no harbour / town / palace: those are VERDOR_AERIAL's builder). X6-07: Remi cannot lean per act (REQUEST).
+- NOT DONE: X4-10 (back in `plans` with notes: r2 still had no mast in frame - the 50 mm frame at y 30 cuts above the
+  ship's rig, Abby hidden by the upstroke; the mainmast position / top must be measured and a lookout (crowd08) needs a
+  platform). X4-15 (needs a mark at the palace chamber opening: MAP.chamberOpening [84, 76, 1430] does not match the keep,
+  whose east face is at x ~61; then Alexandria standing in it).
+- Verify: npm test 48 pass / 0 fail / 1 skipped.
+- NEXT: 1. Lead renders the 12 videos (none heavy beyond the usual pair shots). 2. X4-10: measure the Santa Maria's
+  mainmast in a probe, Leaf ~20 m, lens 4 m above her. 3. X4-15: a `chamberOpening` mark from palace() (keep front
+  windows, row 16.5 m) + Alexandria (`y` on the cast) + Remi raiseHand reverse. 4. OUTER_ROCKS set for X6-01..03/08..18.
+- REQUESTS: humans - per-act rider lean (X6-06/07) and a rider pat (X4-12): written in humans/PROGRESS.md.
+
 ## Session 29 (2026-11-07, short budgeted session: F4 cloth + near leg, X4-06 "no hoe / no lean" - STILLS only)
 
 Scratch: `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/dir29/` - `f4_before.png` (= s28 after), `f4_t2.png` (try 1), `f4_t104.png` (try 1 at CAMS 104),

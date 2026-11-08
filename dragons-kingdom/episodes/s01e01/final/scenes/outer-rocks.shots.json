@@ -1,0 +1,591 @@
+{
+ "set": "OUTER_ROCKS",
+ "scene_file": "episodes/s01e01/final/scenes/outer-rocks.js",
+ "spec": "episodes/s01e01/final/scenes/specs/outer-rocks.spec.js",
+ "fps": 24,
+ "handles": 12,
+ "generated_by": "scenes/lib/director/tools/build-shots.mjs",
+ "note": "start_s / frames are the render-jobs.json contract (episode.mjs); pre/post are handle frames the editor may render around each shot.",
+ "shots": [
+  {
+   "job": "X6-01",
+   "seq": 170,
+   "scene": "1C",
+   "set": "OUTER_ROCKS",
+   "start_s": 1,
+   "start_frame": 24,
+   "frames": 144,
+   "pre": 12,
+   "post": 12,
+   "seconds": 6,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "late morning at the outer rocks (continuous from 1B)",
+    "weather": "clear; the last mist over the water and against the seaward side of the outer rocks; light breeze off the sea",
+    "notes": "CONTINUOUS from 1B-15: Leaf launches first (Abby), then Charcoal (Remi) tears the cleared launch space (the launch scar mended in X19). Same sun as 1B (east, ~31 deg up). The flight line (1C-10/11) runs along the coast with Leaf behind and on the near (inland) side; screen direction L -> R held through 1E.",
+    "sun": [
+     0.8384361386092437,
+     0.5150380749100542,
+     0.17821510280267075
+    ],
+    "exposure": 1.1
+   },
+   "staging": "EXTREME WIDE 100 mm from a camera ship far out SSE, slow drift: the outer rocks centre (the two leaning stacks and the gap opening toward us, birds on the ledges, white water), the mist bank against their seaward side right; Leaf and Charcoal small, left, coming down the coast toward them.",
+   "deviation": null
+  },
+  {
+   "job": "X6-02",
+   "seq": 171,
+   "scene": "1C",
+   "set": "OUTER_ROCKS",
+   "start_s": 9,
+   "start_frame": 216,
+   "frames": 72,
+   "pre": 12,
+   "post": 12,
+   "seconds": 3,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "late morning at the outer rocks (continuous from 1B)",
+    "weather": "clear; the last mist over the water and against the seaward side of the outer rocks; light breeze off the sea",
+    "notes": "CONTINUOUS from 1B-15: Leaf launches first (Abby), then Charcoal (Remi) tears the cleared launch space (the launch scar mended in X19). Same sun as 1B (east, ~31 deg up). The flight line (1C-10/11) runs along the coast with Leaf behind and on the near (inland) side; screen direction L -> R held through 1E.",
+    "sun": [
+     0.8384361386092437,
+     0.5150380749100542,
+     0.17821510280267075
+    ],
+    "exposure": 1.1
+   },
+   "staging": "WIDE 35 mm low over the water on the approach side, a slow push: the gap - two stone walls leaning together, a slot of bright mist and sea beyond, white water at their feet.",
+   "deviation": null
+  },
+  {
+   "job": "X6-03",
+   "seq": 172,
+   "scene": "1C",
+   "set": "OUTER_ROCKS",
+   "start_s": 14,
+   "start_frame": 336,
+   "frames": 72,
+   "pre": 12,
+   "post": 12,
+   "seconds": 3,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "late morning at the outer rocks (continuous from 1B)",
+    "weather": "clear; the last mist over the water and against the seaward side of the outer rocks; light breeze off the sea",
+    "notes": "CONTINUOUS from 1B-15: Leaf launches first (Abby), then Charcoal (Remi) tears the cleared launch space (the launch scar mended in X19). Same sun as 1B (east, ~31 deg up). The flight line (1C-10/11) runs along the coast with Leaf behind and on the near (inland) side; screen direction L -> R held through 1E.",
+    "sun": [
+     0.8384361386092437,
+     0.5150380749100542,
+     0.17821510280267075
+    ],
+    "exposure": 1.1
+   },
+   "staging": "WIDE 35 mm on the seaward side: the low bank of sea mist lying against the stacks' seaward faces, the gap's exit half lost in it; muffled surf.",
+   "deviation": null
+  },
+  {
+   "job": "X6-08",
+   "seq": 177,
+   "scene": "1C",
+   "set": "OUTER_ROCKS",
+   "start_s": 19,
+   "start_frame": 456,
+   "frames": 96,
+   "pre": 12,
+   "post": 12,
+   "seconds": 4,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "late morning at the outer rocks (continuous from 1B)",
+    "weather": "clear; the last mist over the water and against the seaward side of the outer rocks; light breeze off the sea",
+    "notes": "CONTINUOUS from 1B-15: Leaf launches first (Abby), then Charcoal (Remi) tears the cleared launch space (the launch scar mended in X19). Same sun as 1B (east, ~31 deg up). The flight line (1C-10/11) runs along the coast with Leaf behind and on the near (inland) side; screen direction L -> R held through 1E.",
+    "sun": [
+     0.8384361386092437,
+     0.5150380749100542,
+     0.17821510280267075
+    ],
+    "exposure": 1.1
+   },
+   "staging": "WIDE 35 mm tracking low over the water from behind-right: Leaf skims the sea a few metres up, short quick beats, small corrections; Abby tucked down; the stacks ahead right.",
+   "deviation": null
+  },
+  {
+   "job": "X6-09",
+   "seq": 178,
+   "scene": "1C",
+   "set": "OUTER_ROCKS",
+   "start_s": 25,
+   "start_frame": 600,
+   "frames": 96,
+   "pre": 12,
+   "post": 12,
+   "seconds": 4,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "late morning at the outer rocks (continuous from 1B)",
+    "weather": "clear; the last mist over the water and against the seaward side of the outer rocks; light breeze off the sea",
+    "notes": "CONTINUOUS from 1B-15: Leaf launches first (Abby), then Charcoal (Remi) tears the cleared launch space (the launch scar mended in X19). Same sun as 1B (east, ~31 deg up). The flight line (1C-10/11) runs along the coast with Leaf behind and on the near (inland) side; screen direction L -> R held through 1E.",
+    "sun": [
+     0.8384361386092437,
+     0.5150380749100542,
+     0.17821510280267075
+    ],
+    "exposure": 1.1
+   },
+   "staging": "WIDE 35 mm static INSIDE the gap looking out (NNW): Leaf comes in low and fast, tilts almost onto his side and threads the gap toward the lens, wingtips passing close to both walls; Abby tucked down.",
+   "deviation": null
+  },
+  {
+   "job": "X6-10",
+   "seq": 179,
+   "scene": "1C",
+   "set": "OUTER_ROCKS",
+   "start_s": 31,
+   "start_frame": 744,
+   "frames": 48,
+   "pre": 12,
+   "post": 12,
+   "seconds": 2,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "late morning at the outer rocks (continuous from 1B)",
+    "weather": "clear; the last mist over the water and against the seaward side of the outer rocks; light breeze off the sea",
+    "notes": "CONTINUOUS from 1B-15: Leaf launches first (Abby), then Charcoal (Remi) tears the cleared launch space (the launch scar mended in X19). Same sun as 1B (east, ~31 deg up). The flight line (1C-10/11) runs along the coast with Leaf behind and on the near (inland) side; screen direction L -> R held through 1E.",
+    "sun": [
+     0.8384361386092437,
+     0.5150380749100542,
+     0.17821510280267075
+    ],
+    "exposure": 1.1
+   },
+   "staging": "CLOSE 85 mm air-to-air on Abby from her right front: tucked down against Leaf, both hands on the grips, laughing into the wind; sea and spray behind.",
+   "deviation": null
+  },
+  {
+   "job": "X6-11",
+   "seq": 180,
+   "scene": "1C",
+   "set": "OUTER_ROCKS",
+   "start_s": 35,
+   "start_frame": 840,
+   "frames": 120,
+   "pre": 12,
+   "post": 12,
+   "seconds": 5,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "late morning at the outer rocks (continuous from 1B)",
+    "weather": "clear; the last mist over the water and against the seaward side of the outer rocks; light breeze off the sea",
+    "notes": "CONTINUOUS from 1B-15: Leaf launches first (Abby), then Charcoal (Remi) tears the cleared launch space (the launch scar mended in X19). Same sun as 1B (east, ~31 deg up). The flight line (1C-10/11) runs along the coast with Leaf behind and on the near (inland) side; screen direction L -> R held through 1E.",
+    "sun": [
+     0.8384361386092437,
+     0.5150380749100542,
+     0.17821510280267075
+    ],
+    "exposure": 1.1
+   },
+   "staging": "WIDE 35 mm from low on the water by the stacks' seaward feet looking up: Charcoal cannot follow - he climbs and goes over the top of the stacks, slow and enormous, Remi low on his back.",
+   "deviation": null
+  },
+  {
+   "job": "X6-12",
+   "seq": 181,
+   "scene": "1C",
+   "set": "OUTER_ROCKS",
+   "start_s": 42,
+   "start_frame": 1008,
+   "frames": 96,
+   "pre": 12,
+   "post": 12,
+   "seconds": 4,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [
+    {
+     "kind": "water-downwash",
+     "from": 0,
+     "to": null
+    }
+   ],
+   "continuity": {
+    "tod": "late morning at the outer rocks (continuous from 1B)",
+    "weather": "clear; the last mist over the water and against the seaward side of the outer rocks; light breeze off the sea",
+    "notes": "CONTINUOUS from 1B-15: Leaf launches first (Abby), then Charcoal (Remi) tears the cleared launch space (the launch scar mended in X19). Same sun as 1B (east, ~31 deg up). The flight line (1C-10/11) runs along the coast with Leaf behind and on the near (inland) side; screen direction L -> R held through 1E.",
+    "sun": [
+     0.8384361386092437,
+     0.5150380749100542,
+     0.17821510280267075
+    ],
+    "exposure": 1.1
+   },
+   "staging": "WIDE 35 mm static at the foot of the stacks looking up at them: his downwash (from above, off frame top) flattens the water round the rocks into a pale ring and lifts every seabird off its ledge at once.",
+   "deviation": null
+  },
+  {
+   "job": "X6-13",
+   "seq": 182,
+   "scene": "1C",
+   "set": "OUTER_ROCKS",
+   "start_s": 48,
+   "start_frame": 1152,
+   "frames": 72,
+   "pre": 12,
+   "post": 12,
+   "seconds": 3,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [
+    {
+     "kind": "water-spray",
+     "from": 0,
+     "to": null
+    },
+    {
+     "kind": "water-spray",
+     "from": 0.9,
+     "to": null
+    },
+    {
+     "kind": "water-spray",
+     "from": 1.8,
+     "to": null
+    }
+   ],
+   "continuity": {
+    "tod": "late morning at the outer rocks (continuous from 1B)",
+    "weather": "clear; the last mist over the water and against the seaward side of the outer rocks; light breeze off the sea",
+    "notes": "CONTINUOUS from 1B-15: Leaf launches first (Abby), then Charcoal (Remi) tears the cleared launch space (the launch scar mended in X19). Same sun as 1B (east, ~31 deg up). The flight line (1C-10/11) runs along the coast with Leaf behind and on the near (inland) side; screen direction L -> R held through 1E.",
+    "sun": [
+     0.8384361386092437,
+     0.5150380749100542,
+     0.17821510280267075
+    ],
+    "exposure": 1.1
+   },
+   "staging": "MEDIUM 50 mm air-to-air from Charcoal's left front as he comes down past the stacks: Remi stays low in the saddle; behind him spray climbs the stone and the birds wheel.",
+   "deviation": null
+  },
+  {
+   "job": "X6-14",
+   "seq": 183,
+   "scene": "1C",
+   "set": "OUTER_ROCKS",
+   "start_s": 53,
+   "start_frame": 1272,
+   "frames": 96,
+   "pre": 12,
+   "post": 12,
+   "seconds": 4,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "late morning at the outer rocks (continuous from 1B)",
+    "weather": "clear; the last mist over the water and against the seaward side of the outer rocks; light breeze off the sea",
+    "notes": "CONTINUOUS from 1B-15: Leaf launches first (Abby), then Charcoal (Remi) tears the cleared launch space (the launch scar mended in X19). Same sun as 1B (east, ~31 deg up). The flight line (1C-10/11) runs along the coast with Leaf behind and on the near (inland) side; screen direction L -> R held through 1E.",
+    "sun": [
+     0.8384361386092437,
+     0.5150380749100542,
+     0.17821510280267075
+    ],
+    "exposure": 1.1
+   },
+   "staging": "WIDE 35 mm from the far side: Charcoal folds his wings and comes down the slope of the air past the stacks toward the low stack; for a moment it looks as if he might get there first.",
+   "deviation": null
+  },
+  {
+   "job": "X6-15",
+   "seq": 184,
+   "scene": "1C",
+   "set": "OUTER_ROCKS",
+   "start_s": 59,
+   "start_frame": 1416,
+   "frames": 144,
+   "pre": 12,
+   "post": 12,
+   "seconds": 6,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "late morning at the outer rocks (continuous from 1B)",
+    "weather": "clear; the last mist over the water and against the seaward side of the outer rocks; light breeze off the sea",
+    "notes": "CONTINUOUS from 1B-15: Leaf launches first (Abby), then Charcoal (Remi) tears the cleared launch space (the launch scar mended in X19). Same sun as 1B (east, ~31 deg up). The flight line (1C-10/11) runs along the coast with Leaf behind and on the near (inland) side; screen direction L -> R held through 1E.",
+    "sun": [
+     0.8384361386092437,
+     0.5150380749100542,
+     0.17821510280267075
+    ],
+    "exposure": 1.1
+   },
+   "staging": "WIDE 35 mm static from the top of a lower stack (F): Leaf bursts out of the gap on the seaward side through the mist, swings up in a tight climbing right turn and lands on the flat top of the low stack, settling low and level, wrists down, Abby on his back - the whole of him fitting with room to spare.",
+   "deviation": null
+  },
+  {
+   "job": "X6-16",
+   "seq": 185,
+   "scene": "1C",
+   "set": "OUTER_ROCKS",
+   "start_s": 67,
+   "start_frame": 1608,
+   "frames": 96,
+   "pre": 12,
+   "post": 12,
+   "seconds": 4,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "late morning at the outer rocks (continuous from 1B)",
+    "weather": "clear; the last mist over the water and against the seaward side of the outer rocks; light breeze off the sea",
+    "notes": "CONTINUOUS from 1B-15: Leaf launches first (Abby), then Charcoal (Remi) tears the cleared launch space (the launch scar mended in X19). Same sun as 1B (east, ~31 deg up). The flight line (1C-10/11) runs along the coast with Leaf behind and on the near (inland) side; screen direction L -> R held through 1E.",
+    "sun": [
+     0.8384361386092437,
+     0.5150380749100542,
+     0.17821510280267075
+    ],
+    "exposure": 1.1
+   },
+   "staging": "WIDE 135 mm static, low over the water from ~400 m SSW: Leaf crouched on the low stack (left); Charcoal arrives out of his dive above it from the ESE and checks with one huge beat that sends the last birds wheeling; his shadow covers the whole stack and the dragon on it.",
+   "deviation": null
+  },
+  {
+   "job": "X6-17",
+   "seq": 186,
+   "scene": "1C",
+   "set": "OUTER_ROCKS",
+   "start_s": 73,
+   "start_frame": 1752,
+   "frames": 168,
+   "pre": 12,
+   "post": 12,
+   "seconds": 7,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [
+    {
+     "id": "X6-07",
+     "part": 0,
+     "ref": "X6-07",
+     "role": "ABBY",
+     "file": "vo/X6-07.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.59,
+     "at_s": 0.27,
+     "speech_in_s": 0.3,
+     "speech_out_s": 0.83,
+     "words": [
+      {
+       "w": "again",
+       "start_s": 0.27,
+       "end_s": 0.78
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    },
+    {
+     "id": "X6-08",
+     "part": 0,
+     "ref": "X6-08",
+     "role": "REMI",
+     "file": "vo/X6-08.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.73,
+     "at_s": 0.95,
+     "speech_in_s": 0.98,
+     "speech_out_s": 1.65,
+     "words": [
+      {
+       "w": "you",
+       "start_s": 0.95,
+       "end_s": 1.19
+      },
+      {
+       "w": "won",
+       "start_s": 1.19,
+       "end_s": 1.58
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    },
+    {
+     "id": "X6-09",
+     "part": 0,
+     "ref": "X6-09",
+     "role": "ABBY",
+     "file": "vo/X6-09.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.195,
+     "at_s": 1.77,
+     "speech_in_s": 1.8,
+     "speech_out_s": 2.935,
+     "words": [
+      {
+       "w": "say",
+       "start_s": 1.77,
+       "end_s": 2.04
+      },
+      {
+       "w": "it",
+       "start_s": 2.04,
+       "end_s": 2.14
+      },
+      {
+       "w": "so",
+       "start_s": 2.14,
+       "end_s": 2.28
+      },
+      {
+       "w": "he",
+       "start_s": 2.28,
+       "end_s": 2.41
+      },
+      {
+       "w": "can",
+       "start_s": 2.41,
+       "end_s": 2.58
+      },
+      {
+       "w": "hear",
+       "start_s": 2.58,
+       "end_s": 2.91
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    },
+    {
+     "id": "X6-10",
+     "part": 0,
+     "ref": "X6-10",
+     "role": "REMI",
+     "file": "vo/X6-10.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.68,
+     "at_s": 3.095,
+     "speech_in_s": 3.135,
+     "speech_out_s": 3.745,
+     "words": [
+      {
+       "w": "you",
+       "start_s": 3.095,
+       "end_s": 3.305
+      },
+      {
+       "w": "won",
+       "start_s": 3.305,
+       "end_s": 3.665
+      }
+     ],
+     "gain_db": 3,
+     "continues": false,
+     "placeholder": false
+    }
+   ],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "late morning at the outer rocks (continuous from 1B)",
+    "weather": "clear; the last mist over the water and against the seaward side of the outer rocks; light breeze off the sea",
+    "notes": "CONTINUOUS from 1B-15: Leaf launches first (Abby), then Charcoal (Remi) tears the cleared launch space (the launch scar mended in X19). Same sun as 1B (east, ~31 deg up). The flight line (1C-10/11) runs along the coast with Leaf behind and on the near (inland) side; screen direction L -> R held through 1E.",
+    "sun": [
+     0.8384361386092437,
+     0.5150380749100542,
+     0.17821510280267075
+    ],
+    "exposure": 1.1
+   },
+   "staging": "MEDIUM 50 mm static two-shot, Remi above: from 60 m out beyond Abby's right shoulder, level with the low stack (Abby left, three-quarter back) up to Remi on the hovering Charcoal (right, top). \"Again?\" - \"You won.\" - \"Say it so he can hear.\" - \"You won.\" (louder).",
+   "deviation": null
+  },
+  {
+   "job": "X6-18",
+   "seq": 187,
+   "scene": "1C",
+   "set": "OUTER_ROCKS",
+   "start_s": 82,
+   "start_frame": 1968,
+   "frames": 72,
+   "pre": 12,
+   "post": 12,
+   "seconds": 3,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "late morning at the outer rocks (continuous from 1B)",
+    "weather": "clear; the last mist over the water and against the seaward side of the outer rocks; light breeze off the sea",
+    "notes": "CONTINUOUS from 1B-15: Leaf launches first (Abby), then Charcoal (Remi) tears the cleared launch space (the launch scar mended in X19). Same sun as 1B (east, ~31 deg up). The flight line (1C-10/11) runs along the coast with Leaf behind and on the near (inland) side; screen direction L -> R held through 1E.",
+    "sun": [
+     0.8384361386092437,
+     0.5150380749100542,
+     0.17821510280267075
+    ],
+    "exposure": 1.1
+   },
+   "staging": "CLOSE 85 mm static on Leaf's head from his front-left, on the stack: he turns one eye up toward Charcoal (off frame, above left) without any fear at all.",
+   "deviation": "Leaf stays on the stack (the shot list's \"and flies a little higher than he needs to\" is not staged: he has just landed in X6-15/16/17)."
+  }
+ ]
+}

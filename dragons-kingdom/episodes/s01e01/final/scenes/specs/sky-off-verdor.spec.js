@@ -51,6 +51,45 @@ const T = { '1C-10': 0, '1C-11': 6, '1C-12': 11, '1C-13': 15, '1C-14': 21, '1C-1
 const FORM = { leaf: [505, 61, 0], charcoal: [545, 58, 20] };
 const TALK = { leaf: [505, 62, 0], charcoal: [535, 60, 16] };
 
+// ---- X6 (session 30, batch 1): off the south end of the coast, short of the OUTER ROCKS (verdor-aerial MAP: stacks at
+// [700, 0, 3200]; NO SET YET - OUTER_ROCKS is a later build). These shots keep the rocks OFF FRAME: approach shots look
+// north-east (the rocks lie south-east, ahead), the return shots look west at the island (the rocks behind, off left).
+// The talking formation rotated onto any heading: Charcoal 30 m to Leaf's LEFT (seaward when heading south, inland
+// when heading north - Leaf on the near / seaward side for the return, shot list X6-19), 16 m ahead, 2 m lower.
+function pair(p, h, dur, o = {}) {
+  const f = [Math.sin(h * D2R), -Math.cos(h * D2R)], l = [-Math.cos(h * D2R), -Math.sin(h * D2R)];
+  const lat = o.lat ?? 30, lead = o.lead ?? 16;
+  const c0 = [p[0] + l[0] * lat + f[0] * lead, p[1] + (o.cdy ?? -2), p[2] + l[1] * lat + f[1] * lead];
+  return { leaf: fly(p, h, o.v ?? V, dur, o.dy || 0), charcoal: fly(c0, h, o.v ?? V, dur, o.dy || 0) };
+}
+const posAt = (fl, t) => { const [[t0, a], [t1, b]] = fl.root; const k = (t - t0) / (t1 - t0); return a.map((v, i) => v + (b[i] - v) * k); };
+/** shadow-box centre for a flyer at p (sun 102 / 31: the box's axis through p meets y 20 here) */
+const SH = (p) => [p[0] - 1.86 * (p[1] - 20), 20, p[2] - 0.394 * (p[1] - 20)];
+const shTrack = (fl) => fl.root.map(([t, p, e]) => (e ? [t, SH(p), e] : [t, SH(p)]));
+/** a long-lens camera ship riding with a pair: `dist` m out on bearing `from`, `up` m above their midpoint */
+function shipCam(pr, dur, from, dist, up, o = {}) {
+  const mid = (t) => posAt(pr.leaf, t).map((v, i) => (v + posAt(pr.charcoal, t)[i]) / 2);
+  const d = [Math.sin(from * D2R), -Math.cos(from * D2R)];
+  const P = (t) => { const m = mid(t); return [m[0] + d[0] * dist, m[1] + up, m[2] + d[1] * dist]; };
+  const L = (t) => { const m = mid(t); return [m[0], m[1] + (o.aimUp ?? 0), m[2]]; };
+  return { rig: 'follow', pos: [[0, P(0)], [dur, P(dur), 'linear']], look: [[0, L(0)], [dur, L(dur), 'linear']], mm: o.mm ?? 160, fstop: 8, focus: 'leaf.chest' };
+}
+const GAP = [700, 25, 3200];                          // the gap between the leaning stacks (off frame in every X6 shot here)
+const X6H = 158;                                      // heading SSE down the coast toward the rocks
+const X6L0 = [560, 62, 2600];                         // Leaf at the first X6 air shot (coast x ~410 here: 150 m offshore)
+const x6Leaf = (T0) => [X6L0[0] + Math.sin(X6H * D2R) * V * T0, X6L0[1], X6L0[2] - Math.cos(X6H * D2R) * V * T0];
+const X6P = {
+  'X6-04': pair(x6Leaf(0), X6H, 2),
+  'X6-05': pair(x6Leaf(2), X6H, 12),
+  'X6-07': pair(x6Leaf(17), X6H, 4),
+  // the return (s30 r2): heading north, Leaf back on the INLAND side (flight-line convention), Charcoal 24 m to her right
+  // (seaward) and 20 m ahead so the two never overlap on screen; ~350 m offshore
+  'X6-19': pair([800, 60, 3020], 330, 5, { v: 15, lat: -24, lead: 20 }),
+  'X6-20': pair([770, 60, 2930], 345, 8, { lat: -24, lead: 20 }),
+};
+const X6_06 = fly(x6Leaf(14), 148, 19, 3, -16);       // Leaf drops away toward the rocks, faster, losing 16 m
+const REMI_X6_04 = posAt(X6P['X6-04'].charcoal, 1.2).map((v, i) => v + (i === 1 ? 3 : 0));
+
 export default {
   set: 'SKY_OFF_VERDOR',
   cast: {
@@ -237,6 +276,76 @@ export default {
         //  separation. 10 m further back in this shot only -> ~17 m, clear of his tail)
         leaf: { tack: true, ...inForm(TALK.leaf[0], TALK.leaf[1], TALK.leaf[2] - 10, T['1C-19'], 8), acts: LEAF_FLY() },
         charcoal: { tack: true, ...inForm(...TALK.charcoal, T['1C-19'], 8), acts: CHAR_FLY() },
+        abbyR: {}, remiR: {},
+      },
+    },
+    // ------------------------------------------------------------------ session 30 (batch 1) ---
+    'X6-04': {
+      staging: 'MEDIUM 50 mm air-to-air off Leaf\'s right front: Abby (screen left) looks ahead at the gap (off frame right, far), then across at Remi (screen right). He already knows what she is going to say.',
+      cam: { rig: 'follow', frame: { subjects: [['abbyR.head', [-0.2, 0.2]]], from: 212, dist: 8, rise: 1.0, track: true }, mm: 50, fstop: 4, focus: 'abbyR.head' },
+      set: { shadowAt: shTrack(X6P['X6-04'].leaf), shadowExtent: 40 },
+      cast: {
+        leaf: { tack: true, ...X6P['X6-04'].leaf, acts: LEAF_FLY() },
+        abbyR: { acts: [[0, 'look', { at: GAP, amount: 0.85 }], [1.0, 'look', { at: REMI_X6_04, amount: 0.8, blend: 0.4 }]] },
+      },
+    },
+    'X6-05': {
+      staging: 'TWO-SHOT 180 mm air-to-air from inland (the X4-18 set-up): Leaf / Abby left and near, Charcoal / Remi right and beyond, the sea behind. The challenge: "First through the gap." ... "They\'re within reach of the island."',
+      // (s30: the shot list's 50 mm two-shot off Charcoal's shoulder (1C-14 rotated to heading 158) hid Abby + Leaf behind his
+      // right wing in r1 (from 170, rise 3.2, Leaf +3) AND r2 (from 176, rise 5, Leaf +6; solve 0.41 off) -> the long-lens
+      // two-shot from inland that reads in X4-18 (size difference honest, faces small: lip-sync barely visible))
+      cam: { rig: 'follow', frame: { subjects: [['abbyR.head', [-0.4, 0]], ['remiR.head', [0.4, 0.08]]], from: 240, dist: 230, rise: 22, track: true }, mm: 180, fstop: 5.6, focus: 'abbyR.head' },
+      set: { shadowAt: shTrack(X6P['X6-05'].leaf), shadowExtent: 90 },
+      cast: {
+        leaf: { tack: true, ...X6P['X6-05'].leaf, acts: LEAF_FLY() },
+        charcoal: { tack: true, ...X6P['X6-05'].charcoal, acts: CHAR_GLIDE({ droop: 0.16 }) },
+        remiR: { acts: [[0, 'look', { at: 'abbyR.head', amount: 0.5 }]] },
+        abbyR: { acts: [[0, 'look', { at: 'remiR.head', amount: 0.8 }]] },
+      },
+      lines: [['X6-01', 0.8], ['X6-02', 0.6], ['X6-03', 0.5], ['X6-04', 0.7], ['X6-05', 0.6]],
+    },
+    'X6-06': {
+      staging: 'WIDE 120 mm from a camera ship inland and a little above: she does not wait - Leaf (Abby up) tips over and drops away toward the rocks (off frame right) with quick, eager beats.',
+      // (rocks: no OUTER_ROCKS set yet - the camera looks east-north-east, the rocks lie south-east, out of frame)
+      cam: { rig: 'follow', frame: { subjects: [['leaf.chest', [-0.1, 0.05]]], from: 255, dist: 120, rise: 14, track: true }, mm: 120, fstop: 8, focus: 'leaf.chest' },
+      set: { shadowAt: shTrack(X6_06), shadowExtent: 50 },
+      cast: {
+        leaf: { tack: true, ...X6_06, pitch: [[0, 0], [0.8, 10], [3, 12]], acts: [[0, 'flight', { corr: 1 }], [0.3, 'flight', { corr: 1, hz: 1.5, blend: 0.4 }]] },
+        abbyR: {},
+      },
+    },
+    'X6-07': {
+      staging: 'MEDIUM 50 mm off Charcoal\'s right front: Remi, resigned ("We\'re going to lose."), looks after them; Charcoal goes after them - out of the glide into a deep beat, nose down.',
+      // (the rider's forward lean is set per cast (createRider lean), not per act: Remi stays seated; the dive sells the go)
+      cam: { rig: 'follow', frame: { subjects: [['remiR.head', [0.05, 0.12]]], from: 212, dist: 8, rise: 1.0, track: true }, mm: 50, fstop: 4, focus: 'remiR.head' },
+      set: { shadowAt: shTrack(X6P['X6-07'].charcoal), shadowExtent: 50 },
+      cast: {
+        charcoal: { tack: true, ...X6P['X6-07'].charcoal, pitch: [[0, 0], [2.1, 0], [3.4, 7]], acts: [[0, 'glide', { bank: 0.03, dihedral: 0.08, droop: 0.12 }], [2.1, 'flight', { hz: CHAR_HZ, amp: 0.68, blend: 0.5 }]] },
+        remiR: { acts: [[0, 'look', { at: [760, 30, 2950], amount: 0.6 }]] },
+      },
+      lines: [['X6-06', 0.4]],
+    },
+    'X6-19': {
+      staging: 'WIDE 160 mm from a camera ship high, behind and seaward, looking north-west up the coast: they turn back along the coast side by side (travel screen L -> R), Leaf a little behind on the inland side (left), Charcoal right; sea below, the island\'s cliffs beyond.',
+      // (s30 r1 from abeam-seaward at 460 m: the cliff face filled the frame and Leaf sat on his tail -> from behind and
+      // high (bearing 140, 600 m, 110 m up). Rocks + mist: no OUTER_ROCKS set yet - the rocks lie behind the lens, off frame)
+      cam: shipCam(X6P['X6-19'], 5, 140, 600, 110, { mm: 160 }),
+      set: { shadowAt: shTrack(X6P['X6-19'].leaf), shadowExtent: 120 },
+      cast: {
+        leaf: { tack: true, ...X6P['X6-19'].leaf, yawKeys: [[0, 322], [5, 338]], acts: LEAF_FLY({ bank: 0.08 }) },
+        charcoal: { tack: true, ...X6P['X6-19'].charcoal, yawKeys: [[0, 322], [5, 338]], acts: CHAR_FLY({ bank: 0.06 }) },
+        abbyR: {}, remiR: {},
+      },
+    },
+    'X6-20': {
+      staging: 'EXTREME WIDE 135 mm aerial travel from high behind them on the seaward side: ahead, the island in the morning light, the coast running away north; Leaf left, Charcoal right. Nobody speaks; the camera travels with them, not around them.',
+      // (SKY_OFF_VERDOR has the island\'s coast + hills only - the harbour, town and palace are VERDOR_AERIAL\'s builder:
+      // the shot list's 'harbor, town, palace' in the background need them built into this set (or the shot moved))
+      cam: shipCam(X6P['X6-20'], 8, 150, 1000, 170, { mm: 135, aimUp: 25 }),
+      set: { shadowAt: shTrack(X6P['X6-20'].leaf), shadowExtent: 140 },
+      cast: {
+        leaf: { tack: true, ...X6P['X6-20'].leaf, acts: LEAF_FLY() },
+        charcoal: { tack: true, ...X6P['X6-20'].charcoal, acts: CHAR_FLY() },
         abbyR: {}, remiR: {},
       },
     },

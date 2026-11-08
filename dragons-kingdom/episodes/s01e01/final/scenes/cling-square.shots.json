@@ -1,0 +1,297 @@
+{
+ "set": "CLING_SQUARE",
+ "scene_file": "episodes/s01e01/final/scenes/cling-square.js",
+ "spec": "episodes/s01e01/final/scenes/specs/cling-square.spec.js",
+ "fps": 24,
+ "handles": 12,
+ "generated_by": "scenes/lib/director/tools/build-shots.mjs",
+ "note": "start_s / frames are the render-jobs.json contract (episode.mjs); pre/post are handle frames the editor may render around each shot.",
+ "shots": [
+  {
+   "job": "X5-01",
+   "seq": 148,
+   "scene": "1C",
+   "set": "CLING_SQUARE",
+   "start_s": 1,
+   "start_frame": 24,
+   "frames": 72,
+   "pre": 12,
+   "post": 12,
+   "seconds": 3,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [
+    {
+     "text": "CLING — SCRAPPER",
+     "style": "location",
+     "from_s": 0.25,
+     "to_s": 2.95
+    }
+   ],
+   "fx": [],
+   "continuity": {
+    "tod": "early morning in Cling before the festival: low sun from the south-east, long shadows",
+    "weather": "clear; the last mist over the water and against the seaward side of the outer rocks; light breeze off the sea",
+    "notes": "CONTINUOUS from 1B-15: Leaf launches first (Abby), then Charcoal (Remi) tears the cleared launch space (the launch scar mended in X19). Same sun as 1B (east, ~31 deg up). The flight line (1C-10/11) runs along the coast with Leaf behind and on the near (inland) side; screen direction L -> R held through 1E.",
+    "sun": [
+     0.726905328038456,
+     0.20791169081775931,
+     0.6545084971874737
+    ],
+    "exposure": 1.5
+   },
+   "staging": "INSERT 100 mm STATIC, low on the paving east of the alley line: the cart's iron-tyred wheel rolls through frame south over the uneven setts and jolts on a proud stone (~1.35 s), a smaller knock at ~2.3 s. The vendor (out of frame) pushes. Location caption T11 over it (from the edit list).",
+   "deviation": null
+  },
+  {
+   "job": "X5-02",
+   "seq": 149,
+   "scene": "1C",
+   "set": "CLING_SQUARE",
+   "start_s": 6,
+   "start_frame": 144,
+   "frames": 120,
+   "pre": 12,
+   "post": 12,
+   "seconds": 5,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "early morning in Cling before the festival: low sun from the south-east, long shadows",
+    "weather": "clear; the last mist over the water and against the seaward side of the outer rocks; light breeze off the sea",
+    "notes": "CONTINUOUS from 1B-15: Leaf launches first (Abby), then Charcoal (Remi) tears the cleared launch space (the launch scar mended in X19). Same sun as 1B (east, ~31 deg up). The flight line (1C-10/11) runs along the coast with Leaf behind and on the near (inland) side; screen direction L -> R held through 1E.",
+    "sun": [
+     0.726905328038456,
+     0.20791169081775931,
+     0.6545084971874737
+    ],
+    "exposure": 1.5
+   },
+   "staging": "WIDE 35 mm STATIC from the king's steps looking north: the square nearly empty, the fountain running round its stone pillar at the centre, long morning shadows of the south-east sun stretching north-west across the setts; a pigeon on a ridge. The festival has not begun (no stall yet).",
+   "deviation": null
+  },
+  {
+   "job": "X5-03",
+   "seq": 150,
+   "scene": "1C",
+   "set": "CLING_SQUARE",
+   "start_s": 13,
+   "start_frame": 312,
+   "frames": 192,
+   "pre": 12,
+   "post": 12,
+   "seconds": 8,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "early morning in Cling before the festival: low sun from the south-east, long shadows",
+    "weather": "clear; the last mist over the water and against the seaward side of the outer rocks; light breeze off the sea",
+    "notes": "CONTINUOUS from 1B-15: Leaf launches first (Abby), then Charcoal (Remi) tears the cleared launch space (the launch scar mended in X19). Same sun as 1B (east, ~31 deg up). The flight line (1C-10/11) runs along the coast with Leaf behind and on the near (inland) side; screen direction L -> R held through 1E.",
+    "sun": [
+     0.726905328038456,
+     0.20791169081775931,
+     0.6545084971874737
+    ],
+    "exposure": 1.5
+   },
+   "staging": "WIDE 35 mm slow TRAVELING PAN round the square from beside the fountain (the camera drifts 6 m east): the king's steps, then left across the south-west corner to the stone arch, the alley behind the stall place, over the fountain to the music space (the empty dais) and on to the gate onto the broad road. Unlabelled: the map of the attack.",
+   "deviation": null
+  },
+  {
+   "job": "X5-04",
+   "seq": 151,
+   "scene": "1C",
+   "set": "CLING_SQUARE",
+   "start_s": 23,
+   "start_frame": 552,
+   "frames": 144,
+   "pre": 12,
+   "post": 12,
+   "seconds": 6,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "early morning in Cling before the festival: low sun from the south-east, long shadows",
+    "weather": "clear; the last mist over the water and against the seaward side of the outer rocks; light breeze off the sea",
+    "notes": "CONTINUOUS from 1B-15: Leaf launches first (Abby), then Charcoal (Remi) tears the cleared launch space (the launch scar mended in X19). Same sun as 1B (east, ~31 deg up). The flight line (1C-10/11) runs along the coast with Leaf behind and on the near (inland) side; screen direction L -> R held through 1E.",
+    "sun": [
+     0.726905328038456,
+     0.20791169081775931,
+     0.6545084971874737
+    ],
+    "exposure": 1.5
+   },
+   "staging": "MEDIUM 50 mm STATIC from the south-west of the stall place: the VENDOR pushes his handcart in from the alley side and parks it (~2.4 s), then stands the back poles, tips up the front frame (two poles and the crossbar), drops the back crossbar on and throws the cloth roof forward over them.",
+   "deviation": null
+  },
+  {
+   "job": "X5-05",
+   "seq": 152,
+   "scene": "1C",
+   "set": "CLING_SQUARE",
+   "start_s": 31,
+   "start_frame": 744,
+   "frames": 120,
+   "pre": 12,
+   "post": 12,
+   "seconds": 5,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "early morning in Cling before the festival: low sun from the south-east, long shadows",
+    "weather": "clear; the last mist over the water and against the seaward side of the outer rocks; light breeze off the sea",
+    "notes": "CONTINUOUS from 1B-15: Leaf launches first (Abby), then Charcoal (Remi) tears the cleared launch space (the launch scar mended in X19). Same sun as 1B (east, ~31 deg up). The flight line (1C-10/11) runs along the coast with Leaf behind and on the near (inland) side; screen direction L -> R held through 1E.",
+    "sun": [
+     0.726905328038456,
+     0.20791169081775931,
+     0.6545084971874737
+    ],
+    "exposure": 1.5
+   },
+   "staging": "INSERT 100 mm STATIC, low at the front-left leg: the leg rocks on the uneven setts; the vendor's hand slides a flat stone under it (~1.4 s), his other hand tests the pole (it still rocks a little), and a second, thinner stone goes in (~3.1 s). Still.",
+   "deviation": null
+  },
+  {
+   "job": "X5-06",
+   "seq": 153,
+   "scene": "1C",
+   "set": "CLING_SQUARE",
+   "start_s": 38,
+   "start_frame": 912,
+   "frames": 72,
+   "pre": 12,
+   "post": 12,
+   "seconds": 3,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "early morning in Cling before the festival: low sun from the south-east, long shadows",
+    "weather": "clear; the last mist over the water and against the seaward side of the outer rocks; light breeze off the sea",
+    "notes": "CONTINUOUS from 1B-15: Leaf launches first (Abby), then Charcoal (Remi) tears the cleared launch space (the launch scar mended in X19). Same sun as 1B (east, ~31 deg up). The flight line (1C-10/11) runs along the coast with Leaf behind and on the near (inland) side; screen direction L -> R held through 1E.",
+    "sun": [
+     0.726905328038456,
+     0.20791169081775931,
+     0.6545084971874737
+    ],
+    "exposure": 1.5
+   },
+   "staging": "MEDIUM 50 mm STATIC from the south-west: the vendor ties the back-left corner of the cloth to its pole (right of frame, arms up); in the foreground the front-left corner hangs lower than the rest, at the height of a passing shoulder.",
+   "deviation": null
+  },
+  {
+   "job": "X5-07",
+   "seq": 154,
+   "scene": "1C",
+   "set": "CLING_SQUARE",
+   "start_s": 43,
+   "start_frame": 1032,
+   "frames": 108,
+   "pre": 12,
+   "post": 12,
+   "seconds": 4.5,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "early morning in Cling before the festival: low sun from the south-east, long shadows",
+    "weather": "clear; the last mist over the water and against the seaward side of the outer rocks; light breeze off the sea",
+    "notes": "CONTINUOUS from 1B-15: Leaf launches first (Abby), then Charcoal (Remi) tears the cleared launch space (the launch scar mended in X19). Same sun as 1B (east, ~31 deg up). The flight line (1C-10/11) runs along the coast with Leaf behind and on the near (inland) side; screen direction L -> R held through 1E.",
+    "sun": [
+     0.726905328038456,
+     0.20791169081775931,
+     0.6545084971874737
+    ],
+    "exposure": 1.5
+   },
+   "staging": "WIDE 35 mm STATIC from the square, looking north at the stall: two VILLAGERS carry a long ladder on their shoulders across the square left to right (to hang banners); its front end catches the low front-left corner (~1.2 s), drags it a metre and pulls the cloth half off its frame (it falls in a fold, ~2 s). They do not notice and walk on. The vendor, behind the cart with his back to them, does not see it.",
+   "deviation": null
+  },
+  {
+   "job": "X5-08",
+   "seq": 155,
+   "scene": "1C",
+   "set": "CLING_SQUARE",
+   "start_s": 50,
+   "start_frame": 1200,
+   "frames": 84,
+   "pre": 12,
+   "post": 12,
+   "seconds": 3.5,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "early morning in Cling before the festival: low sun from the south-east, long shadows",
+    "weather": "clear; the last mist over the water and against the seaward side of the outer rocks; light breeze off the sea",
+    "notes": "CONTINUOUS from 1B-15: Leaf launches first (Abby), then Charcoal (Remi) tears the cleared launch space (the launch scar mended in X19). Same sun as 1B (east, ~31 deg up). The flight line (1C-10/11) runs along the coast with Leaf behind and on the near (inland) side; screen direction L -> R held through 1E.",
+    "sun": [
+     0.726905328038456,
+     0.20791169081775931,
+     0.6545084971874737
+    ],
+    "exposure": 1.5
+   },
+   "staging": "MEDIUM 50 mm STATIC from the south-west: the vendor stands at the dragged corner watching the two with the ladder go (screen right), then turns and reties the corner without a word (the cloth back on its frame, the corner still hanging low). The first time.",
+   "deviation": null
+  },
+  {
+   "job": "X5-09",
+   "seq": 156,
+   "scene": "1C",
+   "set": "CLING_SQUARE",
+   "start_s": 56,
+   "start_frame": 1344,
+   "frames": 96,
+   "pre": 12,
+   "post": 12,
+   "seconds": 4,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "early morning in Cling before the festival: low sun from the south-east, long shadows",
+    "weather": "clear; the last mist over the water and against the seaward side of the outer rocks; light breeze off the sea",
+    "notes": "CONTINUOUS from 1B-15: Leaf launches first (Abby), then Charcoal (Remi) tears the cleared launch space (the launch scar mended in X19). Same sun as 1B (east, ~31 deg up). The flight line (1C-10/11) runs along the coast with Leaf behind and on the near (inland) side; screen direction L -> R held through 1E.",
+    "sun": [
+     0.726905328038456,
+     0.20791169081775931,
+     0.6545084971874737
+    ],
+    "exposure": 1.5
+   },
+   "staging": "WIDE 35 mm STATIC from the east side of the square by the music dais, looking west-north-west over the fountain: early life, few and distinct - the fountain running, pigeons on the north roofs (one hops, one pecks), a woman crossing from the alley, the vendor at his stall (cloth corner low). Sound carries the door and the shutter.",
+   "deviation": "the door opening and the shutter thrown back are SOUND only (no animated door / shutter leaf in the set yet); the bird is on the roof"
+  }
+ ]
+}

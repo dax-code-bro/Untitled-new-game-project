@@ -1,6 +1,6 @@
 {
  "title": "Dragon's Kingdom S01E01 - draft cut: 1C",
- "made_at": "2026-11-07T19:45",
+ "made_at": "2026-11-08T03:18",
  "shots_dir": "$DK_DIRECTOR_WORK/shots",
  "size": "960x540",
  "fps": 24,
@@ -432,7 +432,7 @@
   {
    "job": "X4-04",
    "scene": "1C",
-   "kind": "missing",
+   "kind": "3d",
    "source": "slate",
    "frames": 96,
    "rec_in": 2556,
@@ -451,7 +451,7 @@
   {
    "job": "X4-05",
    "scene": "1C",
-   "kind": "missing",
+   "kind": "3d",
    "source": "slate",
    "frames": 144,
    "rec_in": 2652,
@@ -489,7 +489,7 @@
   {
    "job": "X4-07",
    "scene": "1C",
-   "kind": "missing",
+   "kind": "3d",
    "source": "slate",
    "frames": 120,
    "rec_in": 2868,
@@ -508,8 +508,8 @@
   {
    "job": "X4-08",
    "scene": "1C",
-   "kind": "missing",
-   "source": "slate",
+   "kind": "3d",
+   "source": "rendered 2026-11-08T00:18",
    "frames": 84,
    "rec_in": 2988,
    "trans": [
@@ -527,7 +527,7 @@
   {
    "job": "X4-09",
    "scene": "1C",
-   "kind": "missing",
+   "kind": "3d",
    "source": "slate",
    "frames": 120,
    "rec_in": 3072,
@@ -546,7 +546,7 @@
   {
    "job": "X4-10",
    "scene": "1C",
-   "kind": "missing",
+   "kind": "3d",
    "source": "slate",
    "frames": 168,
    "rec_in": 3192,
@@ -584,8 +584,8 @@
   {
    "job": "X4-12",
    "scene": "1C",
-   "kind": "missing",
-   "source": "slate",
+   "kind": "3d",
+   "source": "rendered 2026-11-08T00:35",
    "frames": 96,
    "rec_in": 3444,
    "trans": [
@@ -603,8 +603,8 @@
   {
    "job": "X4-13",
    "scene": "1C",
-   "kind": "missing",
-   "source": "slate",
+   "kind": "3d",
+   "source": "rendered 2026-11-08T00:11",
    "frames": 192,
    "rec_in": 3540,
    "trans": [
@@ -641,8 +641,8 @@
   {
    "job": "X4-15",
    "scene": "1C",
-   "kind": "missing",
-   "source": "slate",
+   "kind": "3d",
+   "source": "rendered 2026-11-08T00:33",
    "frames": 108,
    "rec_in": 3852,
    "trans": [
@@ -660,8 +660,8 @@
   {
    "job": "X4-16",
    "scene": "1C",
-   "kind": "missing",
-   "source": "slate",
+   "kind": "3d",
+   "source": "rendered 2026-11-08T01:28",
    "frames": 144,
    "rec_in": 3960,
    "trans": [
@@ -679,8 +679,8 @@
   {
    "job": "X4-17",
    "scene": "1C",
-   "kind": "missing",
-   "source": "slate",
+   "kind": "3d",
+   "source": "rendered 2026-11-08T01:35",
    "frames": 48,
    "rec_in": 4104,
    "trans": [
@@ -698,7 +698,7 @@
   {
    "job": "X4-18",
    "scene": "1C",
-   "kind": "missing",
+   "kind": "3d",
    "source": "slate",
    "frames": 192,
    "rec_in": 4152,
@@ -717,7 +717,7 @@
   {
    "job": "X4-19",
    "scene": "1C",
-   "kind": "missing",
+   "kind": "3d",
    "source": "slate",
    "frames": 84,
    "rec_in": 4344,
@@ -755,7 +755,7 @@
   {
    "job": "X5-01",
    "scene": "1C",
-   "kind": "missing",
+   "kind": "3d",
    "source": "slate",
    "frames": 72,
    "rec_in": 4548,
@@ -774,7 +774,7 @@
   {
    "job": "X5-02",
    "scene": "1C",
-   "kind": "missing",
+   "kind": "3d",
    "source": "slate",
    "frames": 120,
    "rec_in": 4620,
@@ -793,7 +793,7 @@
   {
    "job": "X5-03",
    "scene": "1C",
-   "kind": "missing",
+   "kind": "3d",
    "source": "slate",
    "frames": 192,
    "rec_in": 4740,
@@ -812,7 +812,7 @@
   {
    "job": "X5-04",
    "scene": "1C",
-   "kind": "missing",
+   "kind": "3d",
    "source": "slate",
    "frames": 144,
    "rec_in": 4932,
@@ -831,7 +831,7 @@
   {
    "job": "X5-05",
    "scene": "1C",
-   "kind": "missing",
+   "kind": "3d",
    "source": "slate",
    "frames": 120,
    "rec_in": 5076,
@@ -850,7 +850,7 @@
   {
    "job": "X5-06",
    "scene": "1C",
-   "kind": "missing",
+   "kind": "3d",
    "source": "slate",
    "frames": 72,
    "rec_in": 5196,
@@ -869,7 +869,7 @@
   {
    "job": "X5-07",
    "scene": "1C",
-   "kind": "missing",
+   "kind": "3d",
    "source": "slate",
    "frames": 108,
    "rec_in": 5268,
@@ -888,7 +888,7 @@
   {
    "job": "X5-08",
    "scene": "1C",
-   "kind": "missing",
+   "kind": "3d",
    "source": "slate",
    "frames": 84,
    "rec_in": 5376,
@@ -907,7 +907,7 @@
   {
    "job": "X5-09",
    "scene": "1C",
-   "kind": "missing",
+   "kind": "3d",
    "source": "slate",
    "frames": 96,
    "rec_in": 5460,
@@ -926,7 +926,7 @@
   {
    "job": "X5-10",
    "scene": "1C",
-   "kind": "missing",
+   "kind": "3d",
    "source": "slate",
    "frames": 120,
    "rec_in": 5556,
@@ -945,7 +945,7 @@
   {
    "job": "X5-11",
    "scene": "1C",
-   "kind": "missing",
+   "kind": "3d",
    "source": "slate",
    "frames": 72,
    "rec_in": 5676,
@@ -964,7 +964,7 @@
   {
    "job": "X5-12",
    "scene": "1C",
-   "kind": "missing",
+   "kind": "3d",
    "source": "slate",
    "frames": 72,
    "rec_in": 5748,
@@ -983,7 +983,7 @@
   {
    "job": "X5-13",
    "scene": "1C",
-   "kind": "missing",
+   "kind": "3d",
    "source": "slate",
    "frames": 120,
    "rec_in": 5820,
@@ -1002,7 +1002,7 @@
   {
    "job": "X5-14",
    "scene": "1C",
-   "kind": "missing",
+   "kind": "3d",
    "source": "slate",
    "frames": 120,
    "rec_in": 5940,
@@ -1021,7 +1021,7 @@
   {
    "job": "R3-01",
    "scene": "1C",
-   "kind": "missing",
+   "kind": "3d",
    "source": "slate",
    "frames": 60,
    "rec_in": 6060,
@@ -1040,7 +1040,7 @@
   {
    "job": "R3-02",
    "scene": "1C",
-   "kind": "missing",
+   "kind": "3d",
    "source": "slate",
    "frames": 108,
    "rec_in": 6120,
@@ -1059,7 +1059,7 @@
   {
    "job": "R3-03",
    "scene": "1C",
-   "kind": "missing",
+   "kind": "3d",
    "source": "slate",
    "frames": 180,
    "rec_in": 6228,
@@ -1078,7 +1078,7 @@
   {
    "job": "R3-04",
    "scene": "1C",
-   "kind": "missing",
+   "kind": "3d",
    "source": "slate",
    "frames": 84,
    "rec_in": 6408,
@@ -1097,7 +1097,7 @@
   {
    "job": "X5-15",
    "scene": "1C",
-   "kind": "missing",
+   "kind": "3d",
    "source": "slate",
    "frames": 120,
    "rec_in": 6492,
@@ -1116,7 +1116,7 @@
   {
    "job": "X5-16",
    "scene": "1C",
-   "kind": "missing",
+   "kind": "3d",
    "source": "slate",
    "frames": 108,
    "rec_in": 6612,
@@ -1135,7 +1135,7 @@
   {
    "job": "X5-17",
    "scene": "1C",
-   "kind": "missing",
+   "kind": "3d",
    "source": "slate",
    "frames": 144,
    "rec_in": 6720,
@@ -1154,7 +1154,7 @@
   {
    "job": "X5-18",
    "scene": "1C",
-   "kind": "missing",
+   "kind": "3d",
    "source": "slate",
    "frames": 96,
    "rec_in": 6864,
@@ -1173,8 +1173,8 @@
   {
    "job": "X6-01",
    "scene": "1C",
-   "kind": "missing",
-   "source": "slate",
+   "kind": "3d",
+   "source": "rendered 2026-11-08T02:06",
    "frames": 144,
    "rec_in": 6960,
    "trans": [
@@ -1192,8 +1192,8 @@
   {
    "job": "X6-02",
    "scene": "1C",
-   "kind": "missing",
-   "source": "slate",
+   "kind": "3d",
+   "source": "rendered 2026-11-08T02:09",
    "frames": 72,
    "rec_in": 7104,
    "trans": [
@@ -1211,8 +1211,8 @@
   {
    "job": "X6-03",
    "scene": "1C",
-   "kind": "missing",
-   "source": "slate",
+   "kind": "3d",
+   "source": "rendered 2026-11-08T02:13",
    "frames": 72,
    "rec_in": 7176,
    "trans": [
@@ -1230,8 +1230,8 @@
   {
    "job": "X6-04",
    "scene": "1C",
-   "kind": "missing",
-   "source": "slate",
+   "kind": "3d",
+   "source": "rendered 2026-11-07T22:38",
    "frames": 48,
    "rec_in": 7248,
    "trans": [
@@ -1249,8 +1249,8 @@
   {
    "job": "X6-05",
    "scene": "1C",
-   "kind": "missing",
-   "source": "slate",
+   "kind": "3d",
+   "source": "rendered 2026-11-07T23:09",
    "frames": 288,
    "rec_in": 7296,
    "trans": [
@@ -1263,13 +1263,16 @@
    "held_frames": [
     0,
     0
+   ],
+   "notes": [
+    "framing: a subject lands 0.39 screen units from its place (lens too long for the room, or the subjects too far apart)"
    ]
   },
   {
    "job": "X6-06",
    "scene": "1C",
-   "kind": "missing",
-   "source": "slate",
+   "kind": "3d",
+   "source": "rendered 2026-11-07T23:14",
    "frames": 72,
    "rec_in": 7584,
    "trans": [
@@ -1287,8 +1290,8 @@
   {
    "job": "X6-07",
    "scene": "1C",
-   "kind": "missing",
-   "source": "slate",
+   "kind": "3d",
+   "source": "rendered 2026-11-07T23:18",
    "frames": 96,
    "rec_in": 7656,
    "trans": [
@@ -1301,13 +1304,16 @@
    "held_frames": [
     0,
     0
+   ],
+   "notes": [
+    "speaking face reads: REMI 59 deg from the lens, 10.5% of frame height, blur 0% (lip-sync carries it now: check the mouth, or soften / turn / shrink / backlight it)"
    ]
   },
   {
    "job": "X6-08",
    "scene": "1C",
-   "kind": "missing",
-   "source": "slate",
+   "kind": "3d",
+   "source": "rendered 2026-11-08T02:22",
    "frames": 96,
    "rec_in": 7752,
    "trans": [
@@ -1325,8 +1331,8 @@
   {
    "job": "X6-09",
    "scene": "1C",
-   "kind": "missing",
-   "source": "slate",
+   "kind": "3d",
+   "source": "rendered 2026-11-08T02:29",
    "frames": 96,
    "rec_in": 7848,
    "trans": [
@@ -1344,8 +1350,8 @@
   {
    "job": "X6-10",
    "scene": "1C",
-   "kind": "missing",
-   "source": "slate",
+   "kind": "3d",
+   "source": "rendered 2026-11-08T02:32",
    "frames": 48,
    "rec_in": 7944,
    "trans": [
@@ -1363,8 +1369,8 @@
   {
    "job": "X6-11",
    "scene": "1C",
-   "kind": "missing",
-   "source": "slate",
+   "kind": "3d",
+   "source": "rendered 2026-11-08T02:37",
    "frames": 120,
    "rec_in": 7992,
    "trans": [
@@ -1382,8 +1388,8 @@
   {
    "job": "X6-12",
    "scene": "1C",
-   "kind": "missing",
-   "source": "slate",
+   "kind": "3d",
+   "source": "rendered 2026-11-08T02:42",
    "frames": 96,
    "rec_in": 8112,
    "trans": [
@@ -1401,8 +1407,8 @@
   {
    "job": "X6-13",
    "scene": "1C",
-   "kind": "missing",
-   "source": "slate",
+   "kind": "3d",
+   "source": "rendered 2026-11-08T02:48",
    "frames": 72,
    "rec_in": 8208,
    "trans": [
@@ -1420,8 +1426,8 @@
   {
    "job": "X6-14",
    "scene": "1C",
-   "kind": "missing",
-   "source": "slate",
+   "kind": "3d",
+   "source": "rendered 2026-11-08T02:51",
    "frames": 96,
    "rec_in": 8280,
    "trans": [
@@ -1439,8 +1445,8 @@
   {
    "job": "X6-15",
    "scene": "1C",
-   "kind": "missing",
-   "source": "slate",
+   "kind": "3d",
+   "source": "rendered 2026-11-08T02:58",
    "frames": 144,
    "rec_in": 8376,
    "trans": [
@@ -1458,8 +1464,8 @@
   {
    "job": "X6-16",
    "scene": "1C",
-   "kind": "missing",
-   "source": "slate",
+   "kind": "3d",
+   "source": "rendered 2026-11-08T03:02",
    "frames": 96,
    "rec_in": 8520,
    "trans": [
@@ -1477,8 +1483,8 @@
   {
    "job": "X6-17",
    "scene": "1C",
-   "kind": "missing",
-   "source": "slate",
+   "kind": "3d",
+   "source": "rendered 2026-11-08T03:12",
    "frames": 168,
    "rec_in": 8616,
    "trans": [
@@ -1496,8 +1502,8 @@
   {
    "job": "X6-18",
    "scene": "1C",
-   "kind": "missing",
-   "source": "slate",
+   "kind": "3d",
+   "source": "rendered 2026-11-08T03:18",
    "frames": 72,
    "rec_in": 8784,
    "trans": [
@@ -1515,8 +1521,8 @@
   {
    "job": "X6-19",
    "scene": "1C",
-   "kind": "missing",
-   "source": "slate",
+   "kind": "3d",
+   "source": "rendered 2026-11-07T23:26",
    "frames": 120,
    "rec_in": 8856,
    "trans": [
@@ -1534,8 +1540,8 @@
   {
    "job": "X6-20",
    "scene": "1C",
-   "kind": "missing",
-   "source": "slate",
+   "kind": "3d",
+   "source": "rendered 2026-11-07T23:44",
    "frames": 192,
    "rec_in": 8976,
    "trans": [
@@ -1591,21 +1597,301 @@
    "file_out_s": 0.86,
    "rec_s": 63.455,
    "gain_db": 0
+  },
+  {
+   "ref": "X4-01",
+   "role": "ABBY",
+   "shot": "X4-10",
+   "file": "vo/X4-01.wav",
+   "file_in_s": 0,
+   "file_out_s": 1.02,
+   "rec_s": 137.57,
+   "gain_db": 0
+  },
+  {
+   "ref": "X4-02",
+   "role": "REMI",
+   "shot": "X4-12",
+   "file": "vo/X4-02.wav",
+   "file_in_s": 0,
+   "file_out_s": 1.085,
+   "rec_s": 143.82,
+   "gain_db": 0
+  },
+  {
+   "ref": "X4-03",
+   "role": "ABBY",
+   "shot": "X4-18",
+   "file": "vo/X4-03.wav",
+   "file_in_s": 0,
+   "file_out_s": 1.055,
+   "rec_s": 173.47,
+   "gain_db": 0
+  },
+  {
+   "ref": "X4-04",
+   "role": "REMI",
+   "shot": "X4-18",
+   "file": "vo/X4-04.wav",
+   "file_in_s": 0,
+   "file_out_s": 0.915,
+   "rec_s": 174.815,
+   "gain_db": 0
+  },
+  {
+   "ref": "X4-05",
+   "role": "ABBY",
+   "shot": "X4-18",
+   "file": "vo/X4-05.wav",
+   "file_in_s": 0,
+   "file_out_s": 0.975,
+   "rec_s": 175.97,
+   "gain_db": 0
+  },
+  {
+   "ref": "X4-06",
+   "role": "REMI",
+   "shot": "X4-18",
+   "file": "vo/X4-06.wav",
+   "file_in_s": 0,
+   "file_out_s": 1.57,
+   "rec_s": 177.235,
+   "gain_db": 0
+  },
+  {
+   "ref": "X4-07",
+   "role": "ABBY",
+   "shot": "X4-18",
+   "file": "vo/X4-07.wav",
+   "file_in_s": 0,
+   "file_out_s": 1.205,
+   "rec_s": 179.095,
+   "gain_db": 0
+  },
+  {
+   "ref": "X5-01",
+   "role": "MUSICIAN",
+   "shot": "X5-14",
+   "file": "vo/X5-01.wav",
+   "file_in_s": 0,
+   "file_out_s": 1.075,
+   "rec_s": 247.82,
+   "gain_db": 0
+  },
+  {
+   "ref": "X5-02",
+   "role": "VENDOR",
+   "shot": "X5-14",
+   "file": "vo/X5-02.wav",
+   "file_in_s": 0,
+   "file_out_s": 0.67,
+   "rec_s": 249.085,
+   "gain_db": 0
+  },
+  {
+   "ref": "X5-03",
+   "role": "MUSICIAN",
+   "shot": "X5-14",
+   "file": "vo/X5-03.wav",
+   "file_in_s": 0,
+   "file_out_s": 1.935,
+   "rec_s": 249.945,
+   "gain_db": 0
+  },
+  {
+   "ref": "R3-01",
+   "role": "VENDOR",
+   "shot": "R3-03",
+   "file": "vo/R3-01.wav",
+   "file_in_s": 0,
+   "file_out_s": 1.05,
+   "rec_s": 259.77,
+   "gain_db": 0
+  },
+  {
+   "ref": "R3-02",
+   "role": "MUSICIAN",
+   "shot": "R3-03",
+   "file": "vo/R3-02.wav",
+   "file_in_s": 0,
+   "file_out_s": 1.22,
+   "rec_s": 260.91,
+   "gain_db": 0
+  },
+  {
+   "ref": "R3-03",
+   "role": "VENDOR",
+   "shot": "R3-03",
+   "file": "vo/R3-03.wav",
+   "file_in_s": 0,
+   "file_out_s": 1.335,
+   "rec_s": 262.22,
+   "gain_db": 0
+  },
+  {
+   "ref": "R3-04",
+   "role": "MUSICIAN",
+   "shot": "R3-03",
+   "file": "vo/R3-04.wav",
+   "file_in_s": 0,
+   "file_out_s": 1.06,
+   "rec_s": 263.69,
+   "gain_db": 0
+  },
+  {
+   "ref": "X5-04",
+   "role": "GUARD",
+   "shot": "X5-16",
+   "file": "vo/X5-04.wav",
+   "file_in_s": 0,
+   "file_out_s": 0.84,
+   "rec_s": 275.72,
+   "gain_db": 0
+  },
+  {
+   "ref": "X5-05",
+   "role": "WATCHMAN",
+   "shot": "X5-16",
+   "file": "vo/X5-05.wav",
+   "file_in_s": 0,
+   "file_out_s": 0.56,
+   "rec_s": 276.65,
+   "gain_db": 0
+  },
+  {
+   "ref": "X5-06",
+   "role": "GUARD",
+   "shot": "X5-16",
+   "file": "vo/X5-06.wav",
+   "file_in_s": 0,
+   "file_out_s": 0.88,
+   "rec_s": 277.31,
+   "gain_db": 0
+  },
+  {
+   "ref": "X5-07",
+   "role": "WATCHMAN",
+   "shot": "X5-16",
+   "file": "vo/X5-07.wav",
+   "file_in_s": 0,
+   "file_out_s": 0.78,
+   "rec_s": 278.275,
+   "gain_db": 0
+  },
+  {
+   "ref": "X6-01",
+   "role": "ABBY",
+   "shot": "X6-05",
+   "file": "vo/X6-01.wav",
+   "file_in_s": 0,
+   "file_out_s": 1.135,
+   "rec_s": 304.77,
+   "gain_db": 0
+  },
+  {
+   "ref": "X6-02",
+   "role": "REMI",
+   "shot": "X6-05",
+   "file": "vo/X6-02.wav",
+   "file_in_s": 0,
+   "file_out_s": 1.62,
+   "rec_s": 306.445,
+   "gain_db": 0
+  },
+  {
+   "ref": "X6-03",
+   "role": "ABBY",
+   "shot": "X6-05",
+   "file": "vo/X6-03.wav",
+   "file_in_s": 0,
+   "file_out_s": 0.62,
+   "rec_s": 308.505,
+   "gain_db": 0
+  },
+  {
+   "ref": "X6-04",
+   "role": "REMI",
+   "shot": "X6-05",
+   "file": "vo/X6-04.wav",
+   "file_in_s": 0,
+   "file_out_s": 2.28,
+   "rec_s": 309.765,
+   "gain_db": 0
+  },
+  {
+   "ref": "X6-05",
+   "role": "ABBY",
+   "shot": "X6-05",
+   "file": "vo/X6-05.wav",
+   "file_in_s": 0,
+   "file_out_s": 1.64,
+   "rec_s": 312.585,
+   "gain_db": 0
+  },
+  {
+   "ref": "X6-06",
+   "role": "REMI",
+   "shot": "X6-07",
+   "file": "vo/X6-06.wav",
+   "file_in_s": 0,
+   "file_out_s": 1.385,
+   "rec_s": 319.37,
+   "gain_db": -2
+  },
+  {
+   "ref": "X6-07",
+   "role": "ABBY",
+   "shot": "X6-17",
+   "file": "vo/X6-07.wav",
+   "file_in_s": 0,
+   "file_out_s": 0.59,
+   "rec_s": 359.27,
+   "gain_db": 0
+  },
+  {
+   "ref": "X6-08",
+   "role": "REMI",
+   "shot": "X6-17",
+   "file": "vo/X6-08.wav",
+   "file_in_s": 0,
+   "file_out_s": 0.73,
+   "rec_s": 359.95,
+   "gain_db": 0
+  },
+  {
+   "ref": "X6-09",
+   "role": "ABBY",
+   "shot": "X6-17",
+   "file": "vo/X6-09.wav",
+   "file_in_s": 0,
+   "file_out_s": 1.195,
+   "rec_s": 360.77,
+   "gain_db": 0
+  },
+  {
+   "ref": "X6-10",
+   "role": "REMI",
+   "shot": "X6-17",
+   "file": "vo/X6-10.wav",
+   "file_in_s": 0,
+   "file_out_s": 0.68,
+   "rec_s": 362.095,
+   "gain_db": 3
   }
  ],
  "output": {
   "file": "episodes/s01e01/final/cut/DragonsKingdom_S01E01_draft-cut_1C.mp4",
   "frames": 9168,
   "duration_s": 382,
-  "size_mb": 42.4,
-  "assembled_s": 32
+  "size_mb": 82.8,
+  "assembled_s": 46
  },
  "summary": {
-  "rendered": 26,
+  "rendered": 52,
   "black": 0,
-  "slates": 55,
-  "voice_cues": 4,
-  "review_flags": 2,
+  "slates": 29,
+  "voice_cues": 32,
+  "review_flags": 4,
   "review_flags_accepted": 0
  }
 }
