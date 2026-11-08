@@ -3,6 +3,54 @@
 Owner paths: `scenes/lib/director/`, `episodes/s01e01/final/scenes/`, `episodes/s01e01/final/cut/`.
 How it works: `README.md` in this folder. Latest state first.
 
+## Session 33 (2026-11-08, budgeted batch 4 of the 1C slates: CLING_SQUARE set + X5-01..09 - STILLS only)
+
+Scratch: `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/build4/` - `r1/` (all 9), `r2/` (X5-04/05/07 after fixes),
+`contact-build4.png` (3x3 sheet, X5-01..09 in order, unlabelled). All draft (~4-6 min per still on the shared CPU).
+- NEW SET CLING_SQUARE (registry entry with a new world frame CLING, scene `episodes/s01e01/final/scenes/cling-square.js`,
+  builder `sets/cling-square.js`, spec `specs/cling-square.spec.js`). Built from the libraries, nothing else edited: the
+  square = architecture `clingSquare()` (the CLING layout of style frame F5: uneven sett paving with worn paths + the
+  fountain kennel, the fountain round its stone pillar, the king's steps + stone support, the stone arch through a west
+  house, the gate + town wall onto the broad road, the alley; its houses / roofs / stone are house.js + roof.js + masonry
+  + archMaterials, the same builders and materials VERDOR_AERIAL / VERDOR_HARBOR use); the land = nature `loadClingLand()`
+  (fields, hedges, woods, the road east); weeds at the wall feet. Added procedurally (arch Kit blocks in the arch oak):
+  the MUSIC SPACE dais (bench + stools) at [7, 1.5]; the WATCHMAN'S PLATFORM on the wall north of the gate (deck 4.7 m,
+  x 18.6..21.8, z -2.4..0.6, rail, braces, ladder from the square; `ground` returns the deck for X5-15/16). Moving
+  pieces (set state `stall`, `ladder`, `birds`): the vendor's handcart = props `handcart()` with its wheels dropped and
+  rebuilt as rolling `wheel()`s, `stall.cart: 'follow'` runs it 2.35 m ahead of the vendor's own blocking (actorState),
+  shafts lifted while it moves, `jolt` keys; stall poles / crossbars ride on the bed and swing up per key; a cloth roof
+  (14x10 grid on the four pole tops) with `low` (front-left corner drop), `off` (dragged half off), `snag` (the ladder's
+  front end, found from the carriers' blocking, catches the low corner, drags it 1 m and lets it fall); `rock` (the
+  front-left leg rocking) + `stones` (two wedges slide under it); the ladder on two carriers' left shoulders; pigeons on
+  north-row ridges. Sun 1C here: sunDir(132, 12) (south-east behind the steps, long shadows), exposure 1.5.
+  NOT YET: the house near the arch with an OPEN door (+ its interior for X5-10/11/12, R3-01) - clingSquare's own doors
+  open at random; plan: pick the west-row house next to the arch, drop its door-leaf triangles (as F5's dropTriangles)
+  and add a hinged leaf + a room box. Shutter leaf, banners (X5-18) also not yet.
+- WIRED (ready for video): CLING_SQUARE X5-01, X5-02, X5-03, X5-04, X5-05, X5-06, X5-07, X5-08, X5-09. Durations =
+  shot-list frames = edl-1C slots. X5-01 carries T11 "CLING — SCRAPPER" as a spec caption (0.25-2.95 s; the cut burns
+  it in - nothing drawn in 3D). Casting: vendor (adult man), crowd02 + crowd08 with the ladder (adult men), crowd03
+  crossing in X5-09 (adult woman). No children in X5-01..09.
+- Stills (looked at): X5-01 iron-tyred wheel on the setts, low, cloth roll on the bed - reads. X5-02 the empty square from
+  the steps, fountain + pillar centre, long shadow across the foreground - reads (tight-ish wide). X5-03 @0.3 the stone
+  arch, strong pan blur (the look keys sweep ~280 deg in 8 s: judge in the video; ease the keys if it strobes). X5-04 r1
+  showed (a) the vendor build's own CRATE prop floating over his hands -> hidden by name in the builder's afterCast,
+  (b) per-pole keys parsed as one key list (poles stayed on the bed) -> fixed, (c) cart too near -> lens back 2.3 m; r2
+  re-stilled. X5-05 the leg + first wedge at 100 mm (hands above frame at 0.45) -> lens back a little; r2 @0.28: the first wedge sliding in, the vendor's shoe + apron at left, but his HAND does not reach the setts (kneel + bow IK stops short) - the stone moves on its own key. X5-06
+  the vendor tying the back-left corner, the front-left corner hanging low mid-frame. X5-07 r1 ladder edge-on at eye
+  height (a thin line) -> lens up to 3.1 m; snag reads (the corner pulled to the ladder end). X5-08 vendor (back to us)
+  reties the corner. X5-09 square from the east: fountain, the woman crossing, vendor at his stall left; the pigeons on
+  the north ridges are not in this frame (sound carries the bird).
+- KNOWN ISSUES: the cloth is a flat dark-red sheet (no weave, no valance; the ties render pale); the cart has no goods;
+  carriers' hands do not grip the ladder (reach to a shoulder point); vendor's 'handsTo' raising the frame is a gesture
+  (poles swing up by key, not by his hands); X5-09 DEVIATION door + shutter are sound only; X5-06 / X5-08 the vendor is
+  seen from behind / three-quarter back; the fountain jets are fine strands (barely read in the wides).
+- Verify: npm test 48 pass / 0 fail / 1 skipped; selftest 20 pass; build-shots: no X5-01..09 warnings.
+- NEXT: 1. Lead renders the 9 X5 videos (one browser setup builds the whole town + land: ~4-6 min to the first frame at
+  draft; X5-07 casts three humans; --workers 1 is safest). 2. The open-door house near the arch + interior, the musician
+  on the fountain rim (X5-13/14), the watchman on the platform (X5-15/16) and his POV (X5-17), banners (X5-18), R3-01..04
+  (NO_CHILD_IN_FRAME for the pipe shots).
+- REQUESTS: humans - a load option (or build) for the vendor / sailor2 without the pose's built-in crate (humans/PROGRESS.md, s33).
+
 ## Session 32 (2026-11-07/08, budgeted batch 3 of the 1C slates: OUTER_ROCKS set + 14 X6 specs - STILLS only)
 
 Scratch: `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/build3/` - `r1/` .. `r5/` (all stills), `final/` (the kept still

@@ -1,5 +1,10 @@
 # Humans - progress log (for a successor)
 
+## REQUEST from director s33 (2026-11-08) - builds without their pose prop (Cling vendor)
+The 'vendor' build (pose 'crate') carries its empty crate as part of the character: in CLING_SQUARE (X5-04..09) the
+director's arm acts lift it over his head. The director hides it by mesh name in sets/cling-square.js afterCast (a
+workaround). Please add a load option (`loadCharacter(id, { props: false })`) or a prop-free variant for vendor / sailor2.
+
 ## REQUEST from director s32 (2026-11-07) - rider expression + per-act lean (X6 race)
 X6-10 (close 85 mm on Abby, "tucked down, laughing into the wind") has no way to make a rider laugh: please add a
 face/expression act for riders (`[t, 'face', { expr: 'laugh' | 'smile' | 'shout', amount }]` or similar). The race also

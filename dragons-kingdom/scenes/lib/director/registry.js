@@ -11,6 +11,8 @@
 // World frames
 //   VERDOR: one frame for every Verdor set (riding grounds, palace interiors, chamber): +x = EAST
 //           (the sea side: the shot list's "sun over the sea side"), -z = NORTH, y up, metres.
+//   CLING: the CLING layout of scenes/lib/architecture/cling.js (the square at the origin, -z = NORTH, +x = EAST,
+//          y = 0 on the paving; the king's steps south, the gate east onto the broad road).
 //   PROLOGUE: style frame F1's frame (camera near the origin looking north, the island 2 km out).
 //
 // Sun direction: a unit vector TOWARD the sun in the set's world frame, from azimuth (degrees,
@@ -86,6 +88,12 @@ export const SETS = {
     libs: ['sets/sky-off-verdor.js (the coast, sea, sky, sun, scanned rocks: its build() as-is)', 'sea stacks, foam collars and instanced seabirds in sets/outer-rocks.js (procedural three.js; limestone = acg_rock26 as the cliffs)', 'scenes/lib/sets/kitbash.js (boulders at the feet)', 'scenes/lib/fx (water-downwash ring, water-spray on the stone)', 'scenes/lib/creatures (Leaf, Charcoal: flight / glide / dive / land / crouch)', 'scenes/lib/humans (remi_ride, abby_ride)', 'runtime/cinematic (physical sky, the sea-mist bank against the stacks)'],
     from: 'SKY_OFF_VERDOR continued to the outer rocks off the south end of the coast (session 32)',
     continuity: { '1C': { sun: sunDir(102, 31), tod: 'late morning at the outer rocks (continuous from 1B)', exposure: 1.1 } },
+  },
+  CLING_SQUARE: {
+    file: 'cling-square.js', builder: 'cling-square', frame: 'CLING',
+    libs: ['scenes/lib/architecture/cling.js clingSquare (the square, its houses + roofs from house.js / roof.js / masonry and archMaterials stone + oak + clay: the builders VERDOR_AERIAL / VERDOR_HARBOR use; fountain, king\'s steps, stone arch, gate + town wall, alley, paving)', 'scenes/lib/nature/farmland.js loadClingLand (fields, hedges, woods, the broad road east)', 'scenes/lib/props/containers.js handcart + wheel (the vendor\'s cart, wheels rolling)', 'procedural three.js in sets/cling-square.js (the vendor\'s stall: poles, crossbars, cloth roof, wedge stones; the ladder; the music dais; the watchman\'s platform on the wall; pigeons)', 'scenes/lib/humans (vendor, crowd extras)', 'runtime/cinematic (physical sky, morning mist over the fields)'],
+    from: 'style frame F5 (scenes/lookdev/style-f5-cling-square.js) layout: CLING (architecture/cling.js), sun behind the king\'s steps (south-east in the morning); session 33',
+    continuity: { '1C': { sun: sunDir(132, 12), tod: 'early morning in Cling before the festival: low sun from the south-east, long shadows', exposure: 1.5 } },
   },
   BIRTHING_CHAMBER: {
     file: 'birthing-chamber.js', builder: 'birthing-chamber', frame: 'VERDOR',

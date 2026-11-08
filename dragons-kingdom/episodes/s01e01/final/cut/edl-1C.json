@@ -1354,11 +1354,11 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 4.02,
-    "k4_cpu_s_per_frame": 53.57,
+    "draft_s_per_frame": 18.38,
+    "k4_cpu_s_per_frame": 245.01,
     "k4_gpu_s_per_frame": null,
-    "draft_minutes": 5.62,
-    "k4_cpu_hours": 1.25,
+    "draft_minutes": 25.73,
+    "k4_cpu_hours": 5.72,
     "k4_gpu_hours": null,
     "factors": {
      "people": 1.24,
@@ -1368,7 +1368,7 @@
      "move": 1.08,
      "total": 1.34
     },
-    "basis": "ESTIMATE: unknown set, generic; x 1.34 for the shot's content"
+    "basis": "MEASURED draft 18.38 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
    },
    "staging": "MEDIUM-WIDE 120 mm air-to-air off Leaf's right, a little above: low over the harbour basin, Leaf gives a quick bright call (neck up, jaw open), then back to the line; the quay dragon's answer is OFF (sound). Charcoal does not call (not in frame).",
    "deviation": null,
@@ -1557,11 +1557,11 @@
    ],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 4.02,
-    "k4_cpu_s_per_frame": 53.57,
+    "draft_s_per_frame": 10.08,
+    "k4_cpu_s_per_frame": 134.41,
     "k4_gpu_s_per_frame": null,
-    "draft_minutes": 6.43,
-    "k4_cpu_hours": 1.43,
+    "draft_minutes": 16.13,
+    "k4_cpu_hours": 3.58,
     "k4_gpu_hours": null,
     "factors": {
      "people": 1.24,
@@ -1571,7 +1571,7 @@
      "move": 1.08,
      "total": 1.34
     },
-    "basis": "ESTIMATE: unknown set, generic; x 1.34 for the shot's content"
+    "basis": "MEASURED draft 10.08 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
    },
    "staging": "MEDIUM 50 mm on Abby from Leaf's right front three-quarter (Remi's line X4-02 \"They wave at you.\" OFF / over, he is 30 m away seaward): she pretends not to hear and pats Leaf's neck with her right hand; face three-quarter.",
    "deviation": null,
@@ -1695,11 +1695,11 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 4.41,
-    "k4_cpu_s_per_frame": 58.75,
+    "draft_s_per_frame": 12.42,
+    "k4_cpu_s_per_frame": 165.64,
     "k4_gpu_s_per_frame": null,
-    "draft_minutes": 7.93,
-    "k4_cpu_hours": 1.76,
+    "draft_minutes": 22.36,
+    "k4_cpu_hours": 4.97,
     "k4_gpu_hours": null,
     "factors": {
      "people": 1.36,
@@ -1709,7 +1709,7 @@
      "move": 1.08,
      "total": 1.47
     },
-    "basis": "ESTIMATE: unknown set, generic; x 1.47 for the shot's content"
+    "basis": "MEASURED draft 12.42 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
    },
    "staging": "POV 300 mm from Remi's eyeline (on Charcoal, passing ~67 m east of the palace keep, heading south): Alexandria stands in the chamber's high opening on the keep's east face, watching them pass - still, unreadable, hands folded; she does not wave. Remi lifts his right hand (his act; the REVERSE on him is not staged - DEVIATION: one POV set-up, no cut inside the shot).",
    "deviation": null,
@@ -1741,11 +1741,11 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 4.02,
-    "k4_cpu_s_per_frame": 53.57,
+    "draft_s_per_frame": 16.62,
+    "k4_cpu_s_per_frame": 221.57,
     "k4_gpu_s_per_frame": null,
-    "draft_minutes": 9.64,
-    "k4_cpu_hours": 2.14,
+    "draft_minutes": 39.88,
+    "k4_cpu_hours": 8.86,
     "k4_gpu_hours": null,
     "factors": {
      "people": 1.24,
@@ -1755,7 +1755,7 @@
      "move": 1.08,
      "total": 1.34
     },
-    "basis": "ESTIMATE: unknown set, generic; x 1.34 for the shot's content"
+    "basis": "MEASURED draft 16.62 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
    },
    "staging": "MEDIUM 50 mm off Charcoal's right front: Remi (screen right) looks down over the town longer than he needs to - roofs, harbour, people working below-left; face three-quarter AWAY (down-left).",
    "deviation": null,
@@ -2120,7 +2120,7 @@
    "seq": 148,
    "scene": "1C",
    "set": "CLING_SQUARE",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 72,
    "rec_in": 4548,
    "rec_out": 4620,
@@ -2129,11 +2129,40 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/cling-square.js",
+    "start_s": 1,
+    "start_frame": 24
+   },
    "dialogue": [],
-   "captions": [],
-   "cost": null,
-   "staging": null,
+   "captions": [
+    {
+     "text": "CLING — SCRAPPER",
+     "style": "location",
+     "from_s": 0.25,
+     "to_s": 2.95,
+     "rec_from_s": 189.75,
+     "rec_to_s": 192.45
+    }
+   ],
+   "cost": {
+    "draft_s_per_frame": 3,
+    "k4_cpu_s_per_frame": 40,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 3.6,
+    "k4_cpu_hours": 0.8,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1,
+     "total": 1
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1 for the shot's content"
+   },
+   "staging": "INSERT 100 mm STATIC, low on the paving east of the alley line: the cart's iron-tyred wheel rolls through frame south over the uneven setts and jolts on a proud stone (~1.35 s), a smaller knock at ~2.3 s. The vendor (out of frame) pushes. Location caption T11 over it (from the edit list).",
    "deviation": null,
    "action": "ON-SCREEN LOCATION: CLING — SCRAPPER (T11). A cart wheel jolts over uneven paving stones.",
    "need": {
@@ -2146,7 +2175,7 @@
    "seq": 149,
    "scene": "1C",
    "set": "CLING_SQUARE",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 120,
    "rec_in": 4620,
    "rec_out": 4740,
@@ -2155,11 +2184,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/cling-square.js",
+    "start_s": 6,
+    "start_frame": 144
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 3,
+    "k4_cpu_s_per_frame": 40,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 6,
+    "k4_cpu_hours": 1.33,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1,
+     "total": 1
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1 for the shot's content"
+   },
+   "staging": "WIDE 35 mm STATIC from the king's steps looking north: the square nearly empty, the fountain running round its stone pillar at the centre, long morning shadows of the south-east sun stretching north-west across the setts; a pigeon on a ridge. The festival has not begun (no stall yet).",
    "deviation": null,
    "action": "The square is nearly empty; long morning shadows; the fountain runs quietly around its stone pillar. The festival has not begun.",
    "need": {
@@ -2172,7 +2221,7 @@
    "seq": 150,
    "scene": "1C",
    "set": "CLING_SQUARE",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 192,
    "rec_in": 4740,
    "rec_out": 4932,
@@ -2181,11 +2230,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/cling-square.js",
+    "start_s": 13,
+    "start_frame": 312
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 3.24,
+    "k4_cpu_s_per_frame": 43.2,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 10.37,
+    "k4_cpu_hours": 2.3,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.08
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.08 for the shot's content"
+   },
+   "staging": "WIDE 35 mm slow TRAVELING PAN round the square from beside the fountain (the camera drifts 6 m east): the king's steps, then left across the south-west corner to the stone arch, the alley behind the stall place, over the fountain to the music space (the empty dais) and on to the gate onto the broad road. Unlabelled: the map of the attack.",
    "deviation": null,
    "action": "The camera passes each fixed landmark naturally, unlabelled: the steps, the stone arch, the gate onto the broad road, the alley, the music space. This is the map the attack depends on.",
    "need": {
@@ -2198,7 +2267,7 @@
    "seq": 151,
    "scene": "1C",
    "set": "CLING_SQUARE",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 144,
    "rec_in": 4932,
    "rec_out": 5076,
@@ -2207,11 +2276,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/cling-square.js",
+    "start_s": 23,
+    "start_frame": 552
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 3.46,
+    "k4_cpu_s_per_frame": 46.14,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 8.31,
+    "k4_cpu_hours": 1.85,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.12,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1.03,
+     "move": 1,
+     "total": 1.15
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.15 for the shot's content"
+   },
+   "staging": "MEDIUM 50 mm STATIC from the south-west of the stall place: the VENDOR pushes his handcart in from the alley side and parks it (~2.4 s), then stands the back poles, tips up the front frame (two poles and the crossbar), drops the back crossbar on and throws the cloth roof forward over them.",
    "deviation": null,
    "action": "The VENDOR pushes his cart into place and builds his stall: poles, a crossbar, a cloth roof.",
    "need": {
@@ -2224,7 +2313,7 @@
    "seq": 152,
    "scene": "1C",
    "set": "CLING_SQUARE",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 120,
    "rec_in": 5076,
    "rec_out": 5196,
@@ -2233,11 +2322,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/cling-square.js",
+    "start_s": 31,
+    "start_frame": 744
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 3.36,
+    "k4_cpu_s_per_frame": 44.8,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 6.72,
+    "k4_cpu_hours": 1.49,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.12,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1,
+     "total": 1.12
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.12 for the shot's content"
+   },
+   "staging": "INSERT 100 mm STATIC, low at the front-left leg: the leg rocks on the uneven setts; the vendor's hand slides a flat stone under it (~1.4 s), his other hand tests the pole (it still rocks a little), and a second, thinner stone goes in (~3.1 s). Still.",
    "deviation": null,
    "action": "One leg rocks on the uneven stones. He wedges a flat stone under it, tests it, and wedges a second.",
    "need": {
@@ -2250,7 +2359,7 @@
    "seq": 153,
    "scene": "1C",
    "set": "CLING_SQUARE",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 72,
    "rec_in": 5196,
    "rec_out": 5268,
@@ -2259,11 +2368,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/cling-square.js",
+    "start_s": 38,
+    "start_frame": 912
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 3.36,
+    "k4_cpu_s_per_frame": 44.8,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 4.03,
+    "k4_cpu_hours": 0.9,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.12,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1,
+     "total": 1.12
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.12 for the shot's content"
+   },
+   "staging": "MEDIUM 50 mm STATIC from the south-west: the vendor ties the back-left corner of the cloth to its pole (right of frame, arms up); in the foreground the front-left corner hangs lower than the rest, at the height of a passing shoulder.",
    "deviation": null,
    "action": "He ties the cloth. One corner hangs lower than the rest, at the height of a passing shoulder.",
    "need": {
@@ -2276,7 +2405,7 @@
    "seq": 154,
    "scene": "1C",
    "set": "CLING_SQUARE",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 108,
    "rec_in": 5268,
    "rec_out": 5376,
@@ -2285,11 +2414,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/cling-square.js",
+    "start_s": 43,
+    "start_frame": 1032
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 4.32,
+    "k4_cpu_s_per_frame": 57.66,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 7.78,
+    "k4_cpu_hours": 1.73,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.36,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1.06,
+     "move": 1,
+     "total": 1.44
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.44 for the shot's content"
+   },
+   "staging": "WIDE 35 mm STATIC from the square, looking north at the stall: two VILLAGERS carry a long ladder on their shoulders across the square left to right (to hang banners); its front end catches the low front-left corner (~1.2 s), drags it a metre and pulls the cloth half off its frame (it falls in a fold, ~2 s). They do not notice and walk on. The vendor, behind the cart with his back to them, does not see it.",
    "deviation": null,
    "action": "Two VILLAGERS carry a long ladder across the square to hang banners. The end of the ladder catches the low corner and drags the cloth half off its frame. They do not notice.",
    "need": {
@@ -2302,7 +2451,7 @@
    "seq": 155,
    "scene": "1C",
    "set": "CLING_SQUARE",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 84,
    "rec_in": 5376,
    "rec_out": 5460,
@@ -2311,11 +2460,31 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/cling-square.js",
+    "start_s": 50,
+    "start_frame": 1200
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
+   "cost": {
+    "draft_s_per_frame": 4.32,
+    "k4_cpu_s_per_frame": 57.66,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 6.05,
+    "k4_cpu_hours": 1.35,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.36,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1.06,
+     "move": 1,
+     "total": 1.44
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.44 for the shot's content"
+   },
+   "staging": "MEDIUM 50 mm STATIC from the south-west: the vendor stands at the dragged corner watching the two with the ladder go (screen right), then turns and reties the corner without a word (the cloth back on its frame, the corner still hanging low). The first time.",
    "deviation": null,
    "action": "The vendor watches them go, then reties the corner without a word. That is the first time.",
    "need": {
@@ -2328,7 +2497,7 @@
    "seq": 156,
    "scene": "1C",
    "set": "CLING_SQUARE",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 96,
    "rec_in": 5460,
    "rec_out": 5556,
@@ -2337,12 +2506,32 @@
    "trans": [
     "cut"
    ],
-   "src": null,
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/cling-square.js",
+    "start_s": 56,
+    "start_frame": 1344
+   },
    "dialogue": [],
    "captions": [],
-   "cost": null,
-   "staging": null,
-   "deviation": null,
+   "cost": {
+    "draft_s_per_frame": 3.83,
+    "k4_cpu_s_per_frame": 51.09,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 6.13,
+    "k4_cpu_hours": 1.36,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1.03,
+     "move": 1,
+     "total": 1.28
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.28 for the shot's content"
+   },
+   "staging": "WIDE 35 mm STATIC from the east side of the square by the music dais, looking west-north-west over the fountain: early life, few and distinct - the fountain running, pigeons on the north roofs (one hops, one pecks), a woman crossing from the alley, the vendor at his stall (cloth corner low). Sound carries the door and the shutter.",
+   "deviation": "the door opening and the shutter thrown back are SOUND only (no animated door / shutter leaf in the set yet); the bird is on the roof",
    "action": "Early sounds, few and distinct: the fountain, the cart, a door opening, a bird on a roof, a shutter thrown back.",
    "need": {
     "pre": 0,
