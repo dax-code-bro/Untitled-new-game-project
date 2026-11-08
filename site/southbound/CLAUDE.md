@@ -67,7 +67,9 @@ the fewest additions next. Be honest in reports about what is and isn't done.
   the game). With no Blob store connected (`watch.mjs status` says store:false) the reports only reach the
   function log for ~1 hour: MCP `get_runtime_logs` with query `SBWATCH`. The cloud environment allows
   `untitled-new-game-project.vercel.app`, so the live site can be fetched/tested from here directly.
-  Comment to the owner on what they were doing now and then, and fix what looks wrong.
+  Comment to the owner on what they were doing now and then, and fix what looks wrong. An hourly
+  scheduled task (`trig_01XFqbdkJQU8S8NtwN8Zbobt`, "Southbound: watch the owner play", fires into this
+  session at :54) does the check; delete it if the owner asks to stop.
 - Sketchfab: the "Untitled-new-game-project" cloud environment allows it, but the saved API token was
   rejected; while a bad token is saved even search fails (the proxy adds it to every request). Never
   use the sketchfab.com/i/ website endpoints (blocked by the safety check).
