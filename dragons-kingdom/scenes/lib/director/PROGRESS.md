@@ -3,6 +3,38 @@
 Owner paths: `scenes/lib/director/`, `episodes/s01e01/final/scenes/`, `episodes/s01e01/final/cut/`.
 How it works: `README.md` in this folder. Latest state first.
 
+## Session 35 (2026-11-08, budgeted batch 6 of the 1C slates: VERDOR_AERIAL_2 + X4-10 - STILLS only)
+
+Scratch: `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/build6/` - `X4-10_050.png` (t 2.1), `X4-10_092.png` (t 3.85),
+`contact-build6.png` (the two side by side), `pv/` (previs sheets). Stills by `render-shots.mjs --stills 0.3,0.55
+--preset draft --sets VERDOR_AERIAL_2 --only X4-10 --work <scratch>/work` (set build 53 s, 2.3 min in all).
+- VERDOR_AERIAL / VERDOR_HARBOR shots were queued for rendering: verdor-aerial.spec.js, sets/verdor-aerial.js,
+  verdor-aerial.js / .shots.json and every verdor-harbor file are UNTOUCHED. X4-10 goes into a SECOND spec on the
+  VERDOR_AERIAL shots (the s34 `shotSet` mechanism): registry VERDOR_AERIAL_2 (`shotSet: 'VERDOR_AERIAL'`), scene
+  scenes/verdor-aerial-2.js, table verdor-aerial-2.shots.json, spec specs/verdor-aerial-2.spec.js (imports the
+  verdor-aerial spec's MAP, so the harbour is the same), builder sets/verdor-aerial-2.js (a wrapper over
+  sets/verdor-aerial.js's build()). The old `plans` X4-10 entry in verdor-aerial.spec.js stays (build-shots reads only
+  `shots`; it is superseded by VERDOR_AERIAL_2). Render with `--sets VERDOR_AERIAL_2`.
+- MEASURED (gltf probe of ph_dutch_ship_medium's rigging mesh, ship frame +x bow): mainmast at ship x -1.15, z 0 ->
+  world [267, 1591.15]; masthead y 22.66 (MAP.santaMaria.mastTop 28 was a guess); main top / yards y 15-18 (yard ends
+  world x 264.5 / 269.5); foremast ship x 6.5 (world z 1583.5), top 20.2.
+- sets/verdor-aerial-2.js adds a CROW'S NEST (procedural: staved tub r 0.85, waist-high wall, rim, floor, four cheek
+  brackets) parented to the ship at the mainmast, floor y 18.3; marks `crowsNest`, `mainmastTop`.
+- WIRED (ready for video): X4-10 (168 frames = shot list = edl-1C slot; line X4-01 at 4.6 s; build-shots: no warnings).
+  Staging: camera ship AHEAD of Leaf on the inland side (bearing 192, 17 m, 50 mm, explicit pos/look keys) looking
+  back: Abby left, the mast + nest beyond her right; Leaf 10 m inland of the mast, ~3 m below the nest; lookout =
+  crowd08 (adult man) in the nest: ducks 0.95-2.0 (crouch 0.85), laughs (nod 3.6 Hz) and waves R 2.6-5.4; Abby looks
+  at him, waves LEFT 3.0-4.75 (right stays on the grip), turns back to the front for the line (face 19 deg at 4.9).
+- Stills (looked at): t 2.1 - Abby (both hands on the grip) left, Leaf's wing sweeping up, the mast + nest right with
+  the lookout's head just over the rim (coming up from the duck) - reads. t 3.85 - lookout waving from the nest, Abby
+  waving back with her left hand, face three-quarter - reads. Background: sea + breakwater (looking NE).
+- DEVIATION: a slowed close pass (Leaf 7 m/s, cruise 16) so one medium holds both; the laugh is a head bob + sound
+  (no laugh face); the crow's nest is dressing (the ship model has none).
+- KNOWN ISSUES: the duck itself (0.95-2.0) happens while the lookout enters frame right - mostly seen as him coming
+  back up; the tub hides him below the chest; crowd08 warns "mouth shapes not attached" (he does not speak).
+- Verify: npm test 48 pass / 0 fail / 1 skipped; build-shots: no X4-10 warnings.
+- REQUESTS: none new (render: masters for a `shotSet` spec's shots, as s34).
+
 ## Session 34 (2026-11-08, budgeted batch 5 of the 1C slates: CLING_SQUARE_2 + X5-10..18, R3-01..04 - STILLS only)
 
 Scratch: `/tmp/claude-0/-home-user-Untitled-new-game-project/c24e42f5-3f85-5974-a286-53c4d569fb35/scratchpad/eng1/build5/` - `work/` (r1, all 13), `work2/` (r2, 12

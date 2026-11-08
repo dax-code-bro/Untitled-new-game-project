@@ -1429,7 +1429,7 @@
    "seq": 137,
    "scene": "1C",
    "set": "VERDOR_AERIAL",
-   "kind": "missing",
+   "kind": "3d",
    "frames": 168,
    "rec_in": 3192,
    "rec_out": 3360,
@@ -1438,12 +1438,71 @@
    "trans": [
     "cut"
    ],
-   "src": null,
-   "dialogue": [],
+   "src": {
+    "scene_file": "episodes/s01e01/final/scenes/verdor-aerial-2.js",
+    "start_s": 1,
+    "start_frame": 24
+   },
+   "dialogue": [
+    {
+     "id": "X4-01",
+     "part": 0,
+     "ref": "X4-01",
+     "role": "ABBY",
+     "file": "vo/X4-01.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.02,
+     "at_s": 4.57,
+     "speech_in_s": 4.6,
+     "speech_out_s": 5.56,
+     "words": [
+      {
+       "w": "they",
+       "start_s": 4.57,
+       "end_s": 4.74
+      },
+      {
+       "w": "wave",
+       "start_s": 4.74,
+       "end_s": 5
+      },
+      {
+       "w": "at",
+       "start_s": 5,
+       "end_s": 5.1
+      },
+      {
+       "w": "leaf",
+       "start_s": 5.1,
+       "end_s": 5.53
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 137.57
+    }
+   ],
    "captions": [],
-   "cost": null,
-   "staging": null,
-   "deviation": null,
+   "cost": {
+    "draft_s_per_frame": 4.41,
+    "k4_cpu_s_per_frame": 58.75,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 12.34,
+    "k4_cpu_hours": 2.74,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.36,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1.08,
+     "total": 1.47
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.47 for the shot's content"
+   },
+   "staging": "MEDIUM 50 mm air-to-air past the Santa Maria's mainmast: the camera ship flies ahead of Leaf on the inland side, looking back at Abby (left, face three-quarter); Leaf passes close beside the mast (10 m inland of it, just below the crow's nest). The LOOKOUT in the nest (beyond her, right) ducks as the wings sweep by, comes back up laughing and waves; Abby waves back with her LEFT hand (no attention drawn to it: a plain wave, her right stays on the grip). Line X4-01 (Abby), said as she turns back to the front.",
+   "deviation": "a slowed close pass (7 m/s) so one medium holds both; the laugh is a quick head bob (no laugh face in the humans library) + the sound; the crow's nest is set dressing (the ship model has none)",
    "action": "Leaf passes close beside her mast. A LOOKOUT at the masthead ducks, then laughs and waves. Abby waves back with her LEFT hand (no attention drawn to which hand).",
    "need": {
     "pre": 0,
@@ -4081,11 +4140,11 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 4.02,
-    "k4_cpu_s_per_frame": 53.57,
+    "draft_s_per_frame": 5.57,
+    "k4_cpu_s_per_frame": 74.2,
     "k4_gpu_s_per_frame": null,
-    "draft_minutes": 6.43,
-    "k4_cpu_hours": 1.43,
+    "draft_minutes": 8.9,
+    "k4_cpu_hours": 1.98,
     "k4_gpu_hours": null,
     "factors": {
      "people": 1.24,
@@ -4095,7 +4154,7 @@
      "move": 1.08,
      "total": 1.34
     },
-    "basis": "ESTIMATE: unknown set, generic; x 1.34 for the shot's content"
+    "basis": "MEASURED draft 5.57 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
    },
    "staging": "WIDE 35 mm tracking low over the water from behind-right: Leaf skims the sea a few metres up, short quick beats, small corrections; Abby tucked down; the stacks ahead right.",
    "deviation": null,
@@ -4127,11 +4186,11 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 3.72,
-    "k4_cpu_s_per_frame": 49.6,
+    "draft_s_per_frame": 3.31,
+    "k4_cpu_s_per_frame": 44.09,
     "k4_gpu_s_per_frame": null,
-    "draft_minutes": 5.95,
-    "k4_cpu_hours": 1.32,
+    "draft_minutes": 5.29,
+    "k4_cpu_hours": 1.18,
     "k4_gpu_hours": null,
     "factors": {
      "people": 1.24,
@@ -4141,7 +4200,7 @@
      "move": 1,
      "total": 1.24
     },
-    "basis": "ESTIMATE: unknown set, generic; x 1.24 for the shot's content"
+    "basis": "MEASURED draft 3.31 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
    },
    "staging": "WIDE 35 mm static INSIDE the gap looking out (NNW): Leaf comes in low and fast, tilts almost onto his side and threads the gap toward the lens, wingtips passing close to both walls; Abby tucked down.",
    "deviation": null,
@@ -4173,11 +4232,11 @@
    "dialogue": [],
    "captions": [],
    "cost": {
-    "draft_s_per_frame": 4.02,
-    "k4_cpu_s_per_frame": 53.57,
+    "draft_s_per_frame": 3.58,
+    "k4_cpu_s_per_frame": 47.69,
     "k4_gpu_s_per_frame": null,
-    "draft_minutes": 3.21,
-    "k4_cpu_hours": 0.71,
+    "draft_minutes": 2.86,
+    "k4_cpu_hours": 0.64,
     "k4_gpu_hours": null,
     "factors": {
      "people": 1.24,
@@ -4187,7 +4246,7 @@
      "move": 1.08,
      "total": 1.34
     },
-    "basis": "ESTIMATE: unknown set, generic; x 1.34 for the shot's content"
+    "basis": "MEASURED draft 3.58 s/f on this machine; 4K = draft x 13.33 (the set's 4K/draft ratio: ESTIMATE: unknown set, generic)"
    },
    "staging": "CLOSE 85 mm air-to-air on Abby from her right front: tucked down against Leaf, both hands on the grips, laughing into the wind; sea and spray behind.",
    "deviation": null,

@@ -77,6 +77,14 @@ export const SETS = {
     from: 'SKY_OFF_VERDOR continued south to the harbour town (spec MAP, session 17 plan)',
     continuity: { '1C': { sun: sunDir(102, 31), tod: 'morning (continuous from 1B)', exposure: 1.1 } },
   },
+  // a SECOND spec on the VERDOR_AERIAL shots (session 35, the CLING_SQUARE_2 mechanism): X4-10 at the Santa Maria's
+  // mainmast; the shot list's set stays VERDOR_AERIAL (`shotSet`); verdor-aerial.spec.js / sets/verdor-aerial.js untouched
+  VERDOR_AERIAL_2: {
+    file: 'verdor-aerial-2.js', builder: 'verdor-aerial-2', frame: 'VERDOR', shotSet: 'VERDOR_AERIAL',
+    libs: ['sets/verdor-aerial.js (the whole harbour town + the Santa Maria: its build() as-is, the verdor-aerial spec MAP)', 'procedural three.js in sets/verdor-aerial-2.js (a crow\'s nest on the mainmast, measured from the ship model)', 'scenes/lib/creatures (Leaf)', 'scenes/lib/humans (abby_ride, crowd08 = the lookout)'],
+    from: 'VERDOR_AERIAL + dressing; session 35',
+    continuity: { '1C': { sun: sunDir(102, 31), tod: 'morning (continuous from 1B)', exposure: 1.1 } },
+  },
   VERDOR_HARBOR: {
     file: 'verdor-harbor.js', builder: 'verdor-harbor', frame: 'VERDOR',
     libs: ['sets/verdor-aerial.js (the whole harbour town: terrain, sea, basin, breakwater, quay + warehouses, terraces, palace, the Santa Maria) from the SAME map', 'quay-level dressing in sets/verdor-harbor.js (procedural three.js: bollards, slipway, boats, hauled net + haul lines, fish baskets, market stalls)', 'scenes/lib/creatures (working dragons: Leaf builds in the scout look; Charcoal for his shadow)', 'scenes/lib/humans (sailor1/2, vendor, crowd extras)'],
