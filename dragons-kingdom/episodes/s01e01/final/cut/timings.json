@@ -1296,6 +1296,15 @@
    "load": 7.66,
    "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.10GHz, SwiftShader",
    "measured_at": "2026-11-08T01:28"
+  },
+  "X4-17": {
+   "draft_s_per_frame": 8.167,
+   "frames_drawn": 48,
+   "cinematic": "velocity",
+   "twos": false,
+   "load": 4.46,
+   "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.10GHz, SwiftShader",
+   "measured_at": "2026-11-08T01:35"
   }
  },
  "sets": {
