@@ -411,6 +411,20 @@ async (opts) => {
     for (const p of [a, b]) { const k = peds.list.indexOf(p); if (k >= 0) { G.scene.remove(p.h.root); p.h.dispose(); peds.list.splice(k, 1); } }
   });
 
+  // "Let Claude watch me play" (core/watch.js): off unless the player turns it on, never sends from a
+  // test browser, and a report knows where you are, what you're doing, and can carry a picture
+  await run('Claude can watch (off by default, reports and pictures work)', async () => {
+    const W = G.watch;
+    ok(W && W.on === false, 'watching is off by default (and always off in a test browser)');
+    const s = W.snapshot();
+    ok(s && s.region && Array.isArray(s.pos) && 'wanted' in s && 'health' in s && 'money' in s && s.preset, 'a report says where you are and how you are (' + [s.region, s.mode, s.health, s.money].join(', ') + ')');
+    G.hud.toast('qa watch toast', 0.1);
+    // (the picture itself is checked by tools/southbound/watch-test.mjs: reading a frame back here waits
+    // minutes for the test browser's software graphics)
+    ok(typeof W.capture === 'function' && typeof W.grab === 'function', 'pictures can be asked for');
+    ok(typeof W.sendError === 'function' && !(await W.sendError({ msg: 'qa', stack: '' })), 'nothing is sent from a test browser');
+  });
+
   // NaN sweep over everything in the scene
   await run('scene NaN sweep', async () => {
     let bad = [];

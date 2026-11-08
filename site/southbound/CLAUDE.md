@@ -57,6 +57,17 @@ the fewest additions next. Be honest in reports about what is and isn't done.
 - Guns: `src/entities/gunkit.js` builds every catalogue gun except the photo-scanned first few
   (`arsenal.js` REAL_FIRST); same hold description as downloaded models (g/f/w/b/t fractions).
   The support-hand point sits ~1.5 cm under the handguard (buildOpenGun lowers it 4.5 cm).
+- **Watching the owner play** (`src/core/watch.js` in the game, `api/sb-watch.js` on the server,
+  `tools/southbound/watch.mjs` to read): when the owner turns on Settings > Display > "Let Claude watch
+  me play", errors arrive at once and a report with a screenshot every ~3 min of play. Read them:
+  get the key with the Vercel MCP `web_fetch_vercel_url` on
+  `https://<latest deployment url>/api/sb-watch?reveal=1` (only protected deployment addresses reveal it),
+  `node tools/southbound/watch.mjs key <key>`, then `... new` (since the last check; pictures saved to
+  `$SBWATCH_OUT`, look at them), `... list 20 error`, `... show <pathname>`, `... say "<note>"` (shows in
+  the game). With no Blob store connected (`watch.mjs status` says store:false) the reports only reach the
+  function log for ~1 hour: MCP `get_runtime_logs` with query `SBWATCH`. The cloud environment allows
+  `untitled-new-game-project.vercel.app`, so the live site can be fetched/tested from here directly.
+  Comment to the owner on what they were doing now and then, and fix what looks wrong.
 - Sketchfab: the "Untitled-new-game-project" cloud environment allows it, but the saved API token was
   rejected; while a bad token is saved even search fails (the proxy adds it to every request). Never
   use the sketchfab.com/i/ website endpoints (blocked by the safety check).
@@ -71,6 +82,9 @@ the fewest additions next. Be honest in reports about what is and isn't done.
 
 - Full QA: `node tools/southbound/qa.mjs low` (from the repo root): ~3-6 min, must be
   `705 passed, 0 failed ... no console errors` (the count grows as tests are added).
+- `node tools/southbound/watch-test.mjs`: the watcher on its own (picture of a WebGL frame, play and error
+  reports, Claude's note), ~10 s. In the full QA, never read a frame back (toDataURL/createImageBitmap
+  of the game canvas): it waits minutes for the test browser's software graphics.
 - Feature/screenshot tests: Playwright + SwiftShader scripts in the session scratchpad
   (copy the header of an existing one). Use `SB.freeze(true); SB.skipRender(true)`, step with
   `SB.step(n, 1/30)`, render only for the shot (`SB.skipRender(false); SB.renderNow()`), then

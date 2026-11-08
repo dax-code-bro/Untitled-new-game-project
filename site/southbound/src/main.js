@@ -14,6 +14,7 @@ import { setWorld as setSubstrateWorld, describe as describeSubstrate, SUBSTRATE
 import { createFooting } from './systems/footing.js';
 import { setupMenu, setupSettingsPanel } from './ui/menu.js';
 import { installRecovery } from './ui/recovery.js';
+import { installWatch } from './core/watch.js';
 import { buildRoadGraph, CITY, TOWN, regionAt } from './world/layout.js';
 import { Heightmap } from './world/heightmap.js';
 import { createTerrain, makeWorldTextures, worldUniforms } from './world/terrain.js';
@@ -748,6 +749,7 @@ vec3 CustomToneMapping( vec3 color ) {
     tick(Math.min(dt, 0.05));
     // how long the game's own code took this frame (simulation + handing the frame to the GPU)
     S.cpuMs = (S.cpuMs || 0) * 0.9 + (performance.now() - t0) * 0.1;
+    game.watch?.update(Math.min(dt, 0.25), S.paused);
   }
 
   function tick(dt) {
@@ -1245,6 +1247,7 @@ vec3 CustomToneMapping( vec3 color ) {
     renderer.info.reset();
     water.renderReflection(scene, camera);
     if (post) post.render(1 / 60); else renderer.render(scene, camera);
+    if (game.watch?.wantsShot) game.watch.grab(renderer.domElement); // "Claude is watching": a picture of this frame, taken while it's still there
     stats.drawCalls = renderer.info.render.calls;  // all passes this frame
     stats.tris = renderer.info.render.triangles;
   }
@@ -1469,6 +1472,16 @@ vec3 CustomToneMapping( vec3 color ) {
   game.Vehicle = Vehicle;
   api.trace = (ox, oy, oz, dx, dy, dz, far = 200) => { const t = combat.trace(new THREE.Vector3(ox, oy, oz), new THREE.Vector3(dx, dy, dz).normalize(), far, { peds, vehicles: [...traffic.cars.map((c) => c.v), ...police.cars.map((c) => c.v), ...parked], animals: game.hunting ? game.hunting.list : [], statics: hitStatics }); return { kind: t.kind, t: +t.t.toFixed(3), head: !!t.head }; };
   window.SB = api;
+
+  // "Let Claude watch me play" (Settings > Display; off unless the player turns it on): errors and a
+  // few-minutely report of what's going on, with a small screenshot, to the game's own server
+  game.watch = window.__sbWatch = installWatch({ settings, saveSettings, hud, automated: AUTOMATED, getState: () => {
+    const run = game.missions?.active;
+    return { ...api.state, vehicle: S.vehicle ? S.vehicle.type : null, wanted: police.wanted, health: Math.round(player.health), armor: Math.round(player.armor || 0),
+      money: Math.round(S.money), weapon: combat.drawn ? combat.weapon : null, indoors: !!S.indoors, dead: S.dead > 0, paused: !!S.paused,
+      mission: run ? (run.m?.title || run.m?.name || run.m?.id || '?') : null, weather: weather.kind, day: sky.day, cpuMs: +(S.cpuMs || 0).toFixed(1), gpu: GPU_NAME };
+  } });
+  addEventListener('pagehide', () => game.watch.flush());
   // a saved game: back within 20 m of where you saved, in the middle of something ordinary
   // (after the test API exists: game.teleport goes through it)
   if (profile.saved && Array.isArray(profile.pos) && profile.story?.prologue) game.arrival?.arrive();

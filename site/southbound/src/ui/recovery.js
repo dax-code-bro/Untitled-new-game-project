@@ -66,7 +66,11 @@ export function installRecovery({ canvas, settings, saveSettings, PRESETS, save,
     const now = performance.now(); errs = errs.filter((t) => now - t < 5000); errs.push(now);
     if (errs.length > 40) {
       storm = true; safeSave();
-      overlay('Something went wrong', 'The game hit an error it can\'t get past. Your game is saved; reloading usually fixes it. If it keeps happening, send the message below.', [['Reload', () => location.reload()], ['Keep playing', () => { storm = false; errs = []; }]], String(msg).slice(0, 600));
+      const w = window.__sbWatch; // core/watch.js: already sent if the player lets Claude watch; otherwise one click sends it
+      const told = w && w.on ? ' Claude has been sent this error.' : '';
+      const btns = [['Reload', () => location.reload()], ['Keep playing', () => { storm = false; errs = []; }]];
+      if (w && !w.on) btns.push(['Send to Claude', () => { w.sendError(); storm = false; errs = []; }]);
+      overlay('Something went wrong', 'The game hit an error it can\'t get past. Your game is saved; reloading usually fixes it. If it keeps happening, send the message below.' + told, btns, String(msg).slice(0, 600));
     }
   };
   addEventListener('error', (e) => onErr(e.error?.stack || e.message));

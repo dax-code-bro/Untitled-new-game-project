@@ -78,6 +78,11 @@ every catalogue gun beyond the photo-scanned few is built as its own firearm by 
 possible later: photo-real downloads from Sketchfab once a valid API token is saved in the
 "Untitled-new-game-project" environment (the one entered was rejected).
 
+**Done (Phase 1.59):** "Let Claude watch me play" (Settings > Display): errors and a report with a
+screenshot every few minutes reach Claude (`api/sb-watch.js`, `tools/southbound/watch.mjs`); Claude's
+notes show up in the game. Needs a private Vercel Blob store connected to the project to keep reports
+longer than the function log's hour.
+
 ## Backlog: ideas per feature (take from here, strike when shipped)
 
 - **Gangs & hideout (F10 shipped; left for a later batch):** protection money from businesses,

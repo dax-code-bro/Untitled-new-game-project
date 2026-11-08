@@ -153,6 +153,7 @@ const SCHEMA = {
   Display: [
     { key: 'units', label: 'Speed units', type: 'select', options: [['mph', 'MPH'], ['kmh', 'KM/H']] },
     { key: 'showFps', label: 'Show FPS counter', type: 'toggle' },
+    { key: 'claudeWatch', label: 'Let Claude watch me play', hint: 'Sends errors straight away, and every few minutes what you\'re doing with a small screenshot, to this game\'s own server so Claude can see bugs, fix them and leave you notes. Off: nothing is sent', type: 'toggle' },
     { key: 'hudScale', label: 'HUD size', type: 'range', min: 0.7, max: 1.5, step: 0.05 },
     { key: 'timeScale', label: 'Day speed', hint: '1 = a game day lasts 48 minutes', type: 'range', min: 0, max: 10, step: 0.25 },
   ],

@@ -140,6 +140,28 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 - [x] Loading screen with in-game art, tips and progress
 - [x] Fewer touch buttons: ◎ interact replaces the car button; map, phone, arsenal, free cam moved to pause
 
+## Phase 1.59 — "Let Claude watch me play" (errors, play reports, notes from Claude)
+
+The owner: "I want you to be able to see the latest error I hit, and also watch me play", so Claude can
+comment now and then, have a reference for what went wrong, and spot and fix things that look off.
+- [x] Settings > Display > "Let Claude watch me play" (or `?watch=1` once); off by default, so other
+      players send nothing; test browsers never send
+- [x] Errors sent straight away (uncaught errors, failed promises, console errors such as a person's AI
+      failing) with the stack, what you were doing, the last 30 game messages and a picture of the moment
+- [x] Every ~3 minutes of play: samples every 10 s (place, on foot/which car and speed, wanted level,
+      health, armour, money, weapon, mission, hour, weather, frame rate, CPU ms, draw calls), the
+      timeline (messages, getting in/out, places, police, deaths, frame-rate drops) and a 640 px screenshot;
+      sooner (45 s) after a death or a police chase
+- [x] The error box: "Claude has been sent this error" when watching, else a "Send to Claude" button
+- [x] Notes from Claude show up in the game as a card at the top ("Claude: ...")
+- [x] Server: `api/sb-watch.js` (private Vercel Blob store when connected; the function log, ~1 hour,
+      until then). Reader: `tools/southbound/watch.mjs` (list / new / show / say)
+- [x] The screenshot is copied right after the frame is drawn and encoded off the main thread
+      (createImageBitmap + convertToBlob), so it never holds up a frame; tested by
+      `tools/southbound/watch-test.mjs`
+- [ ] Needs the owner: a private Blob store connected to the project (Claude's Vercel access can't
+      create one: 403)
+
 ## Phase 1.58a — Crash fix: hitchhikers dropped off in town
 
 The owner hit "Something went wrong" (TypeError reading '0' in the pedestrian AI). A roadside walker
