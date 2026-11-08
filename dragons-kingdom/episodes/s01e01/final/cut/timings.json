@@ -1548,6 +1548,15 @@
    "load": 4.84,
    "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.10GHz, SwiftShader",
    "measured_at": "2026-11-08T09:17"
+  },
+  "X4-10": {
+   "draft_s_per_frame": 8.717,
+   "frames_drawn": 168,
+   "cinematic": "velocity",
+   "twos": false,
+   "load": 4.49,
+   "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.10GHz, SwiftShader",
+   "measured_at": "2026-11-08T09:48"
   }
  },
  "sets": {
@@ -1605,6 +1614,11 @@
    "setup_s": 44.4,
    "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.10GHz, SwiftShader",
    "measured_at": "2026-11-08T03:23"
+  },
+  "VERDOR_AERIAL_2": {
+   "setup_s": 51.4,
+   "machine": "4 vCPU Intel(R) Xeon(R) Processor @ 2.10GHz, SwiftShader",
+   "measured_at": "2026-11-08T09:23"
   }
  }
 }
