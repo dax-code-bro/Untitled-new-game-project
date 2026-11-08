@@ -1,6 +1,6 @@
 {
  "title": "Dragon's Kingdom S01E01 - draft cut: 1C",
- "made_at": "2026-11-08T09:48",
+ "made_at": "2026-11-08T14:10",
  "shots_dir": "$DK_DIRECTOR_WORK/shots",
  "size": "960x540",
  "fps": 24,
@@ -756,7 +756,7 @@
    "job": "X5-01",
    "scene": "1C",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-11-08T10:10",
    "frames": 72,
    "rec_in": 4548,
    "trans": [
@@ -775,7 +775,7 @@
    "job": "X5-02",
    "scene": "1C",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-11-08T10:42",
    "frames": 120,
    "rec_in": 4620,
    "trans": [
@@ -794,7 +794,7 @@
    "job": "X5-03",
    "scene": "1C",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-11-08T11:28",
    "frames": 192,
    "rec_in": 4740,
    "trans": [
@@ -813,7 +813,7 @@
    "job": "X5-04",
    "scene": "1C",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-11-08T12:04",
    "frames": 144,
    "rec_in": 4932,
    "trans": [
@@ -832,7 +832,7 @@
    "job": "X5-05",
    "scene": "1C",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-11-08T12:32",
    "frames": 120,
    "rec_in": 5076,
    "trans": [
@@ -851,7 +851,7 @@
    "job": "X5-06",
    "scene": "1C",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-11-08T12:51",
    "frames": 72,
    "rec_in": 5196,
    "trans": [
@@ -870,7 +870,7 @@
    "job": "X5-07",
    "scene": "1C",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-11-08T13:20",
    "frames": 108,
    "rec_in": 5268,
    "trans": [
@@ -889,7 +889,7 @@
    "job": "X5-08",
    "scene": "1C",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-11-08T13:43",
    "frames": 84,
    "rec_in": 5376,
    "trans": [
@@ -908,7 +908,7 @@
    "job": "X5-09",
    "scene": "1C",
    "kind": "3d",
-   "source": "slate",
+   "source": "rendered 2026-11-08T14:10",
    "frames": 96,
    "rec_in": 5460,
    "trans": [
@@ -1889,13 +1889,13 @@
   "file": "episodes/s01e01/final/cut/DragonsKingdom_S01E01_draft-cut_1C.mp4",
   "frames": 9168,
   "duration_s": 382,
-  "size_mb": 88.4,
-  "assembled_s": 47
+  "size_mb": 93.8,
+  "assembled_s": 49
  },
  "summary": {
-  "rendered": 66,
+  "rendered": 75,
   "black": 0,
-  "slates": 15,
+  "slates": 6,
   "voice_cues": 32,
   "review_flags": 6,
   "review_flags_accepted": 0
