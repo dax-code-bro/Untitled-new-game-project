@@ -83,6 +83,24 @@ screenshot every few minutes reach Claude (`api/sb-watch.js`, `tools/southbound/
 notes show up in the game. Needs a private Vercel Blob store connected to the project to keep reports
 longer than the function log's hour.
 
+## The owner's list after watching them play (2026-11-09) — do in this order
+
+1. ~~**R1 Reactions that fit the situation.**~~ (first pass shipped, Phase 1.60; keep extending the matrix) People robbed the owner while they were in a speeding car.
+   Every system that approaches or targets the player (muggers, street crime, beggars, armed
+   civilians, world events, gang ambushes, witnesses) must check what the player is doing (driving and
+   how fast, indoors, in a cutscene, dead/arrested, armed and aiming, wanted). Cops AND bystanders take
+   cover during robberies and gunfights (behind cars, walls, counters), not just cower in place.
+   "Prepared for every combination of scenario": keep a situation matrix and test it.
+2. **G13 Blood and injuries.** Real blood: spatter on ground/walls, pools under the downed and dead,
+   trails from the bleeding; wounds on bodies (bullet holes, cuts, bruises, scrapes from crashes and
+   falls) on the player and everyone else, healing over days; the Gore setting turns it off.
+3. **F15 Real workplaces and careers.** Barbershop: walk into the building, talk to the manager: buy
+   a cut, or work as a trainee and rise through the ranks; shifts you must turn up to (late = warning,
+   missed = fired). Then the same for every job (bike messenger depot with a dispatcher, etc.).
+4. **F16/G14 Destruction and rebuilding.** Realistic destruction physics for everything; blow up a
+   skyscraper and the city hires crews who rebuild it over ~7 game days, in visible stages (cleanup,
+   scaffolding, cranes, floors rising).
+
 ## Backlog: ideas per feature (take from here, strike when shipped)
 
 - **Gangs & hideout (F10 shipped; left for a later batch):** protection money from businesses,

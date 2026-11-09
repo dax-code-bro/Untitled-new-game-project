@@ -2,7 +2,7 @@
 // corners, chat, panic and flee from gunfire, get hit, flinch, die and go limp (bodies are searched: systems/loot.js).
 import * as THREE from 'three';
 import { Human, locomotion } from './human.js';
-const REACT = new Set(['cower', 'phone', 'freeze']); // (hands up when a gun's on them: systems/streetcrime.js)
+const REACT = new Set(['cower', 'phone', 'freeze', 'cover']); // (hands up when a gun's on them: systems/streetcrime.js)
 import { CITY, TOWN } from '../world/layout.js';
 import { mulberry32, wrapAngle, clamp } from '../util.js';
 
@@ -122,28 +122,59 @@ export class Peds {
   // Everyone near `pos` runs away from it
   // People don't all do the same thing: most run, some drop and cover their heads, some freeze for a
   // moment, some get their phone out and call it in (then run). Each person's nerve is their own.
-  panic(pos, radius = 35) {
+  // A gun out or shots (opts.cover): many take cover instead: the far side of a parked car, a wall's
+  // corner or a tree trunk, crouched there until it's over (the cover the police use: police.js
+  // findCover, via this.findCover set in main.js). Someone already in cover stays put.
+  panic(pos, radius = 35, opts = {}) {
+    const coverShare = opts.cover ? 0.6 : 0.3;
     for (const p of this.list) {
       if (p.mode === 'dead' || p.mode === 'ko' || p.role === 'cop' || p.scripted || (p.role && p.role !== 'resident' && p.role !== 'walker')) continue;
       if (p.pos.distanceTo(pos) >= radius) continue;
       if (p.nerve === undefined) p.nerve = this.rnd();
       p.threat = pos.clone();
+      if (p.mode === 'cover' && p.cover) { p.timer = Math.max(p.timer, 8 + this.rnd() * 6); continue; }
       const near = p.pos.distanceTo(pos) < radius * 0.5;
-      if (p.nerve < 0.55 || p.mode === 'flee') { p.mode = 'flee'; p.timer = 8 + this.rnd() * 6; }
+      const spot = p.mode !== 'flee' && p.nerve >= 0.2 && p.nerve < 0.2 + coverShare && this.findCover ? this.findCover(p, pos) : null;
+      if (spot) { p.mode = 'cover'; p.cover = spot; p.atCover = false; p.coverT = 7; p.timer = 10 + this.rnd() * 8; }
+      else if (p.nerve < 0.55 || p.mode === 'flee') { p.mode = 'flee'; p.timer = 8 + this.rnd() * 6; }
       else if (p.nerve < 0.75) { p.mode = 'cower'; p.timer = 4 + this.rnd() * 6; }
       else if (p.nerve < 0.88 && !near) { p.mode = 'phone'; p.timer = 5 + this.rnd() * 3; }
       else { p.mode = 'freeze'; p.timer = 1.2 + this.rnd() * 1.8; }
     }
   }
   react(p, dt) {
-    p.timer -= dt;
     const t = p.threat;
     const turn = (away) => { if (!t) return; const a = Math.atan2(t.x - p.pos.x, t.z - p.pos.z) + (away ? Math.PI : 0); p.heading += wrapAngle(a - p.heading) * Math.min(1, dt * 5); };
+    if (p.mode === 'cover') {
+      const c = p.cover;
+      if (c && !p.atCover) {
+        // run for it, bent low; give up and drop where they are if it takes too long
+        const dx = c.x - p.pos.x, dz = c.z - p.pos.z, d = Math.hypot(dx, dz);
+        if (d < 0.45 || (p.coverT -= dt) <= 0) p.atCover = true;
+        else {
+          p.heading += wrapAngle(Math.atan2(dx, dz) - p.heading) * Math.min(1, dt * 9);
+          const sp = Math.min(5.4, d * 3);
+          p.pos.x += Math.sin(p.heading) * sp * dt; p.pos.z += Math.cos(p.heading) * sp * dt;
+          const r = this.collision.resolve(p.pos.x, p.pos.z, 0.35, p.pos.y, 1.8);
+          p.pos.x = r.x; p.pos.z = r.z;
+          p.pos.y = this.collision.surface(p.pos.x, p.pos.z, p.pos.y + 0.5);
+          const [clip, s] = locomotion(sp); p.h.play(clip, 0.2, s);
+          return;
+        }
+      }
+      // in cover: low, facing the danger now and then to look (the timer only runs once they're there)
+      if ((p.peekT = (p.peekT ?? 2 + this.rnd() * 3) - dt) <= 0) p.peekT = 2 + this.rnd() * 4;
+      turn(p.peekT > 1.2);
+      p.h.play('Crouch_Idle_Loop', 0.2);
+    }
+    p.timer -= dt;
     if (p.mode === 'cower') { turn(true); p.h.play('Crouch_Idle_Loop', 0.15); }
     else if (p.mode === 'phone') { turn(true); if ((p.phT = (p.phT || 0) - dt) <= 0) { p.phT = 1.8; p.h.play('Interact', 0.2, 0.6, true); } }
     else if (p.mode === 'freeze') { turn(false); p.h.play('Idle_Loop', 0.15); }
     if (p.timer <= 0) {
       if (p.mode === 'phone') this.onPhoneCall?.(p, t);
+      // out of cover once it's quiet: most walk away from it, nobody strolls back towards it
+      p.cover = null; p.atCover = false;
       p.mode = 'flee'; p.timer = 7 + this.rnd() * 6; if (!p.threat) p.threat = p.pos.clone();
     }
   }

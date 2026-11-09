@@ -104,6 +104,10 @@ the fewest additions next. Be honest in reports about what is and isn't done.
   A system that hands a person back to ordinary street life (`p.role = undefined`) must leave them
   somewhere to walk: `peds.home(p)` (people it created itself have no block/corner; that crashed the
   game for the owner). `peds.update` isolates each person's AI with try/catch (logs `[peds] ...`).
+  Anything that walks up to the player, robs them or reacts to them asks `game.situation()`
+  (systems/situation.js: pos is the car when driving; `reachable`, `muggable`, speed, indoors, scene,
+  armed, wanted), never S.mode/player.pos alone (the on-foot body stays where you got in the car).
+  Bystanders take cover with `peds.panic(pos, r, { cover: true })` (mode 'cover', police findCover).
   The mouse is captured (pointer lock) only while no `.screen` menu is showing (`core/input.js`): with
   it captured, clicks go to the game, and the owner couldn't click a setting on their PC. Headless
   Playwright: a lock taken just before Esc stays on unless that guard is there; use `{ force: true }`

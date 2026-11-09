@@ -15,6 +15,7 @@ import { createFooting } from './systems/footing.js';
 import { setupMenu, setupSettingsPanel } from './ui/menu.js';
 import { installRecovery } from './ui/recovery.js';
 import { installWatch } from './core/watch.js';
+import { installSituation } from './systems/situation.js';
 import { buildRoadGraph, CITY, TOWN, regionAt } from './world/layout.js';
 import { Heightmap } from './world/heightmap.js';
 import { createTerrain, makeWorldTextures, worldUniforms } from './world/terrain.js';
@@ -634,6 +635,8 @@ vec3 CustomToneMapping( vec3 color ) {
   game.scanner = scanner;
   game.refreshHitStatics = () => { hitStatics.length = 0; scene.traverse((o) => { if (o.userData.hitStatic) hitStatics.push(o); }); };
   installStreetLife(game);
+  game.situationSys = installSituation(game); // what you're doing right now, for everyone who reacts to you (R1)
+  peds.findCover = (p, from) => police.findCover(p, { pos: from }); // bystanders duck behind the same cover the police use
   const worldEvents = installWorldEvents(game);
   game.worldEvents = worldEvents;
   game.audio = audio;
@@ -1004,6 +1007,7 @@ vec3 CustomToneMapping( vec3 color ) {
       const ip = interact.update(dt, focus, S.mode === 'car', S.mode === 'foot' && a.enter && !prompt, S.vehicle ? S.vehicle.speed : 0);
       if (!prompt) prompt = ip;
     }
+    game.situationSys.update(dt);
     const sp = systems.update(dt, a, !prompt && !interact.consumed && S.mode === 'foot' && !S.dead);
     if (!prompt && sp) prompt = sp;
     const lp = law.update(dt, a);

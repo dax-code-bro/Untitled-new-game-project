@@ -71,9 +71,15 @@ module.exports = async (req, res) => {
       const raw = JSON.stringify(body);
       if (raw.length > MAX) return json(res, 413, { error: 'too big' });
       const id = String(9999999999999 - Date.now()).padStart(13, '0') + '-' + body.kind + '-' + safe(body.session, 8);
-      // the log always gets the gist (without the picture), so the newest hour is readable even with no store
-      const gist = { id, ...body, shot: body.shot ? '[jpeg ' + Math.round(body.shot.length / 1024) + ' KB]' : null };
-      (body.kind === 'error' ? console.error : console.log)('SBWATCH ' + JSON.stringify(gist).slice(0, 12000));
+      // the log always gets the gist (without the picture), so the newest hour is readable even with no
+      // store: what happened first (error, state, the game's messages), the 10 s samples on a line of
+      // their own (log viewers cut long lines short, and the timeline matters more)
+      const { samples, shot, ua, ...rest } = body;
+      const head = { id, ...rest, shot: shot ? '[jpeg ' + Math.round(shot.length / 1024) + ' KB]' : null, ua: String(ua || '').replace(/^Mozilla\/5\.0 /, '').slice(0, 60) };
+      if (head.events) head.events = head.events.slice(-25).map((e) => `${Math.round(e.t)}s ${e.kind}: ${e.text}`);
+      const log = body.kind === 'error' ? console.error : console.log;
+      log('SBWATCH ' + JSON.stringify(head).slice(0, 12000));
+      if (samples && samples.length) log('SBWATCH-SAMPLES ' + id + ' ' + JSON.stringify(samples.map((q) => [Math.round(q.t), q.region, q.mode, q.vehicle, Math.round(q.speed || 0), q.wanted, q.health, q.money, Math.round(q.fps), q.pos && q.pos.map(Math.round)])).slice(0, 12000));
       if (STORE) await blob.put(PREFIX + id + '.json', raw, { access: 'private', token: TOKEN, contentType: 'application/json', addRandomSuffix: false, allowOverwrite: true });
       return json(res, 200, { ok: true, stored: STORE, id });
     }

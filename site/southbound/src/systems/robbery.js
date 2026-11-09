@@ -75,6 +75,7 @@ export function installRobbery(game) {
         if (a.t < 0.45) return;
         if (k.robbedDay === game.sky.day) { hud.toast(pick(AGAIN), 2.2); k.h.play('Crouch_Idle_Loop', 0.2); a.state = 'done'; a.t = 0; return; }
         const roll = game.robberyForce ? (game.robberyForce === 'fight' ? 0 : 1) : Math.random(); // (tests can force it)
+        game.peds.panic(k.pos, 30, { cover: true }); // a gun on the clerk: customers and passers-by get down (R1)
         if (roll < armedChance(k)) { a.state = 'fight'; fight(k); active = null; return; }
         a.state = 'comply'; a.t = 0;
         hud.toast(pick(COMPLY), 2.5);

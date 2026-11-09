@@ -406,7 +406,7 @@ async (opts) => {
     try { SB.skipRender(true); for (let i = 0; i < 20; i++) SB.step(1, 1 / 30); } catch (e) { threw = e; } finally { peds.think = think; SB.skipRender(false); }
     ok(!threw, 'the frame goes on (' + (threw && threw.message) + ')');
     ok(a.G && Array.isArray(a.target) && Number.isFinite(a.target[0]) && finite(a.pos), 'the dropped-off passenger picks a corner and walks to it');
-    ok(b.G && (b.mode === 'return' || b.mode === 'walk' || b.mode === 'idle') && finite(b.pos), 'someone with no home block runs, then heads back to the street (' + b.mode + ')');
+    ok(b.G && (b.mode === 'return' || b.mode === 'walk' || b.mode === 'idle' || b.mode === 'dead') && finite(b.pos), 'someone with no home block runs, then heads back to the street (' + b.mode + (b.mode === 'dead' ? ': hit by traffic on the way' : '') + ')');
     ok(!peds.list.includes(c), 'a person whose thinking keeps failing is let go, not the game');
     for (const p of [a, b]) { const k = peds.list.indexOf(p); if (k >= 0) { G.scene.remove(p.h.root); p.h.dispose(); peds.list.splice(k, 1); } }
   });
@@ -423,6 +423,69 @@ async (opts) => {
     // minutes for the test browser's software graphics)
     ok(typeof W.capture === 'function' && typeof W.grab === 'function', 'pictures can be asked for');
     ok(typeof W.sendError === 'function' && !(await W.sendError({ msg: 'qa', stack: '' })), 'nothing is sent from a test browser');
+  });
+
+  // R1: what you're doing decides who can walk up to you. The owner was mugged while speeding off in a
+  // car (the mugger walked to where they'd got in and took the wallet anyway); and people should take
+  // cover in a robbery, with an officer coming to deal with it
+  await run('situations: no mugging while you drive off; cover; an officer answers a robbery', async () => {
+    const W = G.worldEvents, pp = G.player.pos, S = G.S;
+    if (S.indoors && G.estate) G.estate.leave();
+    if (G.S.mode !== 'foot') G.exitVehicle();
+    G.police.wanted = 0; G.combat.holstered = true; W.clear();
+    SB.skipRender(true); for (let i = 0; i < 20; i++) SB.step(1, 1 / 30);
+    let s = G.situation();
+    ok(s.onFoot && s.reachable && s.muggable, 'standing on the pavement: reachable, a mugger could pick you (' + [s.reachable, s.muggable, s.speed.toFixed(1)].join(',') + ')');
+    G.police.wanted = 1; ok(!G.situation().muggable, 'wanted: no mugger picks you'); G.police.wanted = 0;
+    S.cutscene = true; ok(!G.situation().reachable && !G.situation().muggable, 'in a cutscene: nobody walks up'); S.cutscene = false;
+    S.indoors = { fake: true }; ok(!G.situation().muggable, 'indoors: no street mugging'); S.indoors = null;
+    G.combat.holstered = false; ok(!G.situation().muggable || !G.combat.drawn, 'a gun out: no mugger picks you'); G.combat.holstered = true;
+    // the owner's case: he demands, you get in a car and floor it
+    const money0 = S.money;
+    const e = W.force('mugging');
+    ok(e && e.kind === 'mugging' && e.m, 'a mugging can start while you stand on the pavement');
+    if (e && e.m) {
+      e.m.pos.set(pp.x + 1.6, pp.y, pp.z + 0.4);
+      for (let i = 0; i < 20 && !e.demanded; i++) SB.step(1, 1 / 30);
+      ok(e.demanded, 'he demands your wallet');
+      let v = G.parked.find((c) => !c.isBoat && !c.isAir && c.pos.distanceTo(pp) < 40);
+      if (!v) { v = new G.Vehicle(G.lib, 'sedan'); v.pos.set(pp.x + 4, G.collision.surface(pp.x + 4, pp.z, 300), pp.z); v.heading = 0; v.sync(0); G.scene.add(v.group); G.parked.push(v); }
+      G.enterVehicle(v);
+      SB.setOverride({ throttle: 1 });
+      for (let i = 0; i < 150; i++) SB.step(1, 1 / 30);
+      const sp = Math.abs(G.vehicle()?.speed || 0);
+      SB.setOverride(null);
+      ok(S.money === money0, 'driving off keeps your money (' + money0 + ' -> ' + S.money + ', speed ' + sp.toFixed(1) + ' m/s)');
+      ok(!W.event || W.event.kind !== 'mugging' || W.event.done, 'the mugger gives up once you drive away');
+      ok(e.m.role !== 'mugger', 'he stops being a mugger (' + e.m.role + ', ' + e.m.mode + ')');
+      G.exitVehicle();
+      for (let i = 0; i < 10; i++) SB.step(1, 1 / 30);
+    }
+    // bystanders near a gun take cover behind something
+    const near = [];
+    for (let i = 0; i < 6; i++) { const q = G.peds.spawnAt(pp.x + 8 + i * 2, pp.z + 6 - i, null); q.nerve = 0.3; near.push(q); }
+    G.peds.panic(new SB.debug.THREE.Vector3(pp.x + 10, pp.y, pp.z), 30, { cover: true });
+    const inCover = near.filter((q) => q.mode === 'cover' && q.cover);
+    ok(inCover.length >= 1, 'people near a gun take cover (' + inCover.length + ' of ' + near.length + '; the rest run or cower)');
+    const d0 = inCover.map((q) => Math.hypot(q.cover.x - q.pos.x, q.cover.z - q.pos.z));
+    for (let i = 0; i < 45; i++) SB.step(1, 1 / 30);
+    const d1 = inCover.map((q) => Math.hypot(q.cover.x - q.pos.x, q.cover.z - q.pos.z));
+    ok(!inCover.length || d1.some((d, i) => d < d0[i] - 0.5 || d < 0.6), 'they run to it (' + d0.map((d) => d.toFixed(1)).join(',') + ' -> ' + d1.map((d) => d.toFixed(1)).join(',') + ')');
+    // a robbery with an officer close by: he comes, takes cover, and it ends
+    const cop = G.peds.spawnAt(pp.x + 3, pp.z + 2, null); cop.role = 'cop';
+    const r = W.force('robbery');
+    if (r && r.m) {
+      ok(r.cop && r.cop.role === 'responder', 'the nearest officer answers the robbery (' + (r.cop ? r.cop.role : 'none') + ')');
+      if (!r.cop) return;
+      const rc = r.cop, c0 = rc.pos.clone();
+      for (let i = 0; i < 360; i++) SB.step(1, 1 / 30);
+      ok(rc.pos.distanceTo(c0) > 2 || rc.role === 'cop', 'the officer moves in (' + rc.pos.distanceTo(c0).toFixed(1) + ' m, ' + rc.role + ')');
+      ok(r.cop.resp === null || r.cop.resp === undefined || r.cop.resp.told, 'he orders the robber to drop it');
+      ok(['arrested', 'mugger', 'foe'].includes(r.m.role) || r.m.mode === 'dead' || r.m.mode === 'flee' || !G.peds.list.includes(r.m), 'the robber gives up, runs, or fights (' + r.m.role + ', ' + r.m.mode + ')');
+    } else ok(true, '(no street right here for a robbery)');
+    for (const q of [...near, cop]) { const k = G.peds.list.indexOf(q); if (k >= 0) { G.scene.remove(q.h.root); q.h.dispose(); G.peds.list.splice(k, 1); } }
+    W.clear();
+    SB.skipRender(false);
   });
 
   // NaN sweep over everything in the scene

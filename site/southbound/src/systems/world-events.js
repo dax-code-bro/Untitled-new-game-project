@@ -53,10 +53,18 @@ export function installWorldEvents(game) {
 
   // muggers and robbers walk up, point, demand
   peds.muggerThink = (p, dt) => {
-    const tgt = p.target || player;
-    const tp = tgt.pos;
+    if (p.shootAt) return shootOut(p, p.shootAt, dt); // cornered by the police and won't give up
+    if (p.facing && p.facing.mode !== 'dead') { // an officer has him covered: he freezes, gun on the officer, deciding
+      p.heading = Math.atan2(p.facing.pos.x - p.pos.x, p.facing.pos.z - p.pos.z);
+      if (p.h.locked <= 0) p.h.play('Pistol_Aim_Neutral', 0.15);
+      p.h.root.position.copy(p.pos); p.h.root.rotation.y = p.heading;
+      if (p.gun && p.pose) { p.h.root.updateMatrixWorld(true); p.pose.attachToHand(p.gun, p.pose.R); p.gun.visible = true; }
+      return;
+    }
+    const tp = p.target ? p.target.pos : game.situation().pos; // you, or your car if you're in one (R1)
     const dx = tp.x - p.pos.x, dz = tp.z - p.pos.z, d = Math.hypot(dx, dz);
     p.heading += wrapAngle(Math.atan2(dx, dz) - p.heading) * Math.min(1, dt * 6);
+    if (d > 3.4) p.holding = false; // you stepped away: after you again
     if (d > 2.6 && !p.holding) {
       const sp = d > 12 ? 3.4 : 1.6;
       p.pos.x += Math.sin(p.heading) * sp * dt; p.pos.z += Math.cos(p.heading) * sp * dt;
@@ -75,8 +83,79 @@ export function installWorldEvents(game) {
     else if (p.h.locked <= 0) p.h.play('Idle_Loop', 0.2);
     p.h.root.position.copy(p.pos); p.h.root.rotation.y = p.heading;
   };
+  // ---- an officer answering a robbery (R1): runs to cover with the robber in sight, orders him to drop
+  // it; he gives up, runs, or shoots it out. Bystanders are already in cover by then.
+  const shootOut = (p, foe, dt) => {
+    if (!foe || foe.mode === 'dead' || !peds.list.includes(foe)) { p.shootAt = null; p.role = undefined; p.mode = 'flee'; p.threat = player.pos.clone(); p.timer = 12; return; }
+    p.heading = Math.atan2(foe.pos.x - p.pos.x, foe.pos.z - p.pos.z);
+    if ((p.fireT = (p.fireT ?? 0.8) - dt) <= 0) {
+      p.fireT = 1.1 + Math.random() * 0.9;
+      p.h.play('Pistol_Shoot', 0.05, 1.4, true); police.audio?.gunshot?.(0.5);
+      peds.panic(p.pos, 45, { cover: true });
+      if (Math.random() < 0.22) peds.damage(foe, 22 + Math.random() * 18, p.pos, { part: 'chest' });
+    } else if (p.h.locked <= 0) p.h.play('Pistol_Aim_Neutral', 0.15);
+    p.h.root.position.copy(p.pos); p.h.root.rotation.y = p.heading;
+    if (p.gun) { p.h.root.updateMatrixWorld(true); p.pose.attachToHand(p.gun, p.pose.R); p.gun.visible = true; }
+  };
+  const ORDERS = ['Police! Drop the weapon!', 'Drop it! Drop it now!', 'Police! Hands where I can see them!'];
+  function callResponder(e) {
+    let cop = null, bd = 95;
+    for (const p of peds.list) if (p.role === 'cop' && p.mode !== 'dead' && !p.scripted && !p.inCar) { const d = Math.hypot(p.pos.x - e.m.pos.x, p.pos.z - e.m.pos.z); if (d < bd) { bd = d; cop = p; } }
+    if (!cop) return null;
+    cop.role = 'responder'; cop.resp = { e, t: 0, atT: 0, told: false, decided: false, cover: null };
+    police.armCop?.(cop, true);
+    return cop;
+  }
+  peds.responderThink = (p, dt) => {
+    const R = p.resp, rob = R.e.m;
+    const stand = () => { p.role = 'cop'; p.resp = null; p.drawn = false; police.poseGun?.(p, false); };
+    R.t += dt;
+    if (!rob || !peds.list.includes(rob) || rob.mode === 'dead' || R.t > 90 || (rob.mode === 'flee' && rob.pos.distanceTo(p.pos) > 45)) {
+      if (rob && rob.mode === 'dead' && !R.said) { R.said = true; if (p.pos.distanceTo(player.pos) < 40) say('Officer', 'Suspect down! Need an ambulance here.', 3); }
+      return stand();
+    }
+    if (rob.role === 'arrested') { // walk up, cuff him, take him away
+      const d = p.pos.distanceTo(rob.pos);
+      p.heading = Math.atan2(rob.pos.x - p.pos.x, rob.pos.z - p.pos.z);
+      if (d > 1.3) police.walkCop(p, dt, 2.2);
+      else if ((R.cuff = (R.cuff || 0) + dt) > 3) { scene.remove(rob.h.root); rob.h.dispose(); if (rob.gun) scene.remove(rob.gun); peds.list.splice(peds.list.indexOf(rob), 1); if (p.pos.distanceTo(player.pos) < 40) hud.toast('The robber is taken into custody', 2.5); return stand(); }
+      else if (p.h.locked <= 0) p.h.play('Interact', 0.2, 0.7);
+      police.poseGun?.(p, false);
+      return;
+    }
+    if (!R.cover) R.cover = police.findCover(p, { pos: rob.pos }) || { x: p.pos.x, z: p.pos.z, low: false, here: true };
+    const c = R.cover, dx = c.x - p.pos.x, dz = c.z - p.pos.z, dc = Math.hypot(dx, dz);
+    if (dc > 0.5 && !c.here) {
+      // blocked on the way (a wall, a parked car: officers don't path-find): kneel where he is instead
+      const g = R.prog || (R.prog = { t: 0, x: p.pos.x, z: p.pos.z });
+      if ((g.t += dt) > 1.5) { if (Math.hypot(p.pos.x - g.x, p.pos.z - g.z) < 0.8) c.here = true; R.prog = { t: 0, x: p.pos.x, z: p.pos.z }; }
+      if (!c.here) { p.heading = Math.atan2(dx, dz); police.walkCop(p, dt, 5.6); police.poseGun?.(p, true); return; }
+    }
+    c.here = true;
+    p.heading = Math.atan2(rob.pos.x - p.pos.x, rob.pos.z - p.pos.z);
+    R.atT += dt;
+    if (!R.told) { R.told = true; if (p.pos.distanceTo(player.pos) < 60) say('Officer', ORDERS[(Math.random() * ORDERS.length) | 0], 2.5); rob.facing = p; }
+    if (!R.decided && R.atT > 2.5) {
+      R.decided = true;
+      const r = Math.random();
+      if (r < 0.5) { rob.role = 'arrested'; if (rob.gun) rob.gun.visible = false; if (p.pos.distanceTo(player.pos) < 40) say('Robber', 'Okay, okay! I give up!', 2.5); }
+      else if (r < 0.78) { rob.role = undefined; rob.mode = 'flee'; rob.threat = p.pos.clone(); rob.timer = 14; if (rob.gun) rob.gun.visible = false; }
+      else { rob.shootAt = p; peds.panic(rob.pos, 45, { cover: true }); }
+    }
+    // in cover: low behind a car, aiming over it; shoot back if he's shooting
+    if (rob.shootAt === p && (R.fireT = (R.fireT ?? 0.5) - dt) <= 0) {
+      R.fireT = 0.8 + Math.random() * 0.6;
+      p.h.play('Pistol_Shoot', 0.05, 1.4, true); police.audio?.gunshot?.(0.5);
+      if (Math.random() < 0.38) peds.damage(rob, 30 + Math.random() * 25, p.pos, { part: 'chest' });
+    } else if (p.h.locked <= 0) p.h.play(c.low && !rob.shootAt ? 'Crouch_Idle_Loop' : 'Pistol_Aim_Neutral', 0.15);
+    police.poseGun?.(p, true);
+  };
+  peds.arrestedThink = (p) => { if (p.h.locked <= 0) p.h.play('Crouch_Idle_Loop', 0.3); p.h.root.position.copy(p.pos); p.h.root.rotation.y = p.heading; };
+
   const prevThink = peds.think.bind(peds);
   peds.think = (p, dt, pl) => {
+    if (p.mode !== 'dead' && p.role === 'responder') return peds.responderThink(p, dt);
+    if (p.mode !== 'dead' && p.role === 'arrested') return peds.arrestedThink(p, dt);
     if (p.mode !== 'dead' && p.role === 'mugger') return peds.muggerThink(p, dt);
     if (p.mode !== 'dead' && p.role === 'victim') return peds.victimThink(p, dt);
     if (p.mode !== 'dead' && p.role === 'fighter') return peds.fighterThink(p, dt);
@@ -89,14 +168,15 @@ export function installWorldEvents(game) {
     const id = p.role === 'mugger' ? (game.muggerWeapon?.() || 'pistol') : 'pistol';
     p.weaponId = id; p.gun = buildWeaponModel(WEAPONS[id]); p.gun.visible = false; scene.add(p.gun); p.pose = new GunPose(p.h);
   };
-  const cleanup = (e) => { for (const p of e.people || []) { if (p.gun) scene.remove(p.gun); if (p.mode !== 'dead') { p.role = undefined; p.mode = 'flee'; p.threat = player.pos.clone(); p.timer = 10; } } if (e.car) { e.car.group.remove(e.smoke); } };
+  const cleanup = (e) => { for (const p of e.people || []) { if (p.role === 'arrested' || p.shootAt) continue; if (p.gun) scene.remove(p.gun); if (p.mode !== 'dead') { p.role = undefined; p.mode = 'flee'; p.threat = player.pos.clone(); p.timer = 10; } } if (e.car) { e.car.group.remove(e.smoke); } };
 
-  function startEvent() {
+  function startEvent(force) {
     if (S.mode !== 'foot' && S.mode !== 'car') return;
+    const sit = game.situation();
     const town = inTown(player.pos.x, player.pos.z);
     const kinds = town ? ['mugging', 'robbery', 'fight'] : ['breakdown', 'mugging'];
-    const kind = kinds[(Math.random() * kinds.length) | 0];
-    if (kind === 'mugging' && S.mode === 'foot') {
+    const kind = force || kinds[(Math.random() * kinds.length) | 0];
+    if (kind === 'mugging' && sit.muggable) { // (not while you're driving, armed, wanted, running or indoors: R1)
       const a = Math.random() * Math.PI * 2, x = player.pos.x + Math.cos(a) * 22, z = player.pos.z + Math.sin(a) * 22;
       const m = spawnPerson(x, z, 'mugger'); giveGun(m);
       ev = { kind, people: [m], t: 0, m, demanded: false };
@@ -106,6 +186,8 @@ export function installWorldEvents(game) {
       const m = spawnPerson(r.x + 4.5, r.z + 4.5, 'mugger'); m.target = v; giveGun(m);
       ev = { kind, people: [v, m], t: 0, m, v };
       hud.toast('Someone is being robbed nearby', 3);
+      peds.panic(m.pos, 28, { cover: true }); // a gun out on the street: people get down behind cars and walls
+      ev.cop = callResponder(ev);
     } else if (kind === 'fight') {
       const r = roadPointAround(graph, player.pos.x, player.pos.z, 15, 35); if (!r) return;
       const a = spawnPerson(r.x + 3, r.z + 3, 'fighter'), b = spawnPerson(r.x + 4.1, r.z + 3.2, 'fighter');
@@ -129,21 +211,32 @@ export function installWorldEvents(game) {
   function updateEvent(dt) {
     const e = ev; e.t += dt;
     if (e.kind === 'mugging') {
-      const m = e.m;
+      const m = e.m, sit = game.situation();
+      const dm = Math.hypot(m.pos.x - sit.pos.x, m.pos.z - sit.pos.z);
       if (m.mode === 'dead') { say('', 'The mugger is down.', 2); e.done = true; }
-      else if (m.holding && !e.demanded) { e.demanded = true; e.demandT = 0; say('Mugger', 'Wallet. Now. Don\'t be a hero.', 4); }
+      else if (m.role !== 'mugger') e.done = true;
+      // you drove off, went inside, a scene started, or you're long gone: he can't rob you (R1)
+      else if (sit.indoors || sit.scene || sit.down || dm > 40 || (!sit.reachable && (sit.inVehicle || dm > 6))) {
+        const drove = sit.inVehicle && sit.speed > 2;
+        if (drove && e.demanded && Math.random() < 0.3) { say('Mugger', 'Get back here!', 2); m.role = 'foe'; } // a parting shot at the car
+        else { if (dm < 60) say('Mugger', drove ? 'Damn it!' : 'Forget it.', 2); m.role = undefined; m.mode = 'flee'; m.threat = sit.pos.clone(); m.timer = 12; }
+        e.done = true;
+      } else if (m.holding && !e.demanded) { e.demanded = true; e.demandT = 0; say('Mugger', sit.inVehicle ? 'Window down. Wallet. Now.' : 'Wallet. Now. Don\'t be a hero.', 4); peds.panic(m.pos, 22, { cover: true }); }
+      else if (e.demanded && !m.holding) { /* you stepped back: he closes in again, the clock waits */ }
       else if (e.demanded) {
         e.demandT += dt;
         if (combat.drawn || player.h.current === player.h.actions.Punch_Jab) { say('Mugger', Math.random() < 0.5 ? 'Whoa, whoa! I\'m going!' : 'Bad idea, man!', 2); m.role = Math.random() < 0.5 ? undefined : 'foe'; if (!m.role) { m.mode = 'flee'; m.threat = player.pos.clone(); m.timer = 12; } e.done = true; }
-        else if (e.demandT > 6) { const loss = Math.min(400, Math.round(S.money * 0.15)); S.money -= loss; say('Mugger', 'Pleasure doing business.', 3); hud.toast(`You were robbed: -$${loss}`, 3); m.role = undefined; m.mode = 'flee'; m.threat = player.pos.clone(); m.timer = 14; e.done = true; }
+        else if (e.demandT > 6 && sit.reachable && dm < 3.6) { const loss = Math.min(400, Math.round(S.money * 0.15)); S.money -= loss; say('Mugger', 'Pleasure doing business.', 3); hud.toast(`You were robbed: -$${loss}`, 3); m.role = undefined; m.mode = 'flee'; m.threat = player.pos.clone(); m.timer = 14; e.done = true; }
       }
     } else if (e.kind === 'robbery') {
       if (e.m.mode === 'dead' || (combat.drawn && e.m.pos.distanceTo(player.pos) < 18 && !e.scared)) {
         if (e.m.mode !== 'dead') { e.scared = true; say('Robber', 'This ain\'t over!', 2); e.m.role = undefined; e.m.mode = 'flee'; e.m.threat = player.pos.clone(); e.m.timer = 14; }
-        const tip = 50 + ((Math.random() * 100) | 0); S.money += tip;
-        say('Victim', 'Thank you! Thank you. Here, it\'s all I have left.', 3); hud.toast(`+$${tip}`, 2);
+        if (e.v.pos.distanceTo(game.situation().pos) < 30) { // only if you were there to see it (not when an officer stopped him)
+          const tip = 50 + ((Math.random() * 100) | 0); S.money += tip;
+          say('Victim', 'Thank you! Thank you. Here, it\'s all I have left.', 3); hud.toast(`+$${tip}`, 2);
+        }
         e.done = true;
-      } else if (e.t > 45) { say('', 'The robber got away.', 2); e.done = true; }
+      } else if (e.t > 45 && !(e.cop && e.cop.role === 'responder' && e.cop.mode !== 'dead')) { if (e.m.role === 'mugger') say('', 'The robber got away.', 2); e.done = true; }
     } else if (e.kind === 'fight') {
       if (e.t > 20 || e.people.some((p) => p.mode === 'dead')) e.done = true;
     } else if (e.kind === 'breakdown') {
@@ -184,6 +277,9 @@ export function installWorldEvents(game) {
 
   return {
     turfs,
+    get event() { return ev; },
+    force(kind) { if (ev) { cleanup(ev); ev = null; } startEvent(kind); return ev; }, // (tests)
+    clear() { if (ev) { cleanup(ev); ev = null; } nextT = 80 + Math.random() * 90; },
     update(dt) {
       if (reportT > 0 && (reportT -= dt) <= 0 && police.wanted === 0) { police.crime('shots'); hud.toast('Someone reported gunshots', 2.5); }
       // events

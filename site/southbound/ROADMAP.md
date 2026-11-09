@@ -140,6 +140,30 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 - [x] Loading screen with in-game art, tips and progress
 - [x] Fewer touch buttons: ◎ interact replaces the car button; map, phone, arsenal, free cam moved to pause
 
+## Phase 1.60 — R1: reactions that fit the situation, and people take cover
+
+From watching the owner play: a mugger robbed them while they were speeding away in a car (he walked
+to where they'd got in, "reached" them and took the wallet six seconds later); and nobody took cover
+in a robbery. The owner wants a reaction ready for every combination of what the player is doing.
+- [x] `game.situation()` (systems/situation.js): one answer to "what is the player doing": where (the
+      car if in one), on foot or driving and how fast, indoors, cutscene/arrest, down, armed, wanted,
+      mission; `reachable` (someone on foot can walk up: on foot and not running, or a stopped car) and
+      `muggable` (outdoors, on foot, unarmed, not wanted, standing or walking)
+- [x] Muggers: only pick someone `muggable`; walk to where you really are; follow if you step back
+      (the clock waits); give up if you drive off, go inside, a scene starts or you're 40 m away
+      ("Damn it!"), now and then with a parting shot at the car; the wallet goes only if you're still
+      within reach (on foot, or at the window of a stopped car: "Window down. Wallet. Now.")
+- [x] Bystanders take cover: the far side of a parked car, a wall's corner or a tree (the police cover
+      finder), run there bent low, crouch and peek until it's over, then walk away from it; about 30% of
+      a crowd at gunfire, 60% when a gun is pointed (muggings, robberies, store hold-ups, shoot-outs)
+- [x] A robbery in the street brings the nearest officer on foot (95 m): runs to cover with the robber
+      in sight, "Police! Drop the weapon!"; the robber gives up (cuffed and taken away), runs, or shoots
+      it out (both from cover; people around get down)
+- [x] Store hold-ups: customers and passers-by get down; a victim only tips you if you were there
+- [x] Reports to Claude: the server log puts the timeline first and the samples on their own line
+- [x] QA: the owner's exact case (demand, get in, floor it: money kept), the situation flags, cover,
+      the officer answering a robbery
+
 ## Phase 1.59 — "Let Claude watch me play" (errors, play reports, notes from Claude)
 
 The owner: "I want you to be able to see the latest error I hit, and also watch me play", so Claude can
