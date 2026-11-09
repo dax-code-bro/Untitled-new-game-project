@@ -192,6 +192,8 @@ export function setupSettingsPanel(settings, onChange) {
         b.className = 'toggle' + (settings[it.key] ? ' on' : '');
         b.onclick = () => { set(!settings[it.key]); b.classList.toggle('on', settings[it.key]); };
         val.appendChild(b);
+        row.style.cursor = 'pointer'; // the whole row flips it, not just the small switch
+        row.addEventListener('click', (e) => { if (!b.contains(e.target)) b.click(); });
       } else {
         const r = document.createElement('input');
         r.type = 'range'; r.min = it.min; r.max = it.max; r.step = it.step; r.value = settings[it.key];
@@ -205,7 +207,7 @@ export function setupSettingsPanel(settings, onChange) {
   };
   $('#restart').onclick = () => { location.reload(); };
   return {
-    open() { render(); $('#settings').classList.add('show'); },
+    open() { render(); $('#settings').classList.add('show'); if (document.pointerLockElement) document.exitPointerLock(); }, // the mouse belongs to the menu
     close() { $('#settings').classList.remove('show'); },
   };
 }

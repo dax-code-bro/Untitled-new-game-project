@@ -22,8 +22,15 @@ export class Input {
     });
     addEventListener('keyup', (e) => this.keys.delete(e.code));
     addEventListener('blur', () => this.keys.clear());
-    canvas.addEventListener('click', () => { if (!settings.isTouch && canvas.requestPointerLock) canvas.requestPointerLock(); });
-    document.addEventListener('pointerlockchange', () => { this.locked = document.pointerLockElement === canvas; });
+    // A menu on screen (title, loading, pause, settings) always has the mouse: never capture it then, and
+    // let go if a capture lands after a menu opened (click the game, then Esc/P straight away). With the
+    // mouse captured, clicks go to the game, not the menu: the owner couldn't click a setting on their PC
+    const menuUp = () => !!document.querySelector('.screen.show');
+    canvas.addEventListener('click', () => { if (!settings.isTouch && canvas.requestPointerLock && !menuUp()) canvas.requestPointerLock(); });
+    document.addEventListener('pointerlockchange', () => {
+      this.locked = document.pointerLockElement === canvas;
+      if (this.locked && menuUp()) document.exitPointerLock();
+    });
     addEventListener('mousemove', (e) => {
       if (!this.locked) return;
       this.look.x += e.movementX; this.look.y += e.movementY; this.lastLookTime = performance.now();

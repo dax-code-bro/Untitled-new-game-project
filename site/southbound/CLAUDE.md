@@ -104,6 +104,10 @@ the fewest additions next. Be honest in reports about what is and isn't done.
   A system that hands a person back to ordinary street life (`p.role = undefined`) must leave them
   somewhere to walk: `peds.home(p)` (people it created itself have no block/corner; that crashed the
   game for the owner). `peds.update` isolates each person's AI with try/catch (logs `[peds] ...`).
+  The mouse is captured (pointer lock) only while no `.screen` menu is showing (`core/input.js`): with
+  it captured, clicks go to the game, and the owner couldn't click a setting on their PC. Headless
+  Playwright: a lock taken just before Esc stays on unless that guard is there; use `{ force: true }`
+  clicks in-game (the SwiftShader frames keep elements from ever counting as "stable").
 - Commit one batch at a time: if the next batch's edits are already in the tree, commit only the
   finished batch's files (and an `index.js` without the next batch's `add(...)` line), with the
   `game.js` that was built and QA'd for it.

@@ -159,6 +159,9 @@ comment now and then, have a reference for what went wrong, and spot and fix thi
 - [x] The screenshot is copied right after the frame is drawn and encoded off the main thread
       (createImageBitmap + convertToBlob), so it never holds up a frame; tested by
       `tools/southbound/watch-test.mjs`
+- [x] Fix (the owner couldn't click it on the PC): menus always get the mouse back (a capture that
+      lands after the pause is released at once; no capture while a menu is up); the whole row of an
+      on/off setting flips it
 - [ ] Needs the owner: a private Blob store connected to the project (Claude's Vercel access can't
       create one: 403)
 
