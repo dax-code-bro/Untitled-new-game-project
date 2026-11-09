@@ -551,6 +551,7 @@ async (opts) => {
     if (G.S.indoors && G.estate) G.estate.leave();
     if (G.S.mode !== 'foot') G.exitVehicle();
     if (G.jobs.active) G.jobs.start(G.jobs.active.def.id);
+    SB.skipRender(true); // (stepping hundreds of frames: don't draw them)
     SB.setWanted(0); G.combat.holstered = true; if (P.grime) { P.grime.blood = 0; P.grime.dirt = 0; } G.player.health = 100;
     for (let i = 0; i < 3 && !W.ready; i++) SB.step(1, 1 / 30);
     ok(W.ready, 'the employers are set up');
@@ -649,6 +650,59 @@ async (opts) => {
     ph.show('work'); ph.render(); ph.close();
     if (G.jobs.active) G.jobs.start(G.jobs.active.def.id);
     if (G.vehicle()) SB.exitCar();
+    SB.skipRender(false);
+  });
+
+  // F16: a big building takes damage (most at the base), demolition charges, the collapse, the rubble,
+  // and the rebuild over days (crane, frame, facade) until it's back
+  await run('destruction (blasts, charges, collapse, a rebuild over days)', async () => {
+    const D = G.destruction, B = G.city.buildings, THREE = SB.debug.THREE, P = G.career.p;
+    if (G.S.indoors && G.estate) G.estate.leave();
+    if (G.S.mode !== 'foot') G.exitVehicle();
+    ok(!!D, 'the destruction system is installed');
+    if (!D) return;
+    SB.skipRender(true);
+    const pp = G.player.pos;
+    // a tall one, so it takes more than one blast
+    let bi = -1, best = 0;
+    B.forEach((b, i) => { const d = Math.hypot(b.x - pp.x, b.z - pp.z); if (!b.ruined && !D.isSmall(b) && b.h > 35 && d > 60 && d < 900 && b.h > best) { best = b.h; bi = i; } });
+    if (bi < 0) B.forEach((b, i) => { if (!b.ruined && !D.isSmall(b) && b.h > best) { best = b.h; bi = i; } });
+    const b = B[bi];
+    const hp0 = D.hp(bi);
+    ok(hp0 > 100, 'a big building has structure to spare (' + Math.round(hp0) + ', ' + Math.round(b.h) + ' m tall)');
+    G.combat.onExplosion(new THREE.Vector3(b.x + b.w / 2 + 1, b.y + 1, b.z), 4);
+    const hp1 = D.hp(bi);
+    ok(hp1 < hp0 && !b.ruined, 'a blast at the base weakens it (' + Math.round(hp0) + ' -> ' + Math.round(hp1) + ')');
+    G.combat.onExplosion(new THREE.Vector3(b.x + b.w / 2 + 1, b.y + b.h - 2, b.z), 4);
+    ok(hp1 - D.hp(bi) > 0 && hp1 - D.hp(bi) < hp0 - hp1, 'one near the top does less (' + Math.round(hp1 - D.hp(bi)) + ' vs ' + Math.round(hp0 - hp1) + ')');
+    // a demolition charge on the wall, then run
+    const tools0 = P.tools['construction_demolition-charge'] || 0;
+    G.career.addTool('construction_demolition-charge', 1);
+    SB.teleport(b.x + b.w / 2 + 0.7, b.z, -Math.PI / 2); SB.step(3, 1 / 30);
+    D.plant();
+    ok(D.charges.length === 1, 'a charge sticks to the wall');
+    SB.teleport(b.x + b.w / 2 + 90, b.z, 0); SB.step(3, 1 / 30);
+    const hp2 = D.hp(bi);
+    for (let i = 0; i < 330 && D.charges.length; i++) SB.step(1, 1 / 30);
+    ok(D.charges.length === 0 && (D.hp(bi) < hp2 || b.ruined), 'ten seconds later it goes off (' + Math.round(hp2) + ' -> ' + Math.round(D.hp(bi)) + ')');
+    // down it comes
+    if (!b.ruined) D.collapse(bi);
+    ok(b.ruined === 'collapse', 'enough and it comes down');
+    let n = 0; while (D.falling && n < 2400) { SB.step(1, 1 / 30); n++; }
+    ok(!D.falling && D.sites.has(bi), 'the storeys give way one after another (' + (n / 30).toFixed(1) + ' s), leaving a pile of rubble');
+    ok(['response', 'clearing rubble'].includes(D.phaseOf(bi)), 'police barriers, then the crews (' + D.phaseOf(bi) + ')');
+    const W = P.wrecks[bi];
+    ok(W && W.days >= 2 && W.days <= 7, 'the city rebuilds it in ' + (W ? W.days.toFixed(1) : '?') + ' game days (saved with the game)');
+    D.advance(bi, W.days * 24 * 0.5); SB.step(2, 1 / 30);
+    const site = D.sites.get(bi);
+    ok(D.phaseOf(bi) === 'framing' && site.frame.count > 0 && site.crane.visible, 'half way: a tower crane and the frame rising (' + D.phaseOf(bi) + ', ' + site.frame.count + ' pieces)');
+    D.advance(bi, W.days * 24 * 0.38); SB.step(2, 1 / 30);
+    ok(site.skin.count > 0, 'then the walls go on, floor by floor (' + site.skin.count + ' floors)');
+    D.advance(bi, W.days * 24); SB.step(2, 1 / 30);
+    ok(!b.ruined && !D.sites.has(bi) && !P.wrecks[bi], 'after the week it is back');
+    P.tools['construction_demolition-charge'] = tools0;
+    SB.setWanted(0);
+    SB.skipRender(false);
   });
 
   // NaN sweep over everything in the scene

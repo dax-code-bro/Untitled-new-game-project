@@ -130,6 +130,11 @@ the fewest additions next. Be honest in reports about what is and isn't done.
   A system can take over a building with `estate.claim(i, { kind, name, size, open(), furnish(ctx),
   enter(ctx), leave() })` (the barbershops, the courier depot, the offices); `estate.onEnter(fn)` adds
   points to any interior. Records live in `P.employ` (schedule, warnings, rank), `P.kit`, `P.ownBiz`.
+  Destruction (F16, `systems/destruction.js`, `game.destruction`): big buildings (not houses/small shops,
+  which are demolition.js) have structure `b.shp`; `damage(bi, n, at)`, `collapse(bi)`, rebuild sites in
+  `P.wrecks` (`advance(bi, hours)` for tests). It chains `combat.onExplosion` and must be installed after
+  props.js (which replaces the hook without chaining). It uses `game.demolition.show/worker/walkTo/face`
+  and `game.explodeAt` (main.js). A collapsed building's collision box is lowered to the rubble (`b.col`).
   The mouse is captured (pointer lock) only while no `.screen` menu is showing (`core/input.js`): with
   it captured, clicks go to the game, and the owner couldn't click a setting on their PC. Headless
   Playwright: a lock taken just before Esc stays on unless that guard is there; use `{ force: true }`

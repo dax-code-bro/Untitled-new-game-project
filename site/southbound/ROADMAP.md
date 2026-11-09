@@ -140,6 +140,35 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 - [x] Loading screen with in-game art, tips and progress
 - [x] Fewer touch buttons: ◎ interact replaces the car button; map, phone, arsenal, free cam moved to pause
 
+## Phase 1.64 — F16: destruction and rebuilding
+
+The owner: "everything has realistic destruction physics, and people come out to repair it; blow up a
+skyscraper and over seven game days the city realistically rebuilds it." (systems/destruction.js;
+houses and small shops keep demolition.js: they burn and go back up in a day and a half)
+- [x] Every bigger building (offices, towers, apartment blocks, warehouses) has a structure that can
+      take so much, by its size (a 90 m tower ~3,000): explosions hurt it, most at the base (a rocket
+      up near the top does a third as much); a blast scorches that wall, leaves a fire in that floor
+      and throws glass into the street; a weakened building groans and drops dust
+- [x] Demolition charges (hardware store, $650): plant one on any wall with F, it blinks, ten
+      seconds later it goes off (a real explosion: people, cars, props) and takes a big bite out of the
+      structure; on a house it starts the fire
+- [x] The collapse: the storeys give way from the bottom one after another and the rest drops onto
+      them, leaning as it falls (8-9 s for a 90 m tower); chunks of concrete and glass fly out and
+      bounce (600 pieces, one draw call); a dust cloud rolls out down the streets and settles; the
+      ground shakes and rumbles; anyone and any car underneath is crushed, the player hurt; people
+      for blocks run; the buildings next to it take damage (a house next door can catch fire); the
+      police come for whoever did it (3-4 stars); it makes the news
+- [x] What's left: a smoking pile of broken concrete with beams sticking out, behind concrete
+      barriers and police tape; you can climb on it
+- [x] The rebuild, by size (a tower the full 7 game days, a warehouse ~2): the rubble cleared, the pit
+      dug and the slab poured behind a site fence, a tower crane assembled at the corner, the concrete
+      frame rising floor by floor (slab, core and columns) under a mesh safety sleeve, the walls going
+      on a few floors behind, the crane turning with a load on the hook and climbing ahead of the
+      frame, then taken down; the building is back. Crews in hard hats work days. It's saved with
+      the game and carries on while you sleep
+- [x] QA: blast damage at the base vs the top, a planted charge, the collapse, the phases, the
+      rebuild finishing
+
 ## Phase 1.63 — F15: real workplaces and careers
 
 The owner: "for the barbershop there's no building; you should go in, talk to the manager, buy something

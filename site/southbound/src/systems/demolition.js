@@ -543,7 +543,7 @@ export function installDemolition(game) {
     sites.set(bi, site);
   }
 
-  game.demolition = { sites, destroy: (bi) => destroy(bi, 'outside'), finish: (bi) => { const s = sites.get(bi); if (s) finish(s); } };
+  game.demolition = { sites, destroy: (bi) => destroy(bi, 'outside'), finish: (bi) => { const s = sites.get(bi); if (s) finish(s); }, show: showHouse, worker, walkTo, face }; // (destruction.js uses these for the big buildings)
   return {
     update(dt) {
       for (const site of [...sites.values()]) {

@@ -37,7 +37,7 @@ const RAW = {
   Construction: [
     ['Claw hammer', 18], ['Sledgehammer', 45], ['Crowbar', 25], ['Bolt cutters', 40], ['Hand saw', 22], ['Circular saw', 130], ['Cordless drill', 120, { trade: 'build' }], ['Jigsaw', 90], ['Angle grinder', 85], ['Tape measure', 12],
     ['Level', 20], ['Speed square', 10], ['Chalk line', 8], ['Utility knife', 9], ['Ladder 8 ft', 110], ['Extension ladder', 220], ['Toolbox', 40], ['Tool belt', 30], ['Hard hat', 20], ['Safety glasses', 8],
-    ['Work gloves', 12], ['Shop vac', 95], ['Nail gun', 180], ['Stud finder', 25], ['Caulk gun', 10], ['Trowel', 12], ['Paint roller kit', 20], ['Wheelbarrow', 85], ['Cement mixer', 380], ['Scaffold', 420],
+    ['Work gloves', 12], ['Shop vac', 95], ['Nail gun', 180], ['Stud finder', 25], ['Caulk gun', 10], ['Trowel', 12], ['Paint roller kit', 20], ['Wheelbarrow', 85], ['Cement mixer', 380], ['Scaffold', 420], ['Demolition charge', 650, { charge: 1 }],
     ['Rebar bender', 140], ['Tile cutter', 75], ['Pipe wrench', 30, { trade: 'plumb' }], ['Plumbing snake', 45, { trade: 'plumb' }], ['Wire strippers', 15, { trade: 'elec' }],
   ],
   Medical: [

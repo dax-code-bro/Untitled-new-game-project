@@ -9,7 +9,7 @@ feature with the fewest additions next. Batches ship as F# (features) alternatin
 Counts are additions made in the "add to every feature" programme (F1 onwards, plus the S3/S4
 side batches where they extended a feature). The original build of each feature isn't counted.
 
-## Status (last updated: Phase 1.63, F15 real workplaces and careers)
+## Status (last updated: Phase 1.64, F16 destruction and rebuilding)
 
 | # | Feature | Files | Added | Batches | Status |
 |---|---------|-------|------:|---------|--------|
@@ -41,7 +41,7 @@ side batches where they extended a feature). The original build of each feature 
 | 26 | Gunsmiths | gunstores.js | 0 | | 30 to go |
 | 27 | Stray & farm animals | strays.js | 0 | | 30 to go |
 | 28 | World events | world-events.js | 0 | | 30 to go |
-| 29 | Demolition & damage | demolition.js, holes.js | 0 | | 30 to go |
+| 29 | Demolition, damage & rebuilding | demolition.js, holes.js, destruction.js | 14 | F16 | 16 to go |
 | 30 | Property auction | auction.js | 0 | | 30 to go |
 | 31 | Audio | core/audio.js | 0 | | 30 to go |
 | 32 | Camera & controls | core/camera.js, input.js | 0 | | 30 to go |
@@ -97,7 +97,7 @@ longer than the function log's hour.
 3. ~~**F15 Real workplaces and careers.**~~ (shipped, Phase 1.63; bikes to ride are still missing) Barbershop: walk into the building, talk to the manager: buy
    a cut, or work as a trainee and rise through the ranks; shifts you must turn up to (late = warning,
    missed = fired). Then the same for every job (bike messenger depot with a dispatcher, etc.).
-4. **F16/G14 Destruction and rebuilding.** Realistic destruction physics for everything; blow up a
+4. ~~**F16/G14 Destruction and rebuilding.**~~ (shipped, Phase 1.64: buildings of every size; props and cars already react to blasts) Realistic destruction physics for everything; blow up a
    skyscraper and the city hires crews who rebuild it over ~7 game days, in visible stages (cleanup,
    scaffolding, cranes, floors rising).
 

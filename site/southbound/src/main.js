@@ -58,6 +58,7 @@ import { buildStreetClutter } from './world/streetclutter.js';
 import { buildShoulders, buildFootings } from './world/shoulders.js';
 import { createHoles } from './world/holes.js';
 import { installDemolition } from './systems/demolition.js';
+import { installDestruction } from './systems/destruction.js';
 import { installWounds } from './systems/wounds.js';
 import { installStreetCrime } from './systems/streetcrime.js';
 import { installAuction } from './systems/auction.js';
@@ -520,6 +521,7 @@ vec3 CustomToneMapping( vec3 color ) {
     if (S.mode === 'foot' && player.pos.distanceTo(pt) < 6) hurtPlayer(dmg * (1 - player.pos.distanceTo(pt) / 6) * 0.5, pt);
     else if (S.mode === 'car' && S.vehicle.pos.distanceTo(pt) < 7) hurtPlayer(dmg * 0.4, pt);
   };
+  game.explodeAt = explodeAt; // (demolition charges: systems/destruction.js)
   police.onShell = (pt) => explodeAt(pt, 180);
   const law = installLaw({ ...game, hurtPlayer, PRECINCT, Vehicle: game.Vehicle || Vehicle, gunPose, audio, wheelOpen: () => wheel.open, explodeAt,
     tracer: (a, b) => combat.tracer(a, b), get rig() { return rig; } });
@@ -646,6 +648,7 @@ vec3 CustomToneMapping( vec3 color ) {
   game.worldEvents = worldEvents;
   game.audio = audio;
   const demolition = installDemolition(game); // houses burn, the fire department comes, builders rebuild
+  game.destructionSys = installDestruction(game); // bigger buildings come down; the city rebuilds them over up to a week (F16)
   game.nearestRoadPoint = (x, z) => { const r = nearestRoad(x, z); if (!r) return null; const p = {}; traffic.sampleEdge(r.e, r.s, p); return p; };
   const details = installDetails(game);
   game.onCarExploded = (v) => { peds.panic(v.pos, 50); if (witnesses(v.pos, 60) || police.nearPolice(80)) police.crime(v.type === 'police' ? 'copKill' : 'kill'); };
@@ -1021,6 +1024,8 @@ vec3 CustomToneMapping( vec3 color ) {
     if (rp && !prompt) prompt = rp;
     const gp = gang.update(dt, a);
     if (gp && !prompt) prompt = gp;
+    const dpp = game.destructionSys?.update(dt, a, !prompt && !interact.consumed && S.mode === 'foot' && !S.dead);
+    if (dpp && !prompt) prompt = dpp;
     gunStores.update(dt);
     shops.update(dt);
     billboards.update(sky.hour);
