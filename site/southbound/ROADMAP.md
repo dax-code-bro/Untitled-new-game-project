@@ -140,6 +140,24 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 - [x] Loading screen with in-game art, tips and progress
 - [x] Fewer touch buttons: ◎ interact replaces the car button; map, phone, arsenal, free cam moved to pause
 
+## Phase 1.61 — Live feed: Claude watches along, and chat (Y)
+
+The owner: a live feed "no matter what it takes", so Claude can watch them play, spot errors and
+physical glitches, keep them company, and take their comments and ideas as they play.
+- [x] The game (watching on) posts an update every 2 s: position, height above the ground, which way
+      the player and the camera face, on foot or in what and how fast, the car's tilt, health, police,
+      money, weapon, who's near, frame rate, the game's messages; and a 480 px picture every 5 s
+- [x] api/sb-live.js: no storage needed (the warm function's memory; every request reached the same
+      instance in a 20-update test on the live site); a copy goes to the function log
+- [x] Y (or /) opens a box to message Claude; Claude's replies show at the top of the screen and are
+      sent again until the game has shown them
+- [x] tools/southbound/live.mjs: waits in a lobby (a secret only Claude has; its hash in the API) until
+      the owner starts, follows the feed, saves pictures, and prints a line for each thing worth a look
+      (messages, errors, deaths, police, vehicles, places, below/above the ground, a car on its roof or
+      side, crashes, sudden jumps, frame-rate drops, a summary every 90 s), for Monitor to wake Claude
+- [x] live-test.mjs: all local, end to end (updates, pictures, a note shown, a Y message received, the
+      lobby, a body under the ground caught)
+
 ## Phase 1.60 — R1: reactions that fit the situation, and people take cover
 
 From watching the owner play: a mugger robbed them while they were speeding away in a car (he walked

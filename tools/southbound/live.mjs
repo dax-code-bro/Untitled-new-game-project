@@ -4,6 +4,10 @@
 //                                                       look (run it under Monitor: each line wakes Claude)
 //   node tools/southbound/live.mjs say <liveId> "text"   a note that shows up in the owner's game
 //   node tools/southbound/live.mjs now <liveId>          the latest update and picture, once
+//   node tools/southbound/live.mjs auto                  wait until the owner starts playing, then follow
+//                                                       (the lobby: needs the secret in ~/.sblive-secret,
+//                                                       whose sha256 is LOBBY_HASH in api/sb-live.js;
+//                                                       a new secret means a new hash there and a deploy)
 //
 // The live id: the newest "SBLIVE-START <id>" line in the function log (Vercel MCP get_runtime_logs,
 // query "SBLIVE-START"). Pictures and the full feed go to $SBLIVE_OUT (default /tmp/sblive):
@@ -17,13 +21,14 @@ import path from 'node:path';
 
 const BASE = process.env.SBLIVE_URL || 'https://untitled-new-game-project.vercel.app/api/sb-live';
 const OUT = process.env.SBLIVE_OUT || '/tmp/sblive';
-const [cmd, id, ...rest] = process.argv.slice(2);
-if (!id || !/^[a-f0-9]{16,64}$/.test(id)) { console.error('usage: live.mjs watch|say|now <liveId> [text]'); process.exit(2); }
+const [cmd, arg1, ...rest] = process.argv.slice(2);
+let id = arg1;
+if (cmd !== 'auto' && (!id || !/^[a-f0-9]{16,64}$/.test(id))) { console.error('usage: live.mjs watch|say|now <liveId> [text] | auto'); process.exit(2); }
 fs.mkdirSync(OUT, { recursive: true });
 const get = (q, bin = false) => execFileSync('curl', ['-sS', '--max-time', '12', `${BASE}?live=${id}&${q}`], { encoding: bin ? 'buffer' : 'utf8', maxBuffer: 32 << 20 });
 const getJson = (q) => { try { return JSON.parse(get(q)); } catch (e) { return null; } };
-const outbox = path.join(OUT, `outbox-${id.slice(0, 8)}.json`);
-const readOutbox = () => { try { return JSON.parse(fs.readFileSync(outbox, 'utf8')); } catch (e) { return []; } };
+const outboxOf = () => path.join(OUT, `outbox-${String(id).slice(0, 8)}.json`);
+const readOutbox = () => { try { return JSON.parse(fs.readFileSync(outboxOf(), 'utf8')); } catch (e) { return []; } };
 const sendNote = (n) => getJson(`note=${encodeURIComponent(n.text)}&nid=${n.nid}`);
 const hhmm = (h) => (h == null ? '?' : `${Math.floor(h)}:${String(Math.round((h % 1) * 60) % 60).padStart(2, '0')}`);
 const brief = (p) => [p.region, p.indoors ? 'indoors' : p.vehicle ? `in ${p.vehicle} ${Math.round(Math.abs(p.speed || 0) * 3.6)} km/h` : `on foot${p.speed > 0.5 ? ' ' + (Math.abs(p.speed) * 3.6).toFixed(0) + ' km/h' : ''}`,
@@ -43,7 +48,7 @@ const saveFrame = (seq) => {
 if (cmd === 'say') {
   const n = { nid: Math.random().toString(16).slice(2, 10), text: rest.join(' ').slice(0, 400), t: Date.now() };
   const r = sendNote(n);
-  const box = readOutbox(); box.push(n); fs.writeFileSync(outbox, JSON.stringify(box));
+  const box = readOutbox(); box.push(n); fs.writeFileSync(outboxOf(), JSON.stringify(box));
   console.log(r ? `note ${n.nid} sent (the watcher re-sends it until the game shows it)` : 'could not reach the feed');
 } else if (cmd === 'now') {
   const j = getJson('since=0');
@@ -51,11 +56,30 @@ if (cmd === 'say') {
   const p = j.pings[j.pings.length - 1];
   console.log(`#${p.seq} ${new Date(p.t).toISOString().slice(11, 19)}Z ${brief(p)}  pos ${(p.pos || []).map(Math.round).join(',')}`);
   if (j.frames.length) console.log('picture', saveFrame(j.frames[j.frames.length - 1]));
-} else if (cmd === 'watch') {
+} else if (cmd === 'watch' || cmd === 'auto') {
+  const secret = (() => { try { return fs.readFileSync(path.join(process.env.HOME || '/root', '.sblive-secret'), 'utf8').trim(); } catch (e) { return ''; } })();
+  const lobby = () => { try { return JSON.parse(execFileSync('curl', ['-sS', '--max-time', '12', `${BASE}?lobby=${secret}`], { encoding: 'utf8' })); } catch (e) { return null; } };
   let since = 0, prev = null, lastSeen = Date.now(), quiet = false, lastSum = 0, lastFps = 0, lastFrame = 0, misses = 0, polls = 0, below = 0, floatN = 0, rollN = 0;
   const say = (s) => console.log(`${new Date().toISOString().slice(11, 19)} ${s}`);
-  say(`watching ${id.slice(0, 8)}…  pictures: ${OUT}/latest.jpg`);
+  let waiting = cmd === 'auto', lobbyT = 0;
+  if (waiting) say('waiting for the owner to start playing (lobby every 10 s)');
+  else say(`watching ${id.slice(0, 8)}…  pictures: ${OUT}/latest.jpg`);
+  const follow = (nid, f) => { id = nid; since = 0; prev = null; lastSeen = Date.now(); quiet = false; lastFrame = 0; waiting = false; say(`PLAYING: the owner started (feed ${nid.slice(0, 8)}${f && f.region ? ', ' + f.region : ''}) · pictures: ${OUT}/latest.jpg`); };
   const tick = () => {
+    if (waiting) {
+      if (Date.now() - lobbyT < 10000) return;
+      lobbyT = Date.now();
+      const L = lobby(); const f = L && L.feeds && L.feeds.find((x) => x.ago < 30 && x.session !== 'claudetest');
+      if (f) follow(f.id, f);
+      return;
+    }
+    // following: if this feed has been quiet for 10 minutes, go back to waiting for a new one (auto)
+    if (cmd === 'auto' && Date.now() - lastSeen > 600000) { say('the owner seems to have stopped; waiting for the next session'); waiting = true; return; }
+    if (cmd === 'auto' && quiet && Date.now() - lobbyT > 20000) { // a new session (the page was reloaded) takes over
+      lobbyT = Date.now();
+      const L = lobby(); const f = L && L.feeds && L.feeds.find((x) => x.ago < 30 && x.id !== id && x.session !== 'claudetest');
+      if (f) { follow(f.id, f); return; }
+    }
     polls++;
     const j = getJson(`since=${since}`);
     if (!j) return;
@@ -64,7 +88,7 @@ if (cmd === 'say') {
     const box = readOutbox(), acks = new Set(j.acks || []);
     const keep = box.filter((n) => !acks.has(n.nid) && Date.now() - n.t < 180000);
     for (const n of keep) if (!n.last || Date.now() - n.last > 6000) { sendNote(n); n.last = Date.now(); }
-    if (keep.length !== box.length || keep.some((n) => n.last)) fs.writeFileSync(outbox, JSON.stringify(keep));
+    if (keep.length !== box.length || keep.some((n) => n.last)) fs.writeFileSync(outboxOf(), JSON.stringify(keep));
     for (const p of j.pings.sort((a, b) => a.seq - b.seq)) {
       if (p.seq <= since) continue;
       since = p.seq; lastSeen = Date.now();

@@ -50,7 +50,7 @@ await pg.goto(local + '/');
 await pg.waitForFunction(() => window.W);
 const id = await pg.evaluate(() => window.W.liveId);
 const env = { ...process.env, SBLIVE_URL: local + '/api/sb-live', SBLIVE_OUT: out };
-const watcher = spawn('node', [path.join(here, 'live.mjs'), 'watch', id], { env });
+const watcher = spawn('node', [path.join(here, 'live.mjs'), 'auto'], { env }); // (the lobby finds the feed by itself)
 let wout = ''; watcher.stdout.on('data', (d) => { wout += d; }); watcher.stderr.on('data', (d) => { wout += d; });
 await pg.waitForTimeout(7000);
 await new Promise((r) => spawn('node', [path.join(here, 'live.mjs'), 'say', id, 'Nice try escaping those cops'], { env }).on('exit', r)); // (async: the local server lives in this process)
@@ -75,6 +75,7 @@ ok(head === 'ffd8', 'pictures are saved (' + (head ? fs.statSync(jpg).size + ' b
 ok(/Nice try escaping those cops/.test(note || ''), "Claude's note shows in the game (" + note + ')');
 ok(/OWNER: the car went through the bridge/.test(wout), 'a message typed with Y reaches the watcher');
 ok(/BELOW GROUND/.test(wout), 'a body under the ground is caught');
+ok(/PLAYING: the owner started/.test(wout), 'the lobby notices the owner started playing');
 ok(!errs.length, 'no page errors ' + errs.join(' | '));
 console.log('--- watcher output ---\n' + wout.trim());
 console.log(fail ? `live test: ${fail} failed` : 'live test: all passed');

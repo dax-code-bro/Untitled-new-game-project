@@ -14,6 +14,9 @@
 // project's Vercel sign-in to read), so only someone who can read the logs can watch.
 const crypto = require('node:crypto');
 
+// Claude's watcher asks "is anyone playing?" with a secret kept in Claude's environment; only its hash
+// is here, so reading this code (or the game) gives nothing away. (tools/southbound/live.mjs auto)
+const LOBBY_HASH = '191f6306d8778c9c8b9c96962e3135b871f121141602fe71b12de70461a90c83';
 const INST = crypto.randomBytes(4).toString('hex'); // which warm instance answered (the watcher counts misses)
 const feeds = globalThis.__sbLive || (globalThis.__sbLive = new Map());
 const MAX_PINGS = 400, MAX_FRAMES = 24, MAX = 600 * 1024;
@@ -37,6 +40,7 @@ module.exports = async (req, res) => {
       if (JSON.stringify(b).length > MAX) return json(res, 413, { error: 'too big' });
       tidy();
       const f = feed(b.live), t = Date.now(), seq = +b.seq || 0;
+      f.session = String(b.session || '').slice(0, 16);
       const p = { seq, t, ...b.ping, events: b.events || [], say: b.say || null, acks: b.acks || [] };
       f.pings.push(p); if (f.pings.length > MAX_PINGS) f.pings.splice(0, f.pings.length - MAX_PINGS);
       if (b.say) for (const s of [].concat(b.say)) f.says.push({ seq, t, text: String(s).slice(0, 500) });
@@ -47,6 +51,13 @@ module.exports = async (req, res) => {
       if (seq % 15 === 0 || (b.events && b.events.length) || b.say) console.log('SBLIVE ' + b.live.slice(0, 8) + ' ' + JSON.stringify({ seq, ...b.ping, events: b.events, say: b.say }).slice(0, 4000));
       const notes = f.notes.filter((n) => !f.acks.has(n.id)).slice(-5);
       return json(res, 200, { ok: true, inst: INST, notes });
+    }
+    if (q.lobby) {
+      const h = crypto.createHash('sha256').update(String(q.lobby)).digest('hex');
+      if (h.length !== LOBBY_HASH.length || !crypto.timingSafeEqual(Buffer.from(h), Buffer.from(LOBBY_HASH))) return json(res, 403, { error: 'no' });
+      const list = [...feeds].map(([id, f]) => { const p = f.pings[f.pings.length - 1] || {}; return { id, seen: f.seen, ago: Math.round((Date.now() - f.seen) / 1000), seq: p.seq || 0, region: p.region, session: f.session }; })
+        .filter((x) => x.ago < 600).sort((a, b) => a.ago - b.ago);
+      return json(res, 200, { inst: INST, feeds: list });
     }
     if (!okId(q.live)) return json(res, 404, { error: 'no such feed' });
     const f = feeds.get(q.live);

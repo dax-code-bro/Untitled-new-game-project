@@ -70,6 +70,17 @@ the fewest additions next. Be honest in reports about what is and isn't done.
   Comment to the owner on what they were doing now and then, and fix what looks wrong. An hourly
   scheduled task (`trig_01XFqbdkJQU8S8NtwN8Zbobt`, "Southbound: watch the owner play", fires into this
   session at :54) does the check; delete it if the owner asks to stop.
+- **The live feed** (watch along while the owner plays): with watching on, the game posts an update
+  every 2 s and a 480 px picture every 5 s to `api/sb-live.js` (kept in the warm function's memory: all
+  requests land on one instance, tested 20/20). Run `node tools/southbound/live.mjs auto` under Monitor
+  (timeout 30 min, re-arm on expiry): it waits in the lobby until the owner starts playing, then prints
+  a line per thing worth a look (💬 OWNER messages, errors, deaths, police, cars, places, below/above
+  the ground, on its roof, crashes, jumps, fps drops, a NOW summary every 90 s); the newest picture is
+  `$SBLIVE_OUT/latest.jpg` (default /tmp/sblive; look at it with Read). Answer the owner in the game:
+  `node tools/southbound/live.mjs say <feedId> "..."` (the feed id is in the PLAYING line). The lobby
+  needs `~/.sblive-secret`, whose sha256 is LOBBY_HASH in api/sb-live.js; a new container has no
+  secret: make one (`head -c 24 /dev/urandom | od -An -tx1 | tr -d ' \n' > ~/.sblive-secret`), put its
+  sha256 in LOBBY_HASH and deploy. Tests: `node tools/southbound/live-test.mjs` (all local).
 - Sketchfab: the "Untitled-new-game-project" cloud environment allows it, but the saved API token was
   rejected; while a bad token is saved even search fails (the proxy adds it to every request). Never
   use the sketchfab.com/i/ website endpoints (blocked by the safety check).
