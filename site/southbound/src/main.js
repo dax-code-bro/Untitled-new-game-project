@@ -1478,8 +1478,8 @@ vec3 CustomToneMapping( vec3 color ) {
   game.watch = window.__sbWatch = installWatch({ settings, saveSettings, hud, automated: AUTOMATED, getState: () => {
     const run = game.missions?.active;
     return { ...api.state, vehicle: S.vehicle ? S.vehicle.type : null, wanted: police.wanted, health: Math.round(player.health), armor: Math.round(player.armor || 0),
-      money: Math.round(S.money), weapon: combat.drawn ? combat.weapon : null, indoors: !!S.indoors, dead: S.dead > 0, paused: !!S.paused,
-      mission: run ? (run.m?.title || run.m?.name || run.m?.id || '?') : null, weather: weather.kind, day: sky.day, cpuMs: +(S.cpuMs || 0).toFixed(1), gpu: GPU_NAME };
+      money: Math.round(S.money), weapon: combat.drawn ? combat.weapon : null, indoors: !!S.indoors, dead: S.dead > 0 && !S.cutscene, cutscene: !!S.cutscene, paused: !!S.paused, /* (cutscenes and arrests hold the death timer to freeze your controls) */
+      mission: run ? (run.m?.title || run.m?.name || run.m?.id || '?') : null, weather: weather.kind, day: sky.day, cpuMs: +(S.cpuMs || 0).toFixed(1), gpu: GPU_NAME, idleCard: CARD, res: settings.resolution, drawing: [renderer.domElement.width, renderer.domElement.height] };
   } });
   addEventListener('pagehide', () => game.watch.flush());
   // a saved game: back within 20 m of where you saved, in the middle of something ordinary

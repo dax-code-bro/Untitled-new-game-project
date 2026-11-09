@@ -137,6 +137,7 @@ export function installWatch({ settings, saveSettings, getState, hud, automated 
         if (s.region !== prev.region && prev.region) event('place', `${prev.region} -> ${s.region}`);
         if ((s.wanted || 0) !== (prev.wanted || 0)) { event('police', `wanted ${prev.wanted || 0} -> ${s.wanted || 0}`); if ((s.wanted || 0) >= 2 && (s.wanted || 0) > (prev.wanted || 0)) highlight = highlight || 'police chase'; }
         if (s.dead && !prev.dead) { event('death', 'you died'); highlight = 'died'; }
+        if (s.cutscene !== !!prev.cutscene && (s.cutscene || prev.cutscene)) event('cutscene', s.cutscene ? 'a scene started' : 'the scene ended');
         if (s.fps < 20 && prev.fps >= 20) event('perf', `frame rate fell to ${s.fps}`);
         prev = s;
       }
