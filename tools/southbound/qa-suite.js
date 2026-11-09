@@ -488,6 +488,61 @@ async (opts) => {
     SB.skipRender(false);
   });
 
+  // G13: blood and injuries: a hit leaves a wound where it landed and blood on the ground; a death leaves
+  // a pool; the player's wounds heal; the Gore setting off leaves nothing; wounded people's own materials
+  // are freed when they go
+  await run('blood and injuries (wounds where hit, spatter, pools, healing, gore off)', async () => {
+    const pp = G.player.pos, THREE = SB.debug.THREE;
+    if (G.S.indoors && G.estate) G.estate.leave();
+    if (G.S.mode !== 'foot') G.exitVehicle();
+    SB.skipRender(true);
+    G.settings.gore = true;
+    const b0 = G.blood.count();
+    const a = G.peds.spawnAt(pp.x + 3, pp.z + 2, null); a.scripted = true;
+    SB.step(3, 1 / 30);
+    const chest = new THREE.Vector3(); a.h.model.getObjectByName('spine02').getWorldPosition(chest);
+    const from = chest.clone().add(new THREE.Vector3(-4, 0, 0)), pt = chest.clone().add(new THREE.Vector3(-0.12, 0, 0));
+    G.peds.damage(a, 20, from, { part: 'chest', point: pt, dir: pt.clone().sub(from).normalize() });
+    ok(a.h.wound && a.h.wound.list.length === 1 && a.h.wound.list[0].k === 0, 'a bullet leaves a wound where it hit (' + (a.h.wound ? a.h.wound.list.length : 0) + ')');
+    ok(G.blood.count() > b0, 'and blood on the ground behind (' + b0 + ' -> ' + G.blood.count() + ')');
+    ok(a.h.wound && a.h.wound.mats.length >= 2, 'the wounded person gets their own skin and clothes materials (' + (a.h.wound ? a.h.wound.mats.length : 0) + ')');
+    G.peds.damage(a, 6, from, { part: 'arm', melee: true, point: pt.clone().add(new THREE.Vector3(0, -0.3, 0.2)) });
+    ok(a.h.wound.list.some((w) => w.k === 2), 'fists leave a bruise');
+    const r0 = a.h.wound.list[0].r;
+    for (let i = 0; i < 90; i++) SB.step(1, 1 / 30);
+    ok(a.h.wound.list[0].r > r0 && a.h.wound.list[0].run > 0.0001, 'the stain spreads and blood runs down while they bleed');
+    // a killing shot: a wound before the fall, then a pool
+    const d = G.peds.spawnAt(pp.x + 5, pp.z - 2, null);
+    SB.step(3, 1 / 30);
+    const c2 = new THREE.Vector3(); d.h.model.getObjectByName('spine02').getWorldPosition(c2);
+    G.peds.damage(d, 500, c2.clone().add(new THREE.Vector3(-4, 0, 0)), { part: 'chest', point: c2.clone().add(new THREE.Vector3(-0.12, 0, 0)), dir: new THREE.Vector3(1, 0, 0) });
+    const pools0 = G.blood.meshes.pool.count;
+    for (let i = 0; i < 90; i++) SB.step(1, 1 / 30);
+    ok(d.mode === 'dead' && d.h.wound && d.h.wound.list.length >= 1, 'a killing shot still leaves its wound');
+    ok(G.blood.meshes.pool.count > pools0, 'a pool spreads under the dead (' + pools0 + ' -> ' + G.blood.meshes.pool.count + ')');
+    // the player: wounded on the side the shot came from; healing over game days
+    G.onPlayerHurt(10, pp.clone().add(new THREE.Vector3(6, 0, 0)), 2);
+    const pw = G.player.h.wound;
+    ok(pw && pw.list.length >= 1, 'the player gets a wound when shot');
+    const h0 = pw ? pw.list[pw.list.length - 1].heal : 0;
+    const hour0 = G.sky.hour; G.sky.hour = Math.min(23.9, hour0 + 5); SB.step(2, 1 / 30);
+    ok(pw && pw.list.length && pw.list[pw.list.length - 1].heal > h0, 'wounds heal as game time passes');
+    G.sky.hour = hour0;
+    // gore off: nothing new
+    G.settings.gore = false;
+    const e = G.peds.spawnAt(pp.x - 4, pp.z + 3, null); e.scripted = true; SB.step(2, 1 / 30);
+    const b1 = G.blood.count();
+    G.peds.damage(e, 20, from, { part: 'chest', point: e.pos.clone().add(new THREE.Vector3(0, 1.3, 0)), dir: new THREE.Vector3(1, 0, 0) });
+    ok(!e.h.wound && G.blood.count() === b1, 'Blood & gore off: no wounds, no blood');
+    G.settings.gore = true;
+    // gone for good: their own materials go too
+    const mats = a.h.wound.mats.slice();
+    let disposed = 0; for (const m of mats) m.addEventListener('dispose', () => disposed++);
+    for (const q of [a, d, e]) { const k = G.peds.list.indexOf(q); if (k >= 0) { G.scene.remove(q.h.root); q.h.dispose(); G.peds.list.splice(k, 1); } }
+    ok(disposed === mats.length, 'the own materials of a wounded person are freed when they go (' + disposed + '/' + mats.length + ')');
+    SB.skipRender(false);
+  });
+
   // NaN sweep over everything in the scene
   await run('scene NaN sweep', async () => {
     let bad = [];

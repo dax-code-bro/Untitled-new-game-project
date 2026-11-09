@@ -140,6 +140,26 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 - [x] Loading screen with in-game art, tips and progress
 - [x] Fewer touch buttons: ◎ interact replaces the car button; map, phone, arsenal, free cam moved to pause
 
+## Phase 1.62 — G13: blood and injuries
+
+The owner: "there's no actual blood in the game; people should get realistic bruises, injuries".
+- [x] Wounds on bodies where they're actually hit (entities/woundfx.js): a bullet hole with the stain
+      spreading (4 to ~13 cm over 40 s) and blood running down the body while they bleed; a cut; a
+      bruise (skin only, purple going green-yellow as it heals); a scrape (cars, falls); a burn
+      (blasts); a bullet a vest stops leaves a bruise. Blood in cloth is a dark wet stain, on skin red
+- [x] No extra draw calls: a person's skin/clothes/shoes materials are copied the first time they're
+      hurt, with up to 8 wounds as uniforms in the bind pose (they stay on the same patch of skin as
+      the body moves); the copies are freed with the person
+- [x] Blood in the world (world/blood.js, 4 draw calls): spatter thrown behind someone shot (on the
+      ground, and on a wall right behind), pools spreading under the dead and the badly hurt, drip
+      trails behind the bleeding (people and you), smears where a car hit someone; fresh blood wet and
+      dark red, drying darker over minutes, thinned by rain
+- [x] The player: wounds on the side a shot came from (fists bruise, knives cut), a drip trail while
+      bleeding, healing over game days (bullet 6, cut 3, bruise 4, scrape 3, burn 8)
+- [x] Settings > Content > "Blood & gore" off: none of it
+- [x] QA: wound where hit, spatter, own materials, bruise, spreading stain, a killing shot's wound and
+      pool, the player's wound and healing, gore off, materials freed
+
 ## Phase 1.61 — Live feed: Claude watches along, and chat (Y)
 
 The owner: a live feed "no matter what it takes", so Claude can watch them play, spot errors and

@@ -91,7 +91,7 @@ longer than the function log's hour.
    how fast, indoors, in a cutscene, dead/arrested, armed and aiming, wanted). Cops AND bystanders take
    cover during robberies and gunfights (behind cars, walls, counters), not just cower in place.
    "Prepared for every combination of scenario": keep a situation matrix and test it.
-2. **G13 Blood and injuries.** Real blood: spatter on ground/walls, pools under the downed and dead,
+2. ~~**G13 Blood and injuries.**~~ (shipped, Phase 1.62) Real blood: spatter on ground/walls, pools under the downed and dead,
    trails from the bleeding; wounds on bodies (bullet holes, cuts, bruises, scrapes from crashes and
    falls) on the player and everyone else, healing over days; the Gore setting turns it off.
 3. **F15 Real workplaces and careers.** Barbershop: walk into the building, talk to the manager: buy

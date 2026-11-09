@@ -16,6 +16,7 @@ import { setupMenu, setupSettingsPanel } from './ui/menu.js';
 import { installRecovery } from './ui/recovery.js';
 import { installWatch } from './core/watch.js';
 import { installSituation } from './systems/situation.js';
+import { installGore } from './systems/gore.js';
 import { buildRoadGraph, CITY, TOWN, regionAt } from './world/layout.js';
 import { Heightmap } from './world/heightmap.js';
 import { createTerrain, makeWorldTextures, worldUniforms } from './world/terrain.js';
@@ -492,6 +493,7 @@ vec3 CustomToneMapping( vec3 color ) {
     if (S.mode === 'car') { damageVehicle(S.vehicle, amount * 0.6, from ? from.x : S.vehicle.pos.x, from ? from.z : S.vehicle.pos.z + 1); player.damage(amount * 0.35); }
     else player.damage(amount);
     S.dmgFlash = Math.min(1, S.dmgFlash + 0.35);
+    game.onPlayerHurt?.(amount, from, pen); // a wound where it came from (systems/gore.js)
   };
   police.onPlayerHit = (amount, from, pen) => hurtPlayer(amount, from, pen);
   const respawn = (at, title, sub, fee) => {
@@ -638,6 +640,7 @@ vec3 CustomToneMapping( vec3 color ) {
   game.situationSys = installSituation(game); // what you're doing right now, for everyone who reacts to you (R1)
   peds.findCover = (p, from) => police.findCover(p, { pos: from }); // bystanders duck behind the same cover the police use
   const worldEvents = installWorldEvents(game);
+  game.gore = installGore(game); // blood on the ground, wounds on bodies (G13)
   game.worldEvents = worldEvents;
   game.audio = audio;
   const demolition = installDemolition(game); // houses burn, the fire department comes, builders rebuild
@@ -1030,6 +1033,7 @@ vec3 CustomToneMapping( vec3 color ) {
     demolition.update(dt);
     wayfinding.update(dt);
     worldEvents.update(dt);
+    game.gore.update(dt);
     details.update(dt);
     career.update(dt);
     if (S.vehicle && S.vehicle.health <= 0 && !S.vehicle.wrecked) { S.vehicle.wrecked = true; hud.toast('The engine is wrecked — get out (F)', 4); }

@@ -118,6 +118,11 @@ the fewest additions next. Be honest in reports about what is and isn't done.
   Anything that walks up to the player, robs them or reacts to them asks `game.situation()`
   (systems/situation.js: pos is the car when driving; `reachable`, `muggable`, speed, indoors, scene,
   armed, wanted), never S.mode/player.pos alone (the on-foot body stays where you got in the car).
+  Blood and wounds (G13): `systems/gore.js` wraps `peds.damage` (a wound is added BEFORE the hit:
+  a killing hit starts the ragdoll) and `game.onPlayerHurt`; wounds live in the person's own material
+  copies (`entities/woundfx.js`, uniforms in the bind pose; outfit materials keep the bind-pose point
+  as `vOfP`, so hooks there must not expect `#include <begin_vertex>`); ground/wall blood is
+  `world/blood.js` (`game.blood.spatter/pool/drop/smear`). Test: `gore-shots.mjs`-style close-ups.
   Bystanders take cover with `peds.panic(pos, r, { cover: true })` (mode 'cover', police findCover).
   The mouse is captured (pointer lock) only while no `.screen` menu is showing (`core/input.js`): with
   it captured, clicks go to the game, and the owner couldn't click a setting on their PC. Headless
