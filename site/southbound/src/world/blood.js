@@ -27,7 +27,10 @@ function atlas() {
   g.restore();
   // pool (0,1): an irregular pool with a soft rim
   g.save(); g.translate(128, 384);
-  for (let i = 0; i < 22; i++) { const a = rnd() * 6.28, d = rnd() * 50; blob(Math.cos(a) * d, Math.sin(a) * d, 40 + rnd() * 40); }
+  const hard = (x, y, r) => { const gr = g.createRadialGradient(x, y, r * 0.8, x, y, r); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill(); };
+  hard(0, 0, 58);
+  for (let i = 0; i < 16; i++) { const a = rnd() * 6.28, d = 30 + rnd() * 45; hard(Math.cos(a) * d, Math.sin(a) * d, 14 + rnd() * 26); }
+  for (let i = 0; i < 10; i++) { const a = rnd() * 6.28, d = 80 + rnd() * 30; hard(Math.cos(a) * d, Math.sin(a) * d, 3 + rnd() * 6); }
   g.restore();
   // smear (1,1): dragged along
   g.save(); g.translate(384, 384);
@@ -39,7 +42,7 @@ function atlas() {
 
 export function createBlood(scene, collision) {
   const tex = atlas();
-  const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, alphaMap: tex, transparent: true, depthWrite: false, roughness: 0.32, metalness: 0, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 });
+  const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, alphaMap: tex, transparent: true, depthWrite: false, roughness: 0.42, metalness: 0, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 });
   mat.name = 'blood';
   const meshes = {}, next = {}, life = {};
   KINDS.forEach((k, i) => {
@@ -53,6 +56,7 @@ export function createBlood(scene, collision) {
   });
   const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _s = new THREE.Vector3(), _p = new THREE.Vector3();
   const FRESH = new THREE.Color(0.26, 0.008, 0.006), DRY = new THREE.Color(0.11, 0.018, 0.014); // (real blood is darker than paint)
+  const POOL = new THREE.Color(0.13, 0.004, 0.003), POOL_DRY = new THREE.Color(0.06, 0.01, 0.008); // thick: near black-red
   const growing = [];
 
   // put one mark down: at p, facing n (the ground or a wall), turned by `spin`, this big
@@ -64,7 +68,7 @@ export function createBlood(scene, collision) {
     _s.set(size * stretch, 1, size);
     _p.copy(p).addScaledVector(n, 0.015);
     _m.compose(_p, _q, _s); M.setMatrixAt(i, _m); M.instanceMatrix.needsUpdate = true;
-    M.setColorAt(i, FRESH); M.instanceColor.needsUpdate = true;
+    M.setColorAt(i, kind === 'pool' ? POOL : FRESH); M.instanceColor.needsUpdate = true;
     life[kind][i] = { age: 0, p: _p.clone(), n: n.clone(), spin, size, stretch };
     return i;
   }
@@ -123,7 +127,7 @@ export function createBlood(scene, collision) {
           const L = life[k][i]; if (!L) continue;
           L.age += step * (1 + rain * 3);
           const dry = Math.min(1, L.age / 240);
-          c.copy(FRESH).lerp(DRY, dry); if (rain > 0) c.multiplyScalar(Math.max(0.35, 1 - L.age / 1800));
+          if (k === 'pool') c.copy(POOL).lerp(POOL_DRY, dry); else c.copy(FRESH).lerp(DRY, dry); if (rain > 0) c.multiplyScalar(Math.max(0.35, 1 - L.age / 1800));
           M.setColorAt(i, c); ch = true;
         }
         if (ch) M.instanceColor.needsUpdate = true;

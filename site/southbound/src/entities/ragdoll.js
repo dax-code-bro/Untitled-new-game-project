@@ -27,6 +27,9 @@ const MIN_ONLY = new Set(['hipL-anL', 'hipR-anR', 'shL-wrL', 'shR-wrR']);
 
 const _v = new THREE.Vector3(), _a = new THREE.Vector3(), _b = new THREE.Vector3(), _q = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _m = new THREE.Matrix4();
 
+// the world's walls for every ragdoll: (x, z, r, y) -> { x, z } pushed out of anything solid (set in main.js)
+export const RAGDOLL_WALLS = { fn: null };
+
 function findBone(root, names) { for (const n of names) { const b = root.getObjectByName(n); if (b) return b; } return null; }
 
 export class Ragdoll {
@@ -125,6 +128,16 @@ export class Ragdoll {
             o.x = p.x - (p.x - o.x) * 0.55; o.z = p.z - (p.z - o.z) * 0.55; // ground friction
             if (o.y < p.y) o.y = p.y + (p.y - o.y) * 0.15; // a small bounce
           }
+        }
+      }
+      // walls: a body thrown against a building stops at it (it used to fall into the wall, G13 found it)
+      if (RAGDOLL_WALLS.fn) for (const n of NAMES) {
+        const p = this.p[n], r = n === 'head' ? 0.11 : n === 'pelvis' || n === 'chest' ? 0.16 : 0.07;
+        const res = RAGDOLL_WALLS.fn(p.x, p.z, r, p.y - r);
+        if (res && (res.x !== p.x || res.z !== p.z)) {
+          const o = this.o[n];
+          p.x = res.x; p.z = res.z;
+          o.x = p.x - (p.x - o.x) * 0.25; o.z = p.z - (p.z - o.z) * 0.25; // the wall takes the speed
         }
       }
     }

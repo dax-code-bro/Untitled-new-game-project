@@ -80,7 +80,7 @@ export function installGore(game) {
         for (const p of peds.list) {
           if (p.poolT != null && p.poolT !== -1) {
             p.poolT -= 0.25;
-            if (p.poolT <= 0) { p.poolT = -1; const at = p.h.ragdoll ? p.h.root.position : p.pos; if (nearCam(at, 120)) blood.pool(at, p.mode === 'dead' ? 1.2 : 0.7, p.mode === 'dead' ? 30 : 60); }
+            if (p.poolT <= 0) { p.poolT = -1; const at = p.h.ragdoll?.p?.pelvis || p.pos; /* (under the hips, wherever the body came to rest) */ if (nearCam(at, 120)) blood.pool(at, p.mode === 'dead' ? 1.2 : 0.7, p.mode === 'dead' ? 30 : 60); }
           }
           if (p.bleed > 0 && p.mode !== 'dead') {
             p.bleed -= 0.25;

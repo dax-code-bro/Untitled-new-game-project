@@ -157,6 +157,9 @@ The owner: "there's no actual blood in the game; people should get realistic bru
 - [x] The player: wounds on the side a shot came from (fists bruise, knives cut), a drip trail while
       bleeding, healing over game days (bullet 6, cut 3, bruise 4, scrape 3, burn 8)
 - [x] Settings > Content > "Blood & gore" off: none of it
+- [x] Found while testing it: a body shot against a building fell into the wall (ragdolls only knew
+      the ground). Ragdolls now stop at walls (entities/ragdoll.js RAGDOLL_WALLS, collision.resolve);
+      pools sit under the hips, darker and with firm edges
 - [x] QA: wound where hit, spatter, own materials, bruise, spreading stain, a killing shot's wound and
       pool, the player's wound and healing, gore off, materials freed
 

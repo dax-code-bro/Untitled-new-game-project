@@ -17,6 +17,7 @@ import { installRecovery } from './ui/recovery.js';
 import { installWatch } from './core/watch.js';
 import { installSituation } from './systems/situation.js';
 import { installGore } from './systems/gore.js';
+import { RAGDOLL_WALLS } from './entities/ragdoll.js';
 import { buildRoadGraph, CITY, TOWN, regionAt } from './world/layout.js';
 import { Heightmap } from './world/heightmap.js';
 import { createTerrain, makeWorldTextures, worldUniforms } from './world/terrain.js';
@@ -641,6 +642,7 @@ vec3 CustomToneMapping( vec3 color ) {
   peds.findCover = (p, from) => police.findCover(p, { pos: from }); // bystanders duck behind the same cover the police use
   const worldEvents = installWorldEvents(game);
   game.gore = installGore(game); // blood on the ground, wounds on bodies (G13)
+  RAGDOLL_WALLS.fn = (x, z, r, y) => collision.resolve(x, z, r, y, 0.35); // bodies stop at walls
   game.worldEvents = worldEvents;
   game.audio = audio;
   const demolition = installDemolition(game); // houses burn, the fire department comes, builders rebuild
