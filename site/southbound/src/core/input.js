@@ -16,6 +16,7 @@ export class Input {
 
     addEventListener('keydown', (e) => {
       if (e.repeat) return;
+      if (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return; // typing (the chat box to Claude), not playing
       this.keys.add(e.code);
       this.pressed.add(e.code);
       if (['Space', 'ArrowUp', 'ArrowDown', 'Tab'].includes(e.code)) e.preventDefault();

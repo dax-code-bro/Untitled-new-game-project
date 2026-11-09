@@ -406,7 +406,7 @@ async (opts) => {
     try { SB.skipRender(true); for (let i = 0; i < 20; i++) SB.step(1, 1 / 30); } catch (e) { threw = e; } finally { peds.think = think; SB.skipRender(false); }
     ok(!threw, 'the frame goes on (' + (threw && threw.message) + ')');
     ok(a.G && Array.isArray(a.target) && Number.isFinite(a.target[0]) && finite(a.pos), 'the dropped-off passenger picks a corner and walks to it');
-    ok(b.G && (b.mode === 'return' || b.mode === 'walk' || b.mode === 'idle' || b.mode === 'dead') && finite(b.pos), 'someone with no home block runs, then heads back to the street (' + b.mode + (b.mode === 'dead' ? ': hit by traffic on the way' : '') + ')');
+    ok(b.G && ['return', 'walk', 'idle', 'dead', 'flee', 'cover', 'cower', 'phone', 'freeze'].includes(b.mode) && finite(b.pos), /* (something scary nearby can send them running again: R1) */ 'someone with no home block runs, then heads back to the street (' + b.mode + (b.mode === 'dead' ? ': hit by traffic on the way' : '') + ')');
     ok(!peds.list.includes(c), 'a person whose thinking keeps failing is let go, not the game');
     for (const p of [a, b]) { const k = peds.list.indexOf(p); if (k >= 0) { G.scene.remove(p.h.root); p.h.dispose(); peds.list.splice(k, 1); } }
   });

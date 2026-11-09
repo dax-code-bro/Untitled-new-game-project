@@ -9,13 +9,21 @@
 // can leave you a note, which shows up in the game ("Claude: ...").
 // When it's off nothing is sent; the error box still offers "Send to Claude" for that one error.
 // Test browsers (navigator.webdriver) never send anything.
+//
+// The live feed (api/sb-live.js; Claude reads it with tools/southbound/live.mjs): while watching is on,
+// a small update every 2 s (where you are, how high above the ground, which way you face, on foot or
+// in what and how fast, health, police, money, weapon, frame rate, who's near, the game's messages) and
+// a small picture every 5 s, so Claude can watch along a few seconds behind, spot what goes wrong
+// (falling through the ground, a car on its roof, a crash, a frame-rate drop, an error) and chat:
+// press Y (or /) to message Claude; Claude's replies show up at the top of the screen.
 const API = '/api/sb-watch';
+const LIVE = '/api/sb-live';
 const PUBLIC = 'https://untitled-new-game-project.vercel.app';
 const EVERY = 180;      // seconds of play between reports
 const SAMPLE = 10;      // seconds between state samples inside a report
 const SOON = 45;        // a highlight (death, chase) gets its report no sooner than this after the last one
 
-export function installWatch({ settings, saveSettings, getState, hud, automated }) {
+export function installWatch({ settings, saveSettings, getState, hud, automated, pause = null, isFrozen = () => false }) {
   const base = /\.vercel\.app$/.test(location.hostname) ? '' : PUBLIC; // the desktop app and local copies post to the site
   const session = Math.random().toString(36).slice(2, 10);
   const t0 = Date.now();
@@ -26,7 +34,12 @@ export function installWatch({ settings, saveSettings, getState, hud, automated 
   try { if (/[?&]watch=1\b/.test(location.search) && !settings.claudeWatch) { settings.claudeWatch = true; saveSettings(settings); } } catch (e) { /* */ }
 
   const now = () => +((Date.now() - t0) / 1000).toFixed(1);
-  const event = (kind, text) => { events.push({ t: now(), kind, text: String(text).slice(0, 240) }); if (events.length > 80) events.shift(); };
+  const liveQ = [], says = [], ackQ = [], shownNotes = new Set();
+  const event = (kind, text) => {
+    const e = { t: now(), kind, text: String(text).slice(0, 240) };
+    events.push(e); if (events.length > 80) events.shift();
+    liveQ.push(e); if (liveQ.length > 40) liveQ.shift();
+  };
   const state = () => { try { return getState(); } catch (e) { return { stateError: String(e && e.message) }; } };
 
   // what the game tells you (toasts) goes into the timeline
@@ -35,22 +48,24 @@ export function installWatch({ settings, saveSettings, getState, hud, automated 
 
   // a picture of the frame: copied right after it's drawn (the drawing buffer is only valid then),
   // shrunk and turned into a JPEG off the main thread, so taking one never holds up a frame
+  let shotW = 640, shotQ = 0.62;
   function grab(src) {
     const want = shotWanted; shotWanted = null;
     if (!want) return;
-    const w = 640, h = Math.max(1, Math.round(640 * src.height / Math.max(1, src.width)));
+    const w = shotW, h = Math.max(1, Math.round(w * src.height / Math.max(1, src.width))), q = shotQ;
     let copy;
     try { copy = createImageBitmap(src, { resizeWidth: w, resizeHeight: h, resizeQuality: 'medium' }); } catch (e) { want(null); return; }
     copy.then((bmp) => {
       const c = typeof OffscreenCanvas === 'function' ? new OffscreenCanvas(w, h) : Object.assign(document.createElement('canvas'), { width: w, height: h });
       c.getContext('2d').drawImage(bmp, 0, 0); bmp.close?.();
-      return c.convertToBlob ? c.convertToBlob({ type: 'image/jpeg', quality: 0.62 }) : new Promise((r) => c.toBlob(r, 'image/jpeg', 0.62));
+      return c.convertToBlob ? c.convertToBlob({ type: 'image/jpeg', quality: q }) : new Promise((r) => c.toBlob(r, 'image/jpeg', q));
     }).then((b) => (b ? new Promise((r) => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.onerror = () => r(null); fr.readAsDataURL(b); }) : null))
       .then((url) => want(url), () => want(null));
   }
   // the next frame's picture (or null if none comes within a few seconds)
-  const shot = () => new Promise((res) => {
+  const shot = (w = 640, q = 0.62) => new Promise((res) => {
     let done = false; const finish = (v) => { if (!done) { done = true; res(v); } };
+    shotW = w; shotQ = q;
     shotWanted = finish;
     setTimeout(() => { if (shotWanted === finish) shotWanted = null; finish(null); }, 6000);
   });
@@ -113,8 +128,60 @@ export function installWatch({ settings, saveSettings, getState, hud, automated 
     } catch (e) { /* offline */ }
   }
 
+  // ---- the live feed
+  const liveId = Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, '0')).join('');
+  let seq = 0, liveT = 3, frameT = 0, liveBusy = false, hinted = false, lastInst = null;
+  async function sendLive(paused, urgent = false) {
+    if (liveBusy || automated) return;
+    liveBusy = true;
+    try {
+      seq++;
+      const st = state();
+      const body = { game: 'southbound', live: liveId, session, seq, ping: { ...st, paused: !!paused, played: now() }, events: liveQ.splice(0) };
+      if (says.length) body.say = says.splice(0);
+      if (ackQ.length) body.acks = ackQ.splice(0);
+      if (!paused && (frameT <= 0 || urgent)) { frameT = 5; const f = await shot(480, 0.5); if (f) body.frame = f; }
+      const r = await fetch(base + LIVE, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      if (r.ok) {
+        const j = await r.json(); lastInst = j.inst;
+        for (const n of j.notes || []) { if (!shownNotes.has(n.id)) { shownNotes.add(n.id); showNote(n.text); } ackQ.push(n.id); }
+      }
+    } catch (e) { /* offline: the next one tries again */ } finally { liveBusy = false; }
+  }
+
+  // ---- the chat box: Y (or /) to message Claude
+  let chat = null;
+  function closeChat() { if (!chat) return; chat.remove(); chat = null; pause?.(false); }
+  function openChat() {
+    if (chat || !on() || isFrozen() || document.querySelector('.screen.show')) return;
+    pause?.(true); if (document.pointerLockElement) document.exitPointerLock();
+    chat = document.createElement('div');
+    chat.id = 'claude-chat';
+    chat.style.cssText = 'position:fixed;left:50%;bottom:16%;transform:translateX(-50%);z-index:61;width:min(560px,92vw);padding:10px 12px;border-radius:12px;background:rgba(20,22,26,.92);border:1px solid rgba(217,119,87,.6);box-shadow:0 8px 28px rgba(0,0,0,.5);font:14px Inter,system-ui,sans-serif;color:#f1ece4';
+    chat.innerHTML = '<div style="margin-bottom:6px"><b style="color:#e3926f">Message Claude</b> <span style="opacity:.7">· Enter to send · Esc to cancel</span></div>';
+    const input = document.createElement('input');
+    input.maxLength = 400; input.placeholder = 'What do you like, what looks wrong, what should be added...';
+    input.style.cssText = 'width:100%;box-sizing:border-box;padding:9px 10px;border-radius:8px;border:1px solid #555;background:#111;color:#fff;font:15px Inter,system-ui,sans-serif;outline:none';
+    input.onkeydown = (e) => {
+      e.stopPropagation();
+      if (e.key === 'Enter') { const t = input.value.trim(); closeChat(); if (t) { says.push(t); event('owner', t); toast('Sent to Claude', 1.6); sendLive(false, true); } }
+      else if (e.key === 'Escape') closeChat();
+    };
+    chat.appendChild(input); document.body.appendChild(chat);
+    setTimeout(() => input.focus(), 0);
+  }
+  addEventListener('keydown', (e) => {
+    if (!on() || chat || e.repeat || automated) return;
+    if (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+    if (e.code === 'KeyY' || e.code === 'Slash') { e.preventDefault(); openChat(); }
+  });
+
   return {
     get on() { return on(); },
+    get liveId() { return liveId; },
+    get liveInst() { return lastInst; },
+    say(text) { says.push(String(text)); event('owner', text); }, // (tests)
+    openChat, closeChat,
     session,
     grab,
     get wantsShot() { return !!shotWanted; },
@@ -127,6 +194,9 @@ export function installWatch({ settings, saveSettings, getState, hud, automated 
     update(dt, paused) {
       if (!on() || document.hidden) return;
       if ((inboxT -= dt) <= 0) { inboxT = 90; checkInbox(); }
+      frameT -= dt;
+      if ((liveT -= dt) <= 0) { liveT = paused ? 5 : 2; sendLive(paused); }
+      if (!hinted && seq > 0) { hinted = true; toast('Claude is watching · press Y to message Claude', 4); }
       if (paused) return;
       playT += dt; sinceReport += dt;
       if ((sampleT -= dt) <= 0) {

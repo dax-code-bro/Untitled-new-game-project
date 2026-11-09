@@ -1479,11 +1479,19 @@ vec3 CustomToneMapping( vec3 color ) {
 
   // "Let Claude watch me play" (Settings > Display; off unless the player turns it on): errors and a
   // few-minutely report of what's going on, with a small screenshot, to the game's own server
-  game.watch = window.__sbWatch = installWatch({ settings, saveSettings, hud, automated: AUTOMATED, getState: () => {
+  game.watch = window.__sbWatch = installWatch({ settings, saveSettings, hud, automated: AUTOMATED, pause: game.pause, isFrozen: () => !!S.frozen, getState: () => {
     const run = game.missions?.active;
+    // for spotting physical errors on the live feed: how far above the ground, which way you and the
+    // camera face, whether the car is on its roof, who's around
+    const v = S.vehicle, at = v ? v.pos : player.pos;
+    const ground = S.indoors ? null : +collision.surface(at.x, at.z, at.y + 1.5).toFixed(2);
+    let near = 0, cops = 0; for (const q of peds.list) { if (q.mode === 'dead') continue; const d = Math.hypot(q.pos.x - at.x, q.pos.z - at.z); if (d < 30) near++; if (q.role === 'cop' && d < 80) cops++; }
+    const cars = traffic.cars.filter((c) => Math.hypot(c.v.pos.x - at.x, c.v.pos.z - at.z) < 50).length;
+    const live = { y: +at.y.toFixed(2), ground, yaw: +((v ? v.heading : player.heading) || 0).toFixed(2), cam: [+rig.yaw.toFixed(2), +rig.pitch.toFixed(2)],
+      up: v ? +v.group.matrixWorld.elements[5].toFixed(2) : null, near: { people: near, cops, cars, copCars: police.cars.length } };
     return { ...api.state, vehicle: S.vehicle ? S.vehicle.type : null, wanted: police.wanted, health: Math.round(player.health), armor: Math.round(player.armor || 0),
       money: Math.round(S.money), weapon: combat.drawn ? combat.weapon : null, indoors: !!S.indoors, dead: S.dead > 0 && !S.cutscene, cutscene: !!S.cutscene, paused: !!S.paused, /* (cutscenes and arrests hold the death timer to freeze your controls) */
-      mission: run ? (run.m?.title || run.m?.name || run.m?.id || '?') : null, weather: weather.kind, day: sky.day, cpuMs: +(S.cpuMs || 0).toFixed(1), gpu: GPU_NAME, idleCard: CARD, res: settings.resolution, drawing: [renderer.domElement.width, renderer.domElement.height] };
+      mission: run ? (run.m?.title || run.m?.name || run.m?.id || '?') : null, weather: weather.kind, day: sky.day, cpuMs: +(S.cpuMs || 0).toFixed(1), gpu: GPU_NAME, idleCard: CARD, res: settings.resolution, drawing: [renderer.domElement.width, renderer.domElement.height], ...live };
   } });
   addEventListener('pagehide', () => game.watch.flush());
   // a saved game: back within 20 m of where you saved, in the middle of something ordinary
