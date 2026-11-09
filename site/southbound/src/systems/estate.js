@@ -53,6 +53,11 @@ export function installEstate(game) {
   }
   const propByBuilding = new Map(props.map((p) => [p.door.i, p]));
   const owned = (p) => P.properties.includes(p.id);
+  // buildings another system runs (systems/workplaces.js: the barbershops, the courier depot, every
+  // employer's office): their own kind, hours, furniture and people. spec: { kind, name, open(),
+  // furnish(ctx), enter(ctx), leave(inside) }
+  const special = new Map();
+  const enterHooks = [];
 
   // ---------------- interiors ----------------
   const built = new Map();
@@ -85,11 +90,12 @@ export function installEstate(game) {
   };
 
   // what a building is inside (same dice as the interior builder)
-  const kindOf = (d) => { const r = rng(d.i * 31 + 7), a = r(), c = r(); return { 4: 'home', 2: a < 0.5 ? 'home' : 'apartment', 5: c < 0.35 ? 'bar' : 'store', 3: 'warehouse', 1: 'office', 0: 'office' }[d.b.style] || 'home'; };
+  const kindOf = (d) => { if (special.has(d.i)) return special.get(d.i).kind; const r = rng(d.i * 31 + 7), a = r(), c = r(); return { 4: 'home', 2: a < 0.5 ? 'home' : 'apartment', 5: c < 0.35 ? 'bar' : 'store', 3: 'warehouse', 1: 'office', 0: 'office' }[d.b.style] || 'home'; };
   // Is this door open right now? Homes are mostly locked; shops keep hours.
   const lockState = (d, p) => {
     if (p && owned(p)) return 'open';
     if (d.broken > 0) return 'open';
+    if (special.has(d.i)) return special.get(d.i).open() ? 'open' : 'locked';
     const h = game.sky.hour, k = kindOf(d), dice = rng(d.i * 131 + 3)();
     if (p && h >= 9 && h < 17) return 'open'; // for sale: open for viewings in the daytime
     if (k === 'store') return h >= 7 && h < 23 ? 'open' : 'locked';
@@ -106,7 +112,8 @@ export function installEstate(game) {
   function buildInterior(d) {
     const b = d.b, o = IO(d.i), r = rng(d.i * 31 + 7);
     const kind = kindOf(d); r(); r(); // keep the furniture dice where they were
-    const W = Math.max(9, Math.min(b.w - 1, kind === 'warehouse' ? 26 : 18)), D = Math.max(8, Math.min(b.d - 1, kind === 'warehouse' ? 22 : 14)), H = kind === 'warehouse' ? 7 : 3.2;
+    const sp = special.get(d.i); // (a workplace sets its own room size)
+    const W = sp?.size ? sp.size[0] : Math.max(9, Math.min(b.w - 1, kind === 'warehouse' ? 26 : 18)), D = sp?.size ? sp.size[1] : Math.max(8, Math.min(b.d - 1, kind === 'warehouse' ? 22 : 14)), H = kind === 'warehouse' ? 7 : 3.2;
     const g = new THREE.Group(); g.position.copy(o);
     const wallC = [0xeeebe6, 0xd6dce0, 0xe6e2da, 0xc6d1c4, 0xdcd6d0, 0xf4f3f0][Math.floor(r() * 6)]; // neutral paints (warm beige + amber bulbs read as yellow-brown)
     const floorC = kind === 'warehouse' ? 0x6d6d68 : kind === 'office' ? 0x4a4f55 : [0x7a5434, 0x8c6a46, 0x5c3f28, 0xb8b2a4][Math.floor(r() * 4)];
@@ -150,7 +157,8 @@ export function installEstate(game) {
     const F = (w, h, dd, x, z, c, y = 0, solid = true, rough = 0.7) => { const m = boxAt(g, w, h, dd, x, y, z, M(c, rough), solid, o); m.userData.surf = 'wood'; return m; };
     const pick = (arr) => arr[Math.floor(r() * arr.length)];
     const plant = () => QH(pick(['Houseplant_1', 'Houseplant_3', 'Houseplant_5', 'Houseplant_7']));
-    if (kind === 'home' || kind === 'apartment') {
+    if (sp) sp.furnish({ d, g, o, W, D, H, r, put, F, M, boxAt, texMat, QH, K, pick, plant, collision, wallM, floorM });
+    else if (kind === 'home' || kind === 'apartment') {
       put(QH(pick(['Carpet_1', 'Carpet_2', 'Carpet_Round'])), 3.2, -W / 4, -D / 2 + 2.6, 0, 'max', false);
       put(r() < 0.5 ? K('GlamVelvetSofa') : K('SheenWoodLeatherSofa'), 2.3, -W / 4, -D / 2 + 1.0, 0);
       put(QH('Table_RoundSmall'), 0.9, -W / 4, -D / 2 + 2.5, 0);
@@ -270,6 +278,7 @@ export function installEstate(game) {
     if (!it) { it = buildInterior(d); built.set(d.i, it); }
     scene.add(it.g);
     inside = { d, it };
+    const sp = special.get(d.i);
     game.S.indoors = inside; game.weather.indoors = true;
     player.pos.set(it.o.x, it.o.y + 0.05, it.o.z + it.D / 2 - 1.2);
     player.vel.set(0, 0, 0);
@@ -287,10 +296,13 @@ export function installEstate(game) {
       } }));
     if (p && owned(p)) insidePoints.push(interact.add({ x: it.o.x + 2, z: it.o.z, y: it.o.y, r: 1.3, label: () => `${keyHint(game)} change clothes`, color: 0x9fc4c0, use: () => game.openWardrobe?.() }));
     insidePoints.push(interact.add({ x: it.o.x + 1.4, z: it.o.z + it.D / 2 - 0.7, y: it.o.y, r: 0.9, label: () => `${keyHint(game)} pull the fire alarm`, color: 0xff4040, use: () => game.fireAlarm?.(inside) }));
-    hud.toast(`${p ? p.name : ['Home', 'Apartment', 'Office', 'Store', 'Bar', 'Warehouse'][['home', 'apartment', 'office', 'store', 'bar', 'warehouse'].indexOf(it.kind)]}`, 2);
+    hud.toast(`${sp ? sp.name : p ? p.name : ['Home', 'Apartment', 'Office', 'Store', 'Bar', 'Warehouse'][['home', 'apartment', 'office', 'store', 'bar', 'warehouse'].indexOf(it.kind)]}`, 2);
     // someone working the counter in an open shop or bar (one of the residents who works there, if
     // their shift's on); they can be held up like any store clerk (systems/robbery.js)
-    if ((it.kind === 'store' || it.kind === 'bar') && !(p && owned(p)) && lockState(d, p) === 'open') placeClerk(d, it);
+    const point = (pt) => { const q = interact.add({ y: it.o.y, ...pt }); insidePoints.push(q); return q; };
+    if (sp) { try { sp.enter?.({ d, it, point }); } catch (e) { console.error('[estate] ' + (e && e.message), e); } }
+    else if ((it.kind === 'store' || it.kind === 'bar') && !(p && owned(p)) && lockState(d, p) === 'open') placeClerk(d, it);
+    for (const f of enterHooks) f({ d, it, p, owned: !!(p && owned(p)), point });
   }
   // a locked door: knock, kick it in, or leave it
   function tryDoor(d, p) {
@@ -382,6 +394,7 @@ export function installEstate(game) {
   function leave() {
     if (!inside) return;
     dropClerk();
+    if (special.has(inside.d.i)) { try { special.get(inside.d.i).leave?.(inside); } catch (e) { console.error('[estate] ' + (e && e.message), e); } }
     const { d, it } = inside;
     scene.remove(it.g);
     for (const p of insidePoints) interact.remove(p);
@@ -560,7 +573,8 @@ export function installEstate(game) {
   if (P.home) { const p = props.find((x) => x.id === P.home); if (p) game.teleport(p.door.x + p.door.nx * 1.5, p.door.z + p.door.nz * 1.5, Math.atan2(p.door.nx, p.door.nz)); }
 
   return {
-    props, doors, realtor, enter, leave, kindOf, someoneHome, get inside() { return inside; },
+    props, doors, realtor, enter, leave, kindOf, someoneHome, lockState, get inside() { return inside; },
+    claim: (i, spec) => special.set(i, spec), special, onEnter: (f) => enterHooks.push(f), isProperty: (i) => propByBuilding.has(i),
     update(dt = 0) {
       updateOccupant(dt);
       walkIntoDoors(dt);

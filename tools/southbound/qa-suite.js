@@ -182,9 +182,9 @@ async (opts) => {
     for (const j of G.jobs.JOBS) {
       const pt = G.interact.points.find((p) => typeof p.label === 'function' && p.label().includes(j.name));
       if (!pt) { report.fail++; report.errors.push('FAIL no job board for ' + j.name); continue; }
-      pt.use();
+      G.jobs.start(j.id); // (the board itself opens a talk with the manager: systems/workplaces.js)
       G.jobs.update(1 / 30);
-      if (G.jobs.active) pt.use(); // quit
+      if (G.jobs.active) pt.use(); // the board quits an active shift
       if (G.vehicle()) SB.exitCar();
       ok(!G.jobs.active, `job ${j.id} starts and quits cleanly`);
     }
@@ -541,6 +541,114 @@ async (opts) => {
     for (const q of [a, d, e]) { const k = G.peds.list.indexOf(q); if (k >= 0) { G.scene.remove(q.h.root); q.h.dispose(); G.peds.list.splice(k, 1); } }
     ok(disposed === mats.length, 'the own materials of a wounded person are freed when they go (' + disposed + '/' + mats.length + ')');
     SB.skipRender(false);
+  });
+
+  // F15: every job has an employer: a building (or a site office) and a manager; you get hired, get
+  // a schedule, clock in (late = a warning), no-shows and walking off are warnings, three and you're
+  // fired; good shifts get you promoted; the barbershop is a real shop you can work in
+  await run('workplaces (hire, shifts, warnings, fired, promoted, the barbershop)', async () => {
+    const W = G.work, P = G.career.p, now = () => G.sky.day * 24 + G.sky.hour;
+    if (G.S.indoors && G.estate) G.estate.leave();
+    if (G.S.mode !== 'foot') G.exitVehicle();
+    if (G.jobs.active) G.jobs.start(G.jobs.active.def.id);
+    SB.setWanted(0); G.combat.holstered = true; if (P.grime) { P.grime.blood = 0; P.grime.dirt = 0; } G.player.health = 100;
+    for (let i = 0; i < 3 && !W.ready; i++) SB.step(1, 1 / 30);
+    ok(W.ready, 'the employers are set up');
+    const E = [...W.employers.values()];
+    ok(E.length === G.jobs.JOBS.length + 2, 'an employer for every job and both barbershops (' + E.length + ')');
+    ok(E.every((e) => e.door || e.outdoor), 'every employer has a building or a manager outside (' + E.filter((e) => !e.door && !e.outdoor).map((e) => e.id).join(',') + ')');
+    ok(E.filter((e) => e.door).length >= 10, 'town and city employers have a building you walk into (' + E.filter((e) => e.door).length + ')');
+    const badBoard = G.jobs.JOBS.find((j) => { const l = j.board?.label?.() || ''; return !l.includes(j.name) || !/talk to/.test(l); });
+    ok(!badBoard, 'every job board is a manager to talk to' + (badBoard ? ' (' + badBoard.id + ': ' + badBoard.board?.label?.() + ')' : ''));
+    W.talk('taxi');
+    const dl = document.querySelector('.sbdialog.show');
+    ok(dl && /Ask for a job/.test(dl.textContent), 'talking to the dispatcher offers a job');
+    dl?.querySelector('button:last-child')?.click();
+    // hired: a schedule; on time; walking off; late; a finished shift; a no-show = the third warning
+    for (const id of ['taxi', 'bus', 'parcel', 'barber_city']) delete P.employ[id];
+    const e = W.hire('taxi', false);
+    ok(e && e.rank === 0, 'hired as a ' + (e ? W.employers.get('taxi').ladder[e.rank] : '?'));
+    ok(W.upcoming('taxi').length >= 2, 'with shifts on the roster (' + W.upcoming('taxi').length + ')');
+    e.sched = [{ t: now() + 0.1, st: 'due' }];
+    ok(!!W.current('taxi'), 'a shift starting soon can be clocked into');
+    W.clockIn('taxi');
+    ok(e.warn === 0 && G.jobs.active && G.jobs.active.def.id === 'taxi', 'clocking in on time starts the shift (no warning)');
+    G.jobs.start('taxi'); if (G.vehicle()) SB.exitCar();
+    ok(e.warn === 1, 'walking off a scheduled shift is a warning (' + e.warn + ')');
+    e.sched = [{ t: now() - 0.6, st: 'due' }];
+    W.clockIn('taxi');
+    ok(e.warn === 2, 'clocking in 36 minutes late is a warning (' + e.warn + ')');
+    W.shiftEnded('taxi', true, { rating: 5 }); if (G.jobs.active) G.jobs.start('taxi'); if (G.vehicle()) SB.exitCar();
+    ok(e.shifts === 1, 'a finished shift counts');
+    e.sched = [{ t: now() - 2.5, st: 'due' }];
+    W.tick();
+    ok(!W.emp('taxi'), 'a no-show is the third warning: fired');
+    ok(/you were fired/.test(G.jobs.JOBS.find((j) => j.id === 'taxi').board.label()), 'the board knows');
+    ok(!W.hire('taxi', false), 'and they won\'t take you back this week');
+    delete P.employ.taxi;
+    // a clean record and good shifts: promoted, paid more
+    const p = W.hire('bus', false); p.sched = [];
+    for (let k = 0; k < 2; k++) { W.begin('bus'); W.shiftEnded('bus', true, { rating: 5 }); if (G.jobs.active) G.jobs.start('bus'); if (G.vehicle()) SB.exitCar(); }
+    ok(p.rank === 1, 'two good shifts with a clean record: promoted to ' + W.employers.get('bus').ladder[p.rank]);
+    ok(W.payMult('bus') > 1, 'and paid more (x' + W.payMult('bus') + ')');
+    P.grime.blood = 0.6; const went = W.begin('bus'); P.grime.blood = 0;
+    ok(!went && !G.jobs.active, 'turning up covered in blood: sent to clean up');
+    p.warn = 0; p.missedRow = 0; p.sched = [{ t: now() - 30, st: 'due' }, { t: now() - 3, st: 'due' }]; W.tick();
+    ok(!W.emp('bus'), 'two no-shows in a row: fired on the spot');
+    delete P.employ.bus;
+    const c = W.hire('parcel', false); c.sched = [{ t: now() + 5, st: 'due' }, { t: now() + 40, st: 'due' }, { t: now() + 60, st: 'due' }];
+    W.callSick('parcel');
+    ok(c.sched[0].st === 'sick' && c.warn === 0, 'calling in sick once is fine');
+    c.sched.unshift({ t: now() + 7, st: 'due' }); W.callSick('parcel');
+    ok(c.warn === 1, 'twice in a week is a warning');
+    delete P.employ.parcel;
+    // the barbershop: a real shop; a trainee's shift
+    const B = W.employers.get('barber_city');
+    ok(B && B.door, 'the barbershop is a real building');
+    const b = W.hire('barber_city', false); b.sched = [];
+    const m0 = G.S.money;
+    W.begin('barber_city');
+    for (let i = 0; i < 150 && !(W.shop && W.shop.shift); i++) { await new Promise((r) => setTimeout(r, 100)); SB.step(1, 1 / 30); }
+    ok(G.S.indoors && G.estate.inside && G.estate.inside.it.kind === 'barber', 'you walk into the barbershop');
+    ok(W.inside && W.inside.boss && W.inside.people.length >= 3, 'the manager is at the till, a barber is cutting, someone is waiting (' + (W.inside ? W.inside.people.length : 0) + ' people)');
+    ok(W.shop && W.shop.shift, 'the shift starts');
+    const done = [];
+    for (let n = 0; n < 8 && W.shop?.shift; n++) {
+      const sh = W.shop.shift;
+      for (let i = 0; i < 120 && !sh.task; i++) SB.step(1, 1 / 30);
+      if (!sh.task) break;
+      done.push(sh.task.kind);
+      if (sh.task.kind === 'till') { W.complete(); continue; }
+      sh.task.phase = 'work'; sh.task.t = 0.05; G.player.pos.x = sh.task.at.x; G.player.pos.z = sh.task.at.z;
+      for (let i = 0; i < 6; i++) SB.step(1, 1 / 30);
+    }
+    ok(!W.shop?.shift && b.shifts === 1, 'a trainee shift done: ' + done.join(', '));
+    ok(G.S.money > m0, 'paid at the end of the shift (+' + (G.S.money - m0) + ')');
+    // a barber's cut: the wrong style makes the customer angry and it's on the house
+    b.rank = 2; W.begin('barber_city');
+    const sh2 = W.shop?.shift;
+    if (sh2) {
+      for (let i = 0; i < 300 && (!sh2.task || sh2.task.kind !== 'cut'); i++) { if (sh2.task && sh2.task.kind !== 'cut') { if (sh2.task.kind === 'till') W.complete(); else { sh2.task.phase = 'work'; sh2.task.t = 0.01; G.player.pos.x = sh2.task.at.x; G.player.pos.z = sh2.task.at.z; } } SB.step(1, 1 / 30); }
+      if (sh2.task && sh2.task.kind === 'cut') {
+        W.cutDialog();
+        const box = document.querySelector('.sbdialog.show');
+        const wrongBtn = [...(box ? box.querySelectorAll('button') : [])].find((x) => !x.textContent.includes(sh2.task.want.label) && !/Sorry/.test(x.textContent));
+        const r0 = sh2.rating; wrongBtn?.click();
+        ok(sh2.rating < r0 && sh2.task.comped, 'the wrong cut: an angry customer, on the house');
+      } else ok(true, '(no cut came up)');
+      // walking out mid-shift (a scheduled one) is a warning
+      W.shop.shift.s = { t: now(), st: 'in' }; W.shift.s = W.shop.shift.s;
+      G.estate.leave();
+      ok(b.warn === 1 && !W.shop, 'walking out mid-shift is a warning (' + b.warn + ')');
+    } else ok(false, 'a second barbershop shift starts');
+    if (G.S.indoors) G.estate.leave();
+    delete P.employ.barber_city;
+    // the phone's Work tab
+    const ph = G.phoneSys.phone;
+    ok(ph.cfg.tabs.some((t) => t.k === 'work'), 'the phone has a Work tab');
+    ph.show('work'); ph.render(); ph.close();
+    if (G.jobs.active) G.jobs.start(G.jobs.active.def.id);
+    if (G.vehicle()) SB.exitCar();
   });
 
   // NaN sweep over everything in the scene

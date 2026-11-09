@@ -9,7 +9,7 @@ feature with the fewest additions next. Batches ship as F# (features) alternatin
 Counts are additions made in the "add to every feature" programme (F1 onwards, plus the S3/S4
 side batches where they extended a feature). The original build of each feature isn't counted.
 
-## Status (last updated: Phase 1.55, after the owner's list: guns in first person, saves, defence, cover, unique tools)
+## Status (last updated: Phase 1.63, F15 real workplaces and careers)
 
 | # | Feature | Files | Added | Batches | Status |
 |---|---------|-------|------:|---------|--------|
@@ -22,7 +22,7 @@ side batches where they extended a feature). The original build of each feature 
 | 2 | Police & law | police.js, policeplus.js, law.js | 14 | S3, F4, P3 | 16 to go |
 | 3 | Phone | phone.js, phoneplus.js | 10 | F6 | 20 to go |
 | 4 | Residents / people | population.js, residents.js, peds.js | 8 | S3, S4 | 22 to go |
-| 5 | Jobs | jobs.js | 8 | F7 | 22 to go |
+| 5 | Jobs & workplaces | jobs.js, workplaces.js | 38 | F7, F15 | **done (38)** |
 | 6 | Driving & cars | driving.js, vehicle.js | 8 | F1, G4, P2 | 22 to go |
 | 7 | Fishing | fishing.js | 7 | F5 | 23 to go |
 | 8 | Property | estate.js, propertyplus.js | 8 | S2, F8 | 22 to go |
@@ -94,7 +94,7 @@ longer than the function log's hour.
 2. ~~**G13 Blood and injuries.**~~ (shipped, Phase 1.62) Real blood: spatter on ground/walls, pools under the downed and dead,
    trails from the bleeding; wounds on bodies (bullet holes, cuts, bruises, scrapes from crashes and
    falls) on the player and everyone else, healing over days; the Gore setting turns it off.
-3. **F15 Real workplaces and careers.** Barbershop: walk into the building, talk to the manager: buy
+3. ~~**F15 Real workplaces and careers.**~~ (shipped, Phase 1.63; bikes to ride are still missing) Barbershop: walk into the building, talk to the manager: buy
    a cut, or work as a trainee and rise through the ranks; shifts you must turn up to (late = warning,
    missed = fired). Then the same for every job (bike messenger depot with a dispatcher, etc.).
 4. **F16/G14 Destruction and rebuilding.** Realistic destruction physics for everything; blow up a

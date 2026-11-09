@@ -124,6 +124,12 @@ the fewest additions next. Be honest in reports about what is and isn't done.
   as `vOfP`, so hooks there must not expect `#include <begin_vertex>`); ground/wall blood is
   `world/blood.js` (`game.blood.spatter/pool/drop/smear`). Test: `gore-shots.mjs`-style close-ups.
   Bystanders take cover with `peds.panic(pos, r, { cover: true })` (mode 'cover', police findCover).
+  Jobs have employers (F15, `systems/workplaces.js`, `game.work`): a job board's F opens a talk with the
+  manager (a dialog that pauses the game), so tests start shifts with `G.jobs.start(id)` /
+  `G.work.begin(id)`; `jobs.start(id, opts)` and `finish` report back through `game.work.shiftEnded`.
+  A system can take over a building with `estate.claim(i, { kind, name, size, open(), furnish(ctx),
+  enter(ctx), leave() })` (the barbershops, the courier depot, the offices); `estate.onEnter(fn)` adds
+  points to any interior. Records live in `P.employ` (schedule, warnings, rank), `P.kit`, `P.ownBiz`.
   The mouse is captured (pointer lock) only while no `.screen` menu is showing (`core/input.js`): with
   it captured, clicks go to the game, and the owner couldn't click a setting on their PC. Headless
   Playwright: a lock taken just before Esc stays on unless that guard is there; use `{ force: true }`

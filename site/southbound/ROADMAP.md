@@ -140,6 +140,55 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 - [x] Loading screen with in-game art, tips and progress
 - [x] Fewer touch buttons: ◎ interact replaces the car button; map, phone, arsenal, free cam moved to pause
 
+## Phase 1.63 — F15: real workplaces and careers
+
+The owner: "for the barbershop there's no building; you should go in, talk to the manager, buy something
+or work as a trainee and work your way up, and manage going to work so you don't get fired. Same for
+the bike messenger and every job." (systems/workplaces.js)
+- [x] An employer for every one of the 27 jobs and both barbershops: a company with a named manager
+      (dispatcher, foreman, captain, watch sergeant...). 15 work out of a real building you walk into
+      (a sign over the door; estate.js `claim` gives a building its own kind, hours, room size,
+      furniture and people); country employers have a site office (a trailer with a sign, placed off
+      the road); the hospital, fire station and precinct managers wait outside
+- [x] Offices inside: the manager's desk with the company sign behind it, a punch clock and card rack,
+      a roster board that shows your shifts this week, lockers, a bench, a water cooler, and the
+      company's own things (tyres, parcels, pizza boxes, a stretcher, coats and helmets, hard hats
+      and cones)
+- [x] The job board is the manager: ask for a job (you start at the bottom of that trade's ladder:
+      Trainee, Probie, Cadet, EMT trainee, Apprentice, Deckhand, Hand, Trainee pilot...), clock in, pick
+      up an extra shift, check your schedule, hand in your notice; a trial shift right after hiring
+- [x] Schedules: three shifts a week at set times, texted when you're hired, on the roster and the
+      phone; a text two hours before, the GPS set half an hour before
+- [x] Clock in up to 15 minutes late; later is a warning. A no-show is a warning (two in a row and
+      you're out). Walking off a shift or wrecking the company vehicle is a warning. Three warnings:
+      fired, and they won't talk to you for a week. Four good shifts in a row take a warning off.
+      Call in sick from the phone before a shift: once a week is fine, more is a warning (unless
+      you're really hurt)
+- [x] Promotions: enough good shifts at a rank with a clean record and you move up (pay up to
+      1.9x); the top rank adds a daily salary. Pilots need a licence to get past trainee
+- [x] The manager notices how you turn up: covered in blood ("go clean up"), wanted by the police
+      ("not today"; a police officer is suspended), a gun out, filthy, dead on your feet
+- [x] The barbershops are real shops: three red barber chairs facing mirrors, a counter of tonics,
+      combs in blue disinfectant and clippers, a shampoo sink, towels, a waiting bench with magazines,
+      a price list, a checkered floor, the till; the manager at the till, a barber cutting a seated
+      customer, people waiting; the pole moved out front, the name over the door. Mill Creek's barber
+      works out of a house
+- [x] Buy a cut or a shave, or products: pomade and aftershave (a sharp look tips better for days),
+      beard oil, a grooming kit (trim yourself at home or the hideout)
+- [x] Work there: a trainee sweeps up hair, shampoos at the sink, folds towels and makes change at the
+      till (get it wrong and it comes out of your pay); a barber cuts what the customer asks for (pick
+      the right cut from four; the wrong one is an angry customer and on the house), tips by rating;
+      walking out mid-shift is a warning. At the top, buy the shop: daily takings, work the chair
+      and keep it all
+- [x] The courier depot: pigeonholes of envelopes, bikes, bags on hooks, the day's runs on a
+      whiteboard; punch in, grab a bag, run envelopes between real office doors downtown (pick up at
+      one address, deliver to the next)
+- [x] The phone: a Work tab (each job, rank, next shift, warnings, progress to the next rank, call in
+      sick, GPS); the Jobs tab names the company and your rank
+- [x] QA: hiring, schedule, on time, walking off, late, fired on the third warning, two no-shows,
+      promotion and pay, blood at the door, calling in sick, a full barbershop trainee shift, the
+      wrong cut, walking out (747 → ~790 checks)
+
 ## Phase 1.62 — G13: blood and injuries
 
 The owner: "there's no actual blood in the game; people should get realistic bruises, injuries".

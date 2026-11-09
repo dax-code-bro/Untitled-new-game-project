@@ -90,6 +90,7 @@ export function installJobs(game) {
       else if (def.area === 'landmarks') pts.push([[LAKE.x, LAKE.z], CITY.downtown, [CITY.x0 + 400, 1500], [TOWN.x0 + 144, TOWN.z0 + 108]][i % 4]);
       else pts.push([[TOWN.x0 + 144, TOWN.z0 + 120], [CITY.x0 + 200, CITY.z0 + 200], [AIRFIELD.x1 - 100, AIRFIELD.z - 40], [PLAINS.x, PLAINS.z]][(i + Math.floor(Math.random() * 4)) % 4]);
     }
+    if (def.id === 'messenger' && game.work?.officeStops) { const o = game.work.officeStops(def.stops, from); if (o) return o; }
     if (def.back) pts.push(def.id === 'paramedic' || def.id === 'medevac' ? [CITY.x0 + CITY.nx * CITY.pitch + 24, CITY.z0 + 2 * CITY.pitch] : from);
     return pts;
   };
@@ -110,26 +111,27 @@ export function installJobs(game) {
       j.runs++; j.xp++; if (j.xp >= 3) { j.xp = 0; j.level++; hud.toast(`${d.name} level ${j.level}!`, 2.5); }
       P.stats.jobsDone++;
       const bonus = Math.round(job.earned * 0.25 * Math.max(0, job.t / d.timer));
-      if (bonus > 0) career.earn(bonus, 'time bonus');
+      if (bonus > 0) { career.earn(bonus, 'time bonus'); job.earned += bonus; }
       // the shift's rating: dispatch texts it, good shifts add up to employee of the month
-      j.earned = (j.earned || 0) + job.earned + bonus; j.lastRating = job.rating; j.best = Math.max(j.best || 0, job.rating);
+      j.earned = (j.earned || 0) + job.earned; j.lastRating = job.rating; j.best = Math.max(j.best || 0, job.rating);
       if (job.rating >= 4.5) j.good = (j.good || 0) + 1;
-      hud.bigMessage('SHIFT COMPLETE', `${d.name} · earned ${money(job.earned + bonus)} · ${stars(job.rating)}`, 3);
+      hud.bigMessage('SHIFT COMPLETE', `${d.name} · earned ${money(job.earned)} · ${stars(job.rating)}`, 3);
       game.text?.(`${d.name} dispatch`, job.rating >= 4.5 ? `Great shift. ${stars(job.rating)} Keep it up.` : job.rating >= 3 ? `Shift logged. ${stars(job.rating)}` : `We had complaints. ${stars(job.rating)} Drive like it's your own.`);
       if (j.good === 5) { career.earn(500, 'employee of the month'); hud.toast(`Employee of the month: ${d.name}! +$500`, 3.5); game.news?.(`Local ${d.name.toLowerCase()} named employee of the month.`); }
     } else hud.bigMessage('SHIFT OVER', msg || d.name, 2.5);
     if (job.veh && d.siren) job.veh.siren = false;
-    job = null; career.saveSoon();
+    const ended = job; job = null; career.saveSoon();
+    try { game.work?.shiftEnded?.(d.id, ok, { rating: ended.rating, earned: ended.earned, msg, wrecked: !!ended.wrecked, opts: ended.opts }); } catch (e) { console.error('[jobs] ' + (e && e.message), e); }
   };
 
-  const start = (def) => {
+  const start = (def, opts = null) => {
     if (job) return finish(false, 'You quit the shift');
     if (P.jobs[def.id]?.firedDay === game.sky?.day) return hud.toast(`${def.name}: "After what you did to the truck? Come back tomorrow."`, 3);
     if (def.tool && !game.tools.hasTrade(def.tool)) return hud.toast(`You need ${def.tool === 'mech' ? 'mechanic' : def.tool === 'build' ? 'construction' : def.tool === 'elec' ? 'electrical' : def.tool === 'plumb' ? 'plumbing' : 'yard'} tools (hardware store)`, 3);
     const from = where(def);
     // the night shift pays a quarter more
     const h = game.sky?.hour ?? 12, night = h >= 22 || h < 6;
-    job = { def, stop: 0, t: def.timer, earned: 0, base: def.pay * (1 + (lvl(def.id) - 1) * 0.15) * (night ? 1.25 : 1) * (def.air && P.pilotLicence ? 1.15 : 1) /* a pilot's licence pays (systems/aviation.js) */, night, rating: 5, hp0: null, gripeT: 0, leg: 0, count0: def.kind === 'catch' ? P.stats.fishCaught : P.stats.animals };
+    job = { def, opts, stop: 0, t: def.timer, earned: 0, base: def.pay * (1 + (lvl(def.id) - 1) * 0.15) * (game.work?.payMult?.(def.id) ?? 1) * (night ? 1.25 : 1) * (def.air && P.pilotLicence ? 1.15 : 1) /* a pilot's licence pays (systems/aviation.js) */, night, rating: 5, hp0: null, gripeT: 0, leg: 0, count0: def.kind === 'catch' ? P.stats.fishCaught : P.stats.animals };
     if (def.kind === 'bounty') {
       const p = roadPointAround(graph, CITY.x0 + 380, CITY.z0 + 280, 60, 380);
       job.target = game.peds.spawnAt(p.x, p.z, player.pos);
@@ -152,12 +154,13 @@ export function installJobs(game) {
   for (const def of JOBS) {
     const at = where(def);
     interact.add({ x: at[0], z: at[1], color: 0xffe040, blip: { color: '#ffe040', size: 4, icon: JOB_ICONS[def.id] || '💼', badge: 'J' }, show: () => !game.S.indoors && (!job || job.def === def),
-      label: () => job && job.def === def ? `${keyHint(game)} quit the ${def.name} shift` : `${keyHint(game)} work as ${def.name} (${rankOf(lvl(def.id))}, level ${lvl(def.id)} · ~${money((def.pay * (1 + (lvl(def.id) - 1) * 0.15)) * (def.stops || def.need || 1))})`,
-      use: () => start(def) });
+      label: () => job && job.def === def ? `${keyHint(game)} quit the ${def.name} shift` : game.work?.boardLabel?.(def) || `${keyHint(game)} work as ${def.name} (${rankOf(lvl(def.id))}, level ${lvl(def.id)} · ~${money((def.pay * (1 + (lvl(def.id) - 1) * 0.15)) * (def.stops || def.need || 1))})`,
+      use: () => (job && job.def === def) || !game.work?.ready ? start(def) : game.work.talk(def.id) });
+    def.board = interact.points[interact.points.length - 1];
   }
 
   return {
-    JOBS, rankOf, get active() { return job; }, start: (id) => start(JOBS.find((j) => j.id === id)),
+    JOBS, rankOf, where, get active() { return job; }, start: (id, opts) => start(JOBS.find((j) => j.id === id), opts),
     update(dt) {
       if (!job || game.S.frozen && !game.S.stepping) return '';
       const d = job.def;
@@ -172,8 +175,8 @@ export function installJobs(game) {
           if (RIDERS.has(d.id) && job.gripeT <= performance.now()) { job.gripeT = performance.now() + 6000; hud.toast(`Passenger: ${GRIPES[(Math.random() * GRIPES.length) | 0]}`, 2); }
         }
         if (hp < (job.veh.maxHealth || 100) * 0.3) {
-          const j = P.jobs[d.id] || (P.jobs[d.id] = { level: 1, xp: 0, runs: 0 }); j.firedDay = game.sky?.day;
-          finish(false, `You wrecked the ${d.name.toLowerCase()}'s vehicle. You're fired (for today).`); return '';
+          const j = P.jobs[d.id] || (P.jobs[d.id] = { level: 1, xp: 0, runs: 0 }); j.firedDay = game.sky?.day; job.wrecked = true;
+          finish(false, `You wrecked the ${d.name.toLowerCase()}'s vehicle. Sent home for today.`); return '';
         }
       }
       if (job.t <= 0) { finish(false, 'Out of time'); return ''; }
@@ -203,7 +206,8 @@ export function installJobs(game) {
           const pay = Math.round(job.base);
           career.earn(pay, d.name); job.earned += pay;
           // tips: riders tip for a smooth ride; pizza tips for hot pizza
-          const tip = d.id === 'pizza' ? Math.round(job.base * 0.5 * Math.max(0, 1 - job.leg / 90)) : RIDERS.has(d.id) ? Math.round(job.base * 0.1 * Math.max(0, job.rating - 2.5)) : 0;
+          let tip = d.id === 'pizza' ? Math.round(job.base * 0.5 * Math.max(0, 1 - job.leg / 90)) : RIDERS.has(d.id) ? Math.round(job.base * 0.1 * Math.max(0, job.rating - 2.5)) : 0;
+          if (tip > 0 && game.work?.sharp?.()) tip = Math.round(tip * 1.2);
           if (tip > 0) { career.earn(tip, 'tip'); job.earned += tip; hud.toast(`Tip: ${money(tip)}${d.id === 'pizza' ? (job.leg < 40 ? ' (still hot!)' : '') : ` · ${stars(job.rating)}`}`, 1.8); }
           else if (d.id === 'pizza') hud.toast('"This pizza\'s cold." No tip.', 1.8);
           job.leg = 0;
@@ -212,7 +216,8 @@ export function installJobs(game) {
           setMarker();
         } else return `${d.name.toUpperCase()} · working… ${Math.ceil(job.waitT)}s`;
       }
-      return `${d.name.toUpperCase()} · stop ${job.stop + 1}/${job.stops.length} · ${Math.round(dist)} m · ${clock}${job.veh ? ` · ${stars(job.rating)}` : ''}`;
+      const what = job.stops[job.stop][2] ? ` · ${job.stops[job.stop][2]}` : '';
+      return `${d.name.toUpperCase()} · stop ${job.stop + 1}/${job.stops.length}${what} · ${Math.round(dist)} m · ${clock}${job.veh ? ` · ${stars(job.rating)}` : ''}`;
     },
   };
 }
