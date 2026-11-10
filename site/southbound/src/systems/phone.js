@@ -139,6 +139,11 @@ export function installPhone(game) {
   const btn = document.createElement('button');
   btn.textContent = '📱 Phone'; btn.className = 'sbPhoneBtn';
   btn.style.cssText = 'position:fixed;right:16px;top:186px;z-index:20;background:rgba(20,14,10,.7);color:#fff;border:1px solid #4a382b;border-radius:10px;padding:6px 10px;font:600 13px Inter,sans-serif;cursor:pointer';
+  { // (A2) the phone comes out of your pocket when it opens, and goes back when it closes (systems/acts.js)
+    const show0 = phone.show.bind(phone), close0 = phone.close.bind(phone);
+    phone.show = (...a) => { const was = phone.open; show0(...a); if (!was) game.acts?.phoneUp?.(); };
+    phone.close = (...a) => { const was = phone.open; close0(...a); if (was) game.acts?.phoneAway?.(); };
+  }
   btn.onclick = () => phone.show('inv');
   document.body.appendChild(btn);
   addEventListener('keydown', (e) => { if (e.code === 'KeyI' && !phone.open) phone.show('inv'); });
@@ -162,7 +167,12 @@ export function installPhone(game) {
             h.play(d > 25 ? 'Jog_Fwd_Loop' : 'Walk_Loop', 0.25);
           } else {
             // the hand-off
-            c.handed = 2.2; h.play('Interact', 0.2); h.root.remove(c.box); h.root.remove(c.tape);
+            c.handed = 2.2; h.root.remove(c.box); h.root.remove(c.tape);
+            const A = game.acts;
+            if (A && game.S.mode === 'foot' && !game.S.doorWalk) { // (A2) out of their hands into yours
+              const who = A.fromHuman ? A.fromHuman(h) : null, box = A.prop('parcel');
+              if (who) { who.hold(box, true); A.play([...A.handBeats(who, box, 'take', 1.2), { t: 0.6, ik: (F, k, ctx, P) => ctx.held && A.carry(P, F, ctx.held, true) }, { t: 0.01, start: (ctx) => { box.parent?.remove(box); ctx.held = null; } }], { done: () => who.release() }) ? (c.handed = 3.2) : who.release(); }
+            } else h.play('Interact', 0.2);
             c.onArrive(); hud.toast('Runr courier: "Sign here. Have a good one."', 2);
           }
         } else if ((c.handed -= dt) <= 0) {

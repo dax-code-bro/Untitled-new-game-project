@@ -861,6 +861,7 @@ async (opts) => {
     // a taxi fare walks to the passenger door and gets in; at the next stop they get out and walk off
     foot();
     G.jobs.start('taxi');
+    for (let w = 0; w < 30 * 8 && G.S.mode !== 'car'; w++) SB.step(1, 1 / 30); // (you walk to the cab and get in)
     const tj = G.jobs.active;
     if (tj && tj.veh && G.S.mode === 'car') {
       const [sx, sz] = tj.stops[0]; SB.teleport(sx, sz, tj.veh.heading); SB.step(5, 1 / 30);
@@ -872,6 +873,102 @@ async (opts) => {
       G.jobs.start('taxi'); // (quit the shift)
     } else ok(false, 'could not start a taxi shift');
     foot();
+    SB.skipRender(false);
+  });
+
+  // A2 part 2: walking to your work van, going to sleep, the fire alarm, the ATM, the kitchen at the hideout
+  await run('acted out, part 2: the work van, sleep, an ATM, a takedown', async () => {
+    SB.skipRender(true);
+    const foot = () => { if (G.S.indoors) G.estate.leave(); if (G.S.mode !== 'foot') G.exitVehicle(); for (let i = 0; i < 60 && G.S.doorWalk; i++) SB.step(1, 1 / 30); };
+    foot();
+    // the parcel van is parked at the curb: you walk round to its door and get in
+    G.jobs.start('parcel');
+    const pj = G.jobs.active, walking = !!G.S.entering;
+    let i = 0; for (; i < 30 * 8 && G.S.mode !== 'car'; i++) SB.step(1, 1 / 30);
+    ok(walking && G.S.mode === 'car' && G.vehicle() === pj?.veh, `a work van: you walk to it and get in (${(i / 30).toFixed(1)} s)`);
+    G.jobs.start('parcel'); foot();
+    // to sleep: you sit, the lights go down, the hours pass
+    for (let w = 0; w < 30 * 4 && (G.S.doorWalk || G.S.entering); w++) SB.step(1, 1 / 30);
+    const h0 = G.sky.hour + G.sky.day * 24, why = `mode ${G.S.mode}, scene ${!!G.S.doorWalk}, dead ${G.S.dead}`;
+    G.sleep(8, 'QA');
+    const lying = !!G.S.doorWalk;
+    for (i = 0; i < 30 * 6 && G.S.doorWalk; i++) SB.step(1, 1 / 30);
+    SB.step(20, 1 / 30);
+    ok(lying && G.sky.hour + G.sky.day * 24 - h0 > 7, `sleeping is acted out and the night passes (${(G.sky.hour + G.sky.day * 24 - h0).toFixed(1)} h; ${lying ? 'acted' : 'not acted'}; ${why})`);
+    await new Promise((r) => setTimeout(r, 700)); // (the fade back is on a real-time timer)
+    ok(!document.querySelector('.sbfade.show'), 'the screen comes back after the night');
+    // a takedown with a knife: you step in behind them first
+    G.combat.give('hunting_knife'); G.combat.weapon = 'hunting_knife'; G.combat.holstered = false;
+    const pp = G.player.pos, v = G.peds.spawnAt(pp.x + Math.sin(G.player.heading) * 1.4, pp.z + Math.cos(G.player.heading) * 1.4, null);
+    if (v) {
+      v.heading = G.player.heading; SB.step(2, 1 / 30);
+      SB.setOverride({ enter: true }); SB.step(1, 1 / 30); SB.setOverride(null);
+      const grabbing = !!G.S.doorWalk;
+      for (i = 0; i < 30 * 5 && G.S.doorWalk; i++) SB.step(1, 1 / 30);
+      SB.step(5, 1 / 30);
+      ok(!grabbing || v.mode === 'dead' || v.hp <= 0, `a takedown: in from behind, then down (${grabbing ? 'acted out' : 'no target'}, ${v.mode})`);
+    } else ok(true, '(no one to take down)');
+    G.combat.weapon = 'fists'; G.combat.holstered = true;
+    foot();
+    SB.skipRender(false);
+  });
+
+  // A2 part 3: spare change at a camp, the broken-down car, climbing into a plane
+  await run('acted out, part 3: spare change, the broken-down car, boarding a plane', async () => {
+    SB.skipRender(true);
+    const foot = () => { if (G.S.indoors) G.estate.leave(); if (G.S.mode !== 'foot') G.exitVehicle(); for (let i = 0; i < 60 && G.S.doorWalk; i++) SB.step(1, 1 / 30); };
+    const lbl = (p) => { try { return typeof p.label === 'function' ? p.label() : p.label || ''; } catch (e) { return ''; } };
+    foot();
+    // spare change: down on your heels, the bills into their hand
+    const spare = G.interact.points.find((p) => /spare some change/.test(lbl(p)));
+    if (spare) {
+      SB.teleport(spare.x + 1.2, spare.z + 1.2, 0); SB.step(5, 1 / 30);
+      const m0 = G.S.money;
+      if (spare.show?.() !== false) {
+        spare.use(); const acting = !!G.S.doorWalk;
+        let i = 0; for (; i < 30 * 5 && G.S.doorWalk; i++) SB.step(1, 1 / 30);
+        ok(acting && G.S.money === m0 - 5, `spare change is handed over, crouched (${(i / 30).toFixed(1)} s, ${acting ? 'acted out' : 'not acted'})`);
+      } else ok(true, '(nobody at the camp)');
+    } else ok(true, '(no camp)');
+    foot();
+    // a car broken down by the road: under the hood, then the driver pays you from their hand
+    const e = G.worldEvents.force('breakdown');
+    if (e && e.point) {
+      SB.teleport(e.d.pos.x + 1.0, e.d.pos.z + 1.0, 0); SB.step(3, 1 / 30);
+      const m0 = G.S.money;
+      e.point.use(); const acting = !!G.S.doorWalk;
+      let i = 0; for (; i < 30 * 14 && G.S.doorWalk; i++) SB.step(1, 1 / 30);
+      SB.step(3, 1 / 30);
+      ok(acting && G.S.money > m0 && !e.smoke.parent, `the broken-down car: fixed under the hood, then paid (${(i / 30).toFixed(1)} s, +$${G.S.money - m0})`);
+    } else ok(true, '(no road for a breakdown)');
+    G.worldEvents.clear();
+    foot();
+    // a plane: you walk round to its side and climb up into it
+    const a = opts.air[0];
+    const v = G.marineAir.spawnCraft(a, 'air', { x: 1100, z: -440, h: -1.57 });
+    for (let k = 0; k < 3; k++) v.sync(1 / 30);
+    const sx = Math.cos(v.heading), sz = -Math.sin(v.heading);
+    SB.teleport(v.pos.x + sx * (v.radius * 0.8 + 2.5), v.pos.z + sz * (v.radius * 0.8 + 2.5), 0); SB.step(2, 1 / 30);
+    SB.setOverride({ enter: true }); SB.step(1, 1 / 30); SB.setOverride(null);
+    const climbing = !!G.S.doorWalk;
+    let i = 0; for (; i < 30 * 6 && G.vehicle() !== v; i++) SB.step(1, 1 / 30);
+    ok(climbing && G.vehicle() === v, `a plane: walked to its side and climbed in (${(i / 30).toFixed(1)} s)`);
+    foot();
+    G.scene.remove(v.group); const pi = G.parked.indexOf(v); if (pi >= 0) G.parked.splice(pi, 1);
+    // a hold-up: the clerk bags the till and holds it out over the counter while you keep the gun on them
+    const k = (G.storeKeepers || []).find((q) => q.kind === 'mart' && !q.taken && q.h.root.parent && q.robbedDay === undefined && q.shop?.counter);
+    if (k) {
+      const kp = k.h.root.position, f = k.shop.keeperFace;
+      SB.teleport(kp.x + Math.sin(f) * 2.4, kp.z + Math.cos(f) * 2.4, f + Math.PI); SB.step(3, 1 / 30);
+      G.combat.give('rifle_01'); G.combat.weapon = 'rifle_01'; G.combat.holstered = false; G.robberyForce = 'comply';
+      const m0 = G.S.money; let bagged = false;
+      SB.setOverride({ aim: true });
+      for (let j = 0; j < 30 * 8 && G.S.money === m0; j++) { G.player.heading = Math.atan2(kp.x - G.player.pos.x, kp.z - G.player.pos.z); SB.step(1, 1 / 30); bagged = bagged || k.h.root.parent && G.scene.children.some((o) => o.userData?.kind === 'bag'); }
+      SB.setOverride(null); G.robberyForce = null;
+      ok(G.S.money > m0 && bagged, `a hold-up: the clerk holds the bag out over the counter (+$${G.S.money - m0}, ${bagged ? 'bag seen' : 'no bag'})`);
+      SB.step(30 * 7, 1 / 30); // (the clerk's call to the police goes through)
+      G.police.clear(); G.police.wanted = 0; G.combat.weapon = 'fists'; G.combat.holstered = true;
+    } else ok(true, '(no store clerk to rob)');
     SB.skipRender(false);
   });
 

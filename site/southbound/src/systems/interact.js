@@ -70,7 +70,7 @@ export class Interactions {
       if (p.noUse) continue; // (only a marker on the map: something else handles F there)
       if (!!p.drive !== !!inCar && !p.any) continue;
       const d = Math.hypot(p.x - pos.x, p.z - pos.z);
-      if (d < p.r && d < bd) { bd = d; best = p; }
+      if (d < p.r && d < bd && this.visible(p)) { bd = d; best = p; } // (re-asked here: the list above is only rebuilt 4x a second)
     }
     if (best !== this.current) { this.hold = 0; this.fired = false; }
     this.current = best;

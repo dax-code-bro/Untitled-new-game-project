@@ -9,7 +9,7 @@ feature with the fewest additions next. Batches ship as F# (features) alternatin
 Counts are additions made in the "add to every feature" programme (F1 onwards, plus the S3/S4
 side batches where they extended a feature). The original build of each feature isn't counted.
 
-## Status (last updated: Phase 1.67, A2 part 1: acted out)
+## Status (last updated: Phase 1.68, A2 parts 2+3: acted out)
 
 | # | Feature | Files | Added | Batches | Status |
 |---|---------|-------|------:|---------|--------|
@@ -100,12 +100,17 @@ longer than the function log's hour.
 4. ~~**F16/G14 Destruction and rebuilding.**~~ (shipped, Phase 1.64: buildings of every size; props and cars already react to blasts) Realistic destruction physics for everything; blow up a
    skyscraper and the city hires crews who rebuild it over ~7 game days, in visible stages (cleanup,
    scaffolding, cranes, floors rising).
-6. **A2 Animations for every little thing** (part 1 shipped, Phase 1.67: arrests x3, doorstep deliveries + a
-   paper route, trades' tools, carjack, getting out, tickets, bribes, muggings, counters, eating,
-   bandaging, skinning, pick-ups, waves, fishing, knocking/kicking doors). Also taxi/bus/ambulance riders. Still instant (part 2): mission givers with bodies and hand-offs, the doctor, sleeping, washing,
-   the laundromat, the ATM, the fire alarm, the phone in your hand, buying property (keys), the hideout
-   kitchen/ammo rack/chores, hitchhikers through the car door, the fuel can and pump, the auction paddle,
-   bandaging other people, plating a demolition charge, the takedown, cleaning a gun.
+6. ~~**A2 Animations for every little thing**~~ (shipped: part 1 Phase 1.67, parts 2+3 Phase 1.68) Arrests x3 by
+   crime, doorstep deliveries + a paper route, trades' tools, riders, carjack, getting out, tickets, bribes,
+   muggings, counters, eating, bandaging (yourself and others), skinning, pick-ups, waves, fishing,
+   knocking/kicking doors, walking to job vehicles, hitchhikers through the door, mission contacts in person,
+   sleeping, the doctor, the fuel can, takedowns, hideout chores/kitchen/ammo rack/crew payments, buying
+   property, the fire alarm, demolition charges, the ATM, the laundromat, the basin, antagonizing, the
+   desk sergeant, spare change, the broken-down car, a rescued victim's thanks, boarding planes and boats,
+   hold-ups (the bag over the counter), the street cart, the phone back in your pocket, the first-aid
+   cabinet. Still instant (honest list): the auction paddle and the barber chair (both happen behind a
+   paused screen), cleaning a gun (a crouch, no rag), cash on the ground (walk-over pickup), the phone's
+   screen itself (the game is paused and not drawn while it's open).
 5. ~~**A1 Ammunition by caliber; door hands.**~~ (shipped, Phase 1.65) Asked for in-game while playing:
    every gun says what it takes (store, wheel, phone, the U card); 13 calibers shared by the guns
    that take them, at most 500 of a caliber, 50 rockets/grenades, 20 arrows; boxes by caliber at the

@@ -232,6 +232,7 @@ export function installGang(game) {
     if (h.mixer) h.mixer.setTime(Math.random() * 3);
     scene.add(h.root);
     const m = { M, h, pos, look, pose, talkT: 0 };
+    (game.counterPeople = game.counterPeople || []).push({ h, payOnly: true }); // (A2: you pay them hand to hand, systems/acts.js)
     interact.add({ x: pos.x, z: pos.z, r: 2.2, marker: false, show: () => !S.indoors && S.mode === 'foot' && !game.storyBusy?.() && !m.away,
       label: () => `${keyHint(game)} talk to ${M.name.replace(/".*"\s/, '')} · ${M.role}`, use: () => talk(m) });
     return m;
@@ -258,7 +259,7 @@ export function installGang(game) {
       out.push({ name: 'Tow my car to the hideout', sub: last ? last.spec.name : 'no car', price: 250, dis: !last, run: () => { const p = local(0, 9); last.pos.set(p.x, groundY(p.x, p.z), p.z); last.vel.set(0, 0); last.heading = HQ.face; say('Wrench', 'She\'s out front.'); } });
     }
     if (M.service === 'captain') out.push({ name: 'Haul my car out of the water', sub: last ? last.spec.name : 'no car', price: 600, dis: !last, run: () => { const r = nearestRoad(graph, last.pos.x, last.pos.z); if (r) { last.pos.set(r.x, groundY(r.x, r.z), r.z); last.vel.set(0, 0); last.drowned = false; } say('Cap', 'Fished her out. She smells like catfish now.'); } });
-    if (M.service === 'medic') out.push({ name: 'Patch me up', sub: `Health ${Math.round(player.health)}`, price: 60, run: () => { player.health = 100; player.armor = Math.max(player.armor, 25); say('Marisol', 'Try not to get shot for a week.'); } });
+    if (M.service === 'medic') out.push({ name: 'Patch me up', sub: `Health ${Math.round(player.health)}`, price: 60, run: () => { if (game.acts && !S.doorWalk) game.acts.play([{ t: 2.8, pose: 'sit' }, { t: 0.3, pose: 'idle' }]); player.health = 100; player.armor = Math.max(player.armor, 25); say('Marisol', 'Try not to get shot for a week.'); } });
     if (M.service === 'hacker') out.push({ name: 'Wipe my bounty', sub: `Bounty $${(P.law?.bounty || 0).toLocaleString('en-US')}`, price: Math.max(500, Math.round((P.law?.bounty || 0) * 0.6)), dis: !(P.law?.bounty > 0), run: () => { P.law.bounty = 0; P.law.nextHunt = 0; say('Nina', 'Done. You never existed. Well, the warrant didn\'t.'); } });
     if (M.service === 'cook') out.push({ name: 'Bowl of gumbo', sub: 'Restores health and fills you up', price: 15, run: () => { player.health = Math.min(100, player.health + 40); game.feed?.(40); say('Hector', 'Careful, it\'s hot.'); } });
     if (M.service === 'lookout') out.push({ name: 'Anything on the scanner?', sub: '', btn: 'Ask', run: () => say('Jayden', P.law?.bounty > 0 ? `There's $${P.law.bounty.toLocaleString('en-US')} on your head. Hunters come round every few days.` : 'You\'re clean. For now.', 4) });

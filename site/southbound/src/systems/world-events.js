@@ -202,8 +202,24 @@ export function installWorldEvents(game) {
       const d = spawnPerson(r.x + 6, r.z + 2, 'victim'); d.heading = Math.atan2(car.pos.x - d.pos.x, car.pos.z - d.pos.z);
       ev = { kind, people: [d], car, smoke, t: 0, d };
       ev.point = game.interact.add({ x: d.pos.x, z: d.pos.z, r: 3, marker: false, label: () => `${keyHint(game)} help with the car`, use: () => {
-        game.interact.remove(ev.point); player.h.play('Interact', 0.1, 0.8, true);
-        setTimeout(() => { car.group.remove(smoke); const tip = 60 + ((Math.random() * 90) | 0); S.money += tip; say('Driver', 'You\'re a lifesaver. Here, take this.', 3); hud.toast(`+$${tip}`, 2); ev && (ev.done = true); }, 2500);
+        game.interact.remove(ev.point);
+        const e0 = ev, tip = 60 + ((Math.random() * 90) | 0);
+        const paid = () => { S.money += tip; hud.toast(`+$${tip}`, 2); if (ev === e0) ev.done = true; };
+        const fixed = () => { car.group.remove(smoke); say('Driver', 'You\'re a lifesaver. Here, take this.', 3); };
+        const A = game.acts;
+        if (A && S.mode === 'foot' && !S.doorWalk) { // (A2) under the hood, then cash from the driver's hand
+          const fw = new THREE.Vector3(Math.sin(car.heading), 0, Math.cos(car.heading)), front = car.pos.clone().addScaledVector(fw, car.spec.len / 2 + 0.55), bay = car.pos.clone().addScaledVector(fw, car.spec.len * 0.34); bay.y += 0.9;
+          const run = A.play([{ walk: { x: front.x, z: front.z }, face: bay, max: 4 }, { t: 2.4, ik: (F, k, ctx, P) => { P.reach(P.R, bay.clone().addScaledVector(F.right, 0.16 + Math.sin(k * 17) * 0.05), F, 'R'); P.reach(P.L, bay.clone().addScaledVector(F.right, -0.2).addScaledVector(F.up, Math.sin(k * 11) * 0.03), F, 'L'); } }],
+            { done: (ok) => {
+              fixed();
+              if (!ok || d.mode === 'dead' || d.h?.ragdoll) return paid();
+              const who = A.fromPed(d);
+              if (!A.play([A.toward(who), ...A.payBeats(who, 'take', 1.0)], { done: () => { who.release(); paid(); } })) { who.release(); paid(); }
+            } });
+          if (run) return;
+        }
+        player.h.play('Interact', 0.1, 0.8, true);
+        setTimeout(() => { fixed(); paid(); }, 2500);
       } });
     }
   }
@@ -236,11 +252,19 @@ export function installWorldEvents(game) {
         }
       }
     } else if (e.kind === 'robbery') {
+      if (e.tipping) { if (!S.doorWalk) e.done = true; } else
       if (e.m.mode === 'dead' || (combat.drawn && e.m.pos.distanceTo(player.pos) < 18 && !e.scared)) {
         if (e.m.mode !== 'dead') { e.scared = true; say('Robber', 'This ain\'t over!', 2); e.m.role = undefined; e.m.mode = 'flee'; e.m.threat = player.pos.clone(); e.m.timer = 14; }
         if (e.v.pos.distanceTo(game.situation().pos) < 30) { // only if you were there to see it (not when an officer stopped him)
-          const tip = 50 + ((Math.random() * 100) | 0); S.money += tip;
-          say('Victim', 'Thank you! Thank you. Here, it\'s all I have left.', 3); hud.toast(`+$${tip}`, 2);
+          const tip = 50 + ((Math.random() * 100) | 0), give = () => { S.money += tip; hud.toast(`+$${tip}`, 2); };
+          say('Victim', 'Thank you! Thank you. Here, it\'s all I have left.', 3);
+          const A = game.acts;
+          if (A && S.mode === 'foot' && !S.doorWalk && e.v.mode !== 'dead' && !e.v.h?.ragdoll && e.v.pos.distanceTo(player.pos) < 8) { // (A2) from their hand to yours
+            const who = A.fromPed(e.v);
+            if (A.play([A.toward(who), ...A.payBeats(who, 'take', 1.0)], { done: () => { who.release(); give(); e.done = true; } })) { e.tipping = true; return; }
+            who.release();
+          }
+          give();
         }
         e.done = true;
       } else if (e.t > 45 && !(e.cop && e.cop.role === 'responder' && e.cop.mode !== 'dead')) { if (e.m.role === 'mugger') say('', 'The robber got away.', 2); e.done = true; }

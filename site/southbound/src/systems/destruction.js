@@ -190,7 +190,10 @@ export function installDestruction(game) {
     const x = Math.max(it.minX, Math.min(it.maxX, p.x)), z = Math.max(it.minZ, Math.min(it.maxZ, p.z));
     const nx = p.x < it.minX ? -1 : p.x > it.maxX ? 1 : 0, nz = nx ? 0 : (p.z < it.minZ ? -1 : 1);
     const g = chargeMesh(); g.position.set(x + nx * 0.07, p.y + 1.0, z + nz * 0.07); g.rotation.y = Math.atan2(nx, nz); scene.add(g);
-    player.h?.play?.('Interact', 0.1, 1.2, true);
+    if (game.acts && !game.S.doorWalk) { // (A2) both hands press it to the wall, arm it, step back
+      const at = g.position.clone();
+      game.acts.play([{ face: at, t: 0.25 }, { t: 1.2, ik: (F, k, ctx, P) => { P.reach(P.R, at.clone().addScaledVector(F.right, 0.08), F, 'R'); P.reach(P.L, at.clone().addScaledVector(F.right, -0.08), F, 'L'); } }, { walk: { x: p.x + nx * 1.6, z: p.z + nz * 1.6 }, speed: 2.0, max: 1.2 }]);
+    } else player.h?.play?.('Interact', 0.1, 1.2, true);
     charges.push({ g, bi: w.bi, t: 10, at: g.position.clone() });
     hud.toast(`Charge set. ${career.p.tools[CHARGE_ID] ? `${career.p.tools[CHARGE_ID]} left. ` : ''}10 seconds. Get clear.`, 3);
   }

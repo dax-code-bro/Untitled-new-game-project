@@ -293,6 +293,12 @@ export function installEstate(game) {
         if (!career.spend(p.price)) return;
         P.properties.push(p.id); P.home = P.home || p.id; career.save();
         hud.bigMessage('PROPERTY PURCHASED', p.name, 3);
+        if (game.acts && !game.S.doorWalk) { // (A2) sign here, here and here; the keys
+          const A = game.acts, papers = A.prop('papers'), keys = A.prop('keys');
+          A.play([{ t: 1.6, start: (ctx) => A.hold(ctx, papers), ik: (F, k, ctx, P) => { const c = F.chest.clone().addScaledVector(F.fw, 0.34).addScaledVector(F.up, -0.12); papers.position.copy(c); papers.rotation.set(-0.5, Math.atan2(F.fw.x, F.fw.z), 0, 'YXZ'); papers.updateMatrixWorld(true); P.reach(P.L, c.clone().addScaledVector(F.right, -0.08), F, 'L'); P.reach(P.R, c.clone().addScaledVector(F.right, Math.sin(k * 30) * 0.05).addScaledVector(F.up, 0.02), F, 'R'); } },
+            { t: 1.1, start: (ctx) => { papers.parent?.remove(papers); ctx.held = null; A.hold(ctx, keys); }, ik: (F, k, ctx, P) => { const c = F.chest.clone().addScaledVector(F.fw, 0.3 + Math.sin(k * Math.PI) * 0.06).addScaledVector(F.up, -0.05 + Math.sin(k * Math.PI) * 0.1); P.reach(P.R, c, F, 'R'); P.attachToHand(keys, P.R); } },
+            { t: 0.2, start: (ctx) => { keys.parent?.remove(keys); ctx.held = null; } }]);
+        }
       } }));
     if (p && owned(p)) insidePoints.push(interact.add({ x: it.o.x + 2, z: it.o.z, y: it.o.y, r: 1.3, label: () => `${keyHint(game)} change clothes`, color: 0x9fc4c0, use: () => game.openWardrobe?.() }));
     insidePoints.push(interact.add({ x: it.o.x + 1.4, z: it.o.z + it.D / 2 - 0.7, y: it.o.y, r: 0.9, label: () => `${keyHint(game)} pull the fire alarm`, color: 0xff4040, use: () => game.fireAlarm?.(inside) }));

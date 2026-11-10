@@ -96,6 +96,9 @@ export function installLaw(g) {
     player.h.play('Interact', 0.1, 1.4, true);
     say('You', pick(INSULT));
     p.anger = (p.anger || 0) + 1;
+    // (A2) your finger in their face; they recoil, then square up (or wave you off)
+    if (g.acts && !S.doorWalk) g.acts.play([{ face: p.pos, t: 0.2 }, { t: 0.8, ik: (F, k, ctx, P) => { const head = p.h.root.position.clone(); head.y += 1.5; g.acts.reachTo(P, F, 'R', head.lerp(F.chest.clone().addScaledVector(F.fw, 0.3), 0.45), k, 3); } }]);
+    setTimeout(() => { if (p.mode !== 'dead' && p.h && !p.h.ragdoll) p.h.play(p.anger >= 3 ? 'Hit_Chest' : 'Idle_Talking_Loop', 0.15, 1, p.anger >= 3); }, 350);
     setTimeout(() => {
       if (p.mode === 'dead') return;
       if (p.role === 'cop') {
@@ -511,7 +514,13 @@ export function installLaw(g) {
   // pay it off at the precinct
   g.interact.add({ x: g.PRECINCT.x + 3, z: g.PRECINCT.z, r: 3, marker: false, show: () => L.bounty > 0 && !S.indoors,
     label: () => `${keyHint(g)} pay off your bounty ($${L.bounty.toLocaleString('en-US')})`,
-    use: () => { if (S.money >= L.bounty) { S.money -= L.bounty; L.bounty = 0; L.nextHunt = 0; hud.toast('Bounty paid. You\'re a free citizen.', 3); career.saveSoon(); } else hud.toast('Not enough cash to pay the bounty', 2.5); } });
+    use: () => {
+      if (S.money < L.bounty) { hud.toast('Not enough cash to pay the bounty', 2.5); return; }
+      const paid = () => { S.money -= L.bounty; L.bounty = 0; L.nextHunt = 0; hud.toast('Bounty paid. You\'re a free citizen.', 3); career.saveSoon(); };
+      const sgt = g.civic?.precinct?.staff || Object.values(g.civic || {}).find((c) => c.staff && /precinct|police/i.test(c.name))?.staff;
+      if (g.acts && sgt && !S.doorWalk && sgt.root.position.distanceTo(player.pos) < 5) { const who = g.acts.fromHuman(sgt); if (g.acts.play(g.acts.payBeats(who, 'give', 1.1), { done: () => { who.release(); paid(); } })) return; who.release(); }
+      paid();
+    } });
 
   let brandishT = 0;
   return {

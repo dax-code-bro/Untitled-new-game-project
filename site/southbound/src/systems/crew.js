@@ -226,11 +226,13 @@ function hook(game) {
   const point = (lx, lz, label, show, use) => { const p = at(lx, lz); game.interact.add({ x: p.x, z: p.z, r: 1.8, color: 0xd0a040, label, show: () => S.mode === 'foot' && !S.indoors && show(), use }); };
   point(6, -6.9, () => `${keyHint(game)} eat at the kitchen${H.meal === sky.day ? ' (had today\'s)' : ''}`, () => H.up.kitchen, () => {
     if (H.meal === sky.day) { say('Hector', 'You already ate. Come back tomorrow.'); return; }
-    H.meal = sky.day; player.health = Math.min(player.maxHealth || 100, player.health + 30); if (game.needs?.N) game.needs.N.food = Math.min(100, game.needs.N.food + 45); say('Hector', 'Red beans and rice. Sit down and eat it properly.');
+    H.meal = sky.day;
+    if (game.acts && !S.doorWalk) game.acts.play(game.acts.eatBeats(game.acts.prop('bowl'), 3.4, 4)); // (A2) a bowl of it, spoon by spoon player.health = Math.min(player.maxHealth || 100, player.health + 30); if (game.needs?.N) game.needs.N.food = Math.min(100, game.needs.N.food + 45); say('Hector', 'Red beans and rice. Sit down and eat it properly.');
   });
   point(-7, -4.2, () => `${keyHint(game)} restock ammo from the rack${H.ammo === sky.day ? ' (done today)' : ''}`, () => H.up.rack, () => {
     if (H.ammo === sky.day) { hud.toast('The rack\'s empty till tomorrow.', 1.6); return; }
     H.ammo = sky.day; const cb = game.combat;
+    if (game.acts && !S.doorWalk) { const rk = at(-7, -4.9); game.acts.play([{ face: rk, t: 0.3 }, { clip: 'Interact', speed: 1.4, t: 0.7 }, { clip: 'Interact', speed: 1.4, t: 0.7 }]); } // (A2) boxes down off the rack
     for (const id of cb.owned) { const w = WEAPONS[id]; if (!w || w.melee || !cb.ammo[id]) continue; cb.ammo[id].reserve = Math.max(cb.ammo[id].reserve, (w.clip || 10) * 4); }
     hud.toast('Restocked every gun you own', 1.8);
   });
@@ -240,14 +242,22 @@ function hook(game) {
     box(1.1, 0.5, 0.7, k === 'water' ? metal : wood, x, z);
     point(x, z + 1, () => `${keyHint(game)} ${what}${H.chores[k] === sky.day ? ' (done today)' : ''}`, () => true, () => {
       if (H.chores[k] === sky.day) return;
-      H.chores[k] = sky.day; allLoyalty(2); rep(2); S.money += 20; if (game.needs?.N) game.needs.N.energy = Math.max(0, game.needs.N.energy - 6);
-      hud.toast(`Done: ${what}. ${line} (+$20)`, 2.4); career.saveSoon();
+      const doneIt = () => { H.chores[k] = sky.day; allLoyalty(2); rep(2); S.money += 20; if (game.needs?.N) game.needs.N.energy = Math.max(0, game.needs.N.energy - 6); hud.toast(`Done: ${what}. ${line} (+$20)`, 2.4); career.saveSoon(); };
+      // (A2) the work itself: the axe on the woodpile, a bucket from the creek, the hammer on the fence
+      if (game.acts && !S.doorWalk) {
+        const spot = at(x, z), A = game.acts;
+        const beats = k === 'wood' ? A.workBeats({ x: spot.x, z: spot.z, y: player.pos.y }, 'axe', 4.5, false)
+          : k === 'water' ? [{ face: spot, t: 0.3 }, { t: 0.9, pose: 'crouch' }, { t: 2.2, start: (ctx) => A.hold(ctx, A.prop('bucket')), ik: (F, kk, ctx, P) => ctx.held && A.carry(P, F, ctx.held, false, 0.25, 0.5) }, { t: 0.4, pose: 'crouch', start: (ctx) => { ctx.held?.parent?.remove(ctx.held); ctx.held = null; } }]
+          : A.workBeats({ x: spot.x, z: spot.z, y: player.pos.y }, 'hammer', 4.0, true);
+        if (A.play(beats, { done: (ok) => ok && doneIt() })) return;
+      }
+      doneIt();
     });
   }
 
   // ---------------- bunks: a good night's sleep at the hideout
   const sleep0 = game.sleep;
-  if (sleep0) game.sleep = (hours, where = '') => { const r = sleep0(hours, where); if (H.up.bunks && /bunkhouse|Gulf Line/i.test(where)) { player.health = player.maxHealth || 100; if (game.needs?.N) game.needs.N.energy = 100; hud.toast('Slept like a stone in a real bed.', 2.2); } return r; };
+  if (sleep0) game.sleep = (hours, where = '', now) => { const r = sleep0(hours, where, now); if (H.up.bunks && /bunkhouse|Gulf Line/i.test(where)) { player.health = player.maxHealth || 100; if (game.needs?.N) game.needs.N.energy = 100; hud.toast('Slept like a stone in a real bed.', 2.2); } return r; };
 
   // ---------------- raids
   let raid = null;

@@ -156,7 +156,16 @@ export function installDriving(game) {
       if (!v && S.mode === 'foot') {
         const car = game.lastVehicle?.(), canId = game.tools?.list?.find((t) => /fuel can/i.test(t.name))?.id;
         if (car && !car.isBoat && !car.isAir && fuelOf(car) < 0.6 && canId && career.p.tools?.[canId] && car.pos.distanceTo(player.pos) < 3.2) {
-          if (free && a.enter) { a.enter = false; car.fuel = Math.min(1, car.fuel + 0.35); hud.toast('Emptied the fuel can into the tank', 1.8); return ''; }
+          if (free && a.enter) {
+            a.enter = false;
+            const pour = () => { car.fuel = Math.min(1, car.fuel + 0.35); hud.toast('Emptied the fuel can into the tank', 1.8); };
+            // (A2) the filler's on the back quarter, driver's side
+            const fw = { x: Math.sin(car.heading), z: Math.cos(car.heading) }, lf = { x: Math.cos(car.heading), z: -Math.sin(car.heading) }, W = (car.spec.width || 1.9) / 2, L = (car.spec.len || 4.6) / 2;
+            const fill = { x: car.pos.x - fw.x * L * 0.6 + lf.x * W, z: car.pos.z - fw.z * L * 0.6 + lf.z * W };
+            const run = game.acts && !S.doorWalk ? game.acts.play(game.acts.pourBeats({ x: fill.x + lf.x * 0.55, z: fill.z + lf.z * 0.55, face: fill }), { done: (ok) => ok && pour() }) : null;
+            if (!run) pour();
+            return '';
+          }
           return 'F  pour the fuel can into the tank';
         }
       }

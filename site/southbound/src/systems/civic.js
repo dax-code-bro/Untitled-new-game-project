@@ -86,6 +86,7 @@ export function placeCivic(game, points) {
     const h = dressMember(lib, { ...site.staff, name: site.name });
     h.root.position.copy(shop.keeper); h.root.rotation.y = shop.keeperFace; h.play('Idle_Loop', 0); scene.add(h.root);
     staff.push(h);
+    if (game.civic[site.id]) game.civic[site.id].staff = h; // (A2: the desk sergeant takes your money, the nurse your name)
   }
   return {
     update(dt) {

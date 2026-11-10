@@ -102,7 +102,15 @@ export function installPhonePlus(game) {
       const [ux, uz] = L(2.8, 4.5 + 1.3);
       const at = { x: ux, z: uz, g };
       atms.push(at);
-      game.interact.add({ x: at.x, z: at.z, r: 1.6, label: () => `${keyHint(game)} use the ATM`, color: 0x2a7fd0, blip: { color: '#2a7fd0', size: 3, icon: '🏧' }, show: () => S.mode === 'foot' && !S.indoors, use: () => { atAtm = true; show0('bank'); } }); // the machine works whatever your battery says
+      game.interact.add({ x: at.x, z: at.z, r: 1.6, label: () => `${keyHint(game)} use the ATM`, color: 0x2a7fd0, blip: { color: '#2a7fd0', size: 3, icon: '🏧' }, show: () => S.mode === 'foot' && !S.indoors, use: () => {
+        const open = () => { atAtm = true; show0('bank'); };
+        if (!game.acts || S.doorWalk) return open();
+        // (A2) the card in, a few keys, the screen
+        const A = game.acts, card = A.prop('card'), slot = new (game.player.pos.constructor)(at.g.position.x, at.g.position.y + 1.15, at.g.position.z);
+        const run = A.play([{ face: slot, t: 0.3 }, { t: 0.7, start: (ctx) => A.hold(ctx, card), ik: (F, k, ctx, P) => { P.reach(P.R, F.chest.clone().addScaledVector(F.fw, 0.3).lerp(slot, Math.min(1, k * 1.4)), F, 'R'); P.attachToHand(card, P.R); } },
+          { t: 0.8, start: (ctx) => { card.parent?.remove(card); ctx.held = null; }, ik: (F, k, ctx, P) => { P.reach(P.R, slot.clone().addScaledVector(F.up, -0.12).addScaledVector(F.right, Math.sin(k * 20) * 0.03), F, 'R'); } }], { done: open });
+        if (!run) open();
+      } }); // the machine works whatever your battery says
     }
   };
   let atAtm = false;

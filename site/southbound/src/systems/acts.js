@@ -81,6 +81,21 @@ function makeProp(kind) {
   } else if (kind === 'bin') {
     add(new THREE.BoxGeometry(0.58, 1.0, 0.7), mat(0x2f5a34, 0.7), 0, 0.5, 0);
     add(new THREE.BoxGeometry(0.6, 0.05, 0.74), mat(0x264a2a, 0.7), 0, 1.02, 0);
+  } else if (kind === 'jerrycan') {
+    add(new THREE.BoxGeometry(0.17, 0.3, 0.24), mat(0xb3261e, 0.45, 0.2), 0, 0, 0);
+    add(new THREE.CylinderGeometry(0.018, 0.018, 0.09, 8), mat(0x2b2d30, 0.5), 0, 0.17, 0.07);
+  } else if (kind === 'bowl') {
+    add(new THREE.CylinderGeometry(0.075, 0.05, 0.06, 16), mat(0xe8e2d4, 0.7), 0, 0, 0);
+    add(new THREE.CylinderGeometry(0.068, 0.068, 0.01, 16), mat(0x7a4a22, 0.6), 0, 0.022, 0);
+  } else if (kind === 'axe') {
+    add(new THREE.CylinderGeometry(0.016, 0.018, 0.7, 8), mat(0x8a5a2e, 0.7), 0, 0.05, 0);
+    add(new THREE.BoxGeometry(0.03, 0.12, 0.16), mat(0x55585c, 0.4, 0.9), 0, 0.36, 0.05);
+  } else if (kind === 'bucket') {
+    add(new THREE.CylinderGeometry(0.13, 0.1, 0.26, 16, 1, true), mat(0x8a9096, 0.4, 0.8), 0, 0, 0);
+    add(new THREE.CylinderGeometry(0.12, 0.12, 0.01, 16), mat(0x3a5a70, 0.2), 0, 0.08, 0);
+  } else if (kind === 'phone') {
+    add(new THREE.BoxGeometry(0.072, 0.15, 0.009), mat(0x111214, 0.3, 0.2));
+    add(new THREE.BoxGeometry(0.064, 0.13, 0.002), mat(0x1d3550, 0.15, 0), 0, 0, 0.0055); // the screen
   } else if (kind === 'cup') {
     add(new THREE.CylinderGeometry(0.04, 0.032, 0.11, 12), mat(0xf2efe8, 0.8));
   } else add(new THREE.BoxGeometry(0.2, 0.15, 0.15), mat(0x888888)); // (anything else: a small package)
@@ -253,13 +268,13 @@ export function installActs(game) {
   //  chainsaw / trimmer (two hands, sweeping), flashlight (shone ahead, the other hand trying the door),
   //  bin (lifted with both hands and tipped)
   function workBeats(at, tool, t = 4, low = false) {
-    const k0 = prop(tool), two = tool === 'shovel' || tool === 'chainsaw' || tool === 'trimmer' || tool === 'bin';
+    const k0 = prop(tool), two = tool === 'shovel' || tool === 'chainsaw' || tool === 'trimmer' || tool === 'bin' || tool === 'axe';
     const W = { t, pose: low ? 'crouch' : 'idle', start: (ctx) => { ctx.held = null; scene.add(k0); }, ik: (F, k, ctx, P) => {
       const T = k * t, g = new THREE.Vector3(at.x, (at.y ?? player.pos.y) + (low ? 0.35 : 1.15), at.z);
       const front = F.chest.clone().addScaledVector(F.fw, 0.42).addScaledVector(F.up, low ? -0.45 : -0.1);
       const work = front.lerp(g, 0.35);
       let R = work.clone(), L = work.clone().addScaledVector(F.right, -0.16);
-      if (tool === 'hammer') R.addScaledVector(F.up, Math.abs(Math.sin(T * Math.PI * 2.4)) * 0.22).addScaledVector(F.right, 0.06);
+      if (tool === 'hammer' || tool === 'axe') { const ax = tool === 'axe'; R.addScaledVector(F.up, Math.abs(Math.sin(T * Math.PI * (ax ? 1.2 : 2.4))) * (ax ? 0.5 : 0.22)).addScaledVector(F.right, 0.06); if (ax) L = R.clone().addScaledVector(F.up, -0.12).addScaledVector(F.right, -0.05); }
       else if (tool === 'wrench') R.addScaledVector(F.right, 0.05 + Math.cos(T * 7) * 0.06).addScaledVector(F.up, Math.sin(T * 7) * 0.06);
       else if (tool === 'screwdriver') R.addScaledVector(F.fw, 0.04 + Math.sin(T * 9) * 0.015);
       else if (tool === 'shovel') { const d = Math.sin(T * Math.PI * 1.1); R = work.clone().addScaledVector(F.up, 0.3 + d * 0.15).addScaledVector(F.right, 0.08); L = work.clone().addScaledVector(F.up, -0.05 + d * 0.15).addScaledVector(F.fw, 0.1); }
@@ -269,11 +284,39 @@ export function installActs(game) {
       P.reach(P.R, R, F, 'R'); if (two || tool === 'flashlight' || tool === 'screwdriver' || tool === 'wrench') P.reach(P.L, L, F, 'L');
       if (tool === 'bin') { k0.position.copy(R).lerp(L, 0.5).addScaledVector(F.up, -0.55).addScaledVector(F.fw, 0.32); k0.rotation.set(-Math.sin(clamp(k, 0, 1) * Math.PI) * 1.1, Math.atan2(F.fw.x, F.fw.z), 0); k0.updateMatrixWorld(true); }
       else { P.attachToHand(k0, P.R); if (tool === 'chainsaw' || tool === 'trimmer' || tool === 'shovel') { k0.rotateX(-Math.PI / 2); k0.updateMatrixWorld(true); } }
-      if (tool === 'hammer' && Math.floor(T * 2.4) !== Math.floor((T - 1 / 60) * 2.4)) game.audio?.thud?.(0.12);
+      if ((tool === 'hammer' || tool === 'axe') && Math.floor(T * (tool === 'axe' ? 1.2 : 2.4)) !== Math.floor((T - 1 / 60) * (tool === 'axe' ? 1.2 : 2.4))) game.audio?.thud?.(tool === 'axe' ? 0.3 : 0.12);
     }, end: () => k0.parent?.remove(k0) };
     return [{ face: at, t: 0.3 }, W, { t: 0.25, pose: 'idle' }];
   }
+  // the screen goes dark for a while (title + a line), then comes back
+  let fadeEl = null;
+  function fade(on, title = '', line = '') {
+    if (!fadeEl) { fadeEl = document.createElement('div'); fadeEl.className = 'sbfade'; fadeEl.innerHTML = '<b style="font:800 28px Inter,system-ui,sans-serif;letter-spacing:.12em"></b><span style="opacity:.8"></span>'; document.body.appendChild(fadeEl); }
+    fadeEl.querySelector('b').textContent = title; fadeEl.querySelector('span').textContent = line;
+    fadeEl.classList.toggle('show', !!on);
+  }
+  // down for the night: sit on the edge of the bed, lie back, lights out
+  function sleepBeats(at = null) {
+    return [...(at ? [{ walk: at, speed: 1.3, max: 4 }] : []), { t: 1.0, pose: 'sit' }, { t: 1.6, pose: 'sit', start: () => fade(true, 'SLEEPING', '') }];
+  }
+  // pouring from a can: tilted over the filler for a couple of seconds, glugging
+  function pourBeats(at, t = 2.2) {
+    const can = prop('jerrycan');
+    return [{ walk: { x: at.x, z: at.z }, speed: 1.3, max: 4, face: at.face }, { t, start: (ctx) => hold(ctx, can), ik: (F, k, ctx, P) => {
+      const tilt = Math.min(1, k * 4) * (k < 0.9 ? 1 : (1 - k) * 10);
+      const c = F.chest.clone().addScaledVector(F.fw, 0.42).addScaledVector(F.up, -0.25 + tilt * 0.12);
+      can.position.copy(c); can.rotation.set(-tilt * 1.2, Math.atan2(F.fw.x, F.fw.z), 0, 'YXZ'); can.updateMatrixWorld(true);
+      P.reach(P.R, c.clone().addScaledVector(F.up, 0.17).addScaledVector(F.right, 0.03), F, 'R');
+      P.reach(P.L, c.clone().addScaledVector(F.right, -0.1).addScaledVector(F.up, -0.08), F, 'L');
+      if (Math.random() < 0.06) game.audio?.thud?.(0.04);
+    } }, { t: 0.3, start: (ctx) => { ctx.held = null; can.parent?.remove(can); } }];
+  }
   // cash changes hands: beats for your side (dir 'give': you pay them; 'take': they pay you)
+  function toward(who, gap = 0.85, max = 3) {
+    const dx = player.pos.x - who.pos.x, dz = player.pos.z - who.pos.z, L = Math.hypot(dx, dz) || 1;
+    if (L <= gap + 0.15) return { face: who.pos, t: 0.3 };
+    return { walk: { x: who.pos.x + (dx / L) * gap, z: who.pos.z + (dz / L) * gap }, face: who.pos, max };
+  }
   function payBeats(who, dir = 'give', t = 1.1) {
     const cash = prop('cash');
     if (dir === 'take') who.hold(cash, false);
@@ -319,7 +362,7 @@ export function installActs(game) {
   // ---------- the runner
   let cur = null;
   function play(beats, opts = {}) {
-    if (S.doorWalk || S.entering || S.mode !== 'foot' || S.dead > 0) { opts.done?.(false); return null; }
+    if (S.doorWalk || S.entering || S.mode !== 'foot' || S.dead > 0) return null; // (no done: the caller falls back)
     const ctx = { held: null, heldTwo: false, data: opts.data || {} };
     let i = -1, b = null, t = 0, ended = false;
     const pp = player.pos;
@@ -448,7 +491,9 @@ export function installActs(game) {
       beats.push({ pose: 'crouch', t: 1.0, ik: (F, k, ctx, P) => { const mat = new THREE.Vector3(spot.x + spot.nx * 0.45, gy + 0.08, spot.z + spot.nz * 0.45); carry(P, F, mesh, two, 0.3, 0.1, F.chest.clone().addScaledVector(F.fw, 0.3).lerp(mat, smooth(k))); },
         end: (ctx) => { ctx.held = null; const left = mesh; setTimeout(() => scene.remove(left), 20000); } });
       beats.push({ t: 0.5, pose: 'idle', say: opts.leftLine ? ['', opts.leftLine] : null });
-      return play(beats, { done: (ok) => { if (!ok) scene.remove(mesh); opts.done?.(ok); } });
+      const r0 = play(beats, { done: (ok) => { if (!ok) scene.remove(mesh); opts.done?.(ok); } });
+      if (!r0) scene.remove(mesh);
+      return r0;
     }
     beats.push(
       { t: 0.8, start: () => { swing('open'); who.h.root.visible = true; }, each: (dt) => { who.walk({ x: spot.x + spot.nx * 0.2, z: spot.z + spot.nz * 0.2 }, dt, 1.0); who.sync(dt); }, ik: waitIk },
@@ -460,7 +505,9 @@ export function installActs(game) {
       { t: 0.9, say: opts.thanks ? ['', opts.thanks] : null, each: (dt) => { who.walk({ x: spot.x - spot.nx * 0.7, z: spot.z - spot.nz * 0.7 }, dt, 1.1); who.sync(dt); } },
       { t: 0.45, start: () => { swing('close'); who.remove(); } },
     );
-    return play(beats, { done: (ok) => { if (!ok) who.remove(); scene.remove(mesh); opts.done?.(ok); } });
+    const r1 = play(beats, { done: (ok) => { if (!ok) who.remove(); scene.remove(mesh); opts.done?.(ok); } });
+    if (!r1) { who.remove(); scene.remove(mesh); }
+    return r1;
   }
 
   // ---------- at the counter: whenever you've bought something from a shopkeeper (a store screen or a
@@ -470,14 +517,15 @@ export function installActs(game) {
   Object.defineProperty(S, 'frozen', { configurable: true, enumerable: true, get: () => frozen,
     set: (b) => { b = !!b; if (b && !frozen && money0 == null) money0 = S.money; frozen = b; } });
   function counter(spent) {
-    if (S.mode !== 'foot' || S.doorWalk || S.dead > 0 || S.cutscene) return false;
-    let best = null, bd = 4.2;
-    for (const k of game.storeKeepers || []) {
+    if (S.mode !== 'foot' || S.doorWalk || S.entering || S.dead > 0 || S.cutscene) return false;
+    let best = null, bd = 4.2, payOnly = false;
+    for (const k of [...(game.storeKeepers || []), ...(game.counterPeople || [])]) {
       const h = k.h; if (!h || k.taken || !h.root.parent || h.root.visible === false) continue;
       const d = h.root.getWorldPosition(_v).distanceTo(player.pos);
-      if (d < bd && Math.abs(_v.y - player.pos.y) < 1.5) { bd = d; best = h; }
+      if (d < bd && Math.abs(_v.y - player.pos.y) < 1.5) { bd = d; best = h; payOnly = !!k.payOnly; }
     }
     if (!best) return false;
+    if (payOnly) { api.nextGoods = null; const who = fromHuman(best); return !!play(payBeats(who, 'give', 1.0), { done: () => who.release() }); }
     const ng = api.nextGoods; api.nextGoods = null;
     const who = fromHuman(best), goods = ng?.mesh || prop(spent >= 500 ? 'box' : 'bag');
     if (!goods.userData.kind) goods.userData.kind = 'food';
@@ -486,8 +534,26 @@ export function installActs(game) {
       { done: () => { who.release(); goods.parent?.remove(goods); } });
   }
 
-  const api = { play, person, fromPed, fromHuman, payBeats, eatBeats, treatBeats, pickupBeats, waveBeats, knifeBeats, workBeats, counter, prop, carry, reachTo, handsUp, handsBehind, wristsOf, handBeats, hold, doorstep, get acting() { return !!cur; }, cancel() { cur?.cancel(); } };
+  // the phone: the game is paused (and not drawn) while its screen is open, so what you see is the end of
+  // it: you finish with it in your hand, look at it a moment, and put it back in your pocket
+  let phoneOut = null;
+  const phoneAt = (F) => F.chest.clone().addScaledVector(F.fw, 0.3).addScaledVector(F.up, 0.1).addScaledVector(F.right, 0.03);
+  function phoneUp() {
+    if (S.mode !== 'foot' || S.doorWalk || S.dead > 0 || S.cutscene || phoneOut) return;
+    phoneOut = prop('phone');
+  }
+  function phoneAway() {
+    const ph = phoneOut; phoneOut = null;
+    if (!ph || S.mode !== 'foot' || S.dead > 0) return;
+    const run = play([{ t: 0.45, start: (ctx) => hold(ctx, ph), ik: (F, k, ctx, P) => { P.reach(P.R, phoneAt(F), F, 'R'); P.attachToHand(ph, P.R); } }, { t: 0.55, ik: (F, k, ctx, P) => {
+      const pocket = F.chest.clone().addScaledVector(F.right, 0.2).addScaledVector(F.up, -0.45).addScaledVector(F.fw, 0.05);
+      P.reach(P.R, phoneAt(F).lerp(pocket, smooth(k)), F, 'R'); P.attachToHand(ph, P.R);
+    } }, { t: 0.01, start: (ctx) => { ctx.held = null; ph.parent?.remove(ph); } }]);
+    if (!run) ph.parent?.remove(ph);
+  }
+  const api = { play, phoneUp, phoneAway, person, fromPed, fromHuman, toward, payBeats, eatBeats, treatBeats, pickupBeats, waveBeats, knifeBeats, workBeats, sleepBeats, pourBeats, fade, counter, prop, carry, reachTo, handsUp, handsBehind, wristsOf, handBeats, hold, doorstep, get acting() { return !!cur; }, cancel() { cur?.cancel(); } };
   game.acts = api;
+  game.fade = (fn) => { fade(true); setTimeout(() => { try { fn?.(); } catch (e) { console.error('[acts] ' + (e && e.message), e); } setTimeout(() => fade(false), 300); }, 1250); }; // (style.css .sbfade takes 1.2 s to go black)
   return { update() {
     // the store screen (or the conversation) closed: settle up at the counter
     if (money0 != null && !frozen && !S.stepping) { const spent = money0 - S.money; money0 = null; if (spent > 0) counter(spent); api.nextGoods = null; }

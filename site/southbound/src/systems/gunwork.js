@@ -88,6 +88,25 @@ export function installGunwork(game) {
         const p = victim();
         if (p) {
           const blade = combat.def.kind === 'blade';
+          if (free && a.enter && game.acts && !S.doorWalk && !p.takenDown) {
+            a.enter = false; p.takenDown = true;
+            // (A2) behind them, an arm round the neck, a moment's struggle, then down
+            const A = game.acts, who = A.fromPed(p), fx = Math.sin(p.heading), fz = Math.cos(p.heading);
+            const behind = { x: p.pos.x - fx * 0.5, z: p.pos.z - fz * 0.5 };
+            const run = A.play([{ walk: behind, speed: 2.4, max: 0.8, face: p.pos }, { t: 1.2, start: () => { p.h.play('Hit_Chest', 0.1, 0.6, true); }, each: (dt, k) => { p.heading += Math.sin(k * 30) * 0.02; }, ik: (F, k, ctx, P) => {
+              const neck = p.h.root.position.clone(); neck.y += 1.45;
+              P.reach(P.R, neck.clone().addScaledVector(F.right, -0.06).addScaledVector(F.fw, 0.06), F, 'R');
+              P.reach(P.L, neck.clone().addScaledVector(F.right, 0.12).addScaledVector(F.up, -0.15), F, 'L');
+            } }], { done: () => { who.release(); p.takenDown = false; a.enter = false; finishTakedown(); } });
+            const finishTakedown = () => {
+              if (p.mode === 'dead') return;
+              player.h.play(blade ? 'Punch_Jab' : 'Punch_Cross', 0.05, 1.3, true);
+              if (blade) peds.damage(p, 999, player.pos.clone(), { melee: true, part: 'torso', side: 'R' });
+              else { p.mode = 'ko'; p.koT = 25 + Math.random() * 10; p.speed = 0; if (p.h.goLimp((x, z, y) => game.collision.surface(x, z, y))) { const T = p.h.ragdoll; T.push(player.pos.clone().set(Math.sin(player.heading) * 0.6, -0.4, Math.cos(player.heading) * 0.6), null, null, 0.4); } ko.push(p); if (game.reportCrime) game.reportCrime('assault', p.pos.clone(), p); }
+            };
+            if (run) return '';
+            who.release(); p.takenDown = false; finishTakedown(); return '';
+          }
           if (free && a.enter) {
             a.enter = false;
             player.h.play(blade ? 'Punch_Jab' : 'Punch_Cross', 0.05, 1.3, true);

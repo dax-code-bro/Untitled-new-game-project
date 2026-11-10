@@ -291,6 +291,7 @@ export function installJobs(game) {
     for (const r of job.riders || []) r.remove();
     if (job.board) { for (const q of job.board.q) if (q.kind === 'on' && !job.riders?.includes(q.r)) q.r.remove(); if (game.S.holdCar === 'riders') game.S.holdCar = false; }
     const ended = job; job = null; career.saveSoon();
+    if (ended.veh && game.S.entering?.v === ended.veh) game.cancelEnter?.(); // (quit before you got in: you stop walking to it)
     try { game.work?.shiftEnded?.(d.id, ok, { rating: ended.rating, earned: ended.earned, msg, wrecked: !!ended.wrecked, opts: ended.opts }); } catch (e) { console.error('[jobs] ' + (e && e.message), e); }
   };
 
@@ -311,7 +312,7 @@ export function installJobs(game) {
     else {
       job.stops = stopPoints(def, from);
       // the work vehicle
-      if (def.veh) { const r = nearestRoad(graph, from[0], from[1]); job.veh = spawnParked(game, def.veh, r.x, r.z, Math.atan2(r.tx, r.tz)); job.veh.issued = true; game.enterVehicle(job.veh); }
+      if (def.veh) { const r = nearestRoad(graph, from[0], from[1]); job.veh = spawnParked(game, def.veh, r.x, r.z, Math.atan2(r.tx, r.tz)); job.veh.issued = true; if (!game.walkIntoVehicle?.(job.veh)) game.enterVehicle(job.veh); } // (A2: you walk to it)
       if (def.boat) { job.veh = game.marineAir.spawnCraft(BOATS.find((b) => b.id === def.boat), 'boat', { x: marina().water.x, z: marina().water.z, h: marina().dir }); game.enterVehicle(job.veh); }
       if (def.air) { const e = AIRCRAFT.find((a) => a.id === def.air); job.veh = game.marineAir.spawnCraft(e, 'air', { x: AIRFIELD.x1 - 90, z: AIRFIELD.z, h: -Math.PI / 2 }); game.enterVehicle(job.veh); }
       if (job.veh && def.siren) job.veh.siren = true;
@@ -330,7 +331,8 @@ export function installJobs(game) {
   }
 
   return {
-    JOBS, rankOf, where, get active() { return job; }, start: (id, opts) => start(JOBS.find((j) => j.id === id), opts),
+    JOBS, rankOf, where, get active() { return job; },
+    atDoor() { const st = job && DOOR[job.def.id] && job.stops[job.stop], sp = st && st[3]; return !!sp && Math.hypot(player.pos.x - (sp.x + sp.nx * 0.9), player.pos.z - (sp.z + sp.nz * 0.9)) < 2.6; }, start: (id, opts) => start(JOBS.find((j) => j.id === id), opts),
     update(dt, a, free) {
       if (!job) game.deliveryDoor = null;
       if (!job || game.S.frozen && !game.S.stepping) return '';

@@ -83,12 +83,20 @@ function hook(game) {
     const pr = problems(), cost = pr.reduce((a, [, c]) => a + c, 0);
     if (!pr.length) { hud.toast('The doctor looks you over. "You\'re fine. Go home."', 2.4); return; }
     if (!career.spend(cost)) { hud.toast(`That comes to $${cost}. You don't have it.`, 2.4); return; }
-    W.bleed = 0; W.leg = 0; W.arm = 0; W.numb = 0; player.health = 100;
-    if (M.woundAt != null) { P.stats.scars++; M.woundAt = null; }
-    M.inf = 0; M.venom = 0; M.venomSlow = false; M.conc = 0; M.broken = false; M.rabiesBy = 0; M.clean = false;
-    sky.hour += 2; if (sky.hour >= 24) { sky.hour -= 24; sky.day++; }
-    P.stats.hospital++; career.saveSoon();
-    hud.toast(`${where}: ${pr.map(([n]) => n).join(', ')}. Billed $${cost}. Two hours later you walk out patched up.`, 3.6);
+    const fix = () => {
+      W.bleed = 0; W.leg = 0; W.arm = 0; W.numb = 0; player.health = 100;
+      if (M.woundAt != null) { P.stats.scars++; M.woundAt = null; }
+      M.inf = 0; M.venom = 0; M.venomSlow = false; M.conc = 0; M.broken = false; M.rabiesBy = 0; M.clean = false;
+      sky.hour += 2; if (sky.hour >= 24) { sky.hour -= 24; sky.day++; }
+      P.stats.hospital++; career.saveSoon();
+      hud.toast(`${where}: ${pr.map(([n]) => n).join(', ')}. Billed $${cost}. Two hours later you walk out patched up.`, 3.6);
+    };
+    // (A2) up on the exam table while they work on you; the two hours go by in the dark
+    if (game.acts && S.mode === 'foot' && !S.doorWalk) {
+      const run = game.acts.play([{ t: 1.2, pose: 'sit' }, { t: 2.2, pose: 'sit', start: () => game.acts.fade(true, 'TREATMENT', where) }], { done: () => { fix(); setTimeout(() => game.acts.fade(false), 400); } });
+      if (run) return;
+    }
+    fix();
   };
   const pharmacy = [['Antibiotics', 45, () => { M.abx = Math.min(6, M.abx + 1); }], ['Painkillers', 9, () => { P.med.painkillers = Math.min(6, (P.med.painkillers || 0) + 1); lastMed.painkillers = P.med.painkillers; }], ['Bandage roll', 12, () => { P.med.bandage = Math.min(10, (P.med.bandage || 0) + 1); lastMed.bandage = P.med.bandage; }]];
   for (const [id, where] of [['hospital', 'Port Calvera Medical Center'], ['clinic', 'Mill Creek Clinic']]) {
@@ -110,8 +118,15 @@ function hook(game) {
     interact.add({ x: p.x, z: p.z, r: 1.6, color: 0xd04040, show: () => S.mode === 'foot', label: () => `${keyHint(game)} first-aid cabinet${M.cabinetDay === sky.day ? ' (empty till tomorrow)' : ''}`,
       use: () => {
         if (M.cabinetDay === sky.day) { hud.toast('Empty. Someone restocks it every morning.', 1.8); return; }
-        M.cabinetDay = sky.day; P.med.bandage = Math.min(10, (P.med.bandage || 0) + 2); lastMed.bandage = P.med.bandage;
-        hud.toast('Two bandage rolls from the cabinet.', 1.8); career.saveSoon();
+        const got = () => { M.cabinetDay = sky.day; P.med.bandage = Math.min(10, (P.med.bandage || 0) + 2); lastMed.bandage = P.med.bandage; hud.toast('Two bandage rolls from the cabinet.', 1.8); career.saveSoon(); };
+        const A = game.acts;
+        if (A && !S.doorWalk) { // (A2) a hand into the cabinet, the rolls out
+          const at = new (player.pos.constructor)(p.x, player.pos.y + 1.35, p.z), roll = A.prop('bandage'), chest = (F) => F.chest.clone().addScaledVector(F.fw, 0.3);
+          if (A.play([{ face: at, t: 0.3 }, { t: 0.55, ik: (F, k, ctx, P) => P.reach(P.R, chest(F).lerp(at, k * 0.85), F, 'R') },
+            { t: 0.65, start: (ctx) => A.hold(ctx, roll), ik: (F, k, ctx, P) => { P.reach(P.R, at.clone().lerp(chest(F), k), F, 'R'); P.attachToHand(roll, P.R); } },
+            { t: 0.01, start: (ctx) => { roll.parent?.remove(roll); ctx.held = null; } }], { done: got })) return;
+        }
+        got();
       } });
   }
 

@@ -131,6 +131,7 @@ export function installAmbient(game) {
     const vendor = new Human(lib, lib.peopleIds[(carts.length * 3) % lib.peopleIds.length]);
     vendor.root.position.set(x, y, z - 0.9); vendor.root.rotation.y = Math.PI; vendor.play('Idle_Loop', 0); scene.add(vendor.root);
     carts.push({ g, vendor, x, z });
+    (game.counterPeople = game.counterPeople || []).push({ h: vendor }); // (A2: they hand it over the cart, systems/acts.js)
     interact.add({ x, z: z + 1.2, r: 1.8, marker: false, show: () => S.mode === 'foot', label: () => `${keyHint(game)} buy something from the cart`,
       use: () => { if (game.mart) { game.mart.k = 0.85; game.mart.show('here', 'Street cart'); } } });
   }

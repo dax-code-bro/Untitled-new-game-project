@@ -75,7 +75,7 @@ export function installRobbery(game) {
         if (a.t < 0.45) return;
         if (k.robbedDay === game.sky.day) { hud.toast(pick(AGAIN), 2.2); k.h.play('Crouch_Idle_Loop', 0.2); a.state = 'done'; a.t = 0; return; }
         const roll = game.robberyForce ? (game.robberyForce === 'fight' ? 0 : 1) : Math.random(); // (tests can force it)
-        game.peds.panic(k.pos, 30, { cover: true }); // a gun on the clerk: customers and passers-by get down (R1)
+        game.peds.panic(k.h.root.position.clone(), 30, { cover: true }); // (a keeper has no .pos: that threw on every hold-up) // a gun on the clerk: customers and passers-by get down (R1)
         if (roll < armedChance(k)) { a.state = 'fight'; fight(k); active = null; return; }
         a.state = 'comply'; a.t = 0;
         hud.toast(pick(COMPLY), 2.5);
@@ -86,6 +86,7 @@ export function installRobbery(game) {
         if (!aimed) {
           a.lowered += dt;
           if (a.lowered > 1.5) { // they hit the panic button under the counter
+            if (a.bag) { a.bag.who.release(); a.bag = null; }
             hud.toast('The clerk hits the panic button!', 2.5); game.audio?.alarm?.(0.8);
             k.robbedDay = game.sky.day; callCops(k, 0.5); k.h.play('Crouch_Idle_Loop', 0.2); a.state = 'done'; a.t = 0;
           }
@@ -93,7 +94,15 @@ export function installRobbery(game) {
         }
         a.lowered = 0;
         if (a.t > 1.2 && a.t - dt <= 1.2) k.h.play('Interact', 0.2, 0.8);
-        if (a.t > 3.8) {
+        // (A2) the bag comes up from behind the counter and is held out to you, arms shaking
+        if (a.t > 3.8 && !a.bag && game.acts && !k.taken) {
+          const A = game.acts, who = A.fromHuman(k.h), bag = A.prop('bag');
+          who.hold(bag, true); k.h.play('Idle_Loop', 0.2);
+          who.ik = (F, P) => { const to = player.pos.clone(); to.y = F.chest.y - 0.15; const at = F.chest.clone().addScaledVector(F.fw, 0.32).addScaledVector(F.up, -0.1).lerp(to, 0.18); at.x += Math.sin(a.t * 37) * 0.008; A.carry(P, F, bag, true, 0.3, 0.12, at); };
+          a.bag = { who, bag };
+        }
+        if (a.t > (a.bag ? 5.2 : 3.8)) {
+          if (a.bag) { a.bag.who.release(); a.bag = null; } // (you snatch it)
           const cash = take(k);
           S.money += cash;
           hud.toast(`${pick(HANDOVER)}  +$${cash}`, 2.8);

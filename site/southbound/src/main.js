@@ -701,7 +701,15 @@ vec3 CustomToneMapping( vec3 color ) {
   }
   // walk round to the driver's door, open it, climb in (parked cars)
   function beginEnter(v, fromTraffic) {
-    if (v.isBoat || v.isAir) return enterVehicle(v, fromTraffic);
+    if (v.isBoat || v.isAir) {
+      if (game.acts && !fromTraffic && S.mode === 'foot' && !S.doorWalk) { // (A2) over to it and aboard
+        const side = new THREE.Vector3(Math.cos(v.heading), 0, -Math.sin(v.heading)), s = Math.sign(side.x * (player.pos.x - v.pos.x) + side.z * (player.pos.z - v.pos.z)) || 1;
+        const beats = v.isAir ? [{ walk: { x: v.pos.x + side.x * s * 1.7, z: v.pos.z + side.z * s * 1.7 }, face: v.pos, max: 3.5 }, { t: 0.8, clip: 'Interact', speed: 1.1 }]
+          : [{ face: v.pos, t: 0.3 }, { t: 0.45, pose: 'crouch' }];
+        if (game.acts.play(beats, { done: (ok) => { if (ok && S.mode === 'foot' && S.dead <= 0) enterVehicle(v); } })) return;
+      }
+      return enterVehicle(v, fromTraffic);
+    }
     // a carjacking (A2): the car stops, you yank the driver's door open and drag them out by the collar
     let jack = null;
     if (fromTraffic) {
@@ -718,6 +726,10 @@ vec3 CustomToneMapping( vec3 color ) {
     S.entering = { v, t: 0, phase: 0, at, jack, left, door: v.door ? v.door('door-drv') : v.group.getObjectByName('door-drv') };
     game.onDoorOpen?.(v);
   }
+  // (A2) for systems that hand you a vehicle (a job's van): you walk round to the driver's door and get in
+  game.walkIntoVehicle = (v) => { if (S.mode !== 'foot' || S.entering || S.doorWalk || S.dead > 0 || v.isBoat || v.isAir || !v.cabLayout) return false; beginEnter(v, null); return true; };
+  // stop walking to a car (a teleport, a shift quit before you got in); a carjack can't be called off
+  game.cancelEnter = () => { const e = S.entering; if (!e || e.jack) return; S.entering = null; if (e.door) S.doorClose = { door: e.door, t: 0 }; player.h.locked = 0; };
   function updateEnter(dt) {
     const e = S.entering, v = e.v;
     e.t += dt;
@@ -1451,6 +1463,7 @@ vec3 CustomToneMapping( vec3 color ) {
     teleport(x, z, heading = 0) {
       if (S.indoors && game.estate) game.estate.leave(); // never carry the indoor state across a teleport
       if (S.doorWalk) { S.doorWalk.cancel?.(); S.doorWalk = null; } // (or a little scene: systems/acts.js)
+      game.cancelEnter?.(); // (or on the way to a car's door)
       const y = collision.surface(x, z, 500);
       if (S.mode === 'car') { S.vehicle.pos.set(x, y, z); S.vehicle.heading = heading; S.vehicle.vel.set(0, 0); }
       else { player.pos.set(x, y, z); player.heading = heading; }

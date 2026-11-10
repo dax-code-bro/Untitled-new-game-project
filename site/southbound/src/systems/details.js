@@ -143,6 +143,11 @@ export function installDetails(game) {
   game.fireAlarm = (inside) => {
     if (alarm) { hud.toast('The alarm is already going', 1.5); return; }
     const d = inside.d, a = inside.it.alarm;
+    // (A2) your hand up on the handle, and down it comes
+    if (game.acts && !game.S.doorWalk && a.pull) {
+      const hp = a.pull.getWorldPosition(new THREE.Vector3());
+      game.acts.play([{ face: hp, t: 0.3 }, { t: 0.7, ik: (F, k, ctx, P) => { P.reach(P.R, hp.clone().addScaledVector(F.up, k > 0.55 ? -0.08 : 0.02), F, 'R'); } }]);
+    }
     a.pull.children[0].position.y = -0.06; // the handle stays down
     alarm = { t: 0, d, a, pos: new THREE.Vector3(d.x, collision.surface(d.x, d.z, 300), d.z) };
     hud.toast('FIRE ALARM — everybody out. The fire department is coming.', 3.5);

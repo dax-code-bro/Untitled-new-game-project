@@ -158,6 +158,16 @@ the fewest additions next. Be honest in reports about what is and isn't done.
   (`acts.nextGoods` = what comes over the counter). In a car, `S.carReach(gunPose, v)` poses your hands
   after the wheel. Arrests: law.js PHASES (cuff/hood/ground), `law._cut()` for tests. Job stops: jobs.js
   DOOR (doorstep jobs) and WORK (trades); their map markers have `noUse` so F reaches the job.
+  Part 2/3 helpers: `acts.toward(who)` (walk to arm's length), `acts.fade(on, title, line)` and `game.fade(fn)`
+  (black for a cut), `sleepBeats`/`pourBeats`, `game.counterPeople` ({h, payOnly}: street cart vendors, the
+  hideout crew) beside `game.storeKeepers`, `acts.phoneUp/phoneAway` (wrapped round the phone's show/close),
+  `game.walkIntoVehicle(v)` (job vans), `jobs.atDoor()`, `game.civic[id].staff` (the desk sergeant, the nurse).
+  While a delivery is on, that house's own door point hides (`d !== game.deliveryDoor`) or F walks you in.
+  Nothing renders while `S.frozen` (main.js frame()): a pose struck behind a paused menu is never seen.
+  `acts.play` returns null WITHOUT calling done when it can't start (in a scene, walking to a car, in a
+  car, dead): every caller does `if (play(...)) return; <instant version>`. `game.cancelEnter()` stops a
+  walk to a car (teleports and quitting a shift call it). Wrapping a game function (crew.js wraps
+  game.sleep): pass every argument through.
   Never run python edits through a bash heredoc that mentions `.remove(`: the safety check can't parse it;
   write the script to a file first.
   The mouse is captured (pointer lock) only while no `.screen` menu is showing (`core/input.js`): with

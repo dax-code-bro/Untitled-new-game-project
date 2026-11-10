@@ -140,6 +140,53 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 - [x] Loading screen with in-game art, tips and progress
 - [x] Fewer touch buttons: ◎ interact replaces the car button; map, phone, arsenal, free cam moved to pause
 
+## Phase 1.68 — A2 (parts 2 and 3): the rest of the instant things, acted out
+
+The second and third groups from the survey of things that used to be instant (a toast, money, a teleport).
+All of them go through `systems/acts.js`; each falls back to the old instant version if a scene can't
+start (in a car, already in a scene, dead).
+
+- [x] Job vehicles: the work van/truck is parked at the curb and you walk round to its door and get in
+      (it used to teleport you into the seat). At a delivery door F is for the delivery (the house's own
+      door and "say hello" to a passer-by step aside)
+- [x] Hitchhikers walk round to the passenger door, it opens, they get in and you can see them in the seat;
+      at the drop-off the door opens and they step out
+- [x] Mission givers have a body: they wait at the start, turn to you, brief you face to face, then walk
+      off; a mission's pay is handed to you (cash from their hand)
+- [x] Sleeping: you sit on the edge of the bed, lie back, the screen goes dark through the hours. The fuel
+      can: you tip it over the filler and pour. The doctor: you sit on the exam table, the screen goes
+      dark while you're patched up
+- [x] Bandaging someone else: down on one knee, wrapping their wound. A takedown: you step in behind
+      them, an arm round them, and down they go
+- [x] The hideout: a bowl from the kitchen eaten bite by bite, the ammo rack (a hand to each shelf),
+      chores with the tool in your hands (the axe at the woodpile, the bucket, the hammer), Marisol
+      patching you up while you sit
+- [x] Buying a property: the papers signed against your hand, then the keys. The fire alarm: your hand
+      up on the handle and down it comes. A demolition charge: both hands press it to the wall, then you
+      step back
+- [x] The ATM: your card in the slot, a few keys, then the screen. The Runr courier puts the parcel into
+      your hands. The laundromat: the clothes into the machine, the lid down, half an hour in the dark.
+      The basin: bent over it, scrubbing. Antagonizing someone: your finger in their face; they flinch
+      or square up
+- [x] The precinct: the desk sergeant takes the bounty money from your hand; your confiscated things come
+      back across the desk in a box
+- [x] Spare change: you crouch and put the bills in their hand. A car broken down by the road: round to
+      the front, both hands in the engine bay, then the driver pays you from their hand. The robbery you
+      broke up: the victim presses the cash into your hand
+- [x] Boats and planes: you walk to the plane's side and climb up into it; you step down into a boat
+- [x] A hold-up: the clerk fills a bag at the register and holds it out over the counter while you keep
+      the gun on them. The street cart: the vendor hands it over the cart like a shop counter
+- [x] Paying anyone in the hideout crew for a service: the cash goes from your hand to theirs
+- [x] The phone: when you close it you're holding it, you glance at it and put it back in your pocket (the
+      game is paused and not drawn while its screen is open, so that's the part you can see)
+- [x] A fade to black for the phone's ride to the hideout (it used to cut)
+- [x] Fixed on the way: holding up a store threw an error the moment the clerk complied (the panic call
+      used a position clerks don't have); a scene that couldn't start ran its ending as well as the
+      instant version (two nights' sleep, a bounty paid twice); the crew's bunkhouse hook dropped the
+      sleep's "now" flag, so a night acted out started itself again for ever; F at a door could still go
+      to a point the game had hidden a moment earlier (the list is rebuilt 4x a second; it's re-checked
+      now); quitting a shift while walking to the work van left you walking to it
+
 ## Phase 1.67 — A2 (part 1): things are acted out, not toasted
 
 The owner: "add animations for every little thing ... the cops never even touch you ... depending on what

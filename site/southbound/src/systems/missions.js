@@ -158,13 +158,38 @@ export function installMissions(game) {
     giverPoint.x = near.x + 4; giverPoint.z = near.z; giverPoint.y = game.hm.height(giverPoint.x, giverPoint.z);
   };
   placeGiver();
+  // (A2) the contact, in person
+  let giver = null;
+  const looksFor = (who) => { const ids = game.lib.peopleIds; let h = 0; for (const c of String(who)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return ids[h % ids.length]; };
+  const giverTick = (dt) => {
+    const m = nextMission(), want = !run && !!m && giverPoint.show() && Math.hypot(player.pos.x - giverPoint.x, player.pos.z - giverPoint.z) < 110;
+    if (want && !giver && game.acts) { giver = game.acts.person({ x: giverPoint.x, z: giverPoint.z }, Math.PI, looksFor(m.who)); giver.who = m.who; }
+    if (!giver) return;
+    if (giver.leaving != null) { // briefed you; off they go
+      giver.leaving -= dt;
+      if (giver.leaving < 6.5) giver.walk(giver.away, dt, 1.2);
+      else { giver.face(player.pos, dt); giver.h.play('Idle_Talking_Loop', 0.25); }
+      giver.sync(dt);
+      if (giver.leaving <= 0 || Math.hypot(player.pos.x - giver.pos.x, player.pos.z - giver.pos.z) > 140) { giver.remove(); giver = null; }
+      return;
+    }
+    if (!want || giver.who !== m.who) { giver.remove(); giver = null; return; }
+    const d = Math.hypot(player.pos.x - giver.pos.x, player.pos.z - giver.pos.z);
+    if (d < 9) giver.face(player.pos, dt);
+    giver.h.play(d < 4 ? 'Idle_Talking_Loop' : 'Idle_Loop', 0.4);
+    giver.sync(dt);
+  };
 
   const mark = (x, z, r = 7, opts = {}) => { if (run.marker) interact.remove(run.marker); run.marker = interact.add({ x, z, r, any: true, height: opts.height || 8, color: 0xff3040, blip: { color: '#ff3040', size: 7, global: true, icon: '📍', bg: 'rgba(190,20,30,0.95)' }, label: () => '', use: () => {} }); };
   // opts: { replay } (a story mission again, for a better medal), { from: step } (a checkpoint)
   const begin = (m, opts = {}) => {
     run = { m, step: -1, t: 0, replay: !!opts.replay, total: 0 };
     if (opts.from > 0) { run.step = opts.from - 1; hud.bigMessage(m.title.toUpperCase(), 'From the checkpoint', 2.5); }
-    else { hud.bigMessage(m.title.toUpperCase(), `${m.side ? 'Side job' : m.act} · ${m.who}`, 3.5); say(m.who, m.brief, 7); }
+    else {
+      hud.bigMessage(m.title.toUpperCase(), `${m.side ? 'Side job' : m.act} · ${m.who}`, 3.5); say(m.who, m.brief, 7);
+      // (A2) they brief you face to face, then go
+      if (giver) { giver.leaving = 7 + 6.5; const a = Math.random() * Math.PI * 2; giver.away = { x: giver.pos.x + Math.sin(a) * 9, z: giver.pos.z + Math.cos(a) * 9 }; game.acts?.play([{ face: giver.pos, t: 0.4 }, { t: 1.6, pose: 'idle' }]); }
+    }
     game.onMissionStart?.(m, run, opts);
     advance();
   };
@@ -188,7 +213,11 @@ export function installMissions(game) {
       for (let i = 0; i < a1; i++) { const p = game.peds.spawnAt(x + (Math.random() - 0.5) * 20, z + (Math.random() - 0.5) * 20, player.pos); if (p) { p.foe = true; p.role = 'foe'; p.hp = 120; run.foes.push(p); } }
       mark(x, z, 25, { height: 4 });
     } else if (kind === 'escape') { game.police.wanted = Math.max(game.police.wanted || 0, a1); game.police.cool = 0; }
-    else if (kind === 'pay') { if (!career.spend(a1)) { say(run.m.who, `Come back when you have ${money(a1)}.`, 4); fail(); } else advance(); }
+    else if (kind === 'pay') {
+      if (!career.spend(a1)) { say(run.m.who, `Come back when you have ${money(a1)}.`, 4); fail(); }
+      else if (giver && game.acts && Math.hypot(player.pos.x - giver.pos.x, player.pos.z - giver.pos.z) < 6) { const r = run; giver.leaving = Math.max(giver.leaving ?? 0, 8.5); const ok = game.acts.play(game.acts.payBeats(giver, 'give', 1.1), { done: () => { if (run === r) advance(); } }); if (!ok) advance(); } // (A2) cash into their hand
+      else advance();
+    }
     else if (kind === 'talk') { const lines = ['We\'ll talk more soon.', 'Keep your head down.', 'Danny trusted you. So do I.', 'This town has a long memory.']; say(run.m.who, lines[Math.floor(Math.random() * lines.length)], 4); setTimeout(() => run && advance(), 2500); }
   };
   const complete = () => {
@@ -219,6 +248,7 @@ export function installMissions(game) {
     advanceStep: () => { if (run) advance(); },
     update(dt) {
       if (subT > 0 && (subT -= dt) <= 0) sub.style.opacity = 0;
+      if (!game.S.frozen || game.S.stepping) { try { giverTick(dt); } catch (e) { console.error('[missions] ' + (e && e.message), e); giver = null; } }
       if (!run || (game.S.frozen && !game.S.stepping)) return '';
       if (game.player.health <= 0) { fail('You died'); return ''; }
       const s = run.m.steps[run.step];
