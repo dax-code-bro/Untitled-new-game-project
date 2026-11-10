@@ -67,6 +67,7 @@ export class Interactions {
     let best = null, bd = 1e9;
     for (const p of this.near) {
       if (p.r < 0.5) break;
+      if (p.noUse) continue; // (only a marker on the map: something else handles F there)
       if (!!p.drive !== !!inCar && !p.any) continue;
       const d = Math.hypot(p.x - pos.x, p.z - pos.z);
       if (d < p.r && d < bd) { bd = d; best = p; }

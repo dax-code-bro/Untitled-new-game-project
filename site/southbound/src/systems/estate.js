@@ -304,6 +304,8 @@ export function installEstate(game) {
     else if ((it.kind === 'store' || it.kind === 'bar') && !(p && owned(p)) && lockState(d, p) === 'open') placeClerk(d, it);
     for (const f of enterHooks) f({ d, it, p, owned: !!(p && owned(p)), point });
   }
+  // where a door is, for the little scenes: its middle at the wall and its outside normal
+  const doorSpotOf = (d) => ({ x: d.b.x + d.nx * (d.b.w / 2), z: d.b.z + d.nz * (d.b.d / 2), nx: d.nx, nz: d.nz, door: d });
   // a locked door: knock, kick it in, or leave it
   function tryDoor(d, p) {
     if (d.b.ruined) { hud.toast(d.b.ruined === 'build' ? 'Construction site. Hard hats only.' : 'Fire damage. The building is condemned.', 2.5); return; }
@@ -314,8 +316,13 @@ export function installEstate(game) {
     }
     const opts = [];
     if (home) opts.push(['Knock', () => {
-      if (someoneHome(d)) hud.toast(['"Who is it? ...We don\'t want any. Go away."', '"It\'s late! Go home!"', '"I don\'t know you. I\'m not opening this door."'][(Math.random() * 3) | 0], 3);
-      else hud.toast('Nobody answers.', 2);
+      const answer = () => { if (someoneHome(d)) hud.toast(['"Who is it? ...We don\'t want any. Go away."', '"It\'s late! Go home!"', '"I don\'t know you. I\'m not opening this door."'][(Math.random() * 3) | 0], 3); else hud.toast('Nobody answers.', 2); };
+      if (!game.acts) return answer();
+      const sp = doorSpotOf(d), pt = new THREE.Vector3(sp.x + sp.nx * 0.06, player.pos.y + 1.3, sp.z + sp.nz * 0.06), kn = () => (game.audio?.knock ? game.audio.knock() : game.audio?.thud?.(0.25));
+      const run = game.acts.play([{ walk: { x: sp.x + sp.nx * 0.75, z: sp.z + sp.nz * 0.75 }, face: { x: sp.x, z: sp.z }, max: 3 },
+        { t: 1.3, start: () => { kn(); setTimeout(kn, 360); setTimeout(kn, 720); }, ik: (F, k, ctx, P) => game.acts.reachTo(P, F, 'R', pt.clone().addScaledVector(F.right, 0.15), k, 3) },
+        { t: 1.4 }], { done: answer });
+      if (!run) answer();
     }]);
     opts.push(['Kick it in (break-in)', () => breakIn(d, p, home)]);
     opts.push(['Leave it', () => {}]);
@@ -323,13 +330,20 @@ export function installEstate(game) {
   }
   function breakIn(d, p, home) {
     hud.toast('*THUD* ...*THUD* ...*CRACK*', 2);
-    game.audio?.thud?.(1); setTimeout(() => game.audio?.thud?.(1), 600); setTimeout(() => game.audio?.thud?.(1.2), 1200);
-    setTimeout(() => {
+    // (A2) you kick at the lock: a step back, a kick, again, and the third one bursts it
+    const through = () => {
       d.broken = 24; // the door stays broken until someone fixes it (a game day)
       // neighbours hear it
       game.reportCrime?.('breakin', new THREE.Vector3(d.x, 0, d.z));
       enter(d).then?.(() => { if (home && someoneHome(d)) occupy(d, 'breakin'); else if (!home && Math.random() < 0.5) hud.toast('An alarm starts beeping somewhere.', 2.5); });
-    }, 1500);
+    };
+    if (game.acts && game.S.mode === 'foot' && !game.S.doorWalk) {
+      const sp = doorSpotOf(d), kick = (n) => ({ t: 0.6, clip: 'Punch_Cross', speed: 1.5, start: () => { setTimeout(() => { game.audio?.thud?.(n === 3 ? 1.2 : 1); if (game.rig) game.rig.shake = Math.max(game.rig.shake || 0, n === 3 ? 0.5 : 0.25); if (n === 3) swingDoor(d, 'bash', null); }, 220); } });
+      const run = game.acts.play([{ walk: { x: sp.x + sp.nx * 0.95, z: sp.z + sp.nz * 0.95 }, face: { x: sp.x, z: sp.z }, max: 3 }, kick(1), { t: 0.25 }, kick(2), { t: 0.25 }, kick(3), { t: 0.35 }], { done: through });
+      if (run) return;
+    }
+    game.audio?.thud?.(1); setTimeout(() => game.audio?.thud?.(1), 600); setTimeout(() => game.audio?.thud?.(1.2), 1200);
+    setTimeout(through, 1500);
   }
   // the people who live there
   let occ = null;
@@ -413,7 +427,7 @@ export function installEstate(game) {
     interact.add({ x: d.x, z: d.z, r: 1.6, marker: !!p && !owned(p) ? undefined : false,
       color: p && owned(p) ? 0x60ff90 : 0xffd040, height: 1.2,
       blip: p ? { color: '#60ff90', size: 4, global: true } : null,
-      show: () => !inside,
+      show: () => !inside && d !== game.deliveryDoor, // (a delivery door: F is the knock and hand-over, systems/jobs.js)
       // no prompt: you open a door by walking into it (see walkIntoDoors); F still knocks / kicks a locked one
       label: () => (p && !owned(p) ? `${p.name} · for sale ${money(p.price)}` : ''),
       use: () => tryDoor(d, p) });
@@ -520,6 +534,7 @@ export function installEstate(game) {
       const into = -(v.x * d.nx + v.z * d.nz);
       if (out > -0.1 && out < 0.75 && lat < 0.8 && into > 0.9) { hit = d; break; }
     }
+    if (hit && hit === game.deliveryDoor) hit = null; // (a delivery: you knock, you don't walk in; systems/jobs.js)
     if (!hit) { push.d = null; push.t = 0; return; }
     if (push.d !== hit) { push.d = hit; push.t = 0; }
     push.t += dt;
@@ -619,7 +634,9 @@ export function installEstate(game) {
   if (P.home) { const p = props.find((x) => x.id === P.home); if (p) game.teleport(p.door.x + p.door.nx * 1.5, p.door.z + p.door.nz * 1.5, Math.atan2(p.door.nx, p.door.nz)); }
 
   return {
-    props, doors, realtor, enter, leave, kindOf, someoneHome, lockState, doorWalk, get inside() { return inside; },
+    props, doors, realtor, enter, leave, kindOf, someoneHome, lockState, doorWalk, swingDoor, get inside() { return inside; },
+    // where a door is, for the little scenes (systems/acts.js): its middle at the wall and its outside normal
+    doorSpot: doorSpotOf,
     claim: (i, spec) => special.set(i, spec), special, onEnter: (f) => enterHooks.push(f), isProperty: (i) => propByBuilding.has(i),
     update(dt = 0) {
       updateOccupant(dt);

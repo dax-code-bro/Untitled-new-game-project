@@ -205,7 +205,7 @@ export function installPopulation(game) {
       let near = null, nd = 2.4;
       for (const p of out.values()) { if (p.mode === 'dead') continue; const d = p.pos.distanceTo(player.pos); if (d < nd) { nd = d; near = p; } }
       if (!near) return '';
-      if (free && a?.enter) { a.enter = false; greet(near); return ''; }
+      if (free && a?.enter) { a.enter = false; greet(near); if (game.acts && !S.doorWalk) game.acts.play(game.acts.waveBeats(near.pos)); return ''; }
       return `${keyHint(game)} say hello to ${fullName(near.resident)}`;
     },
   };

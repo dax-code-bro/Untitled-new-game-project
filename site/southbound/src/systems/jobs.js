@@ -1,6 +1,7 @@
 // 27 jobs. Each job board starts a shift: get the work vehicle (or your
 // tools), follow the stops before the clock runs out, get paid per stop.
 // Pay grows with your level in that job (every 3 shifts).
+import * as THREE from 'three';
 import { CITY, TOWN, LAKE, PLAINS, FOREST, AIRFIELD, BAYOU } from '../world/layout.js';
 import { roadPointAround, nearestRoad, spawnParked, money, keyHint } from './world-util.js';
 import { BOATS, AIRCRAFT } from '../entities/craft.js';
@@ -34,6 +35,7 @@ export const JOBS = [
   { id: 'construction', name: 'Construction Worker', at: C(7, 1), veh: null, area: 'near', stops: 4, wait: 6, pay: 120, timer: 420, tool: 'build', text: 'Frame, drill and fasten at the site' },
   { id: 'electrician', name: 'Electrician', at: C(3, 5), veh: 'van_02', area: 'city', stops: 3, wait: 6, pay: 160, timer: 480, tool: 'elec', text: 'Service calls: wiring and panels' },
   { id: 'plumber', name: 'Plumber', at: C(4, 5), veh: 'van_03', area: 'city', stops: 3, wait: 6, pay: 150, timer: 480, tool: 'plumb', text: 'Service calls: leaks and clogs' },
+  { id: 'paper', name: 'Paper Route', at: T(2, 3), veh: null, area: 'town', stops: 7, pay: 18, timer: 540, text: 'The Calvera Courier, door to door around Mill Creek' },
   { id: 'ranch', name: 'Ranch Hand', at: [PLAINS.x + 200, PLAINS.z - 140], veh: 'offroad_01', area: 'plains', stops: 5, pay: 85, timer: 480, text: 'Check fences and round up strays across the plains' },
   { id: 'bounty', name: 'Bounty Hunter', at: C(0, 2), kind: 'bounty', pay: 900, timer: 600, text: 'Track down the fugitive and take them out' },
 ];
@@ -47,7 +49,38 @@ const stars = (r) => '★'.repeat(Math.round(r)) + '☆'.repeat(5 - Math.round(r
 const GRIPES = ['"Whoa! Watch it!"', '"Are you trying to kill us?"', '"Easy, easy!"', '"I\'d like to get there alive."', '"That\'s coming out of your tip."'];
 
 const JOB_ICONS = { taxi: '🚕', bus: '🚌', parcel: '📦', pizza: '🍕', trucker: '🚚', paramedic: '🚑', fire: '🚒', police: '🚓', tow: '🛻', garbage: '🗑️', roadcrew: '🚧', mechanic: '🔧', messenger: '✉️', security: '🛡️',
-  charter: '🛥️', fisherman: '🐟', guide: '🦌', duster: '🌾', tours: '🚁', medevac: '🚑', lumber: '🪓', landscaper: '🌳', construction: '🏗️', electrician: '⚡', plumber: '🚰', ranch: '🐄', bounty: '🎯' };
+  charter: '🛥️', fisherman: '🐟', guide: '🦌', duster: '🌾', tours: '🚁', medevac: '🚑', lumber: '🪓', landscaper: '🌳', construction: '🏗️', electrician: '⚡', plumber: '🚰', ranch: '🐄', bounty: '🎯', paper: '📰' };
+
+// A2: deliveries are made at the door. You walk up with it, knock, they open up and take it from you (or
+// nobody's home and it goes on the mat); pizza customers pay you on the step.
+const DOOR = {
+  parcel: { item: 'parcel', kinds: ['home', 'apartment', 'store', 'office'], verb: 'hand over the parcel', lines: ['Oh, that was quick!', 'Finally! I\'ve been waiting all week.', 'Is that mine? Great, thanks.'], nobody: 0.35, left: 'Nobody home. You leave the parcel on the mat.' },
+  pizza: { item: 'pizza', kinds: ['home', 'apartment'], verb: 'hand over the pizza', lines: ['Smells great!', 'About time, I\'m starving.', 'Pizza! Honey, it\'s here!'], pay: true },
+  messenger: { item: 'papers', kinds: ['office', 'store'], verb: 'hand over the envelope', lines: ['Thanks. I\'ll sign for it.', 'For me? Thanks.', 'Right on time.'] },
+  paper: { item: 'newspaper', kinds: ['home'], verb: 'hand over the paper', lines: ['Morning! Thanks.', 'Ah, the Courier. Thank you.', 'Just in time for my coffee.'], nobody: 0.3, left: 'Nobody answers. You leave the paper on the step.' },
+};
+const pickL = (a) => a[(Math.random() * a.length) | 0];
+// A2: people ride for real: a fare at the curb walks to the passenger door, opens it and gets in; at the
+// drop-off they get out and walk off. Bus riders get off and on at every shelter; a patient on the ground
+// gets up and is helped into the ambulance, and out at the hospital.
+const RIDE = {
+  taxi: (i, n) => (i % 2 === 0 ? 'on' : 'off'),
+  bus: (i, n) => (i === 0 ? 'on' : i === n - 1 ? 'off' : 'both'),
+  paramedic: (i, n) => (i === n - 1 ? 'off' : 'on'),
+};
+// A2: trades do the work at each stop with their hands: out of the truck, the tool, the job, then on
+const WORK = {
+  roadcrew: { tool: 'shovel', verb: 'patch the pothole', low: false },
+  mechanic: { tool: 'wrench', verb: 'work on the car', low: true },
+  plumber: { tool: 'wrench', verb: 'fix the leak', low: true },
+  electrician: { tool: 'screwdriver', verb: 'wire the panel', low: false },
+  construction: { tool: 'hammer', verb: 'frame the wall', low: false },
+  landscaper: { tool: 'trimmer', verb: 'trim the yard', low: false },
+  lumber: { tool: 'chainsaw', verb: 'cut the tree', low: false },
+  garbage: { tool: 'bin', verb: 'empty the bin', low: false },
+  security: { tool: 'flashlight', verb: 'check the door', low: false },
+  ranch: { tool: 'hammer', verb: 'mend the fence', low: true },
+};
 
 export function installJobs(game) {
   const { career, interact, hud, player, hm, graph } = game;
@@ -90,16 +123,151 @@ export function installJobs(game) {
       else if (def.area === 'landmarks') pts.push([[LAKE.x, LAKE.z], CITY.downtown, [CITY.x0 + 400, 1500], [TOWN.x0 + 144, TOWN.z0 + 108]][i % 4]);
       else pts.push([[TOWN.x0 + 144, TOWN.z0 + 120], [CITY.x0 + 200, CITY.z0 + 200], [AIRFIELD.x1 - 100, AIRFIELD.z - 40], [PLAINS.x, PLAINS.z]][(i + Math.floor(Math.random() * 4)) % 4]);
     }
-    if (def.id === 'messenger' && game.work?.officeStops) { const o = game.work.officeStops(def.stops, from); if (o) return o; }
+    if (def.id === 'messenger' && game.work?.officeStops) { const o = game.work.officeStops(def.stops, from); if (o) { pts.length = 0; pts.push(...o); } }
+    if (DOOR[def.id] && game.estate?.doors) atDoors(def, pts);
     if (def.back) pts.push(def.id === 'paramedic' || def.id === 'medevac' ? [CITY.x0 + CITY.nx * CITY.pitch + 24, CITY.z0 + 2 * CITY.pitch] : from);
     return pts;
+  };
+
+  // each delivery stop moves to the nearest door of the right kind (a house for the paper, an office for
+  // an envelope), [x, z, label, spot]: x/z in front of the door, spot = the door (systems/acts.js doorstep)
+  const atDoors = (def, pts) => {
+    const E = game.estate, cfg = DOOR[def.id], used = new Set();
+    const doors = E.doors.filter((d) => !d.b.ruined && !E.special?.has?.(d.i) && cfg.kinds.includes(E.kindOf(d)));
+    for (let i = 0; i < pts.length; i++) {
+      let best = null, bd = 140;
+      for (const d of doors) { if (used.has(d)) continue; const dd = Math.hypot(d.x - pts[i][0], d.z - pts[i][1]); if (dd < bd) { bd = dd; best = d; } }
+      if (!best) continue;
+      used.add(best);
+      const sp = E.doorSpot(best), who = game.population?.atHome?.(best.i)?.[0];
+      pts[i] = [sp.x + sp.nx * 0.9, sp.z + sp.nz * 0.9, who ? `for ${game.population.fullName(who)}` : (pts[i][2] || 'at the door'), sp];
+    }
+  };
+  // a stop's pay, tips, and on to the next (true when that was the last)
+  const payStop = (d) => {
+    const pay = Math.round(job.base);
+    career.earn(pay, d.name); job.earned += pay;
+    // tips: riders tip for a smooth ride; pizza tips for hot pizza
+    let tip = d.id === 'pizza' ? Math.round(job.base * 0.5 * Math.max(0, 1 - job.leg / 90)) : RIDERS.has(d.id) ? Math.round(job.base * 0.1 * Math.max(0, job.rating - 2.5)) : 0;
+    if (tip > 0 && game.work?.sharp?.()) tip = Math.round(tip * 1.2);
+    if (tip > 0) { career.earn(tip, 'tip'); job.earned += tip; hud.toast(`Tip: ${money(tip)}${d.id === 'pizza' ? (job.leg < 40 ? ' (still hot!)' : '') : ` · ${stars(job.rating)}`}`, 1.8); }
+    else if (d.id === 'pizza') hud.toast('"This pizza\'s cold." No tip.', 1.8);
+    job.leg = 0;
+    job.stop++;
+    if (job.stop >= job.stops.length) { finish(true); return true; }
+    setMarker();
+    return false;
+  };
+  // at the door: on foot, F hands it over (acted out); in the work vehicle you park and walk it up
+  const doorstepStop = (d, spot, a, free, clock) => {
+    const cfg = DOOR[d.id], S = game.S, tag = `${d.name.toUpperCase()} · stop ${job.stop + 1}/${job.stops.length}`;
+    game.deliveryDoor = spot.door; // (walking into it doesn't let you in: systems/estate.js)
+    if (job.acting) return `${tag} · at the door`;
+    const fx = spot.x + spot.nx * 0.9, fz = spot.z + spot.nz * 0.9;
+    const dd = Math.hypot(player.pos.x - fx, player.pos.z - fz);
+    if (S.mode === 'foot' && dd < 2.4 && !S.doorWalk) {
+      if (free && a?.enter) {
+        a.enter = false; job.acting = true;
+        const who = game.population?.atHome?.(spot.door?.i)?.[0], nobody = !!cfg.nobody && !who && Math.random() < cfg.nobody * 2;
+        const run = game.acts?.doorstep(spot, cfg.item, { nobody, leftLine: cfg.left, name: who ? game.population.fullName(who) : '', line: pickL(cfg.lines), pay: !!cfg.pay, thanks: cfg.pay ? '"Keep the change."' : null,
+          done: (ok) => { if (!job) return; job.acting = false; if (ok) payStop(d); } });
+        if (!run) { job.acting = false; payStop(d); } // (couldn't act it out: just hand it over)
+        return '';
+      }
+      return `${keyHint(game)} ${cfg.verb}`;
+    }
+    const v = job.veh && game.vehicle() === job.veh ? job.veh : null;
+    const from = v ? v.pos : player.pos, far = Math.round(Math.hypot(from.x - fx, from.z - fz));
+    if (v && far < 35) return `${tag} · park and take the ${cfg.item === 'papers' ? 'envelope' : cfg.item} to the door · ${clock}`;
+    if (job.veh && !v && S.mode !== 'foot') return `${tag} · get back in the vehicle · ${clock}`;
+    const what = job.stops[job.stop][2] ? ` · ${job.stops[job.stop][2]}` : '';
+    return `${tag}${what} · ${far} m · ${clock}${v ? ` · ${stars(job.rating)}` : ''}`;
+  };
+
+  // a trade's stop: walk up to it and do the work, the tool in your hands (the truck waits at the curb)
+  const workStop = (d, a, free, clock) => {
+    const w = WORK[d.id], S = game.S, [x, z] = job.stops[job.stop], tag = `${d.name.toUpperCase()} · stop ${job.stop + 1}/${job.stops.length}`;
+    if (job.acting) return `${tag} · ${w.verb}…`;
+    const dd = Math.hypot(player.pos.x - x, player.pos.z - z);
+    if (S.mode === 'foot' && dd < 3.2 && !S.doorWalk) {
+      if (free && a?.enter) {
+        a.enter = false; job.acting = true;
+        const at = { x, z, y: game.collision.surface(x, z, player.pos.y + 1) };
+        const run = game.acts.play(game.acts.workBeats(at, w.tool, Math.max(2.5, d.wait || 4), w.low), { done: (ok) => { if (!job) return; job.acting = false; if (ok) payStop(d); } });
+        if (!run) { job.acting = false; payStop(d); }
+        return '';
+      }
+      return `${keyHint(game)} ${w.verb}`;
+    }
+    const v = job.veh && game.vehicle() === job.veh ? job.veh : null;
+    const from = v ? v.pos : player.pos, far = Math.round(Math.hypot(from.x - x, from.z - z));
+    if (v && far < 30) return `${tag} · park and get out to ${w.verb} · ${clock}`;
+    if (job.veh && !v && S.mode !== 'foot') return `${tag} · get back in the vehicle · ${clock}`;
+    const what = job.stops[job.stop][2] ? ` · ${job.stops[job.stop][2]}` : '';
+    return `${tag}${what} · ${far} m · ${clock}${v ? ` · ${stars(job.rating)}` : ''}`;
+  };
+
+  // ---- riders (taxi, bus, ambulance)
+  const sideOf = (v, k) => new THREE.Vector3(-Math.cos(v.heading) * k, 0, Math.sin(v.heading) * k); // (the passenger side)
+  const fwdOf = (v, k) => new THREE.Vector3(Math.sin(v.heading) * k, 0, Math.cos(v.heading) * k);
+  const seatRiders = (dt) => { // they ride along, seated
+    const v = job.veh; if (!v || !job.riders) return;
+    for (const r of job.riders) if (r.seated) { r.h.update(dt); if (v.cabLayout) v.seat(r.h, r.seat); else r.h.root.visible = false; }
+  };
+  const riderStop = (d, dt, clock) => {
+    const v = job.veh;
+    job.riders = job.riders || [];
+    seatRiders(dt);
+    if (game.vehicle() !== v) return null;
+    const [x, z] = job.stops[job.stop], tag = `${d.name.toUpperCase()} · stop ${job.stop + 1}/${job.stops.length}`;
+    const B = job.board;
+    if (B) { // the people getting off and on, one after another
+      B.t += dt;
+      const door = v.door?.('door-pass'), W = (v.spec.width || 1.9) / 2;
+      const doorPt = v.pos.clone().add(sideOf(v, W + 0.6)).add(fwdOf(v, d.id === 'bus' ? (v.spec.len || 10) * 0.38 : 0.1));
+      const swing = (k) => { if (door) door.rotation.y = door.userData.open * Math.max(0, Math.min(1, k)); };
+      const cur = B.q[0];
+      if (!cur) { swing(1 - B.t / 0.4); if (B.t > 0.45) { job.board = null; if (game.S.holdCar === 'riders') game.S.holdCar = false; payStop(d); } return `${tag} · ${clock}`; }
+      if (cur.kind === 'off') {
+        const r = cur.r;
+        if (!cur.out) { swing(B.t / 0.4); if (B.t > 0.45) { cur.out = true; r.seated = false; r.h.root.visible = true; r.pos.copy(doorPt); r.pos.y = game.collision.surface(r.pos.x, r.pos.z, v.pos.y + 1); r.heading = v.heading + Math.PI / 2 * (d.id === 'bus' ? 1 : -1); r.h.play('Idle_Loop', 0.2, 1, true); cur.to = r.pos.clone().add(sideOf(v, 5)).add(fwdOf(v, (Math.random() - 0.5) * 6)); if (cur.line) hud.toast(cur.line, 2); } }
+        else { const there = r.walk(cur.to, dt, 1.3); r.sync(dt); if (there || B.t > 4.5) { r.remove(); job.riders.splice(job.riders.indexOf(r), 1); B.q.shift(); B.t = 0.45; } }
+      } else { // on: from the curb to the door, in
+        const r = cur.r;
+        if (!cur.at) { const there = r.walk(doorPt, dt, d.id === 'paramedic' ? 0.9 : 1.4); r.sync(dt); if (there || B.t > 9) { cur.at = true; B.t = 0; r.face(v.pos, 1); r.h.play('Interact', 0.1, 1.6, true); } }
+        else { r.sync(dt); swing(B.t / 0.4); if (B.t > 0.6) { r.seated = true; r.seat = cur.seat; r.h.play('Sitting_Idle_Loop', 0.2, 1, true); job.riders.push(r); B.q.shift(); B.t = 0.45; if (cur.line) game.law?.say?.(d.id === 'paramedic' ? 'Patient' : 'Passenger', cur.line, 3); } }
+      }
+      return `${tag} · ${cur.kind === 'off' ? 'dropping off' : d.id === 'paramedic' ? 'the patient is getting in' : 'picking up'} · ${clock}`;
+    }
+    const dist = Math.hypot(v.pos.x - x, v.pos.z - z);
+    if (dist < job.marker.r && Math.abs(v.speed) < 1.2) {
+      const kind = RIDE[d.id](job.stop, job.stops.length), q = [];
+      if (kind === 'off' || kind === 'both') {
+        const n = d.id === 'bus' ? Math.min(job.riders.length, 1 + ((Math.random() * 2) | 0)) : job.riders.length;
+        for (const r of job.riders.slice(0, n)) q.push({ kind: 'off', r, line: d.id === 'taxi' ? pickL(['"Keep the change."', '"Thanks, this is me."', '"Right here\'s fine."']) : d.id === 'paramedic' ? '"Thank you... thank you."' : '' });
+      }
+      if (kind === 'on' || kind === 'both') {
+        const n = d.id === 'bus' ? 1 + ((Math.random() * 2) | 0) : 1;
+        const lay = v.cabLayout?.seats?.length || 2;
+        for (let i = 0; i < n; i++) {
+          const curb = v.pos.clone().add(sideOf(v, (v.spec.width || 1.9) / 2 + 2.6)).add(fwdOf(v, (i - 0.5) * 1.6 + (d.id === 'bus' ? 3 : 0)));
+          const r = game.acts.person(curb, v.heading - Math.PI / 2);
+          if (d.id === 'paramedic') r.h.play('Crouch_Idle_Loop', 0, 1, true); // (they've been sitting on the curb, hurt)
+          q.push({ kind: 'on', r, seat: Math.min(lay - 1, d.id === 'taxi' ? 2 : 1 + ((job.riders.length + i) % Math.max(1, lay - 1))), line: d.id === 'taxi' ? pickL(['"Take me downtown, please."', '"I\'m late. Step on it."', '"Evening. Out to the address on the app."']) : d.id === 'paramedic' ? '"It hurts... my leg."' : '' });
+        }
+      }
+      job.board = { q, t: 0 };
+      game.S.holdCar = 'riders';
+      return `${tag} · ${clock}`;
+    }
+    return null;
   };
 
   const setMarker = () => {
     if (job.marker) interact.remove(job.marker);
     const [x, z] = job.stops[job.stop];
     const r = job.def.fly ? 26 : job.def.veh === null || job.def.kind ? 3 : 7;
-    job.marker = interact.add({ x, z, r, any: true, marker: true, height: job.def.fly ? 60 : 6, color: 0xffe040, blip: { color: '#ffe040', size: 7, global: true, icon: '📍', bg: 'rgba(160,120,0,0.9)' }, label: () => '', use: () => {} });
+    job.marker = interact.add({ x, z, r, any: true, marker: true, noUse: !!(DOOR[job.def.id] && job.stops[job.stop]?.[3]) || !!(WORK[job.def.id] && game.acts), height: job.def.fly ? 60 : 6, color: 0xffe040, blip: { color: '#ffe040', size: 7, global: true, icon: '📍', bg: 'rgba(160,120,0,0.9)' }, label: () => '', use: () => {} });
     job.waitT = job.def.wait || 0;
   };
   const finish = (ok, msg) => {
@@ -120,6 +288,8 @@ export function installJobs(game) {
       if (j.good === 5) { career.earn(500, 'employee of the month'); hud.toast(`Employee of the month: ${d.name}! +$500`, 3.5); game.news?.(`Local ${d.name.toLowerCase()} named employee of the month.`); }
     } else hud.bigMessage('SHIFT OVER', msg || d.name, 2.5);
     if (job.veh && d.siren) job.veh.siren = false;
+    for (const r of job.riders || []) r.remove();
+    if (job.board) { for (const q of job.board.q) if (q.kind === 'on' && !job.riders?.includes(q.r)) q.r.remove(); if (game.S.holdCar === 'riders') game.S.holdCar = false; }
     const ended = job; job = null; career.saveSoon();
     try { game.work?.shiftEnded?.(d.id, ok, { rating: ended.rating, earned: ended.earned, msg, wrecked: !!ended.wrecked, opts: ended.opts }); } catch (e) { console.error('[jobs] ' + (e && e.message), e); }
   };
@@ -161,7 +331,8 @@ export function installJobs(game) {
 
   return {
     JOBS, rankOf, where, get active() { return job; }, start: (id, opts) => start(JOBS.find((j) => j.id === id), opts),
-    update(dt) {
+    update(dt, a, free) {
+      if (!job) game.deliveryDoor = null;
       if (!job || game.S.frozen && !game.S.stepping) return '';
       const d = job.def;
       job.t -= dt; job.leg += dt;
@@ -193,6 +364,10 @@ export function installJobs(game) {
         if (tg.mode === 'dead' || tg.dead || tg.hp <= 0) { career.earn(Math.round(job.base), 'bounty'); job.earned = job.base; finish(true); return ''; }
         return `BOUNTY · fugitive on the map · ${clock}`;
       }
+      const ds = DOOR[d.id] && job.stops[job.stop]?.[3];
+      if (ds) return doorstepStop(d, ds, a, free, clock);
+      if (WORK[d.id] && game.acts) return workStop(d, a, free, clock);
+      if (RIDE[d.id] && game.acts && job.veh) { const r = riderStop(d, dt, clock); if (r != null) return r; }
       const inJobVeh = !job.veh || game.vehicle() === job.veh;
       if (job.veh && !inJobVeh) return `${d.name.toUpperCase()} · get back in the vehicle · ${clock}`;
       const [x, z] = job.stops[job.stop];
@@ -203,17 +378,7 @@ export function installJobs(game) {
         const still = !job.veh || job.veh.isAir || Math.abs(job.veh.speed) < 1.5;
         if (still) job.waitT -= dt;
         if (job.waitT <= 0) {
-          const pay = Math.round(job.base);
-          career.earn(pay, d.name); job.earned += pay;
-          // tips: riders tip for a smooth ride; pizza tips for hot pizza
-          let tip = d.id === 'pizza' ? Math.round(job.base * 0.5 * Math.max(0, 1 - job.leg / 90)) : RIDERS.has(d.id) ? Math.round(job.base * 0.1 * Math.max(0, job.rating - 2.5)) : 0;
-          if (tip > 0 && game.work?.sharp?.()) tip = Math.round(tip * 1.2);
-          if (tip > 0) { career.earn(tip, 'tip'); job.earned += tip; hud.toast(`Tip: ${money(tip)}${d.id === 'pizza' ? (job.leg < 40 ? ' (still hot!)' : '') : ` · ${stars(job.rating)}`}`, 1.8); }
-          else if (d.id === 'pizza') hud.toast('"This pizza\'s cold." No tip.', 1.8);
-          job.leg = 0;
-          job.stop++;
-          if (job.stop >= job.stops.length) { finish(true); return ''; }
-          setMarker();
+          if (payStop(d)) return '';
         } else return `${d.name.toUpperCase()} · working… ${Math.ceil(job.waitT)}s`;
       }
       const what = job.stops[job.stop][2] ? ` · ${job.stops[job.stop][2]}` : '';

@@ -122,7 +122,8 @@ export function installFishing(game) {
           st = { phase: 'wait', t: (6 + Math.random() * 14) / (1 + rodTier * 0.05) / (game.tools.best('finder') ? 1.5 : 1) * biteMul(kind), spot, kind, progress: 0, tension: 0, home: { x: spot.x, z: spot.z } };
           rod.visible = line.visible = bobber.visible = true;
           bobber.position.set(spot.x, spot.y + 0.03, spot.z);
-          game.splashes?.splash(spot.x, spot.z, 0.05); // the plop of the bobber landing
+          st.castT = onBoat ? 0 : 0.85; // (A2) back over the shoulder, then the cast
+          if (!st.castT) game.splashes?.splash(spot.x, spot.z, 0.05); // the plop of the bobber landing
           return '';
         }
         return onBoat ? `Press H to cast a line (${waterKind(spot.x, spot.z)})` : `${keyHint(game)} cast a line (${waterKind(spot.x, spot.z)} fishing)`;
@@ -133,7 +134,25 @@ export function installFishing(game) {
       rod.position.set(onBoat ? base.x : hx, base.y + 1.0, onBoat ? base.z : hz);
       // the rod bows as the line comes tight; the tip dips on a bite
       const bend = st.phase === 'reel' ? Math.min(1, st.tension) * 0.55 : st.phase === 'bite' ? 0.25 : 0;
-      rod.rotation.set(-0.9 + bend, player.heading, 0, 'YXZ');
+      let castA = 0;
+      if (st.castT > 0) { // (A2) the cast: back over the shoulder, then forward; the bobber lands at the end
+        const k = 1 - st.castT / 0.85; castA = k < 0.4 ? 1.7 * (k / 0.4) : 1.7 * (1 - (k - 0.4) / 0.6);
+        st.castT -= dt; bobber.visible = st.castT <= 0.12;
+        if (st.castT <= 0) { st.castT = 0; game.splashes?.splash(st.spot.x, st.spot.z, 0.05); }
+      }
+      rod.rotation.set(-0.9 + bend + castA, player.heading, 0, 'YXZ');
+      // (A2) in your hands: the butt in the right hand at your hip, the left hand up the rod; the right
+      // hand turns the reel while you reel in
+      if (!onBoat && game.S.mode === 'foot' && game.gunPose?.ok) {
+        const P = game.gunPose; player.h.root.updateMatrixWorld(true); const F = P.frame(player.heading);
+        const reeling = st.phase === 'reel' && (game.input.keys.has('KeyF') || game.input.keys.has('KeyH') || a.sprint), T = performance.now() * 0.012;
+        const butt = F.chest.clone().addScaledVector(F.fw, 0.3).addScaledVector(F.up, -0.24).addScaledVector(F.right, 0.08);
+        rod.position.copy(butt);
+        rod.updateMatrixWorld(true);
+        const axis = new THREE.Vector3(0, 1, 0).applyEuler(rod.rotation);
+        P.reach(P.R, reeling ? butt.clone().addScaledVector(axis, 0.12).addScaledVector(F.right, 0.07 + Math.cos(T) * 0.04).addScaledVector(F.up, Math.sin(T) * 0.04) : butt, F, 'R');
+        P.reach(P.L, butt.clone().addScaledVector(axis, 0.42), F, 'L');
+      }
       rod.scale.set(1, 1 - bend * 0.12, 1);
       const tip = new THREE.Vector3(0, 2.2, 0).applyEuler(rod.rotation).multiplyScalar(1 - bend * 0.12).add(rod.position);
       st.t -= dt;

@@ -226,7 +226,14 @@ export function installWorldEvents(game) {
       else if (e.demanded) {
         e.demandT += dt;
         if (combat.drawn || player.h.current === player.h.actions.Punch_Jab) { say('Mugger', Math.random() < 0.5 ? 'Whoa, whoa! I\'m going!' : 'Bad idea, man!', 2); m.role = Math.random() < 0.5 ? undefined : 'foe'; if (!m.role) { m.mode = 'flee'; m.threat = player.pos.clone(); m.timer = 12; } e.done = true; }
-        else if (e.demandT > 6 && sit.reachable && dm < 3.6) { const loss = Math.min(400, Math.round(S.money * 0.15)); S.money -= loss; say('Mugger', 'Pleasure doing business.', 3); hud.toast(`You were robbed: -$${loss}`, 3); m.role = undefined; m.mode = 'flee'; m.threat = player.pos.clone(); m.timer = 14; e.done = true; }
+        else if (e.demandT > 6 && sit.reachable && dm < 3.6 && !e.handing) {
+          const robbed = () => { const loss = Math.min(400, Math.round(S.money * 0.15)); S.money -= loss; say('Mugger', 'Pleasure doing business.', 3); hud.toast(`You were robbed: -$${loss}`, 3); m.role = undefined; m.mode = 'flee'; m.threat = player.pos.clone(); m.timer = 14; e.done = true; };
+          // (A2) slow hands: you reach for your wallet and hold it out; he snatches it
+          const A = game.acts, who = A && S.mode === 'foot' ? A.fromPed(m) : null, wallet = A?.prop('card');
+          const run = who && A.play([{ face: m.pos, t: 0.3 }, { t: 0.9, ik: (F, k, ctx, P) => A.handsUp(P, F, Math.sin(Math.min(1, k * 1.4) * Math.PI) * 0.7) }, ...A.handBeats(who, wallet, 'give', 0.9)],
+            { done: () => { who.release(); robbed(); } });
+          if (run) e.handing = true; else { who?.release(); robbed(); }
+        }
       }
     } else if (e.kind === 'robbery') {
       if (e.m.mode === 'dead' || (combat.drawn && e.m.pos.distanceTo(player.pos) < 18 && !e.scared)) {

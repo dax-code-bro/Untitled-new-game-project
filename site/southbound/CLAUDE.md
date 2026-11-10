@@ -148,6 +148,18 @@ the fewest additions next. Be honest in reports about what is and isn't done.
   down by it, and anything that should follow the body (camera focus) adds `v.sy`. Probe scripts:
   scratchpad `hwy-probe.mjs` (jolts on a highway drive), `surf-class.mjs` (what the wheels ride on).
   HUD: `hud.big` is the full map canvas, `hud.bigMsg` the banner (they once shared a name: M broke).
+  Acted-out scenes (A2, `systems/acts.js`, `game.acts`): `play(beats, {done})` runs in the `S.doorWalk`
+  slot (main.js runs it instead of your controls; a teleport ends it). Beats: `{walk,face,clip,pose,t,
+  start,end,each(dt,k,ctx),ik(F,k,ctx,P)}`. People: `person(at, heading, id)` (made for the scene),
+  `fromPed(p)` (a street ped: arms in h.post, `release()` after), `fromHuman(h)` (a shopkeeper). Ready-made
+  beats: handBeats/payBeats/eatBeats/treatBeats/pickupBeats/waveBeats/knifeBeats/workBeats, `doorstep(spot,
+  item, opts)`, `prop(kind)`. Shop counters: acts watches `S.frozen` (a defineProperty): when a store screen
+  or dialog closes with less money, the nearest `game.storeKeepers` clerk does the hand-over
+  (`acts.nextGoods` = what comes over the counter). In a car, `S.carReach(gunPose, v)` poses your hands
+  after the wheel. Arrests: law.js PHASES (cuff/hood/ground), `law._cut()` for tests. Job stops: jobs.js
+  DOOR (doorstep jobs) and WORK (trades); their map markers have `noUse` so F reaches the job.
+  Never run python edits through a bash heredoc that mentions `.remove(`: the safety check can't parse it;
+  write the script to a file first.
   The mouse is captured (pointer lock) only while no `.screen` menu is showing (`core/input.js`): with
   it captured, clicks go to the game, and the owner couldn't click a setting on their PC. Headless
   Playwright: a lock taken just before Esc stays on unless that guard is there; use `{ force: true }`

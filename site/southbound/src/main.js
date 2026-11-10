@@ -32,7 +32,7 @@ import { CollisionWorld } from './world/collision.js';
 import { Player } from './entities/player.js';
 import { Vehicle, initCarWarmup, warmCars, carsWarming } from './entities/vehicle.js';
 import { specOf } from './assets/carbuilder.js';
-import { locomotion } from './entities/human.js';
+import { locomotion, Human } from './entities/human.js';
 import { Traffic } from './entities/traffic.js';
 import { Peds } from './entities/peds.js';
 import { Combat, WEAPONS } from './entities/combat.js';
@@ -681,7 +681,7 @@ vec3 CustomToneMapping( vec3 color ) {
       peds.spawnAt(v.pos.x + sx * 2.2, v.pos.z + sz * 2.2, player.pos);
       if (witnesses(v.pos, 30) || police.nearPolice(60)) police.crime('carjack');
     } else {
-      parked.splice(parked.indexOf(v), 1);
+      const pi = parked.indexOf(v); if (pi >= 0) parked.splice(pi, 1);
       // a parked car that isn't yours: that's car theft if anyone sees it
       if (!v.uid && !v.issued && !v.taken && !v.isAir && !v.isBoat) {
         v.taken = true; v.stolenNow = true;
@@ -701,11 +701,21 @@ vec3 CustomToneMapping( vec3 color ) {
   }
   // walk round to the driver's door, open it, climb in (parked cars)
   function beginEnter(v, fromTraffic) {
-    if (fromTraffic || v.isBoat || v.isAir) return enterVehicle(v, fromTraffic);
+    if (v.isBoat || v.isAir) return enterVehicle(v, fromTraffic);
+    // a carjacking (A2): the car stops, you yank the driver's door open and drag them out by the collar
+    let jack = null;
+    if (fromTraffic) {
+      if (Math.abs(fromTraffic.speed) > 3.5 || !v.cabLayout) return enterVehicle(v, fromTraffic); // (still rolling: you swing in)
+      traffic.release(fromTraffic); v.vel.set(0, 0); v.speed = 0; parked.push(v);
+      const h = new Human(lib, lib.peopleIds[(Math.random() * lib.peopleIds.length) | 0]); scene.add(h.root); h.play('Driving_Loop', 0); v.seat(h, 0);
+      jack = { h, seat: h.root.position.clone() };
+      v.taken = true; // (not a second "theft" when you get in)
+      if (witnesses(v.pos, 30) || police.nearPolice(60)) police.crime('carjack');
+    }
     const left = new THREE.Vector3(Math.cos(v.heading), 0, -Math.sin(v.heading)), fwd = new THREE.Vector3(Math.sin(v.heading), 0, Math.cos(v.heading));
     const at = v.pos.clone().addScaledVector(left, v.spec.width / 2 + 0.55).addScaledVector(fwd, (v.spec.wf || 1.3) * 0.2);
     combat.holstered = true;
-    S.entering = { v, t: 0, phase: 0, at, door: v.door ? v.door('door-drv') : v.group.getObjectByName('door-drv') };
+    S.entering = { v, t: 0, phase: 0, at, jack, left, door: v.door ? v.door('door-drv') : v.group.getObjectByName('door-drv') };
     game.onDoorOpen?.(v);
   }
   function updateEnter(dt) {
@@ -720,17 +730,31 @@ vec3 CustomToneMapping( vec3 color ) {
         player.pos.addScaledVector(d.normalize(), sp * dt);
         player.pos.y = collision.surface(player.pos.x, player.pos.z, player.pos.y + 0.5);
         const [clip, k] = locomotion(sp); player.h.play(clip, 0.2, k);
-      } else { e.phase = 1; e.t = 0; player.h.play('Interact', 0.1, 1.5, true); }
+      } else { e.phase = 1; e.t = 0; player.h.play('Interact', 0.1, e.jack ? 2.2 : 1.5, true); }
     } else if (e.phase === 1) {
       player.heading += wrapAngle(v.heading - Math.PI / 2 - player.heading) * Math.min(1, dt * 10); // face the door
-      if (e.door) e.door.rotation.y = e.door.userData.open * Math.min(1, e.t / 0.45);
-      if (e.t > 0.6) { e.phase = 2; S.entering = null; if (e.door) S.doorClose = { door: e.door, t: 0 }; enterVehicle(v, null); return; }
+      if (e.door) e.door.rotation.y = e.door.userData.open * Math.min(1, e.t / (e.jack ? 0.2 : 0.45));
+      if (e.jack && e.t > 0.3) { e.phase = 3; e.t = 0; player.h.play('Punch_Cross', 0.08, 0.9, true); e.jack.h.play('Hit_Chest', 0.1, 0.6, true); e.jack.out = e.at.clone().addScaledVector(e.left, 1.0).addScaledVector(new THREE.Vector3(Math.sin(v.heading), 0, Math.cos(v.heading)), 0.9); }
+      else if (!e.jack && e.t > 0.6) { e.phase = 2; S.entering = null; if (e.door) S.doorClose = { door: e.door, t: 0 }; enterVehicle(v, null); return; }
+    } else if (e.phase === 3) {
+      // the driver comes out by the collar, stumbles and runs
+      const J = e.jack, k = Math.min(1, e.t / 0.75), ke = k * k * (3 - 2 * k);
+      J.h.root.position.lerpVectors(J.seat, J.out, ke); J.h.root.position.y = J.seat.y + (collision.surface(J.out.x, J.out.z, v.pos.y + 1) - J.seat.y) * ke;
+      J.h.root.rotation.set(0, v.heading + Math.PI / 2 + ke * 0.9, 0);
+      J.h.update(dt);
+      if (e.t > 0.9) {
+        scene.remove(J.h.root); J.h.dispose?.();
+        const p = peds.spawnAt(J.out.x, J.out.z, player.pos); if (p) { p.mode = 'flee'; p.threat = player.pos.clone(); p.timer = 12; }
+        e.jack = null; e.phase = 1; e.t = 0.31; // (and climb in)
+        S.entering = null; if (e.door) S.doorClose = { door: e.door, t: -0.1 }; enterVehicle(v, null); return;
+      }
     }
     player.h.update(dt);
     player.h.root.position.copy(player.pos); player.h.root.rotation.y = player.heading;
   }
   function exitVehicle() {
     const v = S.vehicle;
+    let stepOut = null;
     const sx = Math.cos(v.heading), sz = -Math.sin(v.heading);
     let x = v.pos.x + sx * (v.spec.width / 2 + 0.9), z = v.pos.z + sz * (v.spec.width / 2 + 0.9);
     const ep = v.exitPoint ? v.exitPoint(hm) : null;
@@ -742,10 +766,24 @@ vec3 CustomToneMapping( vec3 color ) {
     player.h.root.rotation.set(0, v.heading, 0); player.h.root.position.copy(player.pos);
     player.h.play('Idle_Loop', 0.2, 1, true);
     v.vel.set(0, 0); v.speed = 0;
-    { const door = v.group.getObjectByName('door-drv'); if (door) { door.rotation.y = door.userData.open; S.doorClose = { door, t: -0.35 }; } }
+    const door = v.group.getObjectByName('door-drv');
+    if (door) { door.rotation.y = door.userData.open; S.doorClose = { door, t: -0.35 }; }
+    // (A2) step out of the door's swing, turn, and push it shut behind you
+    if (door && !ep && game.acts && !v.isAir && !v.isBoat) {
+      S.doorClose = { door, t: -99 };
+      const left = new THREE.Vector3(sx, 0, sz), fwd = new THREE.Vector3(Math.sin(v.heading), 0, Math.cos(v.heading));
+      player.pos.copy(v.pos).addScaledVector(left, v.spec.width / 2 + 0.45).addScaledVector(fwd, (v.spec.wf || 1.3) * 0.2 - 0.25); player.pos.y = collision.surface(player.pos.x, player.pos.z, v.pos.y + 1);
+      const out = player.pos.clone().addScaledVector(left, 0.35).addScaledVector(fwd, -0.75);
+      stepOut = () => game.acts.play([
+        { walk: { x: out.x, z: out.z }, speed: 1.3, max: 0.9 },
+        { face: { x: v.pos.x, z: v.pos.z }, t: 0.25 },
+        { clip: 'Interact', speed: 2.0, t: 0.55, start: () => { S.doorClose = { door, t: -0.12 }; } },
+      ], { done: () => { if (S.doorClose?.t < -50) S.doorClose = { door, t: 0 }; } });
+    }
     parked.push(v);
     S.lastVehicle = v;
     S.mode = 'foot'; S.vehicle = null;
+    if (stepOut && !stepOut()) S.doorClose = { door, t: 0 }; // (on foot now: out of the door's swing; or it just shuts)
   }
 
   function frame(now) {
@@ -984,6 +1022,7 @@ vec3 CustomToneMapping( vec3 color ) {
       if (v.cabLayout && player.char.root.visible) {
         v.seat(player.h, 0); player.h.update(dt);
         v.updateCabin(dt); v.handsOnWheel(gunPose);
+        if (S.carReach) { try { S.carReach(gunPose, v); } catch (e) { S.carReach = null; } } // a hand out of the window (a ticket: A2)
       }
       if (v.impact > 4) rig.shake = Math.min(1, v.impact / 15);
       if (v.impact > 4 && !v._hitLatch) { v._hitLatch = true; const f = v.forward ? v.forward() : { x: 0, z: 1 }, dir = (v.speed || 0) >= 0 ? 1 : -1; damageVehicle(v, (v.impact - 3) * 2.2, v.pos.x + f.x * 3 * dir, v.pos.z + f.z * 3 * dir); }
@@ -1411,6 +1450,7 @@ vec3 CustomToneMapping( vec3 color ) {
     setOverride(o) { S.override = o; },
     teleport(x, z, heading = 0) {
       if (S.indoors && game.estate) game.estate.leave(); // never carry the indoor state across a teleport
+      if (S.doorWalk) { S.doorWalk.cancel?.(); S.doorWalk = null; } // (or a little scene: systems/acts.js)
       const y = collision.surface(x, z, 500);
       if (S.mode === 'car') { S.vehicle.pos.set(x, y, z); S.vehicle.heading = heading; S.vehicle.vel.set(0, 0); }
       else { player.pos.set(x, y, z); player.heading = heading; }

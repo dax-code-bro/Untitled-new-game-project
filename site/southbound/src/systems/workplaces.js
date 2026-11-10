@@ -51,6 +51,7 @@ const CO = {
   roadcrew: ['Parish Roads Department', 'foreman', 'trade', [7], [6, 17], 'hardhat'],
   mechanic: ['Mill Creek Garage', 'shop foreman', 'trade', [8, 12], [7, 18], 'garage'],
   messenger: ['Pelican Courier Co.', 'dispatcher', 'courier', [8, 12], [7, 19], 'courier'],
+  paper: ['The Calvera Courier', 'circulation manager', 'courier', [5, 14], [4, 18], 'parcels'],
   security: ['Ironclad Security', 'site supervisor', 'std', [20, 22], 'all', 'police'],
   charter: ['Lake Arden Charters', 'owner', 'boat', [6, 13], [5, 19], 'boat', 'site'],
   fisherman: ['Bayou Seafood Co-op', 'dock boss', 'boat', [5, 6], [4, 16], 'boat', 'site'],

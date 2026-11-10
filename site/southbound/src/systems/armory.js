@@ -119,6 +119,8 @@ export function installArmory(game) {
   // ---------------- medical
   const treat = (m) => {
     if (!P.med[m.id]) return false;
+    // (A2) you do it with your hands: a knee for a leg, round the arm, against your side
+    if (game.acts && S.mode === 'foot' && !S.doorWalk && S.dead <= 0) game.acts.play(game.acts.treatBeats(W.leg ? 'leg' : W.arm ? 'arm' : 'side', m.id === 'painkillers' || m.id === 'antibiotics' ? 1.0 : 2.6));
     P.med[m.id]--;
     player.health = Math.min(100, player.health + (m.heal || 0));
     if (m.bleed) W.bleed = Math.max(0, W.bleed - m.bleed);

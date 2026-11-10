@@ -563,6 +563,7 @@ export function installGang(game) {
         // (in a fight at the hideout, systems/defense.js turns them toward the threat and poses the gun)
         const want = m.fightHeading != null ? m.fightHeading : d < 6 && m.pose !== 'Sitting_Idle_Loop' ? Math.atan2(dx, dz) : m.look;
         m.h.root.rotation.y += wrapAngle(want - m.h.root.rotation.y) * Math.min(1, dt * (m.fightHeading != null ? 8 : 3));
+        if (m.talkT > 0) { m.talkT -= dt; if (m.pose !== 'Sitting_Idle_Loop') m.h.play(m.talkT > 0 ? 'Idle_Talking_Loop' : m.pose || 'Idle_Loop', 0.3); } // (A2) talking with their hands
         m.h.update(dt);
         placeAccessories(m.h);
         if (m.fight) m.fight(dt);

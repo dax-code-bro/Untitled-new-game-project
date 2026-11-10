@@ -17,7 +17,7 @@ import { GunPose } from '../entities/gunpose.js';
 import { WEAPONS, buildWeaponModel } from '../entities/arsenal.js';
 import { AIRCRAFT, Aircraft } from '../entities/craft.js';
 import { regionAt } from '../world/layout.js';
-import { roadPointAround, keyHint } from './world-util.js';
+import { roadPointAround, keyHint, nearestRoad } from './world-util.js';
 import { clamp, wrapAngle } from '../util.js';
 
 const pick = (a) => a[(Math.random() * a.length) | 0];
@@ -134,121 +134,254 @@ export function installLaw(g) {
     p.h.root.position.copy(p.pos); p.h.root.rotation.y = p.heading;
   };
 
-  // ---------------- arrest scene
+  // ---------------- arrest scene (A2): the officer's hands are on you, and how rough it is depends on
+  // what you did (police.heat: the worst crime this chase, and how wanted you are):
+  //  'cuff'   a ticket-type offence: "turn around, hands behind your back", cuffed standing, a hand on
+  //           your arm to the cruiser, the door, a hand on your head, into the back
+  //  'hood'   theft, a robbery, shots fired: marched to the cruiser, hands on the hood, patted down,
+  //           cuffed there, put in the back
+  //  'ground' a killing, a cop shot, SWAT: "on the ground!", on your knees, shoved flat, a knee in your
+  //           back and cuffed on the ground with a partner covering you, hauled up by both arms, pushed in
   let cut = null;
+  const V3 = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
+  const LINES = {
+    cuff: [['Officer', 'Turn around. Hands behind your back.'], ['Officer', 'Watch your head.']],
+    hood: [['Officer', 'Hands on the car! Now!'], ['Officer', 'Anything sharp in your pockets? ...Alright.'], ['Officer', 'In the car.']],
+    ground: [['Officer', 'GET ON THE GROUND! NOW!'], ['Officer', 'Stop resisting! Hands behind your back!'], ['Officer', 'Up. Get up!']],
+  };
   function startArrest(cop) {
     if (cut || S.dead > 0) return;
     if (S.mode === 'car') g.exitVehicle();
     combat.holstered = true;
     cop = cop || peds.list.find((p) => p.role === 'cop' && p.mode !== 'dead') || null;
-    // a cruiser to put you in
+    const heat = police.heat || 1, w = police.wanted || 1;
+    const style = cop?.swat || heat >= 3 || w >= 4 ? 'ground' : heat >= 2 || w >= 3 ? 'hood' : 'cuff';
+    // the cruiser pulls up on the road beside you, its passenger side to you (or on your left, off-road)
     const car = new g.Vehicle(lib, 'police');
-    const side = new THREE.Vector3(-Math.cos(player.heading), 0, Math.sin(player.heading));
-    car.pos.set(player.pos.x + side.x * 5, 0, player.pos.z + side.z * 5);
+    const right = V3(-Math.cos(player.heading), 0, Math.sin(player.heading));
+    const rd = nearestRoad(graph, player.pos.x, player.pos.z), CW = (car.spec.width || 1.9) / 2;
+    if (rd && rd.dist < 30 && !S.indoors) {
+      let nx = player.pos.x - rd.x, nz = player.pos.z - rd.z; const nl = Math.hypot(nx, nz);
+      if (nl > 0.3) { nx /= nl; nz /= nl; } else { nx = -rd.tz; nz = rd.tx; }
+      const room = Math.max(0, rd.edge.width / 2 - CW - 0.4), off = clamp(nl - CW - 1.7, -room, room);
+      car.pos.set(rd.x + nx * off, 0, rd.z + nz * off);
+      car.heading = Math.atan2(nz, -nx); // its right side (the passenger door) toward you
+    } else { car.pos.set(player.pos.x - right.x * 4.6, 0, player.pos.z - right.z * 4.6); car.heading = player.heading; }
     car.pos.y = collision.surface(car.pos.x, car.pos.z, player.pos.y + 2);
-    car.heading = player.heading; car.siren = true; car.sync(0);
+    car.siren = true; car.sync(0);
     scene.add(car.group);
     if (!cop) {
       const h = new Human(lib, 'mh_cop');
-      cop = { h, role: 'cop', mode: 'walk', hp: 120, pos: car.pos.clone().addScaledVector(side, -2), heading: 0, speed: 0, radius: 0.35, acc: 0, timer: 0, scripted: true };
+      cop = { h, role: 'cop', mode: 'walk', hp: 120, pos: car.pos.clone().addScaledVector(right, 2.2).addScaledVector(V3(Math.sin(car.heading), 0, Math.cos(car.heading)), -2.5), heading: 0, speed: 0, radius: 0.35, acc: 0, timer: 0, scripted: true };
       scene.add(h.root);
     }
-    cop.scripted = true;
+    // out of the street crowd for the scene (peds.update would move and animate them a second time)
+    const li = peds.list.indexOf(cop); if (li >= 0) peds.list.splice(li, 1);
+    cop.scripted = true; cop.h.root.visible = true; if (cop.gun) cop.gun.visible = false;
+    const A = g.acts.person(cop.pos, cop.heading, null, { h: cop.h });
+    let partner = null, pgun = null;
+    if (style === 'ground') {
+      const h2 = new Human(lib, 'mh_cop'); scene.add(h2.root);
+      const fwd = V3(Math.sin(player.heading), 0, Math.cos(player.heading));
+      partner = g.acts.person(player.pos.clone().addScaledVector(fwd, 3.2).addScaledVector(right, 1.2), player.heading + Math.PI, null, { h: h2 });
+      h2.play('Pistol_Aim_Neutral', 0); pgun = buildWeaponModel(WEAPONS.pistol); scene.add(pgun);
+      partner.ik = (F, P) => P.attachToHand(pgun, P.R);
+    }
     const fine = Math.round(L.bounty + police.wanted * 150 + Math.min(S.money * 0.08, 2500));
-    cut = { t: 0, cop, car, fine, days: 2 + Math.min(4, police.wanted) };
+    const fwdC = V3(Math.sin(car.heading), 0, Math.cos(car.heading)), rightC = V3(-Math.cos(car.heading), 0, Math.sin(car.heading));
+    const W = car.spec.width || 1.9, Ln = car.spec.len || 4.8;
+    const spot = {
+      door: car.pos.clone().addScaledVector(rightC, W / 2 + 0.6).addScaledVector(fwdC, (car.spec.wf || 1.3) * 0.2 - 0.55),
+      hood: car.pos.clone().addScaledVector(rightC, W / 2 + 0.62).addScaledVector(fwdC, Ln * 0.3),
+      hoodY: car.pos.y + Math.min(1.05, (car.spec.height || 1.45) * 0.62),
+      drv: car.pos.clone().addScaledVector(rightC, -(W / 2 + 0.6)).addScaledVector(fwdC, (car.spec.wf || 1.3) * 0.2),
+      fwdC, rightC,
+    };
+    cut = { t: 0, pt: 0, ph: 0, style, cop: A, copRef: cop, partner, pgun, car, spot, fine, days: 2 + Math.min(4, police.wanted), cuffs: g.acts.prop('cuffs'), cuffed: false, seated: false, said: 0 };
     S.dead = 99; // freezes your controls for the scene
     S.cutscene = true;
     hud.toast('', 0.01);
+    say(...LINES[style][0], 3);
   }
   police.onBusted = (cop) => startArrest(cop);
 
-  function updateArrest(dt) {
-    const c = cut, cop = c.cop;
-    c.t += dt;
-    const behind = new THREE.Vector3(-Math.sin(player.heading), 0, -Math.cos(player.heading));
-    const door = c.car.pos.clone().add(new THREE.Vector3(-Math.cos(c.car.heading), 0, Math.sin(c.car.heading)).multiplyScalar(-1.4));
-    if (c.t < 2.0) {
-      // hands up while the officer walks round behind you
-      player.h.play('Idle_Loop', 0.2);
-      const want = player.pos.clone().addScaledVector(behind, 0.9);
-      cop.pos.lerp(want, Math.min(1, dt * 2.2));
-      cop.heading = player.heading;
-      cop.h.play(cop.pos.distanceTo(want) > 0.3 ? 'Walk_Loop' : 'Idle_Loop', 0.2);
-    } else if (c.t < 3.8) {
-      // walked to the car
-      const k = Math.min(1, dt * 1.6);
-      const toDoor = door.clone().sub(player.pos); toDoor.y = 0;
-      if (toDoor.length() > 0.3) {
-        player.heading += wrapAngle(Math.atan2(toDoor.x, toDoor.z) - player.heading) * Math.min(1, dt * 5);
-        player.pos.addScaledVector(toDoor.normalize(), 1.3 * dt);
-        player.h.play('Walk_Loop', 0.2, 0.8);
-      } else player.h.play('Idle_Loop', 0.2);
-      player.pos.y = collision.surface(player.pos.x, player.pos.z, player.pos.y + 0.5);
-      cop.pos.lerp(player.pos.clone().addScaledVector(behind, 0.7), k * 2);
-      cop.heading = player.heading;
-      cop.h.play('Walk_Loop', 0.2, 0.8);
-    } else if (c.t < 4.4) {
-      // shoved into the back seat
-      if (!c.inside) { c.inside = true; player.h.root.visible = false; cop.h.root.visible = false; if (cop.gun) cop.gun.visible = false; }
-    } else if (c.t < 7.5) {
-      // driven away
-      c.car.physics(dt, { throttle: 0.6, brake: 0, steer: 0, handbrake: false }, g.hm, collision);
-      if (c.t > 6.0 && !c.faded) { c.faded = true; fade.querySelector('b').textContent = 'BUSTED'; fade.querySelector('span').textContent = `${c.days} days later...`; fade.classList.add('show'); }
-    } else {
-      // released
-      scene.remove(c.car.group); c.car.dispose?.();
-      if (cop.scripted && !peds.list.includes(cop)) { scene.remove(cop.h.root); cop.h.freeGpu?.(); }
-      cop.scripted = false;
-      police.clear();
-      S.money = Math.max(0, S.money - c.fine);
-      L.bounty = 0; L.nextHunt = 0;
-      if (g.missions?.active) g.missions.fail('You were arrested');
-      sky.day += c.days; sky.hour = 9.5;
-      const at = g.PRECINCT;
-      player.pos.set(at.x, collision.surface(at.x, at.z, 200), at.z);
-      player.vel.set(0, 0, 0);
-      player.h.root.visible = true;
-      player.health = 100;
-      g.rig.yaw = player.heading;
-      S.dead = 0; S.cutscene = false;
-      cut = null;
-      setTimeout(() => fade.classList.remove('show'), 600);
-      hud.toast(`Released from ${at.name}. Fine paid: $${c.fine.toLocaleString('en-US')}`, 5);
-      g.onArrested?.();
-      career.saveSoon();
-      return;
-    }
-    c.car.sync(dt);
-    cop.h.update(dt);
-    cop.h.root.position.copy(cop.pos); cop.h.root.rotation.y = cop.heading;
-    player.h.update(dt);
-    player.h.root.position.copy(player.pos); player.h.root.rotation.y = player.heading;
+  // where the officer stands to work on you: behind you, a little to one side
+  const behindOf = (d = 0.62, sideK = 0.12) => { const f = V3(Math.sin(player.heading), 0, Math.cos(player.heading)), r = V3(-f.z, 0, f.x); return player.pos.clone().addScaledVector(f, -d).addScaledVector(r, sideK); };
+  const toward = (to, dt, k = 8) => { player.heading += wrapAngle(Math.atan2(to.x - player.pos.x, to.z - player.pos.z) - player.heading) * Math.min(1, dt * k); };
+  const stepPlayer = (to, dt, sp) => { // true when there
+    const dx = to.x - player.pos.x, dz = to.z - player.pos.z, d = Math.hypot(dx, dz);
+    if (d < 0.1) return true;
+    toward(to, dt); const s = Math.min(sp, d * 4); player.pos.x += (dx / d) * s * dt; player.pos.z += (dz / d) * s * dt;
+    player.pos.y = collision.surface(player.pos.x, player.pos.z, player.pos.y + 0.5);
+    player.h.play('Walk_Loop', 0.2, clamp(sp / 1.35, 0.6, 1.2));
+    return false;
+  };
+  // the cop walks beside/behind you, a hand on your upper arm
+  const escort = (c, dt, sideK = 0.32) => {
+    const A = c.cop, want = behindOf(0.45, sideK);
+    A.pos.lerp(want, Math.min(1, dt * 6)); A.pos.y = collision.surface(A.pos.x, A.pos.z, A.pos.y + 0.5);
+    A.heading += wrapAngle(player.heading - A.heading) * Math.min(1, dt * 6);
+    A.h.play(player.h.current?.getClip().name === 'Walk_Loop' ? 'Walk_Loop' : 'Idle_Loop', 0.2, 0.9);
+  };
+  // the cuffs sit on your wrists
+  const placeCuffs = (c) => {
+    if (!c.cuffed || !gunPose.ok) return;
+    const wr = g.acts.wristsOf(gunPose), m = c.cuffs;
+    m.position.copy(wr.R).lerp(wr.L, 0.5); m.lookAt(wr.R); m.rotateY(Math.PI / 2); m.updateMatrixWorld(true);
+  };
+  // the officer's hands: on your wrists (cuffing), on your arm and back (escort), on your head (into the car)
+  const copHands = (c, mode, k = 0) => {
+    const A = c.cop; if (!A.pose) A.pose = new GunPose(A.h);
+    const P = A.pose; if (!P.ok || !gunPose.ok) { A.ik = null; return; }
+    A.ik = (F) => {
+      if (mode === 'wrists') { const wr = g.acts.wristsOf(gunPose); P.reach(P.R, wr.R, F, 'R'); P.reach(P.L, wr.L, F, 'L'); }
+      else if (mode === 'arm') { const arm = (c.armSide === 'L' ? gunPose.L : gunPose.R).upper.getWorldPosition(V3()).lerp((c.armSide === 'L' ? gunPose.L : gunPose.R).lower.getWorldPosition(V3()), 0.35); P.reach(c.armSide === 'L' ? P.R : P.L, arm, F, c.armSide === 'L' ? 'R' : 'L'); }
+      else if (mode === 'frisk') { // down your sides and legs, twice
+        const pf = gunPose.frame(player.heading), y = 1.25 - Math.abs(Math.sin(k * Math.PI * 2)) * 0.85;
+        for (const s of ['R', 'L']) { const pt = player.pos.clone().addScaledVector(pf.right, (s === 'R' ? 1 : -1) * 0.2).addScaledVector(pf.fw, 0.02); pt.y = player.pos.y + y; P.reach(s === 'R' ? P.R : P.L, pt, F, s); }
+      } else if (mode === 'head') { const hd = gunPose.head ? gunPose.head.getWorldPosition(V3()) : player.pos.clone().add(V3(0, 1.7, 0)); hd.y += 0.12; P.reach(P.R, hd, F, 'R'); }
+      else if (mode === 'door') { const dp = c.car.pos.clone().addScaledVector(c.spot.rightC, (c.car.spec.width || 1.9) / 2 + 0.05).addScaledVector(c.spot.fwdC, 0.2); dp.y = c.car.pos.y + 1.0; P.reach(P.R, dp, F, 'R'); }
+      else if (mode === 'back') { const pf = gunPose.frame(player.heading); P.reach(P.L, pf.chest.clone().addScaledVector(pf.fw, -0.16), F, 'L'); }
+    };
+  };
+  // your hands: up / behind your back / on the hood / on the back of your head
+  const myHands = (c, mode, k = 1) => { c.hands = [mode, k]; }; // (applied after your body's animation this frame)
+  const applyMyHands = (c, mode, k = 1) => {
+    if (!gunPose.ok) return;
     player.h.root.updateMatrixWorld(true);
-    // hands up (IK) until you're in the car
-    if (c.t < 3.8 && gunPose.ok) {
-      const F = gunPose.frame(player.heading);
-      const shR = gunPose.R.upper.getWorldPosition(new THREE.Vector3()), shL = gunPose.L.upper.getWorldPosition(new THREE.Vector3());
-      const lift = c.t < 2.0 ? Math.min(1, c.t * 2) : 1 - Math.min(1, (c.t - 2.0) * 0.8) * 0.6;
-      if (c.t < 2.0) {
-        gunPose.reach(gunPose.R, shR.clone().addScaledVector(F.up, 0.38 * lift).addScaledVector(F.right, 0.22).addScaledVector(F.fw, 0.05), F, 'R');
-        gunPose.reach(gunPose.L, shL.clone().addScaledVector(F.up, 0.38 * lift).addScaledVector(F.right, -0.22).addScaledVector(F.fw, 0.05), F, 'L');
-      } else {
-        // hands behind the back
-        const back = F.chest.clone().addScaledVector(F.fw, -0.22).addScaledVector(F.up, -0.42);
-        gunPose.reach(gunPose.R, back.clone().addScaledVector(F.right, 0.05), F, 'R');
-        gunPose.reach(gunPose.L, back.clone().addScaledVector(F.right, -0.05), F, 'L');
-      }
+    const F = gunPose.frame(player.heading);
+    if (mode === 'up') g.acts.handsUp(gunPose, F, k);
+    else if (mode === 'behind') g.acts.handsBehind(gunPose, F);
+    else if (mode === 'hood') for (const s of ['R', 'L']) { const pt = c.spot.hood.clone().addScaledVector(c.spot.fwdC, s === 'R' ? 0.32 : -0.32).addScaledVector(c.spot.rightC, -0.42); pt.y = c.spot.hoodY; gunPose.reach(s === 'R' ? gunPose.R : gunPose.L, pt, F, s); }
+    else if (mode === 'head') for (const s of ['R', 'L']) { const hd = (gunPose.head || gunPose.chest).getWorldPosition(V3()).addScaledVector(F.fw, -0.12).addScaledVector(F.right, s === 'R' ? 0.08 : -0.08); hd.y += 0.04; gunPose.reach(s === 'R' ? gunPose.R : gunPose.L, hd, F, s); }
+  };
+
+  // the phases of each kind of arrest: [seconds, (c, dt, k) => true to move on early]
+  const COMMON_TAIL = [
+    // walked to the cruiser's back door, a hand on your arm
+    [7, (c, dt) => { c.armSide = 'R'; copHands(c, 'arm'); const there = stepPlayer(c.spot.door, dt, c.style === 'ground' ? 1.5 : 1.15); escort(c, dt); myHands(c, 'behind'); return there; }],
+    // the door
+    [0.7, (c, dt, k) => { toward(c.car.pos, dt, 4); player.h.play('Idle_Loop', 0.2); copHands(c, 'door'); c.cop.face(c.car.pos, dt); const d = c.car.door?.('door-pass'); if (d) d.rotation.y = d.userData.open * Math.min(1, k * 1.4); myHands(c, 'behind'); }],
+    // a hand on your head and in you go
+    [1.0, (c, dt, k) => { copHands(c, 'head'); if (k < 0.6) { const into = c.car.pos.clone().addScaledVector(c.spot.rightC, (c.car.spec.width || 1.9) / 2 - 0.1).addScaledVector(c.spot.fwdC, -0.5); player.pos.lerp(V3(into.x, player.pos.y, into.z), Math.min(1, dt * (c.style === 'ground' ? 5 : 2.5))); }
+      else if (!c.seated) { c.seated = true; say(...LINES[c.style][LINES[c.style].length - 1], 2); player.h.play('Sitting_Idle_Loop', 0.25, 1, true); } myHands(c, 'behind'); }],
+    // the door shuts; the officer walks round and gets in
+    [2.2, (c, dt, k) => { const d = c.car.door?.('door-pass'); if (d) d.rotation.y = d.userData.open * Math.max(0, 1 - k * 4); c.cop.ik = null; if (!c.cop.walk(c.spot.drv, dt, 1.6) && k < 0.95) return false; if (!c.copIn) { c.copIn = true; c.cop.h.play('Driving_Loop', 0.2, 1, true); } }],
+  ];
+  const PHASES = {
+    cuff: [
+      // hands up; the officer walks round behind you
+      [1.7, (c, dt, k) => { player.h.play('Idle_Loop', 0.2); myHands(c, 'up', Math.min(1, k * 3)); return c.cop.walk(behindOf(), dt, 1.6) && k > 0.6; }],
+      // turn your back; hands behind it
+      [0.9, (c, dt, k) => { c.cop.face(player.pos, dt); myHands(c, 'behind'); }],
+      // the cuffs go on
+      [1.5, (c, dt, k) => { c.cop.face(player.pos, dt); copHands(c, 'wrists'); myHands(c, 'behind'); if (k > 0.55 && !c.cuffed) { c.cuffed = true; scene.add(c.cuffs); g.audio?.click?.(0.6); } }],
+      ...COMMON_TAIL,
+    ],
+    hood: [
+      [1.3, (c, dt, k) => { player.h.play('Idle_Loop', 0.2); myHands(c, 'up', Math.min(1, k * 3)); return c.cop.walk(behindOf(0.55, 0.3), dt, 2.6) && k > 0.5; }],
+      // marched to the front of the cruiser
+      [5, (c, dt) => { c.armSide = 'R'; copHands(c, 'arm'); const there = stepPlayer(c.spot.hood, dt, 1.5); escort(c, dt); myHands(c, 'behind'); return there; }],
+      // hands on the hood
+      [0.8, (c, dt, k) => { toward(c.car.pos.clone().addScaledVector(c.spot.fwdC, (c.car.spec.len || 4.8) * 0.3), dt, 6); player.h.play('Idle_Loop', 0.2); myHands(c, 'hood'); c.cop.ik = null; c.cop.walk(behindOf(0.62, 0.05), dt, 1.2); }],
+      // patted down
+      [2.4, (c, dt, k) => { myHands(c, 'hood'); c.cop.face(player.pos, dt); c.cop.walk(behindOf(0.55, 0.05), dt, 0.8); copHands(c, 'frisk', k); if (k > 0.5 && !c.said) { c.said = 1; say(...LINES.hood[1], 2.4); } }],
+      // hands behind your back, cuffed against the car
+      [1.5, (c, dt, k) => { myHands(c, 'behind'); copHands(c, 'wrists'); c.cop.face(player.pos, dt); if (k > 0.5 && !c.cuffed) { c.cuffed = true; scene.add(c.cuffs); g.audio?.click?.(0.6); } }],
+      ...COMMON_TAIL,
+    ],
+    ground: [
+      // hands up, the partner covering you
+      [1.0, (c, dt, k) => { player.h.play('Idle_Loop', 0.2); myHands(c, 'up', Math.min(1, k * 4)); c.cop.walk(behindOf(1.2, 0.2), dt, 3.2); }],
+      // on your knees, hands on your head
+      [1.4, (c, dt, k) => { player.h.play('Crouch_Idle_Loop', 0.3, 1, true); myHands(c, 'head'); c.cop.walk(behindOf(0.7, 0.15), dt, 2.0); }],
+      // shoved flat
+      [0.5, (c, dt, k) => { if (!c.shoved) { c.shoved = true; c.cop.h.play('Punch_Cross', 0.05, 1.4, true); setTimeout(() => cut && player.h.play('Death01', 0.12, 1.6, true), 160); } c.cop.face(player.pos, dt); }],
+      // a knee in your back; cuffed on the ground
+      [2.4, (c, dt, k) => { if (k < 0.3) return false; c.cop.h.play('Crouch_Idle_Loop', 0.25, 1, true); c.cop.walk(behindOf(0.35, 0.35), dt, 1.0); copHands(c, 'wrists'); if (k > 0.6 && !c.cuffed) { c.cuffed = true; scene.add(c.cuffs); g.audio?.click?.(0.7); } if (k > 0.4 && !c.said) { c.said = 1; say(...LINES.ground[1], 2.4); } }],
+      // hauled up by both arms
+      [1.3, (c, dt, k) => { if (!c.up) { c.up = true; player.h.play('Crouch_Idle_Loop', 0.5, 1, true); c.cop.h.play('Idle_Loop', 0.3, 1, true); say(...LINES.ground[2], 1.6); } if (k > 0.5) player.h.play('Idle_Loop', 0.4); c.armSide = 'R'; copHands(c, 'arm'); escort(c, dt); myHands(c, 'behind'); if (c.partner) { c.partner.walk(behindOf(0.45, -0.32), dt, 2.0); } }],
+      ...COMMON_TAIL,
+    ],
+  };
+
+  function updateArrest(dt) {
+    const c = cut;
+    c.t += dt; c.pt += dt; c.hands = null;
+    const list = PHASES[c.style];
+    if (c.ph < list.length) {
+      const [d, run] = list[c.ph];
+      const r = run(c, dt, clamp(c.pt / d, 0, 1));
+      if (r === true || (r !== false && c.pt >= d) || c.pt >= d + 4) { c.ph++; c.pt = 0; }
+      if (c.ph >= list.length) c.drive = 0;
+    } else {
+      // driven away
+      c.drive += dt;
+      c.car.physics(dt, { throttle: 0.6, brake: 0, steer: 0, handbrake: false }, g.hm, collision);
+      if (c.drive > 1.6 && !c.faded) { c.faded = true; fade.querySelector('b').textContent = 'BUSTED'; fade.querySelector('span').textContent = `${c.days} days later...`; fade.classList.add('show'); }
+      if (c.drive > 3.2) { endArrest(c); return; }
     }
+    // the partner keeps you covered (and walks along once you're up)
+    if (c.partner) { if (!c.up) c.partner.face(player.pos, dt); c.partner.sync(dt); c.pgun?.updateMatrixWorld(true); }
+    c.car.sync(dt);
+    // bodies: you (seated in the back once you're in), the officer (in the driver's seat once he's in)
+    player.h.update(dt);
+    if (c.seated && c.car.cabLayout) { c.car.seat(player.h, Math.min(2, (c.car.cabLayout.seats.length || 2) - 1)); }
+    else { player.h.root.position.copy(player.pos); player.h.root.rotation.y = player.heading; }
+    if (c.copIn && c.car.cabLayout) { c.cop.h.update(dt); c.car.seat(c.cop.h, 0); }
+    else c.cop.sync(dt);
+    // the IK on top: your hands (as the phase asked) and the cuffs on your wrists
+    if (c.hands && !c.seated) applyMyHands(c, c.hands[0], c.hands[1]);
+    else if (c.cuffed && c.seated) { player.h.root.updateMatrixWorld(true); applyMyHands(c, 'behind'); }
+    placeCuffs(c);
   }
-  // scripted camera for the arrest
+  function endArrest(c) {
+    const cop = c.copRef;
+    scene.remove(c.car.group); c.car.dispose?.();
+    scene.remove(cop.h.root); cop.h.freeGpu?.(); cop.mode = 'gone'; cop.scripted = false;
+    if (c.partner) { c.partner.remove(); }
+    if (c.pgun) scene.remove(c.pgun);
+    scene.remove(c.cuffs);
+    police.clear();
+    S.money = Math.max(0, S.money - c.fine);
+    L.bounty = 0; L.nextHunt = 0;
+    if (g.missions?.active) g.missions.fail('You were arrested');
+    sky.day += c.days; sky.hour = 9.5;
+    const at = g.PRECINCT;
+    player.pos.set(at.x, collision.surface(at.x, at.z, 200), at.z);
+    player.vel.set(0, 0, 0);
+    player.h.root.visible = true; player.h.play('Idle_Loop', 0, 1, true);
+    player.health = 100;
+    g.rig.yaw = player.heading;
+    S.dead = 0; S.cutscene = false;
+    cut = null;
+    setTimeout(() => fade.classList.remove('show'), 600);
+    hud.toast(`Released from ${at.name}. Fine paid: $${c.fine.toLocaleString('en-US')}`, 5);
+    g.onArrested?.();
+    career.saveSoon();
+  }
+  // scripted camera for the arrest: beside you while they work on you (low when you're on the ground),
+  // then behind the cruiser as it drives off
+  // a side to film from that a wall or a parked car isn't in the way of (picked again when blocked)
+  const camClear = (c, ang, dist, hgt) => {
+    const p = player.pos, x = p.x + Math.cos(player.heading + ang) * dist, z = p.z - Math.sin(player.heading + ang) * dist, y = p.y + hgt;
+    if (collision.raycast(p.x, p.y + 1.2, p.z, x, y, z) < 0.98) return false;
+    for (const v of [c.car, ...(g.parked || []), ...(g.traffic?.cars || []).map((t) => t.v)]) if (v?.pos && Math.hypot(v.pos.x - x, v.pos.z - z) < (v.spec?.len || 4.5) * 0.5 + 1.2) return false;
+    return true;
+  };
   function arrestCamera(camera) {
     const c = cut;
-    if (c.t < 4.4) {
-      const side = new THREE.Vector3(Math.cos(player.heading + 0.6), 0, -Math.sin(player.heading + 0.6));
-      camera.position.copy(player.pos).addScaledVector(side, 3.6).add(tmp.set(0, 1.8, 0));
-      camera.lookAt(player.pos.x, player.pos.y + 1.2, player.pos.z);
+    if (!c.seated || !c.copIn) {
+      const low = c.style === 'ground' && !c.up, dist = low ? 3.0 : 3.8, hgt = low ? 1.2 : 1.85;
+      if (c.camAng == null || (c.camT = (c.camT || 0) - 1 / 60) <= 0) {
+        c.camT = 0.5;
+        if (c.camAng == null || !camClear(c, c.camAng, dist, hgt)) c.camAng = [0.9, -0.9, 2.3, -2.3, 0.2, Math.PI].find((a) => camClear(c, a, dist, hgt)) ?? 0.9;
+      }
+      const side = V3(Math.cos(player.heading + c.camAng), 0, -Math.sin(player.heading + c.camAng));
+      camera.position.copy(player.pos).addScaledVector(side, dist).add(tmp.set(0, hgt, 0));
+      camera.lookAt(player.pos.x, player.pos.y + (low ? 0.5 : 1.15), player.pos.z);
     } else {
-      const v = c.car, b = new THREE.Vector3(-Math.sin(v.heading), 0, -Math.cos(v.heading));
+      const v = c.car, b = V3(-Math.sin(v.heading), 0, -Math.cos(v.heading));
       camera.position.copy(v.pos).addScaledVector(b, 9).add(tmp.set(0, 3.2, 0));
       camera.lookAt(v.pos.x, v.pos.y + 1, v.pos.z);
     }
@@ -383,6 +516,7 @@ export function installLaw(g) {
   let brandishT = 0;
   return {
     get cutscene() { return !!cut; },
+    _cut: () => cut, // (tests: the arrest scene in progress)
     say,
     get bounty() { return L.bounty; },
     get focusing() { return focusing; },

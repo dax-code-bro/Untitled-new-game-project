@@ -281,6 +281,7 @@ async (opts) => {
       a.hurt(9999);
       G.hunting.update(1 / 30, { enter: true }, true);
     }
+    for (let i = 0; i < 30 * 8 && G.S.doorWalk; i++) SB.step(1, 1 / 30); SB.step(2, 1 / 30); // (on your knees with the knife first: A2)
     ok(G.career.p.stats.animals > before, 'skinning adds pelts');
   });
 
@@ -442,6 +443,7 @@ async (opts) => {
     G.combat.holstered = false; ok(!G.situation().muggable || !G.combat.drawn, 'a gun out: no mugger picks you'); G.combat.holstered = true;
     // the owner's case: he demands, you get in a car and floor it
     const money0 = S.money;
+    let coverAt = null;
     const e = W.force('mugging');
     ok(e && e.kind === 'mugging' && e.m, 'a mugging can start while you stand on the pavement');
     if (e && e.m) {
@@ -460,11 +462,12 @@ async (opts) => {
       ok(e.m.role !== 'mugger', 'he stops being a mugger (' + e.m.role + ', ' + e.m.mode + ')');
       G.exitVehicle();
       for (let i = 0; i < 10; i++) SB.step(1, 1 / 30);
+      coverAt = v.pos.clone(); // (a parked car is something to get behind, wherever the drive ended)
     }
     // bystanders near a gun take cover behind something
-    const near = [];
-    for (let i = 0; i < 6; i++) { const q = G.peds.spawnAt(pp.x + 8 + i * 2, pp.z + 6 - i, null); q.nerve = 0.3; near.push(q); }
-    G.peds.panic(new SB.debug.THREE.Vector3(pp.x + 10, pp.y, pp.z), 30, { cover: true });
+    const near = [], cp = coverAt || pp;
+    for (let i = 0; i < 6; i++) { const q = G.peds.spawnAt(cp.x - 5 + i * 2, cp.z + 4 - i, null); q.nerve = 0.3; near.push(q); }
+    G.peds.panic(new SB.debug.THREE.Vector3(cp.x + 9, cp.y, cp.z), 30, { cover: true });
     const inCover = near.filter((q) => q.mode === 'cover' && q.cover);
     ok(inCover.length >= 1, 'people near a gun take cover (' + inCover.length + ' of ' + near.length + '; the rest run or cower)');
     const d0 = inCover.map((q) => Math.hypot(q.cover.x - q.pos.x, q.cover.z - q.pos.z));
@@ -797,6 +800,79 @@ async (opts) => {
     const closed = getComputedStyle(w).display;
     G.hud.bigMessage('QA', 'banner', 0.5);
     ok(open === 'flex' && closed === 'none' && document.getElementById('bigmsg').classList.contains('show'), `M opens and closes the big map (${open}/${closed}); the big banners still show`);
+  });
+
+  // A2: things are acted out. Arrests: the officer's hands on you, rougher for worse crimes; deliveries at
+  // the door (knock, hand it over); carjacking drags the driver out; you step out and shut the car door
+  await run('acted out: arrests (3 kinds), a doorstep delivery, a carjack, getting out', async () => {
+    SB.skipRender(true);
+    const foot = () => { if (G.S.indoors) G.estate.leave(); if (G.S.mode !== 'foot') G.exitVehicle(); for (let i = 0; i < 40 && G.S.doorWalk; i++) SB.step(1, 1 / 30); };
+    const street = SB.debug.graph.edges.find((q) => q.kind === 'street') || SB.debug.graph.edges[0];
+    for (const [style, wanted, heat] of [['cuff', 1, 1], ['hood', 2, 2], ['ground', 4, 3]]) {
+      foot();
+      const [x, z] = street.pts[2]; SB.teleport(x + 7, z + 7, 0.3); SB.step(3, 1 / 30);
+      G.police.clear(); G.police.wanted = wanted; G.police.heat = heat;
+      const money0 = G.S.money;
+      G.police.onBusted(null);
+      let cuffed = false, seated = false, near = 9, i = 0, sawStyle = null;
+      for (; i < 30 * 30 && G.S.cutscene; i++) {
+        SB.step(1, 1 / 30);
+        const c = G.law._cut?.(); if (c) { sawStyle = c.style; cuffed = cuffed || c.cuffed; seated = seated || c.seated; if (c.cuffed && !c.seated) near = Math.min(near, c.cop.pos.distanceTo(G.player.pos)); }
+      }
+      ok(!G.S.cutscene && G.S.dead <= 0 && G.police.wanted === 0, `${style} arrest: the scene ends and you're released (${(i / 30).toFixed(1)} s)`);
+      ok(sawStyle === style && cuffed && seated && near < 1.3, `${style} arrest: cuffed by an officer within reach (${near.toFixed(2)} m), put in the back seat (${sawStyle})`);
+      ok(G.S.money <= money0, `${style} arrest: the fine is paid`);
+    }
+    // a paper route: knock, hand the paper over, paid, on to the next door
+    foot();
+    G.jobs.start('paper'); foot();
+    const j = G.jobs.active, st = j && j.stops[0], sp = st && st[3];
+    ok(!!sp, 'the paper route stops are real front doors');
+    if (sp) {
+      SB.teleport(sp.x + sp.nx * 2.2, sp.z + sp.nz * 2.2, Math.atan2(-sp.nx, -sp.nz)); SB.step(3, 1 / 30);
+      const m0 = G.S.money;
+      SB.setOverride({ enter: true }); SB.step(1, 1 / 30); SB.setOverride(null);
+      const acting = !!G.S.doorWalk;
+      let i = 0; for (; i < 30 * 20 && G.S.doorWalk; i++) SB.step(1, 1 / 30);
+      ok(acting && j.stop === 1 && G.S.money > m0, `a delivery is acted out at the door and paid (${(i / 30).toFixed(1)} s, stop ${j.stop}, +$${G.S.money - m0})`);
+      ok(!G.S.indoors, 'knocking at a delivery door does not walk you into the house');
+      G.jobs.start('paper'); // (quit the shift)
+    }
+    // a carjacking: the car stops, the driver is dragged out and runs
+    foot();
+    const tc = G.traffic.cars[0];
+    if (tc) {
+      tc.speed = 0; tc.v.vel.set(0, 0);
+      const v = tc.v, left = { x: Math.cos(v.heading), z: -Math.sin(v.heading) };
+      SB.teleport(v.pos.x + left.x * 2.2, v.pos.z + left.z * 2.2, v.heading - Math.PI / 2); SB.step(2, 1 / 30);
+      const peds0 = G.peds.list.length;
+      SB.setOverride({ enter: true }); SB.step(1, 1 / 30); SB.setOverride(null);
+      const jacking = !!G.S.entering?.jack;
+      let i = 0; for (; i < 30 * 6 && G.S.mode !== 'car'; i++) SB.step(1, 1 / 30);
+      ok(G.S.mode === 'car' && (jacking || G.S.vehicle === v), `carjack: you end up driving it (${jacking ? 'the driver was dragged out' : 'swung in'}, ${(i / 30).toFixed(1)} s)`);
+      ok(!jacking || G.peds.list.length > peds0, 'carjack: the driver runs off');
+      // getting out: step clear of the door, turn, push it shut
+      G.exitVehicle();
+      const out = !!G.S.doorWalk; let k = 0; for (; k < 30 * 4 && G.S.doorWalk; k++) SB.step(1, 1 / 30);
+      SB.step(20, 1 / 30);
+      const door = v.group.getObjectByName('door-drv');
+      ok(out && G.S.mode === 'foot' && (!door || Math.abs(door.rotation.y) < 0.05), `getting out: you step clear and shut the door (${(k / 30).toFixed(1)} s)`);
+    } else ok(true, '(no traffic car for the carjack test)');
+    // a taxi fare walks to the passenger door and gets in; at the next stop they get out and walk off
+    foot();
+    G.jobs.start('taxi');
+    const tj = G.jobs.active;
+    if (tj && tj.veh && G.S.mode === 'car') {
+      const [sx, sz] = tj.stops[0]; SB.teleport(sx, sz, tj.veh.heading); SB.step(5, 1 / 30);
+      let i = 0; for (; i < 30 * 25 && tj.stop === 0; i++) SB.step(1, 1 / 30);
+      ok(tj.stop === 1 && tj.riders?.length === 1 && tj.riders[0].seated, `taxi: the fare walks up to the door and gets in (${(i / 30).toFixed(1)} s)`);
+      const [dx, dz] = tj.stops[1]; SB.teleport(dx, dz, tj.veh.heading); SB.step(5, 1 / 30);
+      for (i = 0; i < 30 * 25 && tj.stop === 1; i++) SB.step(1, 1 / 30);
+      ok(tj.stop === 2 && tj.riders.length === 0, `taxi: they get out at the drop-off and walk off (${(i / 30).toFixed(1)} s)`);
+      G.jobs.start('taxi'); // (quit the shift)
+    } else ok(false, 'could not start a taxi shift');
+    foot();
+    SB.skipRender(false);
   });
 
   // NaN sweep over everything in the scene

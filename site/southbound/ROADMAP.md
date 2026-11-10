@@ -140,6 +140,47 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 - [x] Loading screen with in-game art, tips and progress
 - [x] Fewer touch buttons: ◎ interact replaces the car button; map, phone, arsenal, free cam moved to pause
 
+## Phase 1.67 — A2 (part 1): things are acted out, not toasted
+
+The owner: "add animations for every little thing ... the cops never even touch you ... depending on what
+crime you did they'll do it more aggressively ... you can't just go to an objective marker and be done ...
+you knock on the door, give them the newspaper ... do that for every little thing in the game".
+A survey listed ~80 interactions that were instant (a marker, money, a toast or a teleport); this batch
+does the engine and the first big group. `systems/acts.js` (game.acts): little scenes that lock your
+controls and play beats (walk, face, clip, IK arms, props in your hands, the other person in step).
+
+- [x] Arrests in three kinds, by the worst crime this chase (police.heat) and how wanted you are:
+      *cuff* (hands up, the officer comes round behind you, hands on your wrists, cuffs on, a hand on your
+      arm to the cruiser, the door, a hand on your head, into the back); *hood* (marched to the cruiser,
+      hands on the hood, patted down, cuffed against the car); *ground* (on your knees, hands on your head,
+      a second officer covering you, shoved flat, a knee in your back, cuffed on the ground, hauled up by
+      the arms, pushed into the car). The cruiser pulls up on the road beside you; the camera finds a side
+      a wall or a parked car isn't in the way of; the arresting officer is no longer animated twice a frame
+- [x] Deliveries at the door: parcels, pizza, envelopes and the new **Paper Route** (The Calvera Courier,
+      7 houses around Mill Creek): stops are real front doors; you park, walk it up, knock (three knocks
+      you hear), the door opens and the resident steps out, takes it from your hands, says something
+      (pizza: pays you on the step), steps back in, the door shuts; nobody home: it goes on the mat.
+      Walking into a delivery door no longer lets you in
+- [x] Trades do the work at each stop on foot with their tool in their hands: road crew (shovel), mechanic
+      and plumber (a wrench, kneeling), electrician (a screwdriver at the panel), construction and ranch
+      (a hammer), landscaper (a trimmer), lumberjack (a chainsaw), garbage (the bin lifted and tipped),
+      security (a flashlight, the other hand trying the door)
+- [x] Riders: a taxi fare waits at the curb, walks to the passenger door, opens it and gets in, and at the
+      drop-off gets out and walks off; bus riders get off and on at every shelter; a hurt patient gets up
+      off the curb and climbs into the ambulance, and out at the hospital
+- [x] Carjacking: the car stops, you yank the driver's door open and drag the driver out by the collar;
+      they stumble and run. Getting out of a car: you step out of the door's swing, turn and push it shut
+- [x] Pulled over for speeding: the officer walks up to your window, has a word, hands the ticket in
+      through it and you take it; they walk back to the cruiser. Hot-wiring: your hands under the dash
+- [x] Money changes hands: bribing an officer (they take it, or look at it and then at you), paying a
+      witness to keep quiet, getting mugged (hands up, the wallet held out, snatched), and at every
+      shop counter (you pay, the clerk hands you a bag; eat-in food comes over the counter and you eat it)
+- [x] Eating bite by bite (the food gets smaller), patching yourself up (a knee for a leg, round the arm,
+      against your side), skinning a kill on your knees with a knife, crouching to pick up a dropped gun,
+      a wave when you say hello, a fishing rod held in both hands with a real cast (back over the shoulder,
+      the bobber flies out) and the reel turned as you reel in, knocking on a locked door, kicking one in
+      (three kicks, the third bursts it), the hideout crew talking with their hands when you talk to them
+
 ## Phase 1.66 — From watching the owner play: smooth roads, suspension, the big map
 
 - [x] Fixed (owner: "road is very bumpy"): a road is a chain of 8 m pieces, each a slab round its centre

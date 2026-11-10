@@ -8,6 +8,7 @@ import { installFishing } from './fishing.js';
 import { installJobs } from './jobs.js';
 import { installWorkplaces } from './workplaces.js';
 import { installInspect } from './inspect.js';
+import { installActs } from './acts.js';
 import { installMissions } from './missions.js';
 import { installPhone } from './phone.js';
 import { installKerbside } from './kerbside.js';
@@ -34,6 +35,7 @@ import { installDefense } from './defense.js';
 export function installSystems(game) {
   const list = [];
   const add = (name, sys) => { game[name] = sys; list.push(sys); return sys; };
+  add('actsSys', installActs(game)); // A2: little scenes (hands, hand-offs, doorsteps) for everything you do with people
   add('garage', installGarage(game));
   add('marineAir', installMarineAir(game));
   // GPS waypoint: a tall marker + map blip that clears when you arrive
