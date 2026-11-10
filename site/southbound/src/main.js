@@ -69,7 +69,7 @@ import { installRobbery } from './systems/robbery.js';
 import { installStreetLife } from './systems/streetlife.js';
 import { installWorldEvents } from './systems/world-events.js';
 import { installDetails } from './systems/details.js';
-import { buildWeaponModel, applyFinish, gunModelFor } from './entities/arsenal.js';
+import { buildWeaponModel, applyFinish, gunModelFor, ammoCap } from './entities/arsenal.js';
 import { kitSignature } from './entities/gunkit.js';
 import { vehiclesOverlap } from './world/collision.js';
 import { LAND } from './assets/catalog.js';
@@ -409,13 +409,14 @@ vec3 CustomToneMapping( vec3 color ) {
   if (!profile.cash50k) { if (profile.money < 50000) profile.money = 50000; profile.cash50k = 1; }
   S.money = profile.money;
   if (profile.weapons.owned) { for (const id of profile.weapons.owned) combat.give(id); Object.assign(combat.ammo, profile.weapons.ammo || {}); }
+  if (profile.weapons.rounds) for (const [cal, n] of Object.entries(profile.weapons.rounds)) combat.rounds[cal] = Math.max(0, Math.min(ammoCap(cal), n)); // spare ammo by caliber
   const career = new Career(profile, {
     getMoney: () => S.money, setMoney: (n) => { S.money = Math.max(0, Math.round(n)); }, toast: (m, t) => hud.toast(m, t),
     snapshot: (p) => {
       p.money = S.money; p.hour = sky.hour; p.day = sky.day; p.weather = weather.kind;
       // where you'll come back: only moves while you're safe (systems/saves.js), never mid-fight
       if (S.safeSpot !== false) { const at = S.mode === 'car' && S.vehicle ? S.vehicle.pos : player.pos; p.pos = [+at.x.toFixed(1), +at.z.toFixed(1)]; }
-      p.weapons = { ...p.weapons, owned: combat.owned.slice(), ammo: combat.ammo }; // keep counts and finishes
+      p.weapons = { ...p.weapons, owned: combat.owned.slice(), ammo: combat.ammo, rounds: { ...combat.rounds } }; // keep counts and finishes; spare ammo by caliber
     },
   });
   sky.hour = profile.hour; sky.day = profile.day;
@@ -825,6 +826,9 @@ vec3 CustomToneMapping( vec3 color ) {
     } else if (S.entering) {
       updateEnter(dt);
       focus.copy(player.pos);
+    } else if (S.doorWalk) {
+      // your hands on a building's door (systems/estate.js): reach, push, step through
+      if (S.mode !== 'foot' || S.dead > 0) { S.doorWalk.cancel?.(); S.doorWalk = null; } else { S.doorWalk.update(dt); focus.copy(player.pos); }
     } else if (S.mode === 'foot') {
       needs.update(dt, a);
       if (S.limp) { a.sprint = false; if (a.moveX) a.moveX *= 0.5; if (a.moveY) a.moveY *= 0.5; }

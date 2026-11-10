@@ -9,7 +9,7 @@ import { nearestRoad } from './world-util.js';
 import { ShopUI } from '../ui/shop.js';
 import { VEHICLES } from '../assets/library.js';
 import { BOATS, AIRCRAFT } from '../entities/craft.js';
-import { WEAPONS } from '../entities/arsenal.js';
+import { WEAPONS, ammoCap } from '../entities/arsenal.js';
 import { money } from './world-util.js';
 
 export function installPhone(game) {
@@ -115,7 +115,7 @@ export function installPhone(game) {
       if (t === 'inv' && it.food) return { name: it.name, sub: it.sub, stats: [], btn: 'Eat' };
       if (t === 'inv') return { name: it.name, sub: `${it.trade} · × ${P.tools[it.id]}`, stats: [], btn: Object.keys(it.fx).some((k) => ['heal', 'armor', 'repair', 'light', 'call'].includes(k)) ? 'Use' : 'Info' };
       if (t === 'garage') return { name: nameOf(it) || it.type, sub: `${it.cat}${Object.keys(it.up).length ? ` · ${Object.keys(it.up).length} upgrades` : ''}`, stats: [], btn: 'Deliver' };
-      if (t === 'weapons') { const w = WEAPONS[it]; return { name: w.name, sub: `${w.cat} · ${game.combat.ammo[it]?.clip ?? '-'} / ${game.combat.ammo[it]?.reserve ?? '-'}`, stats: [], btn: game.combat.weapon === it ? 'Equipped' : 'Equip', cls: game.combat.weapon === it ? 'own' : '' }; }
+      if (t === 'weapons') { const w = WEAPONS[it]; return { name: w.name, sub: w.melee ? `${w.cat} · ${w.desc || ''}` : `${w.cat} · takes ${w.caliber} · ${game.combat.ammo[it]?.clip ?? '-'} / ${game.combat.ammo[it]?.reserve ?? '-'} (max ${ammoCap(w.caliber)}) · ${w.desc || ''}`, stats: [], btn: game.combat.weapon === it ? 'Equipped' : 'Equip', cls: game.combat.weapon === it ? 'own' : '' }; }
       if (t === 'props') return { name: it.name, sub: `${it.type} · ${it.region}${P.home === it.id ? ' · home' : ''}`, stats: [], btn: 'GPS' };
       if (t === 'jobs') { const j = P.jobs[it.id], we = game.work?.emp?.(it.id), WE = game.work?.employers?.get(it.id); return { name: it.name, sub: `${WE ? `${WE.name}${we ? ` (${WE.ladder[we.rank]})` : ''} · ` : ''}${it.text}${j ? ` · ${game.jobs.rankOf?.(j.level) || ''} (level ${j.level}), ${j.runs} shifts${j.earned ? `, ${money(j.earned)} earned` : ''}${j.lastRating ? `, last ${'★'.repeat(Math.round(j.lastRating))}` : ''}` : ''}`, stats: [], btn: 'GPS', cls: j ? 'own' : '' }; }
       if (t === 'story') { const done = P.missions.done.includes(it.id), next = !done && game.missions.MISSIONS.find((m) => !P.missions.done.includes(m.id)) === it; return { name: `${it.id.slice(1)}. ${it.title}`, sub: `${it.act} · ${it.who} · ${money(it.reward)}`, stats: [], btn: done ? 'Done' : next ? 'Next' : 'Locked', cls: done ? 'own' : next ? '' : 'dis' }; }

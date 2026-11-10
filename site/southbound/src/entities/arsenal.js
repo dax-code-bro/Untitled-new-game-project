@@ -152,11 +152,11 @@ const PLAT_INFO = {
   compact: ['Semi-auto', '9mm', 1, 'Short slide and grip for concealed carry. Snappier to shoot.'],
   magnum: ['Double-action revolver', '.357 Magnum', 2, 'Six rounds that hit hard. Slow to reload, impossible to jam.'],
   machine: ['Full-auto', '9mm', 1, 'Pistol with a full-auto switch. Empties the magazine in a second.'],
-  target: ['Semi-auto', '.22 LR / .38', 1, 'Long sight radius and a crisp trigger. Accurate at range.'],
+  target: ['Semi-auto', '.38 Special', 1, 'Long sight radius and a crisp trigger. Accurate at range.'],
   carbine: ['Semi / full-auto', '5.56 NATO', 3, 'The standard modern rifle. Light recoil, goes through car doors.'],
   battle: ['Semi-auto', '7.62 NATO', 4, 'Full-power rifle cartridge. Heavy, loud, punches through cover.'],
   bullpup: ['Full-auto', '5.56 NATO', 3, 'Rifle-length barrel in a compact body. Great in close quarters.'],
-  pdw: ['Full-auto', '9mm / 4.6mm', 2, 'Submachine gun. Fast, controllable, short range.'],
+  pdw: ['Full-auto', '4.6×30mm', 2, 'Submachine gun. Fast, controllable, short range.'],
   pump: ['Pump-action', '12 gauge', 1, 'Buckshot at close range ends arguments. Load slugs for reach.'],
   auto: ['Semi-auto', '12 gauge', 1, 'Gas-operated shotgun. Fast follow-up shots.'],
   double: ['Break-action', '12 gauge', 1, 'Two barrels, two shots, a lot of noise.'],
@@ -171,6 +171,25 @@ const PLAT_INFO = {
   lever: ['Lever-action', '.30-30', 3, 'Classic ranch rifle. Smooth, fast, and still deadly.'],
   semi: ['Semi-auto', '.308 Winchester', 4, 'Scoped semi-auto hunting rifle.'],
 };
+// Ammunition by caliber: every gun that takes a caliber shares the same spare rounds. You can carry
+// 500 rounds of a caliber, 50 rockets or grenades, 20 arrows. Bought by the box at the gun stores.
+export const CALIBERS = {
+  '9mm': { box: 50, price: 30, guns: 'Service and compact pistols, machine pistols' },
+  '.357 Magnum': { box: 50, price: 45, guns: 'Revolvers' },
+  '.38 Special': { box: 50, price: 35, guns: 'Target pistols' },
+  '4.6×30mm': { box: 50, price: 50, guns: 'Personal defence weapons' },
+  '5.56 NATO': { box: 60, price: 55, guns: 'Carbines and bullpup rifles' },
+  '7.62 NATO': { box: 40, price: 60, guns: 'Battle rifles and marksman rifles' },
+  '12 gauge': { box: 25, price: 30, guns: 'Shotguns' },
+  '.308 Winchester': { box: 20, price: 45, guns: 'Bolt-action and semi-auto hunting rifles' },
+  '.338 Lapua': { box: 10, price: 70, guns: 'Heavy sniper rifles' },
+  '.30-30': { box: 20, price: 35, guns: 'Lever-action rifles' },
+  '84mm rocket': { box: 1, price: 900, cap: 50, heavy: true, unit: 'rocket', guns: 'Rocket launchers' },
+  '40mm grenade': { box: 6, price: 1200, cap: 50, heavy: true, unit: 'grenade', guns: 'Grenade launchers' },
+  'Arrow': { box: 6, price: 40, cap: 20, unit: 'arrow', guns: 'Bows' },
+};
+export const ammoCap = (cal) => CALIBERS[cal]?.cap ?? 500;
+export const unitOf = (cal, n = 2) => { const u = CALIBERS[cal]?.unit; return u ? `${u}${n === 1 ? '' : 's'}` : n === 1 ? 'round' : 'rounds'; };
 for (const w of Object.values(WEAPONS)) {
   const pi = PLAT_INFO[w.platform];
   if (pi) { w.fireMode = pi[0]; w.caliber = pi[1]; w.pen = pi[2]; w.desc = pi[3]; }

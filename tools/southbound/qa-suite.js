@@ -705,6 +705,59 @@ async (opts) => {
     SB.skipRender(false);
   });
 
+  // A1: ammunition by caliber, shared by the guns that take it, capped (500, rockets/grenades 50,
+  // arrows 20), bought by the box; what a gun takes is in its description and on the U card;
+  // doors: you reach for the handle and step through
+  await run('ammo by caliber, caps, boxes, the inspect card; door hands', async () => {
+    const c = G.combat;
+    // two 9mm pistols share one pool
+    const pistols = ['pistol_01', 'pistol_02', 'pistol_06'];
+    for (const id of pistols) c.give(id);
+    const cal = (id) => G.combat.ammo[id] && Object.getOwnPropertyDescriptor(G.combat.ammo[id], 'reserve') ? G.combat.ammo[id] : null;
+    ok(cal('pistol_01') && cal('pistol_06'), 'every gun has its magazine and reads spares from its caliber');
+    const nineIds = pistols.filter((id) => G.combat.ammo[id] && G.inspect && G.inspect.card(id).includes('9mm'));
+    ok(nineIds.length >= 2, 'the 9mm pistols say they take 9mm (' + nineIds.join(',') + ')');
+    if (nineIds.length >= 2) {
+      c.rounds['9mm'] = 100;
+      const a = c.ammo[nineIds[0]], b = c.ammo[nineIds[1]];
+      a.reserve -= 30;
+      ok(b.reserve === 70 && c.rounds['9mm'] === 70, 'spares are shared: using 30 from one 9mm gun leaves 70 for the other (' + b.reserve + ')');
+      a.reserve += 10000;
+      ok(c.rounds['9mm'] === 500, 'no more than 500 rounds of a caliber (' + c.rounds['9mm'] + ')');
+    }
+    c.give('launcher_01'); c.ammo.launcher_01.reserve += 999;
+    const rk = Object.keys(c.rounds).find((k) => /rocket|grenade/.test(k) && c.rounds[k] > 0);
+    ok(rk && c.rounds[rk] === 50, 'rockets and grenades: 50 at most (' + rk + ' ' + c.rounds[rk] + ')');
+    c.give('bow_01'); c.ammo.bow_01.reserve += 999;
+    ok(c.rounds.Arrow === 20, 'arrows: 20 at most (' + c.rounds.Arrow + ')');
+    // an older save's per-gun spares join the pool
+    c.rounds['.357 Magnum'] = 0;
+    const mag = Object.keys(c.ammo).find((id) => /357/.test(G.inspect.card(id)));
+    if (mag) { c.ammo[mag] = { clip: 2, reserve: 77 }; ok(c.rounds['.357 Magnum'] === 77 && c.ammo[mag].clip === 2, 'an old save: a gun\'s own spares join its caliber (' + c.rounds['.357 Magnum'] + ')'); }
+    // saved as pools, not per gun
+    const saved = JSON.parse(JSON.stringify({ ammo: c.ammo, rounds: c.rounds }));
+    ok(saved.rounds['9mm'] === c.rounds['9mm'] && Object.values(saved.ammo).every((e) => !e || e.reserve === undefined), 'saved by caliber (each gun keeps only its magazine)');
+    // the U card
+    c.weapon = nineIds[0] || 'pistol_01';
+    G.inspect.show();
+    const card = document.getElementById('sb-inspect');
+    ok(card && card.classList.contains('show') && /Takes/.test(card.textContent) && /You carry/.test(card.textContent), 'U shows the weapon: what it takes and how much you carry');
+    G.inspect.hide();
+    c.weapon = 'fists'; c.holstered = true;
+    // doors: reach, the door swings, step through
+    if (G.S.indoors) G.estate.leave();
+    if (G.S.mode !== 'foot') G.exitVehicle();
+    const E = G.estate, pp = G.player.pos;
+    const d = E.doors.filter((q) => !q.b.ruined && E.kindOf(q) === 'store').sort((x, y) => Math.hypot(x.x - pp.x, x.z - pp.z) - Math.hypot(y.x - pp.x, y.z - pp.z))[0];
+    if (d) {
+      SB.teleport(d.x, d.z, 0); SB.step(2, 1 / 30);
+      let done = false; E.doorWalk(d, 'in', () => { done = true; });
+      const phases = new Set();
+      for (let i = 0; i < 120 && !done; i++) { SB.step(1, 1 / 30); if (G.S.doorWalk) phases.add(G.S.doorWalk.phase); }
+      ok(done && phases.has(1) && phases.has(2) && !G.S.doorWalk, 'walking into a door: hand on the handle, the door swings, step through (' + [...phases].join(',') + ')');
+    } else ok(true, '(no shop door near)');
+  });
+
   // NaN sweep over everything in the scene
   await run('scene NaN sweep', async () => {
     let bad = [];

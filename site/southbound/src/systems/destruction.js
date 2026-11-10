@@ -223,7 +223,7 @@ export function installDestruction(game) {
     placeFalling();
     // everyone and everything underneath
     const c = _p.set(b.x, b.y, b.z).clone(), R = Math.max(b.w, b.d) / 2 + 6;
-    for (const p of [...game.peds.list]) if (p.mode !== 'dead' && Math.abs(p.pos.x - b.x) < b.w / 2 + 6 && Math.abs(p.pos.z - b.z) < b.d / 2 + 6) game.peds.damage(p, 600, c, { blast: true });
+    for (const p of [...game.peds.list]) if (p.mode !== 'dead' && Math.abs(p.pos.x - b.x) < b.w / 2 + 6 && Math.abs(p.pos.z - b.z) < b.d / 2 + 6) game.peds.damage(p, 600, c, { blast: c }); /* (blast: where it came from: the ragdoll is pushed away from it) */
     for (const v of [S.vehicle, ...(game.traffic?.cars || []).map((q) => q.v), ...(game.parked || [])]) if (v && Math.abs(v.pos.x - b.x) < b.w / 2 + 5 && Math.abs(v.pos.z - b.z) < b.d / 2 + 5) v.health = Math.min(v.health, 5);
     const mp = me();
     if (Math.abs(mp.x - b.x) < b.w / 2 + 5 && Math.abs(mp.z - b.z) < b.d / 2 + 5) game.hurtPlayer?.(90, c, 3);

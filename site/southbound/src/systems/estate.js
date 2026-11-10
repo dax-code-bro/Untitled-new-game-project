@@ -285,7 +285,7 @@ export function installEstate(game) {
     player.heading = Math.PI;
     if (game.rig) { inside.zoom = game.rig.zoom; game.rig.zoom = 0.6; game.rig.yaw = player.heading; }
     const p = propByBuilding.get(d.i);
-    insidePoints.push(interact.add({ x: it.o.x, z: it.o.z + it.D / 2 - 0.4, y: it.o.y, r: 1.2, label: () => `${keyHint(game)} go outside`, color: 0x80ff80, use: leave }));
+    insidePoints.push(interact.add({ x: it.o.x, z: it.o.z + it.D / 2 - 0.4, y: it.o.y, r: 1.2, label: () => `${keyHint(game)} go outside`, color: 0x80ff80, use: () => doorWalk(null, 'reach', () => leave(true)) }));
     if (p) insidePoints.push(interact.add({ x: it.o.x - 2, z: it.o.z + it.D / 2 - 2, y: it.o.y, r: 1.4, color: owned(p) ? 0x60ff90 : 0xffd040,
       label: () => owned(p) ? `${keyHint(game)} sleep and save (${p.name})` : `${keyHint(game)} buy ${p.name} — ${money(p.price)}`,
       use: () => {
@@ -391,7 +391,7 @@ export function installEstate(game) {
     clerk.h.root.rotation.y += Math.atan2(Math.sin(want - clerk.h.root.rotation.y), Math.cos(want - clerk.h.root.rotation.y)) * Math.min(1, dt * 3);
     clerk.h.update(dt);
   }
-  function leave() {
+  function leave(walk = false) {
     if (!inside) return;
     dropClerk();
     if (special.has(inside.d.i)) { try { special.get(inside.d.i).leave?.(inside); } catch (e) { console.error('[estate] ' + (e && e.message), e); } }
@@ -405,6 +405,7 @@ export function installEstate(game) {
     player.heading = Math.atan2(d.nx, d.nz);
     if (game.rig) game.rig.yaw = player.heading;
     inside = null; game.S.indoors = null; game.weather.indoors = false;
+    if (walk && !d.b.ruined) { doorWalk(d, 'out', () => swingDoor(d, 'close', null)); return; } // you step out and it swings shut behind you
     if (!d.b.ruined) swingDoor(d, 'close', null); // it swings shut behind you
   }
   for (const d of doors) {
@@ -426,6 +427,50 @@ export function installEstate(game) {
   const swings = [];
   const leafMat = new THREE.MeshStandardMaterial({ color: 0x3b2a1e, roughness: 0.6 });
   const voidMat = new THREE.MeshBasicMaterial({ color: 0x050403 });
+  // Your hands on the door: line up with it, reach for the handle (the door swings in as you push),
+  // step through. On the way out: reach for the handle inside, then step out of the doorway while it
+  // swings shut behind you. Runs in place of the usual on-foot controls (main.js: S.doorWalk).
+  const wrapA = (a) => Math.atan2(Math.sin(a), Math.cos(a));
+  function doorWalk(d, mode, done) {
+    const S = game.S, pp = player.pos;
+    const finish = () => { if (S.doorWalk === W) S.doorWalk = null; done?.(); };
+    let wx = 0, wz = 0, face = player.heading, st = null, swung = false;
+    if (d) { wx = d.b.x + d.nx * (d.b.w / 2); wz = d.b.z + d.nz * (d.b.d / 2); face = Math.atan2(mode === 'out' ? d.nx : -d.nx, mode === 'out' ? d.nz : -d.nz); }
+    if (mode === 'in') st = { x: wx + d.nx * 0.62, z: wz + d.nz * 0.62 };
+    if (mode === 'out') { pp.set(wx + d.nx * 0.2, pp.y, wz + d.nz * 0.2); player.heading = face; swingDoor(d, 'open', null); }
+    const W = { t: 0, phase: 0, mode, update(dt) {
+      W.t += dt;
+      if (mode === 'in') {
+        if (W.phase === 0) { // line up in front of the door
+          player.heading += wrapA(face - player.heading) * Math.min(1, dt * 10);
+          const dx = st.x - pp.x, dz = st.z - pp.z, L = Math.hypot(dx, dz);
+          if (L > 0.08 && W.t < 1.5) { const sp = Math.min(2.2, L * 5); pp.x += (dx / L) * sp * dt; pp.z += (dz / L) * sp * dt; player.h.play('Walk_Loop', 0.15, 0.8); }
+          else if (L > 0.08) { pp.x = st.x; pp.z = st.z; } // (never reach for a handle you aren't standing at)
+          if (L <= 0.08 || W.t >= 1.5) { W.phase = 1; W.t = 0; player.h.play('Interact', 0.1, 1.3, true); }
+          pp.y = collision.surface(pp.x, pp.z, pp.y + 0.5);
+        } else if (W.phase === 1) { // the hand on the handle; the door swings in
+          player.heading += wrapA(face - player.heading) * Math.min(1, dt * 10);
+          if (!swung && W.t > 0.28) { swung = true; swingDoor(d, 'open', null); }
+          if (W.t > 0.8) { W.phase = 2; W.t = 0; }
+        } else { // step through
+          pp.x -= d.nx * 1.5 * dt; pp.z -= d.nz * 1.5 * dt; player.h.play('Walk_Loop', 0.15, 0.9);
+          if (W.t > 0.45) { finish(); return; }
+        }
+      } else if (mode === 'reach') { // inside, the hand on the handle
+        if (W.phase === 0) { W.phase = 1; player.h.play('Interact', 0.1, 1.3, true); }
+        if (W.t > 0.5) { finish(); return; }
+      } else { // out of the doorway
+        player.h.play('Walk_Loop', 0.15, 0.9);
+        pp.x += d.nx * 1.6 * dt; pp.z += d.nz * 1.6 * dt; pp.y = collision.surface(pp.x, pp.z, pp.y + 0.5);
+        if (W.t > 0.6) { finish(); return; }
+      }
+      player.vel?.set(0, 0, 0);
+      player.h.update(dt); player.h.root.position.copy(pp); player.h.root.rotation.y = player.heading;
+    } };
+    W.cancel = () => { if (mode === 'in') push.busy = false; };
+    S.doorWalk = W;
+    return W;
+  }
   function swingDoor(d, mode, done) { // mode: 'open' | 'bash' | 'close'
     const b = d.b, wx = b.x + d.nx * (b.w / 2), wz = b.z + d.nz * (b.d / 2);
     const g = new THREE.Group();
@@ -482,8 +527,8 @@ export function installEstate(game) {
     const open = lockState(hit, p) === 'open';
     if (open) {
       if (push.busy) return;
-      if (run) { push.busy = true; swingDoor(hit, 'bash', () => { push.busy = false; bash(hit, false); }); }
-      else if (push.t > 0.18) { push.busy = true; swingDoor(hit, 'open', () => { push.busy = false; tryDoor(hit, p); }); } // the handle turns, the door swings, you go in
+      if (run) { push.busy = true; player.h?.play?.('Punch_Cross', 0.05, 1.6, true); swingDoor(hit, 'bash', () => { push.busy = false; bash(hit, false); }); }
+      else if (push.t > 0.18) { push.busy = true; doorWalk(hit, 'in', () => { push.busy = false; tryDoor(hit, p); }); } // hand on the handle, the door swings, you step through
       return;
     }
     // locked
@@ -494,6 +539,7 @@ export function installEstate(game) {
       game.audio?.thud?.(1 + hit.hits * 0.15);
       if (game.rig) game.rig.shake = Math.min(1, 0.35 + hit.hits * 0.15);
       player.vel.x += hit.nx * 2.5; player.vel.z += hit.nz * 2.5; // you bounce off it
+      player.h?.play?.('Punch_Cross', 0.05, 1.6, true); // (a shoulder into it)
       if (hit.hits >= sturdy(hit)) { hit.hits = 0; push.busy = true; swingDoor(hit, 'bash', () => { push.busy = false; bash(hit, true); }); }
       else hud.toast(hit.hits === 1 ? '*THUD*' : '*THUD* ...it\'s giving', 1);
       if (home && someoneHome(hit) && hit.hits === 1) setTimeout(() => !inside && hud.toast('"Hey! Who\'s out there?!"', 2.2), 500);
@@ -573,7 +619,7 @@ export function installEstate(game) {
   if (P.home) { const p = props.find((x) => x.id === P.home); if (p) game.teleport(p.door.x + p.door.nx * 1.5, p.door.z + p.door.nz * 1.5, Math.atan2(p.door.nx, p.door.nz)); }
 
   return {
-    props, doors, realtor, enter, leave, kindOf, someoneHome, lockState, get inside() { return inside; },
+    props, doors, realtor, enter, leave, kindOf, someoneHome, lockState, doorWalk, get inside() { return inside; },
     claim: (i, spec) => special.set(i, spec), special, onEnter: (f) => enterHooks.push(f), isProperty: (i) => propByBuilding.has(i),
     update(dt = 0) {
       updateOccupant(dt);

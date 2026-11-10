@@ -135,6 +135,13 @@ the fewest additions next. Be honest in reports about what is and isn't done.
   `P.wrecks` (`advance(bi, hours)` for tests). It chains `combat.onExplosion` and must be installed after
   props.js (which replaces the hook without chaining). It uses `game.demolition.show/worker/walkTo/face`
   and `game.explodeAt` (main.js). A collapsed building's collision box is lowered to the rubble (`b.col`).
+  Ammo is by caliber (A1): `combat.rounds[caliber]` is the spare pool (saved as `P.weapons.rounds`);
+  `combat.ammo[id]` is a Proxy whose entries keep `clip` and whose `reserve` is an accessor onto the
+  caliber's pool, capped by `ammoCap(cal)` (arsenal.js `CALIBERS`: 500, rockets/grenades 50, arrows 20),
+  so `a.reserve += n` anywhere is clamped. `peds.damage(p, n, from, { blast })`: blast must be a
+  Vector3 (where it came from), not `true` (that gave NaN ragdolls). Never reference `transformed` in a
+  global ShaderChunk (sprites have none): atmosphere.js builds fog's world position from mvPosition.
+  Building doors: `estate.doorWalk(d, 'in'|'reach'|'out', done)` drives the player through `S.doorWalk`.
   The mouse is captured (pointer lock) only while no `.screen` menu is showing (`core/input.js`): with
   it captured, clicks go to the game, and the owner couldn't click a setting on their PC. Headless
   Playwright: a lock taken just before Esc stays on unless that guard is there; use `{ force: true }`

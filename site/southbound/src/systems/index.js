@@ -7,6 +7,7 @@ import { installHunting } from './hunting.js';
 import { installFishing } from './fishing.js';
 import { installJobs } from './jobs.js';
 import { installWorkplaces } from './workplaces.js';
+import { installInspect } from './inspect.js';
 import { installMissions } from './missions.js';
 import { installPhone } from './phone.js';
 import { installKerbside } from './kerbside.js';
@@ -52,6 +53,7 @@ export function installSystems(game) {
   add('hunting', installHunting(game));
   add('fishing', installFishing(game));
   add('jobs', installJobs(game));
+  add('inspect', installInspect(game)); // U: look at your weapon: what it takes, how much you carry
   add('work', installWorkplaces(game)); // employers for every job: buildings, managers, schedules, warnings, promotions; the barbershops (F15)
   add('missions', installMissions(game));
   add('phoneSys', installPhone(game));

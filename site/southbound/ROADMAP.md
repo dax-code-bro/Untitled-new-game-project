@@ -140,6 +140,28 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 - [x] Loading screen with in-game art, tips and progress
 - [x] Fewer touch buttons: ◎ interact replaces the car button; map, phone, arsenal, free cam moved to pause
 
+## Phase 1.65 — From watching the owner play: door hands, ammo by caliber, a shader fix
+
+- [x] Doors (owner: "add animation for opening doors"): walk into a building's door and you line up,
+      reach for the handle as it swings in, and step through; on the way out you reach for the handle
+      inside, step out, and it swings shut behind you; running into one is a shoulder into it (car
+      doors already had the walk-round, reach and open)
+- [x] Ammunition by caliber (owner: "every weapon shows what ammo it takes; different calibers you can
+      buy; max 500 of each, rockets 50, arrows 20"): 13 calibers (9mm, .357 Magnum, .38 Special,
+      4.6×30mm, 5.56 NATO, 7.62 NATO, 12 gauge, .308, .338 Lapua, .30-30, 84mm rockets, 40mm grenades,
+      arrows); every gun keeps its own magazine and shares its caliber's spares with the other guns that
+      take it; carry at most 500 of a caliber, 50 rockets or grenades, 20 arrows; boxes by caliber at the
+      gun store counter ("I need ammunition") and on each gun's page; old saves' per-gun spares join
+      their caliber
+- [x] What it takes, everywhere: the gun store (list and page: "Takes 5.56 NATO · you carry 120/500"),
+      the weapon wheel, the phone's Weapons tab, and U any time: a card with the gun, what it takes,
+      what's loaded, what you carry (with a bar), damage, range, where to buy more
+- [x] Fixed (seen live): every sprite with fog (gun smoke, cigarette smoke, muzzle flashes) failed to
+      compile its shader and logged an error each time: the fog's world position now comes from the
+      view-space position every shader has
+- [x] Fixed (found by QA): people caught under a collapsing building got NaN positions (the blast had no
+      origin)
+
 ## Phase 1.64 — F16: destruction and rebuilding
 
 The owner: "everything has realistic destruction physics, and people come out to repair it; blow up a

@@ -42,15 +42,11 @@ export function installAtmosphere() {
   varying float vFogDepth;
   varying vec3 vFogWorld;
 #endif`;
+  // the world position from the view-space one (every shader has mvPosition; sprites have no
+  // 'transformed', and the old version failed to compile for every sprite: gun smoke, muzzle flashes)
   THREE.ShaderChunk.fog_vertex = `#ifdef USE_FOG
   vFogDepth = - mvPosition.z;
-  {
-    vec4 fw = vec4(transformed, 1.0);
-    #ifdef USE_INSTANCING
-      fw = instanceMatrix * fw;
-    #endif
-    vFogWorld = (modelMatrix * fw).xyz;
-  }
+  vFogWorld = transpose(mat3(viewMatrix)) * (mvPosition.xyz - viewMatrix[3].xyz);
 #endif`;
   THREE.ShaderChunk.fog_pars_fragment = `#ifdef USE_FOG
   uniform vec3 fogColor;
