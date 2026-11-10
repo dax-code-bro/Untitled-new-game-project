@@ -28,7 +28,7 @@ export class HUD {
     this.hp = this.el('#hpbar'); this.armorEl = this.el('#armorbar');
     this.moneyEl = this.el('#money'); this.wantedEl = this.el('#wanted'); this.stars = [...this.wantedEl.children];
     this.wicon = this.el('#wicon'); this.ammoEl = this.el('#ammo');
-    this.cross = this.el('#crosshair'); this.big = this.el('#bigmsg');
+    this.cross = this.el('#crosshair'); this.bigMsg = this.el('#bigmsg'); // (not this.big: that's the full map)
     this.shownMoney = -1;
     this.vehPanel = this.el('#vehpanel');
     this.vehCtx = this.el('#vehsil').getContext('2d');
@@ -122,11 +122,11 @@ export class HUD {
   toast(msg, secs = 3) { this.toastEl.textContent = msg; this.toastEl.classList.add('show'); this.toastTimer = secs; }
 
   bigMessage(title, sub, secs = 4) {
-    this.big.querySelector('b').textContent = title;
-    this.big.querySelector('span').textContent = sub;
-    this.big.classList.add('show');
+    this.bigMsg.querySelector('b').textContent = title;
+    this.bigMsg.querySelector('span').textContent = sub;
+    this.bigMsg.classList.add('show');
     clearTimeout(this._big);
-    this._big = setTimeout(() => this.big.classList.remove('show'), secs * 1000);
+    this._big = setTimeout(() => this.bigMsg.classList.remove('show'), secs * 1000);
   }
 
   toggleMap() {

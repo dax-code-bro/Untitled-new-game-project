@@ -9,7 +9,7 @@ feature with the fewest additions next. Batches ship as F# (features) alternatin
 Counts are additions made in the "add to every feature" programme (F1 onwards, plus the S3/S4
 side batches where they extended a feature). The original build of each feature isn't counted.
 
-## Status (last updated: Phase 1.65, door hands, ammo by caliber)
+## Status (last updated: Phase 1.66, smooth roads, suspension, the map)
 
 | # | Feature | Files | Added | Batches | Status |
 |---|---------|-------|------:|---------|--------|
@@ -23,7 +23,7 @@ side batches where they extended a feature). The original build of each feature 
 | 3 | Phone | phone.js, phoneplus.js | 10 | F6 | 20 to go |
 | 4 | Residents / people | population.js, residents.js, peds.js | 8 | S3, S4 | 22 to go |
 | 5 | Jobs & workplaces | jobs.js, workplaces.js | 38 | F7, F15 | **done (38)** |
-| 6 | Driving & cars | driving.js, vehicle.js | 8 | F1, G4, P2 | 22 to go |
+| 6 | Driving & cars | driving.js, vehicle.js | 10 | F1, G4, P2, 1.66 | 20 to go |
 | 7 | Fishing | fishing.js | 7 | F5 | 23 to go |
 | 8 | Property | estate.js, propertyplus.js | 8 | S2, F8 | 22 to go |
 | 9 | Street life | ambient.js, streetlife.js | 5 | F3 | 25 to go |
@@ -53,7 +53,7 @@ side batches where they extended a feature). The original build of each feature 
 | 38 | Car combat | carcombat.js | 0 | | 30 to go |
 | 39 | Movement & footing | footing.js, player.js | 1 | P1 | 29 to go |
 
-**Totals: about 241 additions across 26 features; 13 features untouched; 1 feature at 30+ (gangs).**
+**Totals: about 243 additions across 26 features; 13 features untouched; 1 feature at 30+ (gangs).**
 Brand-new features added this programme (not extensions): banking, news, contacts, cabs,
 legendary animals and fish, poaching, property market, burglaries, food spoilage, tracks in the
 ground, boat wakes, rain soak, crew jobs, hideout raids, 12 side jobs, flight school, laundromats,

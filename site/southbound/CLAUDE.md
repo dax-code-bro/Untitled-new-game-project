@@ -142,6 +142,12 @@ the fewest additions next. Be honest in reports about what is and isn't done.
   Vector3 (where it came from), not `true` (that gave NaN ragdolls). Never reference `transformed` in a
   global ShaderChunk (sprites have none): atmosphere.js builds fog's world position from mvPosition.
   Building doors: `estate.doorWalk(d, 'in'|'reach'|'out', done)` drives the player through `S.doorWalk`.
+  Roads (1.66): `collision.surface` takes the NEAREST road piece (t:3 ribbon / t:2 deck), never the highest
+  (that made every slope a staircase); `hm.capRoadBanks` keeps the coarse terrain mesh under the asphalt.
+  Cars ride on springs: `v.sy` is the body's offset over the contact (`v.pos.y`), the wheels are moved back
+  down by it, and anything that should follow the body (camera focus) adds `v.sy`. Probe scripts:
+  scratchpad `hwy-probe.mjs` (jolts on a highway drive), `surf-class.mjs` (what the wheels ride on).
+  HUD: `hud.big` is the full map canvas, `hud.bigMsg` the banner (they once shared a name: M broke).
   The mouse is captured (pointer lock) only while no `.screen` menu is showing (`core/input.js`): with
   it captured, clicks go to the game, and the owner couldn't click a setting on their PC. Headless
   Playwright: a lock taken just before Esc stays on unless that guard is there; use `{ force: true }`

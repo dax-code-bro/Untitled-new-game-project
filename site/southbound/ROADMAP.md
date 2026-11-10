@@ -140,6 +140,21 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 - [x] Loading screen with in-game art, tips and progress
 - [x] Fewer touch buttons: ◎ interact replaces the car button; map, phone, arsenal, free cam moved to pause
 
+## Phase 1.66 — From watching the owner play: smooth roads, suspension, the big map
+
+- [x] Fixed (owner: "road is very bumpy"): a road is a chain of 8 m pieces, each a slab round its centre
+      line, and the ground under a car took the HIGHEST piece in reach; near every joint that was the
+      neighbouring piece's end height, so every sloping road was a staircase (a flat step, then a drop).
+      The surface is now the nearest piece's. Driving the highway the owner came down: hard jolts
+      413 → 0 in 40 s, lane points on the asphalt 66% → 99%
+- [x] Fixed: where a road is cut into a slope, the coarse terrain mesh (a vertex every 10.7 m on Low)
+      reached across the road from the bank and rose through the asphalt (up to 0.67 m on that highway);
+      past a road's edge the ground now climbs only as a gentle 8% bank for 22 m
+- [x] Suspension: the car body rides on springs (about 1.5 Hz, 12 cm each way); the wheels stay on the
+      ground and the camera rides with the body, so a kink in the ground is a soft dip, not a jolt
+- [x] Fixed (owner: "map does not work"): the full map and the big banner shared one name in the HUD, so
+      M (and the pause menu's and phone's map buttons) toggled the banner; the map opens again
+
 ## Phase 1.65 — From watching the owner play: door hands, ammo by caliber, a shader fix
 
 - [x] Doors (owner: "add animation for opening doors"): walk into a building's door and you line up,

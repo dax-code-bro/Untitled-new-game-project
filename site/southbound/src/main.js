@@ -992,7 +992,7 @@ vec3 CustomToneMapping( vec3 color ) {
       if (a.enter && (Math.abs(v.speed) < 6 || v.isAir)) exitVehicle();
       else if (a.enter) prompt = 'Slow down to get out';
       if (v.drowned) prompt = 'The engine is flooded — press F to get out';
-      focus.copy(v.pos);
+      focus.copy(v.pos); focus.y += v.sy || 0; // the camera rides with the body on its springs
     }
     for (const p of parked) { p.night = p.lightsOn ? sky.night : 0; p.sync(dt); } // parked: engine off, lights off
     // vehicle level of detail: a car is ~100k triangles; past a few hundred metres it is a few pixels
@@ -1088,7 +1088,7 @@ vec3 CustomToneMapping( vec3 color ) {
     // looking through a scope: first-person, magnified, the body hidden
     const scoped = S.mode === 'foot' && player.aiming && armed && (combat.def.scope || 0) >= 2 && S.dead <= 0;
     if (scoped && a.sprint && (S.breath ?? 4) > 0) { S.breath = (S.breath ?? 4) - dt; S.steady = Math.min(1, (S.steady || 0) + dt * 4); } else { S.breath = Math.min(4, (S.breath ?? 4) + dt * 0.8); S.steady = Math.max(0, (S.steady || 0) - dt * 2); }
-    if (scoped !== !!S.scoped) { S.scoped = scoped; document.body.classList.toggle('scoped', scoped); player.h.model.visible = !scoped; if (scoped) hud.toast('Hold Shift to hold your breath', 1.6); }
+    if (scoped !== !!S.scoped) { S.scoped = scoped; document.body.classList.toggle('scoped', scoped); player.h.model.visible = !scoped; if (scoped && (S.breathHints = (S.breathHints || 0) + 1) <= 2) hud.toast('Hold Shift to hold your breath', 1.6); } // (a hint, twice a session: it showed every time you aimed)
     if (scoped) for (const m of Object.values(combat.models)) m.visible = false;
     rig.update(dt, a, focus, { vehicle: S.vehicle, cabEye: S.vehicle?.cabLayout && player.char.root.visible ? S.vehicle.eyeWorld(_cabEye) : null, cabQ: S.vehicle?.group.quaternion, heading: S.vehicle?.heading, speed: S.vehicle?.speed || 0, lastLook: input.lastLookTime, aiming: S.mode === 'foot' && player.aiming && armed, eye: S.mode === 'foot' && player.char.root.visible ? getEye() : null, scope: scoped ? combat.def.scope : 0, steady: Math.max(S.steady || 0, game.buffs?.steady > 0 ? 0.55 : 0) }, collision);
 

@@ -758,6 +758,47 @@ async (opts) => {
     } else ok(true, '(no shop door near)');
   });
 
+  // Seen live: "road is very bumpy" (the coarse terrain mesh rose through the highway's asphalt and the
+  // car rode on it) and "map does not work" (M toggled the big message, not the map)
+  await run('smooth roads (no ground above the asphalt), suspension, the big map', async () => {
+    const col = SB.debug.collision, graph = SB.debug.graph;
+    let n = 0, above = 0, worst = 0;
+    for (const e of graph.edges.filter((q) => q.kind === 'highway' || q.gravel)) {
+      for (let i = 0; i < e.pts.length - 1; i += 2) {
+        const [ax, az] = e.pts[i], [bx, bz] = e.pts[i + 1], L = Math.hypot(bx - ax, bz - az) || 1, tx = (bx - ax) / L, tz = (bz - az) / L;
+        for (let s2 = 0; s2 < L; s2 += 2) for (const off of [-0.3, 0.3]) {
+          const o = off * e.width, x = ax + tx * s2 - tz * o, z = az + tz * s2 + tx * o, y = e.ys[i] + (e.ys[i + 1] - e.ys[i]) * (s2 / L) + 0.1;
+          if (col.paved(x, z) !== null) continue;
+          const p = col.surface(x, z, y + 0.5) - y; n++; if (p > 0.08) above++; if (p > worst) worst = p;
+        }
+      }
+    }
+    ok(n > 1000 && above / n < 0.01, `country roads: the car rides on the asphalt, not the ground under it (${above}/${n} lane points have ground above the road, worst ${worst.toFixed(2)} m)`);
+    // suspension: a step in the ground is a soft dip for the body, and the wheels stay on the ground
+    if (G.S.indoors) G.estate.leave();
+    if (G.S.mode !== 'foot') G.exitVehicle();
+    const e = graph.edges.find((q) => q.kind === 'highway'), [x0, z0] = e.pts[30], [x1, z1] = e.pts[31];
+    SB.teleport(x0, z0, 0); SB.spawnCar('sedan-sports'); SB.enterNearest(); SB.step(3, 1 / 60);
+    if (G.S.mode === 'car') {
+      const v = G.S.vehicle;
+      SB.skipRender(true);
+      SB.autoDrive(x0, z0, Math.atan2(x1 - x0, z1 - z0), 26);
+      let jolts = 0, py = null, pv = 0, maxOff = 0;
+      for (let i = 0; i < 600; i++) { SB.step(1, 1 / 60); const by = v.pos.y + (v.sy || 0); if (py !== null) { const vv = (by - py) * 60; if (i > 2 && Math.abs(vv - pv) * 60 > 80) jolts++; pv = vv; } py = by; maxOff = Math.max(maxOff, Math.abs(v.sy || 0)); }
+      ok(jolts < 12, `driving a highway at speed: the body rides smoothly (${jolts} hard jolts in 10 s)`);
+      ok(maxOff <= 0.121 && Number.isFinite(v.sy), `the springs stay within their travel (${maxOff.toFixed(3)} m)`);
+      SB.stopAuto(); SB.exitCar(); SB.skipRender(false);
+    } else ok(false, 'could not get into a car for the suspension test');
+    // the big map: M opens it, M again closes it; the big banner still shows
+    const w = document.getElementById('bigmapwrap');
+    SB.toggleMap(); SB.step(1, 1 / 30);
+    const open = getComputedStyle(w).display;
+    SB.toggleMap();
+    const closed = getComputedStyle(w).display;
+    G.hud.bigMessage('QA', 'banner', 0.5);
+    ok(open === 'flex' && closed === 'none' && document.getElementById('bigmsg').classList.contains('show'), `M opens and closes the big map (${open}/${closed}); the big banners still show`);
+  });
+
   // NaN sweep over everything in the scene
   await run('scene NaN sweep', async () => {
     let bad = [];
