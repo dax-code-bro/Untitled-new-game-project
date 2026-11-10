@@ -28,17 +28,17 @@ side batches where they extended a feature). The original build of each feature 
 | 8 | Property | estate.js, propertyplus.js | 8 | S2, F8 | 22 to go |
 | 9 | Street life | ambient.js, streetlife.js | 5 | F3 | 25 to go |
 | 10 | Food & Gulf Marts | shops.js, foodplus.js | 4 | F9 | 26 to go |
-| 11 | Guns & combat | gunwork.js, combat.js | 11 | F2, P1 | 19 to go |
+| 11 | Guns & combat | gunwork.js, combat.js, inspect.js | 18 | F2, P1, A1 | 12 to go |
 | 12 | Robbery & street crime | robbery.js, streetcrime.js, kerbside.js | 4 | S2, S4, F5 | 26 to go |
 | 13 | Weather & time | weather.js, sky.js | 3 | F6, G8 | 27 to go |
 | 14 | Boats & water | marine-air.js, splashes.js | 2 | G5 | 28 to go |
 | 15 | Garage & customs | garage.js | 2 | F1 | 28 to go |
-| 16 | Interiors | estate.js | 2 | S2, S4 | 28 to go |
+| 16 | Interiors | estate.js | 4 | S2, S4, A1 | 26 to go |
 | 17 | HUD, map & UI | hud.js, ui/ | 2 | F5, F6 | 28 to go |
 | 18 | Needs (sleep, food, weight) | needs.js | 1 | F9 | 29 to go |
 | 19 | Wounds & health | wounds.js | 1 | F9 | 29 to go |
 | 20 | Tools & inventory | tools.js | 2 | F2, P4 | 28 to go |
-| 26 | Gunsmiths | gunstores.js | 0 | | 30 to go |
+| 26 | Gunsmiths | gunstores.js, ui/gunstore.js | 4 | A1 | 26 to go |
 | 27 | Stray & farm animals | strays.js | 0 | | 30 to go |
 | 28 | World events | world-events.js | 0 | | 30 to go |
 | 29 | Demolition, damage & rebuilding | demolition.js, holes.js, destruction.js | 14 | F16 | 16 to go |
@@ -53,7 +53,7 @@ side batches where they extended a feature). The original build of each feature 
 | 38 | Car combat | carcombat.js | 0 | | 30 to go |
 | 39 | Movement & footing | footing.js, player.js | 1 | P1 | 29 to go |
 
-**Totals: about 228 additions across 25 features; 14 features untouched; 1 feature at 30+ (gangs).**
+**Totals: about 241 additions across 26 features; 13 features untouched; 1 feature at 30+ (gangs).**
 Brand-new features added this programme (not extensions): banking, news, contacts, cabs,
 legendary animals and fish, poaching, property market, burglaries, food spoilage, tracks in the
 ground, boat wakes, rain soak, crew jobs, hideout raids, 12 side jobs, flight school, laundromats,
@@ -100,6 +100,10 @@ longer than the function log's hour.
 4. ~~**F16/G14 Destruction and rebuilding.**~~ (shipped, Phase 1.64: buildings of every size; props and cars already react to blasts) Realistic destruction physics for everything; blow up a
    skyscraper and the city hires crews who rebuild it over ~7 game days, in visible stages (cleanup,
    scaffolding, cranes, floors rising).
+5. ~~**A1 Ammunition by caliber; door hands.**~~ (shipped, Phase 1.65) Asked for in-game while playing:
+   every gun says what it takes (store, wheel, phone, the U card); 13 calibers shared by the guns
+   that take them, at most 500 of a caliber, 50 rockets/grenades, 20 arrows; boxes by caliber at the
+   gun store counter. Doors: reach for the handle, the door swings, step through (in and out).
 
 ## Backlog: ideas per feature (take from here, strike when shipped)
 
