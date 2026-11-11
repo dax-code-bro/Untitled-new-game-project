@@ -258,6 +258,17 @@ vec3 layerN(sampler2D t, vec2 p, float scale){
     float lum = dot(c, vec3(0.333));
     c = mix(c, mix(vec3(0.05, 0.075, 0.03), vec3(0.19, 0.16, 0.085), sp.b) * (0.75 + lum * 0.9), gk * 0.85);
   }
+  // near and mid distance (G14): a lawn or a field is never one even green. Patches a few metres
+  // across, lusher or drier, with darker clover/weed clumps; slow drifts over tens of metres
+  {
+    float pn = sbNoise(p * 0.11) * 0.6 + sbNoise(p * 0.37 + 17.0) * 0.4;
+    float pm = sbNoise(p * 0.023 + 5.0);
+    float grassy = (w.x + w.z * 0.6 + w.y * 0.4) * (1.0 - wR) * (1.0 - sp.a);
+    vec3 tint = mix(vec3(0.80, 1.04, 0.78), vec3(1.2, 1.06, 0.7), smoothstep(0.3, 0.8, pm * 0.65 + pn * 0.35));
+    tint *= 0.78 + 0.42 * pn;
+    tint *= 1.0 - 0.22 * smoothstep(0.62, 0.8, sbNoise(p * 0.9 + 3.0)); // dark clover and weed clumps
+    c *= mix(vec3(1.0), tint, grassy * (1.0 - sbFar * 0.6));
+  }
   // only far away: gentle large-scale variation so hills don't look uniform
   c *= mix(1.0, 0.9 + 0.2 * sbFbm(vWPos.xz * 0.008), sbFar);
   float snow = smoothstep(190.0, 230.0, vWPos.y) * (1.0 - smoothstep(0.35, 0.6, slope));

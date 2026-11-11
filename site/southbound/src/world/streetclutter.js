@@ -122,6 +122,43 @@ export function buildStreetClutter({ scene, graph, hm, collision, quality: q, ya
   lists.set('hydrant', { make: () => mergeGeometries([tint(new THREE.CylinderGeometry(0.16, 0.18, 0.08, 12).translate(0, 0.04, 0), 0xc89a1a), tint(new THREE.CylinderGeometry(0.12, 0.13, 0.58, 12).translate(0, 0.37, 0), 0xe0b020), tint(new THREE.CylinderGeometry(0.15, 0.15, 0.05, 12).translate(0, 0.66, 0), 0xc89a1a), tint(new THREE.SphereGeometry(0.12, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2).translate(0, 0.68, 0), 0xe8e8e2), tint(new THREE.CylinderGeometry(0.05, 0.05, 0.12, 10).rotateZ(Math.PI / 2).translate(0.15, 0.46, 0), 0xe0b020), tint(new THREE.CylinderGeometry(0.05, 0.05, 0.12, 10).rotateZ(Math.PI / 2).translate(-0.15, 0.46, 0), 0xe0b020), tint(new THREE.CylinderGeometry(0.07, 0.07, 0.1, 10).rotateX(Math.PI / 2).translate(0, 0.42, 0.14), 0xe0b020)]), mat: paint, list: [] });
   lists.set('bin', { make: () => mergeGeometries([tint(new THREE.CylinderGeometry(0.28, 0.25, 0.85, 14, 1, true).translate(0, 0.43, 0), 0x2f4a32), tint(new THREE.CylinderGeometry(0.3, 0.3, 0.06, 14).translate(0, 0.88, 0), 0x263c28), tint(new THREE.CylinderGeometry(0.15, 0.15, 0.08, 10).translate(0, 0.94, 0), 0x1a1a1a), tint(new THREE.CylinderGeometry(0.24, 0.24, 0.03, 14).translate(0, 0.05, 0), 0x2a2a2a)]), mat: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6, metalness: 0.3, side: THREE.DoubleSide }), list: [] });
 
+  // ---- G14: what a city pavement holds (the furniture zone just inside the kerb)
+  // a clipped shrub: five lumpy clumps of leaves in three greens (not one smooth ball)
+  const bushClumps = () => {
+    let sd = 7; const rnd = () => ((sd = (sd * 16807) % 2147483647) / 2147483647);
+    const greens = [0x2f5226, 0x3d6430, 0x4f7a3e];
+    return [[0, 0.82, 0, 0.36], [0.2, 0.92, 0.12, 0.27], [-0.2, 0.9, -0.1, 0.28], [0.06, 1.06, -0.16, 0.24], [-0.1, 1.04, 0.18, 0.22]].map(([x, y, z, r], k) => {
+      const g = new THREE.IcosahedronGeometry(r, 1), P = g.attributes.position;
+      const ph = rnd() * 10; // (by position, so the corners shared by neighbouring triangles move together)
+      for (let i = 0; i < P.count; i++) { const x = P.getX(i), y = P.getY(i), z = P.getZ(i), f = 0.84 + 0.3 * hash(Math.round(x * 1000) + ph, Math.round(y * 1000) * 1.37 + Math.round(z * 1000)); P.setXYZ(i, x * f, y * f * 0.85, z * f); }
+      g.computeVertexNormals();
+      return tint(g.translate(x, y, z), greens[k % 3]);
+    });
+  };
+  const WOOD = 0x6b4a2e, IRON = 0x26282a, STEEL = 0x8e9499;
+  lists.set('bench', { make: () => mergeGeometries([
+    ...[0, 1, 2].map((k) => tint(new THREE.BoxGeometry(1.8, 0.035, 0.12).translate(0, 0.45, -0.16 + k * 0.15), WOOD)),
+    ...[0, 1].map((k) => tint(new THREE.BoxGeometry(1.8, 0.1, 0.03).translate(0, 0.6 + k * 0.16, -0.26), WOOD)),
+    ...[-1, 1].map((s) => tint(new THREE.BoxGeometry(0.05, 0.45, 0.42).translate(s * 0.78, 0.225, -0.02), IRON)),
+    ...[-1, 1].map((s) => tint(new THREE.BoxGeometry(0.05, 0.42, 0.04).translate(s * 0.78, 0.66, -0.25), IRON)),
+  ]), mat: paint, list: [] });
+  lists.set('planter', { make: () => mergeGeometries([
+    tint(new THREE.BoxGeometry(1.1, 0.55, 1.1).translate(0, 0.275, 0), 0x9b968c),
+    tint(new THREE.BoxGeometry(1.12, 0.05, 1.12).translate(0, 0.56, 0), 0x8a857c),
+    tint(new THREE.BoxGeometry(1.0, 0.02, 1.0).translate(0, 0.575, 0), 0x3a2b1e),
+    ...bushClumps(),
+  ]), mat: paint, list: [] });
+  lists.set('news', { make: () => mergeGeometries([[-0.5, 0x2456a8], [0, 0xb22a22], [0.5, 0xd2a21c]].flatMap(([x, c]) => [
+    tint(new THREE.BoxGeometry(0.44, 0.95, 0.42).translate(x, 0.6, 0), c),
+    tint(new THREE.BoxGeometry(0.36, 0.3, 0.02).translate(x, 0.82, 0.215), 0xd8d6cc),
+    tint(new THREE.BoxGeometry(0.46, 0.03, 0.44).translate(x, 1.09, 0), 0x2a2a2a),
+    tint(new THREE.BoxGeometry(0.06, 0.13, 0.06).translate(x, 0.065, 0), 0x2a2a2a),
+  ])), mat: paint, list: [] });
+  lists.set('bikerack', { make: () => mergeGeometries([-0.6, 0, 0.6].flatMap((x) => [
+    tint(new THREE.TorusGeometry(0.3, 0.025, 6, 12, Math.PI).rotateY(Math.PI / 2).translate(x, 0.55, 0), STEEL),
+    ...[-0.3, 0.3].map((z) => tint(new THREE.CylinderGeometry(0.025, 0.025, 0.55, 6).translate(x, 0.275, z), STEEL)),
+  ])), mat: paint, list: [] });
+
   // ---- junctions: stop signs on each approach, names on one corner
   const nameOf = (e, n) => {
     const a = graph.nodes.get(e.a), b = graph.nodes.get(e.b);
@@ -167,7 +204,7 @@ export function buildStreetClutter({ scene, graph, hm, collision, quality: q, ya
     const city = e.a[0] === 'c' && e.b[0] === 'c', town = e.a[0] === 't' && e.b[0] === 't';
     const P = e.pts, hw = (e.width || 10) / 2;
     let acc = 0, total = 0; for (let i = 1; i < P.length; i++) total += Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1]);
-    let nextMan = 22, nextDrain = 9, nextHyd = 30;
+    let nextMan = 22, nextDrain = 9, nextHyd = 30, nextFurn = 8, furnSide = 1;
     for (let i = 1; i < P.length; i++) {
       const [ax, az] = P[i - 1], [bx, bz] = P[i], L = Math.hypot(bx - ax, bz - az); if (L < 0.01) continue;
       const tx = (bx - ax) / L, tz = (bz - az) / L, nx = -tz, nz = tx;
@@ -218,6 +255,19 @@ export function buildStreetClutter({ scene, graph, hm, collision, quality: q, ya
             const wy = off > hw ? surf(wx, wz, yr) : yr;
             const k = 0.55 + hash(wx, wz) * 0.9;
             put('weed', wx, wy - 0.01, wz, hash(wz, wx) * 6.3, k, k * (0.7 + hw2 * 3), k); out.weeds++;
+          }
+        }
+        // G14: the city pavement's furniture, just inside the kerb, closer together downtown
+        if (city && g >= nextFurn) {
+          nextFurn += 15 - downtown(x0, z0) * 6 + h * 6;
+          furnSide = -furnSide; const sd = furnSide, off = hw + 0.95; // (both pavements, in turn)
+          const fx = x0 + nx * sd * off, fz = z0 + nz * sd * off;
+          const kk = hash(z0 * 0.53, x0 * 0.29), key = kk < 0.32 ? 'bench' : kk < 0.6 ? 'planter' : kk < 0.82 ? 'news' : 'bikerack';
+          if (!blocked(fx, fz, key === 'planter' ? 0.75 : 1.0)) {
+            put(key, fx, surf(fx, fz, yr), fz, Math.atan2(nx * sd, nz * sd)); // (fronts face the pavement)
+            if (key === 'planter') collision.addCircle(fx, fz, 0.6);
+            else for (const a of [-0.6, 0.6]) collision.addCircle(fx + tx * a, fz + tz * a, 0.3);
+            out.furniture = (out.furniture || 0) + 1;
           }
         }
         // Mill Creek: hydrants at the kerb every ~85 m
