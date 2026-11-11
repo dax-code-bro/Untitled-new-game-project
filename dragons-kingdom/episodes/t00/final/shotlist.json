@@ -3,7 +3,7 @@
     "title": "Dragon's Kingdom - T00 - shot list",
     "status": "PLAN ONLY. Parsed from the owner's shot list by the episode engine. Durations are animatic estimates.",
     "source": "episodes/t00/input/shotlist.txt",
-    "source_sha256": "765e5f7f16d647bfc0c9dbe7e6c15f4df0da817d792c373eda3f7f029831f19d",
+    "source_sha256": "aa18bdc5cb03688a6d3facccd02a257c01201e51500ba05016c4fd9da154f24f",
     "dialogue": "episodes/t00/final/dialogue.json",
     "generated_by": "engine/input/shotlist-parse.mjs",
     "fps": 24,
@@ -21,6 +21,13 @@
       "description": "Exterior, Cling (within Scrapper): approach street, festival square with a fountain at the center (raised edge plus a central stone pillar: the continuous reference landmark, readable at foot level and above the dust), a separate substantial stone support by the king's steps (cover for the king and captain), vendor stall (left-center) with alley behind, music space (right-center), stone arch exit (screen LEFT from the steps), gate to broad road (screen RIGHT from the steps), banners, timber and gray stone. Must also exist in a damaged/dusty state for 3C-3D. Same layout as assets.json set.cling_village_square.",
       "shots": 3,
       "expected_s": 11.5,
+      "new_in_final": false
+    },
+    {
+      "id": "CLING_BAKERY",
+      "description": "interior-room: oven on north wall; counter across the middle; window east; door south; two oil lamps",
+      "shots": 1,
+      "expected_s": 4,
       "new_in_final": false
     }
   ],
@@ -210,6 +217,53 @@
       "engine": {
         "trans": "cut"
       }
+    },
+    {
+      "seq": 4,
+      "id": "0B-01",
+      "scene": "0B",
+      "part": null,
+      "origin": "handoff",
+      "set": "CLING_BAKERY",
+      "time_of_day": "MORNING",
+      "lighting": "morning",
+      "shot_size": "wide",
+      "lens": "24 mm",
+      "camera_move": "static",
+      "in_frame": [
+        {
+          "name": "Vendor",
+          "screen_pos": "R (at the door)",
+          "kind": "person"
+        }
+      ],
+      "action": "The vendor walks in from the door to the counter.",
+      "dialogue": [],
+      "sound": "oven fire",
+      "continuity_flags": [],
+      "timing": {
+        "dialogue_s": 0,
+        "action_s": 4,
+        "breath_s": 0
+      },
+      "est_seconds": 4,
+      "est_low_s": 3,
+      "est_high_s": 5,
+      "frames_at_24fps": 96,
+      "render": "3d",
+      "difficulty": 2,
+      "difficulty_tags": [],
+      "hard": false,
+      "native_4k_s_per_frame": {
+        "expected": null,
+        "low": null,
+        "high": null,
+        "basis": "not estimated yet (no Episode 1 shots on this set)"
+      },
+      "realism_strategy": null,
+      "engine": {
+        "from": "north-west corner"
+      }
     }
   ],
   "scene_totals": [
@@ -228,23 +282,39 @@
       "sets": [
         "CLING_SQUARE"
       ]
+    },
+    {
+      "scene": "0B",
+      "title": "CLING BAKERY",
+      "start_s": 11.5,
+      "shots": 1,
+      "spoken_lines": 0,
+      "parts": [],
+      "low_s": 3,
+      "expected_s": 4,
+      "high_s": 5,
+      "frames_expected": 96,
+      "hard_shots": 0,
+      "sets": [
+        "CLING_BAKERY"
+      ]
     }
   ],
   "unit_totals": {},
   "totals": {
-    "shots": 3,
+    "shots": 4,
     "spoken_lines": 3,
-    "low_s": 9.5,
-    "expected_s": 11.5,
-    "high_s": 14.5,
-    "low_min": 0.16,
-    "expected_min": 0.19,
-    "high_min": 0.24,
-    "frames_expected": 276,
-    "frames_total": 276,
+    "low_s": 12.5,
+    "expected_s": 15.5,
+    "high_s": 19.5,
+    "low_min": 0.21,
+    "expected_min": 0.26,
+    "high_min": 0.33,
+    "frames_expected": 372,
+    "frames_total": 372,
     "hard_shots": 0,
     "shots_by_origin": {
-      "handoff": 3
+      "handoff": 4
     },
     "shots_with_realism_strategy": 0,
     "shots_per_tag": {},

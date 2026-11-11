@@ -71,7 +71,7 @@ import { spawn, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { parseArgs, num } from './lib/args.mjs';
 import { PROJECT_ROOT, checkFfmpeg, ffmpegPath } from './lib/tools.mjs';
-import { parseSchedule, loadJobs, parseCommand, DEFAULT_SCHEDULE } from './lib/schedule.mjs';
+import { parseSchedule, loadJobs, parseCommand, DEFAULT_SCHEDULE, scheduleFor } from './lib/schedule.mjs';
 import { probeVideo, ffprobeJson, COLOR_TAGS, fpsRational, spawnFfmpeg } from './lib/ffmpeg.mjs';
 import { lockJob } from './lib/job.mjs';
 import { savedGpuProfile, gpuCheckCommand, renderCommand } from './lib/gpu.mjs';
@@ -88,7 +88,8 @@ import { usableRecommendation } from '../runtime/tools/tier-bench.mjs';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const RENDER_MJS = path.join(HERE, 'render.mjs');
 const FPS = 24;
-const TITLE = 'DragonsKingdom_S01E01';
+// the episode (--episode <id>, default s01e01; engine phase 7): its tag names the files (S01E01, T00, S01E02 ...)
+let EP = 's01e01', TAG = 'S01E01', TITLE = 'DragonsKingdom_S01E01';
 
 const HELP = `
 Render Episode 1 scene by scene (resumable) and assemble the episode.
@@ -118,10 +119,14 @@ Render Episode 1 scene by scene (resumable) and assemble the episode.
   --verify-full        decode scene files and the episode completely as a check (slow at 4K)
   --skip-cache-check   start even if pc/build-caches.mjs reports missing caches (pictures may differ!)
   --master-preset P    x264 preset for scene files / episode (default medium)
+  --episode ID         another episode made by the engine (e.g. s01e02): its plan episodes/<ID>/final/render-schedule.md,
+                       output/episode-<ID>/ (default s01e01: output/episode1)
   --schedule FILE      render-schedule.md (default ${path.relative(PROJECT_ROOT, DEFAULT_SCHEDULE).split(path.sep).join('/')})
   --jobs FILE          render-jobs.json (default: next to the schedule)
   --out DIR            output folder (default output/episode1)
   --size WxH           TEST render at another size: labelled TEST, separate folder, never a master
+  --test-preset P      TEST renders only (needs --size): draw with preset P (draft | preview) instead of final, e.g. the
+                       self-test of a whole engine-made episode on a CPU (pc/selftest-episode.mjs --episode)
 `;
 
 // --------------------------------------------------------------- helpers ---
@@ -232,7 +237,7 @@ async function renderShot(o, scene, job, r, { workers, fresh }) {
   const a = r.args || {};
   const secs = job.frames / FPS;
   const args = [RENDER_MJS, r.scene,
-    '--preset', 'final', ...(o.tier && o.tier !== 'final' ? ['--tier', o.tier] : []),
+    '--preset', o.testPreset || 'final', ...(!o.testPreset && o.tier && o.tier !== 'final' ? ['--tier', o.tier] : []),
     '--start', String(r.startS), '--seconds', secs.toFixed(6),
     '--workers', String(workers),
     '--chunk-seconds', String(a['chunk-seconds'] ?? job.chunk_seconds ?? 1),
@@ -334,7 +339,7 @@ function findAudio(o, scene) {
     }
   }
   for (const dir of audioDirs(o)) {
-    for (const n of [`${'S01E01'}_mix`, 'S01E01', 'episode_mix', 'episode-mix']) {
+    for (const n of [`${TAG}_mix`, TAG, 'episode_mix', 'episode-mix']) {
       for (const e of AUDIO_EXT) { const f = path.join(dir, n + e); if (fs.existsSync(f)) return { file: f, offsetS: scene.startFrame / FPS, kind: 'episode' }; }
     }
   }
@@ -343,7 +348,7 @@ function findAudio(o, scene) {
 
 function episodeCues(o, plan) {
   for (const dir of audioDirs(o)) {
-    const f = path.join(dir, 'S01E01.en.srt');
+    const f = path.join(dir, `${TAG}.en.srt`);
     if (fs.existsSync(f)) return { cues: readSrt(f), source: relp(f), estimated: false };
   }
   const shots = readJson(path.join(PLAN_DIR, 'shotlist.json'))?.shots || [];
@@ -391,7 +396,7 @@ async function assembleScene(o, plan, scene, cues) {
     try {
       await ffmpeg(['-f', 'concat', '-safe', '0', '-i', listFile, ...audioIn, '-map', '0:v:0', '-map', '1:a:0',
         ...passthrough(), ...x264Args({ crf: o.masterCrf, preset: o.masterPreset, bitDepth: 10 }), ...audioOut,
-        '-metadata', `title=Dragon's Kingdom S01E01 - ${scene.key}${scene.title ? `: ${scene.title}` : ''}`,
+        '-metadata', `title=Dragon's Kingdom ${TAG} - ${scene.key}${scene.title ? `: ${scene.title}` : ''}`,
         '-movflags', '+faststart', '-f', 'mp4', tmp], `scene ${scene.key}`);
     } finally { fs.rmSync(listFile, { force: true }); }
   }
@@ -517,7 +522,7 @@ function collectStatus(o, plan) {
 function printStatus(o, plan, rows) {
   const ep4k = path.join(o.out, `${TITLE}${o.size ? '_TEST_' + o.size : '_4K'}.mp4`);
   const lines = [];
-  lines.push(hr('='), `Dragon's Kingdom S01E01 - render status ${new Date().toLocaleString()}`, `renderer: ${o.gpu ? `GPU (${savedGpuProfile()?.renderer || 'see gpu-check'})` : 'CPU (SwiftShader)'}   output: ${relp(o.out)}`);
+  lines.push(hr('='), `Dragon's Kingdom ${TAG} - render status ${new Date().toLocaleString()}`, `renderer: ${o.gpu ? `GPU (${savedGpuProfile()?.renderer || 'see gpu-check'})` : 'CPU (SwiftShader)'}   output: ${relp(o.out)}`);
   lines.push(`quality tier for new shots: ${o.tier || 'final'} - ${o.tierWhy || 'the default'}`);
   const byTier = {};
   for (const r of rows) for (const [t, n] of Object.entries(r.tiers || {})) byTier[t] = (byTier[t] || 0) + n;
@@ -586,7 +591,10 @@ let PLAN_DIR = path.dirname(DEFAULT_SCHEDULE);
 async function main() {
   const a = parseArgs(process.argv.slice(2), { booleans: ['help', 'status', 'dry-run', 'gpu', 'cpu', 'rerender-stale', 'no-assemble', 'assemble', 'keep-chunks', 'verify-full', 'skip-cache-check', 'stale', 'ignore-gate', 'accept-gpu-picture'] });
   if (a.help) { console.log(HELP); return 0; }
-  const schedule = path.resolve(a.schedule || DEFAULT_SCHEDULE);
+  EP = a.episode && a.episode !== true ? String(a.episode) : 's01e01';
+  TAG = EP.toUpperCase(); TITLE = `DragonsKingdom_${TAG}`;
+  const schedule = path.resolve(a.schedule || scheduleFor(EP));
+  if (!fs.existsSync(schedule)) throw new Error(`${relp(schedule)} does not exist: make the episode's PC package first (node engine/make-episode.mjs --episode ${EP} --final)`);
   PLAN_DIR = path.dirname(schedule);
   const o = {
     schedule, jobsFile: a.jobs ? path.resolve(a.jobs) : undefined,
@@ -600,7 +608,12 @@ async function main() {
   } else [o.W, o.H] = [3840, 2160];
   [o.phoneW, o.phoneH] = o.W >= 3840 ? [1920, 1080] : [Math.round(o.W / 4) * 2, Math.round(o.H / 4) * 2];
   o.tag = o.size ? `_TEST_${o.size}` : '';
-  o.out = path.resolve(a.out || path.join(PROJECT_ROOT, 'output', o.size ? `episode1-test-${o.size}` : 'episode1'));
+  o.testPreset = a.testPreset && a.testPreset !== true ? String(a.testPreset) : null;
+  if (o.testPreset && !o.size) throw new Error('--test-preset is only for TEST renders (with --size): masters always render --preset final');
+  if (o.testPreset && !['draft', 'preview', 'final'].includes(o.testPreset)) throw new Error('--test-preset draft | preview | final');
+  if (o.testPreset === 'final') o.testPreset = null;
+  const outName = EP === 's01e01' ? 'episode1' : `episode-${EP}`;
+  o.out = path.resolve(a.out || path.join(PROJECT_ROOT, 'output', o.size ? `${outName}-test-${o.size}${o.testPreset ? `-${o.testPreset}` : ''}` : outName));
   fs.mkdirSync(o.out, { recursive: true });
 
   // renderer: the GPU gpu-check found, or the CPU when asked for
@@ -619,7 +632,7 @@ async function main() {
 
   if (a.status) { printStatus(o, plan, collectStatus(o, plan)); saveHashes(o); return 0; }
 
-  LOG_FILE = path.join(PROJECT_ROOT, 'pc', 'logs', `episode${o.size ? '-test' : ''}.log`);
+  LOG_FILE = path.join(PROJECT_ROOT, 'pc', 'logs', `episode${EP === 's01e01' ? '' : `-${EP}`}${o.size ? '-test' : ''}.log`);
   fs.mkdirSync(path.dirname(LOG_FILE), { recursive: true });
   say(hr('='));
   say(`render/episode.mjs ${process.argv.slice(2).join(' ')}`.trim());
@@ -697,7 +710,7 @@ async function main() {
   let renderedShots = 0;
   try {
     const cues = episodeCues(o, plan);
-    if (cues.estimated) say(`subtitles: ${cues.cues.length} cues, timing ESTIMATED from the shot list (a timed S01E01.en.srt from the sound mix replaces it)`);
+    if (cues.estimated) say(`subtitles: ${cues.cues.length} cues, timing ESTIMATED from the shot list (a timed ${TAG}.en.srt from the sound mix replaces it)`);
     else say(`subtitles: ${cues.cues.length} cues from ${cues.source}`);
     for (const scene of plan.scenes) {
       if (STOPPING) break;
@@ -803,7 +816,7 @@ async function main() {
         say(`episode: ${r}`);
         const silent = plan.scenes.filter((s) => !findAudio(o, s)).map((s) => s.key);
         if (silent.length) say(`WARNING: these scenes have no sound yet: ${silent.join(', ')} - the episode is not finished until they do.`);
-        if (cues.estimated) say('NOTE: subtitle timing is estimated (no timed S01E01.en.srt yet).');
+        if (cues.estimated) say(`NOTE: subtitle timing is estimated (no timed ${TAG}.en.srt yet).`);
       } else say('episode: not assembled yet - it needs every scene file (see the status below).');
     }
   } finally {

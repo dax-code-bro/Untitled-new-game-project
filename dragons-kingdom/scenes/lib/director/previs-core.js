@@ -41,7 +41,7 @@ export function shotEnv(spec, s1, sheet = null) {
   const missing = new Set();
   const cast = s1.cast || {};
   const env = {
-    missing,
+    missing, spec, cast,
     // the set's ground height (spec.previs.ground: a number, the Verdor field is at y 9) - 0 by default
     // + spec.previs.floors: name prefixes of marks that are raised walkable surfaces (a stair's steps, a deck):
     // an actor within 2 m of such marks stands at their height (inverse-distance blend) - stairs and decks
@@ -78,12 +78,14 @@ export function shotEnv(spec, s1, sheet = null) {
       const def = spec.cast?.[an], b = cast[an];
       // a RIDER (cast def.ride): seated on its mount - the seat from spec.previs.marks['<mount>Seat'] or
       // spec.previs.seatH[mount] above the mount's root (default 0.18 x its length); head 0.75 m above the seat
-      if (def?.ride && b && cast[def.ride]) {
-        const mdef = spec.cast?.[def.ride], ms = actorState(cast[def.ride], t, env);
-        const L = cast[def.ride].length ?? mdef?.length ?? CREATURE_LEN[mdef?.id] ?? 2;
+      // (phase 5) `ride` is a mount name or { on: mount, lean } (the stage's form; OUTER_ROCKS / SKY_OFF_VERDOR use it)
+      const mount = typeof def?.ride === 'object' && def.ride ? def.ride.on : def?.ride;
+      if (mount && b && cast[mount]) {
+        const mdef = spec.cast?.[mount], ms = actorState(cast[mount], t, env);
+        const L = cast[mount].length ?? mdef?.length ?? CREATURE_LEN[mdef?.id] ?? 2;
         const fwd = new THREE.Vector3(Math.sin(ms.yaw), 0, Math.cos(ms.yaw));
-        const sm = spec.previs?.marks?.[`${def.ride}Seat`];
-        const seat = sm ? V(sm) : new THREE.Vector3(ms.x, ms.y + (spec.previs?.seatH?.[def.ride] ?? L * 0.18), ms.z).addScaledVector(fwd, L * 0.1);
+        const sm = spec.previs?.marks?.[`${mount}Seat`];
+        const seat = sm ? V(sm) : new THREE.Vector3(ms.x, ms.y + (spec.previs?.seatH?.[mount] ?? L * 0.18), ms.z).addScaledVector(fwd, L * 0.1);
         const dy = part === 'head' || part === 'eye' || part === 'eyes' ? 0.75 : part === 'chest' ? 0.4 : part.startsWith('hand') ? 0.25 : 0.1;
         return seat.add(new THREE.Vector3(0, dy, 0));
       }
@@ -159,6 +161,18 @@ export function cameraAt(spec, s1, t, u, env) {
   const fp = typeof fv === 'number' ? null : res(fv);
   const focus = (typeof fv === 'number' ? fv : fp ? fp.distanceTo(pos) : look.distanceTo(pos)) + (c.focusOffset ?? 0);
   return { pos, look, mm: usedMm, asked: mm, fstop, focus, worst };
+}
+
+/** (phase 5) the LONG-LENS HORIZON RULE: a long lens looking down on flyers keeps the horizon out of the frame, i.e. its
+ *  depression (degrees below level) >= vfov / 2 + 2.5. cam: { pos, look, mm } (arrays or Vector3s).
+ *  -> { ok, depression, need, vfov } (ok is true for lenses under `minMm`, where the rule does not apply). */
+export function horizonRule(cam, { minMm = 100 } = {}) {
+  const a = Array.isArray(cam.pos) ? cam.pos : cam.pos.toArray(), b = Array.isArray(cam.look) ? cam.look : cam.look.toArray();
+  const d = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
+  const depression = -Math.atan2(d[1], Math.hypot(d[0], d[2])) * 180 / Math.PI;
+  const vfov = 2 * Math.atan((24.89 * 9 / 16) / 2 / cam.mm) * 180 / Math.PI;
+  const need = vfov / 2 + 2.5;
+  return { ok: cam.mm < minMm || depression >= need - 1e-6, depression: +depression.toFixed(2), need: +need.toFixed(2), vfov: +vfov.toFixed(2) };
 }
 
 export function analyse(spec, s1, row, t, env) {
@@ -270,7 +284,20 @@ export function occlude(r, sheet, env) {
   if (r.skip || !sheet?.solids?.length) return r;
   for (const a of r.actors) {
     const pts = [a.head, env.point(`${a.name}.chest`, r.t), env.point(`${a.name}.hips`, r.t)].filter(Boolean);
-    const hits = pts.map((p) => rayBlock(sheet.solids, r.cam.pos, p));
+    // (phase 5b) a creature's wing tips too: chest +- 0.5 x its length across its heading (a dragon hidden behind a
+    // stack but for a sliver of wing is mostly occluded, not visible)
+    const def = env.spec?.cast?.[a.name];
+    if (def?.kind === 'creature' && pts[1]) {
+      const st = env.state(a.name, r.t), b = env.cast?.[a.name] || {};
+      const L = b.length ?? def.length ?? CREATURE_LEN[def.id] ?? 2;
+      const side = new THREE.Vector3(Math.cos(st.yaw), 0, -Math.sin(st.yaw));
+      pts.push(pts[1].clone().addScaledVector(side, L * 0.5), pts[1].clone().addScaledVector(side, -L * 0.5));
+    }
+    // (phase 5b) a solid whose footprint holds the actor itself (a lookout in the masthead, someone on an `approx`
+    // palace terrace) cannot say whether it hides them: only the other solids are tested
+    const own = (s) => { const q = xyz(a.head); return !!footprint(s, [q[0] - 0.01, 0, q[2] - 0.01], [q[0] + 0.01, 0, q[2] + 0.01]); };
+    const solids = sheet.solids.filter((s) => !own(s));
+    const hits = pts.map((p) => rayBlock(solids, r.cam.pos, p));
     a.visibleFrac = +(hits.filter((h) => !h).length / pts.length).toFixed(2);
     a.occludedBy = hits[0] ? hits[0].what : null;
     if (!a.occludedBy && a.visibleFrac === 0) a.occludedBy = hits.find(Boolean)?.what ?? null;

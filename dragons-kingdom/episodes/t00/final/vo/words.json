@@ -1,0 +1,61 @@
+{
+ "schema": "word timings (pocketsphinx forced alignment)",
+ "source": "engine/vo/make_vo.py",
+ "lines": {
+  "L001": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "you're",
+     "start_s": 0.0,
+     "end_s": 0.19
+    },
+    {
+     "w": "early",
+     "start_s": 0.19,
+     "end_s": 0.61
+    }
+   ]
+  },
+  "L002": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "the",
+     "start_s": 0.0,
+     "end_s": 0.1
+    },
+    {
+     "w": "crowd",
+     "start_s": 0.1,
+     "end_s": 0.67
+    },
+    {
+     "w": "won't",
+     "start_s": 0.67,
+     "end_s": 0.99
+    },
+    {
+     "w": "wait",
+     "start_s": 0.99,
+     "end_s": 1.4
+    }
+   ]
+  },
+  "L003": {
+   "aligned": true,
+   "words": [
+    {
+     "w": "then",
+     "start_s": 0.0,
+     "end_s": 0.23
+    },
+    {
+     "w": "play",
+     "start_s": 0.23,
+     "end_s": 0.71
+    }
+   ]
+  }
+ }
+}

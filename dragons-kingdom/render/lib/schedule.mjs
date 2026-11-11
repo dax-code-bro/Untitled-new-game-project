@@ -6,6 +6,13 @@ import path from 'node:path';
 import { PROJECT_ROOT } from './tools.mjs';
 
 export const DEFAULT_SCHEDULE = path.join(PROJECT_ROOT, 'episodes', 's01e01', 'final', 'render-schedule.md');
+/** The render plan of an episode (engine phase 7: --episode <id>, default s01e01): episodes/<ep>/final/render-schedule.md */
+export const scheduleFor = (ep = 's01e01') => {
+  if (!/^[a-z0-9][a-z0-9_-]{0,31}$/i.test(String(ep))) throw new Error(`--episode ${ep}: letters, digits, - and _ only (e.g. s01e02)`);
+  return path.join(PROJECT_ROOT, 'episodes', String(ep), 'final', 'render-schedule.md');
+};
+/** The episode id of a plan folder (episodes/<ep>/final), or null. */
+export const episodeOfPlan = (planDir) => { const m = /episodes[\\/]([^\\/]+)[\\/]final[\\/]?$/.exec(path.resolve(planDir)); return m ? m[1] : null; };
 
 const num = (s) => {
   const t = String(s ?? '').replace(/[*,\s]/g, '');

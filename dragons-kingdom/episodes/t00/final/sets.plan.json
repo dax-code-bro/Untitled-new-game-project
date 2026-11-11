@@ -13,6 +13,24 @@
       "dressing": null,
       "about": null,
       "source_line": 2
+    },
+    {
+      "id": "CLING_BAKERY",
+      "action": "variant",
+      "template": "interior-room",
+      "size": "6 x 5 x 3.2",
+      "world": "CLING at [-14, 0, 9] facing east",
+      "features": [
+        "oven on north wall",
+        "counter across the middle",
+        "window east",
+        "door south",
+        "two oil lamps"
+      ],
+      "tod": "0B morning, sun az 110 el 18",
+      "dressing": null,
+      "about": null,
+      "source_line": 4
     }
   ]
 }

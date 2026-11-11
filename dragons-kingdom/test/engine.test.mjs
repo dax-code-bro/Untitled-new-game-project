@@ -74,7 +74,7 @@ test('engine phase 2: t00 validates with 0 errors and its committed final/ files
     fs.copyFileSync(path.join(ROOT, 'episodes/t00/final/lines.lock.json'), path.join(dir, 'lines.lock.json'));
     const r = await validateEpisode('t00', { out: dir, write: true });
     assert.deepEqual(r.errors, []);
-    assert.equal(r.totals.shots, 3);
+    assert.equal(r.totals.shots, 4);                                        // 3 on the Cling square + 1 in the generated bakery (phase 7)
     for (const f of ['dialogue.json', 'onscreen-text.json', 'lines.lock.json', 'shotlist.json', 'sets.plan.json', 'validation.md'])
       assert.equal(fs.readFileSync(path.join(dir, f), 'utf8'), fs.readFileSync(path.join(ROOT, 'episodes/t00/final', f), 'utf8'), `${f} is stale: node engine/input/validate.mjs --episode t00 --write`);
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
@@ -176,9 +176,10 @@ test('engine phase 3: occlusion rays against sheet solids reproduce X6-01 r1 (th
     cast: { ...r2.cast, leaf: { ...r2.cast.leaf, root: P([[0, -350, -28, 70], [6, -240, -28, 62, 'linear']]) }, charcoal: { ...r2.cast.charcoal, root: P([[0, -390, -42, 92], [6, -290, -42, 88, 'linear']]) } } };
   for (const t of [0, 3, 5.9]) {
     const a = measure(spec, r1, t, { sheet, frames: 144 }).actors.find((x) => x.name === 'leaf');
-    assert.ok(a.inFrame && /^stack [AB]$/.test(a.occludedBy) && a.visibleFrac === 0, `r1 t ${t}: leaf ${a.occludedBy} ${a.visibleFrac}`);
+    // (phase 5b: a creature's wing tips are sampled too; the body behind the stack, at most a wing tip out = a hard fail)
+    assert.ok(a.inFrame && /^stack [AB]$/.test(a.occludedBy) && a.visibleFrac < 0.5, `r1 t ${t}: leaf ${a.occludedBy} ${a.visibleFrac}`);
     const b = measure(spec, 'X6-01', t, { sheet, frames: 144 }).actors.find((x) => x.name === 'leaf');
-    assert.ok(b.inFrame && !b.occludedBy && b.visibleFrac === 1, `r2 (hand-written) t ${t}: leaf clear of the stacks`);
+    assert.ok(b.inFrame && !b.occludedBy && b.visibleFrac === 1, `r2 (hand-written) t ${t}: leaf clear of the stacks ${b.occludedBy} ${b.visibleFrac}`);
   }
 });
 
@@ -250,4 +251,151 @@ test('engine phase 3: the rating guard is hard; t00 casts cleanly and its lock i
   const lock = JSON.parse(fs.readFileSync(path.join(ROOT, 'episodes/t00/final/cast.lock.json'), 'utf8'));
   assert.deepEqual(JSON.parse(r.stdout.slice(0, r.stdout.lastIndexOf('}') + 1)), lock);
   assert.deepEqual(lock.shots['0A-01'].map((e) => e.build), ['vendor', 'musician']);
+});
+
+// ---- engine phase 4: auto-stager v1 (ground) ----
+test('engine phase 4: re-staging the 22 Cling shots: >= 80 % of subjects in frame and on their side; deterministic', async () => {
+  const { restageCling } = await import('../engine/stager/accept.mjs');
+  const a = await restageCling(), b = await restageCling();
+  assert.equal(JSON.stringify(a.staged.spec), JSON.stringify(b.staged.spec), 'the stager is deterministic');
+  assert.equal(a.per.length, 22);
+  assert.ok(a.inFrameSide >= 0.8, `in frame + side ${a.inFrameSide}`);
+  // DESIGN's second number (>= 70 % within 45 deg bearing and x1.5 screen height of the hand-made shot) is NOT met
+  // yet (phase 4 measured 55 %, PROGRESS.md); this guards the level reached
+  assert.ok(a.cmpOk >= 0.5, `bearing + height vs hand ${a.cmpOk}`);
+  // rating: no child build anywhere in R3-01..04
+  for (const id of ['R3-01', 'R3-02', 'R3-03', 'R3-04']) for (const k of Object.keys(a.staged.spec.shots[id].cast || {})) assert.ok(!/child|abby/.test(a.staged.spec.cast[k].id), `${id}: ${k}`);
+});
+
+test('engine phase 4: t00 is staged (auto/touch/spec files current), build-shots places every line', async () => {
+  let r = node('engine/stager/write.mjs', '--episode', 't00', '--check');
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  r = node('scenes/lib/director/tools/build-shots.mjs', '--episode', 't00', '--check');
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  assert.doesNotMatch(r.stdout, /not placed|no spec yet/);
+  const edl = JSON.parse(fs.readFileSync(path.join(ROOT, 'episodes/t00/final/cut/edl.json'), 'utf8'));
+  const sl = JSON.parse(fs.readFileSync(path.join(ROOT, 'episodes/t00/final/shotlist.json'), 'utf8'));
+  assert.deepEqual(edl.shots.flatMap((s) => s.dialogue.map((d) => d.id)), sl.shots.flatMap((s) => s.dialogue.map((d) => d.id)));
+  assert.ok(edl.shots.every((s) => s.kind === '3d'));
+  r = node('engine/stager/write.mjs', '--episode', 's01e01');
+  assert.notEqual(r.status, 0, 'Episode 1 specs are never written');
+  const { mergeSpecs } = await import('../scenes/lib/director/staging/merge.js');
+  const m = mergeSpecs({ set: 'X', shots: { a: { cam: { mm: 35, fstop: 8 }, cast: { v: { at: [0, 0] } } }, b: { cam: { mm: 50 } } } }, { a: { cam: { mm: 50 }, cast: { v: null } }, b: { lock: true, cam: { mm: 85 } } });
+  assert.deepEqual(m.shots, { a: { cam: { mm: 50, fstop: 8 }, cast: {} }, b: { cam: { mm: 85 } } });
+});
+
+test('engine phase 5: flight.js helpers, the horizon rule, the line side, the two-shot fix and the stall build', async () => {
+  const F = await import('../scenes/lib/director/staging/flight.js');
+  assert.equal(F.CHAR_HZ, 0.625, 'CHAR_HZ is locked by the sound spots');
+  const p = F.pair([0, 60, 0], 180, 2);
+  assert.deepEqual(p.charcoal.root[0][1], [30, 58, 16]);                       // 30 m to Leaf's left (east going south), 16 m ahead
+  const C = F.formationClock([[0, 60, 0], [0, 60, 100]], { v: 10 });
+  assert.deepEqual(C.at(5).p, [0, 60, 50]); assert.equal(C.at(5).heading, 180);
+  const { horizonRule } = await import('../scenes/lib/director/previs-core.js');
+  assert.equal(horizonRule({ pos: [0, 100, 0], look: [0, 99, 100], mm: 160 }).ok, false);
+  assert.equal(horizonRule({ pos: [0, 100, 0], look: [0, 90, 100], mm: 160 }).ok, true);
+  const { lineSide } = await import('../engine/stager/check.mjs');
+  const line = { travel: 'heading', camSide: 'right', tol: 25 };
+  assert.equal(lineSide(line, [0, 0, 0], 180, [-50, 0, 0]).ok, true);           // heading south, camera west = its right
+  assert.equal(lineSide(line, [0, 0, 0], 180, [50, 0, 0]).ok, false);
+  assert.equal(lineSide(line, [0, 0, 0], 180, [50, 0, 0], true).ok, true);       // "reverse" declared
+  const rep = JSON.parse(fs.readFileSync(path.join(ROOT, 'episodes/t00/final/stage-report.json'), 'utf8')).shots.find((s) => s.id === '0A-02');
+  assert.ok(rep.fixes.some((f) => f.startsWith('two-shot:')), 'the two talkers are brought together');
+  assert.ok(!rep.flags.some((f) => f.startsWith('W_SIZE')));
+  const a = await import('../engine/stager/accept.mjs');
+  const r = await a.restageCling();
+  const x504 = r.staged.spec.shots['X5-04'].set.stall;
+  assert.ok(Array.isArray(x504.poles) && Array.isArray(x504.cloth), 'X5-04: the stall is built during the shot');
+});
+
+test('engine phase 5b: occlusion is a hard fail (X6-09 clear, all 34 air shots), keep-out, leave-one-out air priors', async () => {
+  const a = await import('../engine/stager/accept.mjs');
+  const r = await a.restageAir();
+  // no requested subject more than half hidden behind sheet solids at t 0.15 / 0.5 / 0.85 in any re-staged air shot
+  const occl = r.per.filter((p) => p.flags.some((f) => f.startsWith('W_OCCLUDED')));
+  assert.deepEqual(occl.map((p) => p.id), []);
+  const x609 = r.per.find((p) => p.id === 'X6-09');
+  assert.ok(x609.subjects.every((s) => s.ok) && x609.cmp.ok, 'X6-09: Leaf + Abby in frame, a pass-by from inside the gap');
+  const rep = r.stagedBySet.OUTER_ROCKS.reports.find((q) => q.id === 'X6-09');
+  assert.ok(rep.checks.every((c) => c.visible), 'X6-09: visible at every sample time');
+  // priors never come from the shot being staged
+  for (const st of Object.values(r.stagedBySet)) for (const q of st.reports) if (q.prior) assert.ok(!q.prior.startsWith(`${q.id} `), `${q.id}: its own vantage`);
+  // X6-04: Abby rides Leaf as abby_ride (the hand spec's build, outfit and role)
+  const ab = r.stagedBySet.SKY_OFF_VERDOR.spec.cast.abby;
+  assert.deepEqual([ab.id, ab.ride.on, ab.outfit, ab.role], ['abby_ride', 'leaf', 'abby', 'ABBY']);
+  // keep-out: every standing person of t00 is on walkable ground (not in the fountain basin, not in a solid)
+  const { walkable } = await import('../scenes/lib/director/staging/ground.js');
+  const sheet = JSON.parse(fs.readFileSync(path.join(ROOT, 'scenes/lib/director/sets/sheets/CLING_SQUARE.json'), 'utf8'));
+  const auto = (await import('../episodes/t00/final/scenes/specs/cling-square-2.auto.js')).default;
+  for (const [id, sh] of Object.entries(auto.shots)) for (const [n, b] of Object.entries(sh.cast || {})) if (b.at && !(b.y > 0.3) && !b.posture?.sit) assert.ok(walkable(sheet, b.at), `${id} ${n} at ${b.at}`);
+  // every stack of the outer-rocks DEF is a solid up to its full height
+  await import('../engine/tools/sheet.mjs');                                     // registers the dk/ resolve hook
+  const { DEF } = await import('../scenes/lib/director/sets/outer-rocks.js');
+  const rocks = JSON.parse(fs.readFileSync(path.join(ROOT, 'scenes/lib/director/sets/sheets/OUTER_ROCKS.json'), 'utf8'));
+  for (const [k, s] of Object.entries(DEF.stacks)) assert.equal(Math.max(...rocks.solids.filter((q) => q.what === `stack ${k}`).map((q) => q.y0 + q.h)), s.H, `stack ${k}`);
+});
+
+test('engine phase 6: queue files, animatic frames, auto sound spots, make-episode guards (no render)', async () => {
+  // the queue: enqueue merges pending jobs of a set; a scratch episode id keeps t00's queue untouched
+  const ep = `scratch-q${process.pid}`;
+  const { enqueue, loadQueue, liveness, statusText } = await import('../engine/queue.mjs');
+  const { queuePaths } = await import('../engine/lib/drafts.mjs');
+  try {
+    enqueue(ep, [{ set: 'CLING_SQUARE_2', tier: 'stills', shots: ['0A-01'] }]);
+    enqueue(ep, [{ set: 'CLING_SQUARE_2', tier: 'stills', shots: ['0A-02', '0A-01'] }, { set: 'OUTER_ROCKS', tier: 'stills', shots: ['X6-01'] }]);
+    const q = loadQueue(ep);
+    assert.equal(q.jobs.length, 2);
+    assert.deepEqual(q.jobs[0].shots, ['0A-01', '0A-02']);
+    assert.equal(liveness(ep).alive, false);
+    fs.writeFileSync(queuePaths(ep).pid, '999999');                                 // a dead pid is not a runner
+    assert.equal(liveness(ep).alive, false);
+    assert.match(statusText(ep), /not running/);
+  } finally { fs.rmSync(path.join(ROOT, 'episodes', ep), { recursive: true, force: true }); }
+  // D0: a schematic frame of t00's two-shot is a real PNG with both talkers in frame
+  const { drawFrame, loadEpisodeSets } = await import('../engine/previs/animatic.mjs');
+  const { spec, table, sheet } = (await loadEpisodeSets('t00')).find((x) => x.table.shots.some((r) => r.job === '0A-02'));
+  const row = table.shots.find((r) => r.job === '0A-02');
+  const { png, r } = drawFrame(spec, '0A-02', row, 1, sheet, 160);
+  assert.deepEqual([...png.subarray(1, 4)].map((c) => String.fromCharCode(c)).join(''), 'PNG');
+  assert.ok(r.actors.filter((a) => a.inFrame).length >= 2);
+  // sound: a variant set takes its base set's bed; t00's "pigeons" becomes a wing-flutter spot, "fountain" is unmatched
+  const { bedTable, autoSpots } = await import('../scenes/lib/sound/auto.mjs');
+  assert.equal(bedTable({ sets: { CLING_SQUARE: 'grounds_wind' } }).sets.CLING_SQUARE_2, 'grounds_wind');
+  const edl = JSON.parse(fs.readFileSync(path.join(ROOT, 'episodes/t00/final/cut/edl.json'), 'utf8'));
+  const sp = autoSpots('t00', edl, { defaults: {}, spaces: { open: {} }, space_of_set: {} });
+  assert.ok(sp.events.some((e) => e.shot === '0A-01' && e.sound === 'wingbeat_light'));
+  assert.ok(sp.unmatched.some((u) => u.includes('fountain')));
+  // make-episode refuses Episode 1 and an unknown draft tier; --status works without a render
+  assert.notEqual(node('engine/make-episode.mjs', '--episode', 's01e01', '--stage', 'all').status, 0);
+  assert.notEqual(node('engine/make-episode.mjs', '--episode', 't00', '--draft', 'oil-paint').status, 0);
+  const st = node('engine/make-episode.mjs', '--episode', 't00', '--status');
+  assert.equal(st.status, 0, st.stderr);
+  assert.match(st.stdout, /\| 0A \| 3 \| 3 \|/);
+});
+
+test('engine phase 7: set generator (describe, plan, CLING_BAKERY sheet inside the room), PC package, shotSet masters', async () => {
+  const { matchFeatures, parseTod, parseWorld } = await import('../engine/setgen/describe.mjs');
+  const tpl = await import('../engine/setgen/templates/interior-room.mjs');
+  const m = matchFeatures(['oven on north wall', 'counter across the middle', 'window east', 'door south', 'two oil lamps', 'a stuffed bear'], tpl.VOCAB);
+  assert.deepEqual(m.matched.map((x) => [x.kind, x.wall, x.n]), [['oven', 'north', 1], ['counter', null, 1], ['window', 'east', 1], ['door', 'south', 1], ['lamp', null, 2]]);
+  assert.deepEqual(m.unmatched, ['a stuffed bear']);
+  assert.deepEqual([parseTod('0B morning, sun az 110 el 18').scene, parseWorld('CLING at [-14, 0, 9] facing east').at], ['0B', [-14, 0, 9]]);
+  // the generated files of t00 are current, and every mark of the bakery's sheet is inside the room (or declared outside)
+  const r = node('engine/setgen/plan.mjs', '--episode', 't00', '--check');
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  assert.match(r.stdout, /CLING_BAKERY\s+generate/);
+  const sh = JSON.parse(fs.readFileSync(path.join(ROOT, 'scenes/lib/director/sets/sheets/CLING_BAKERY.json'), 'utf8'));
+  const [[x0, , z0], [x1, , z1]] = [[-3, 0, -2.5], [3, 3.2, 2.5]];
+  const inside = Object.entries(sh.marks).filter(([, k]) => !k.outside);
+  assert.ok(inside.length >= 10);
+  for (const [k, mk] of inside) assert.ok(mk.at[0] >= x0 && mk.at[0] <= x1 && mk.at[2] >= z0 && mk.at[2] <= z1 && mk.at[1] >= 0 && mk.at[1] <= 3.2, `${k} ${mk.at}`);
+  assert.ok(Object.keys(sh.vantages).length >= 8 && Object.keys(sh.paths).length >= 2);
+  // the PC package is current; masters find a shotSet table (0A-01 lives in cling-square-2.shots.json)
+  assert.equal(node('engine/package.mjs', '--episode', 't00', '--check').status, 0);
+  const { resolveShot } = await import('../render/lib/shots.mjs');
+  const jobs = JSON.parse(fs.readFileSync(path.join(ROOT, 'episodes/t00/final/render-jobs.json'), 'utf8')).jobs;
+  const res = resolveShot(jobs.find((j) => j.job === '0A-01'), path.join(ROOT, 'episodes/t00/final'));
+  assert.ok(res.ready && /cling-square-2\.js$/.test(res.scene), JSON.stringify(res));
+  const st = node('render/episode.mjs', '--episode', 't00', '--status', '--cpu');
+  assert.match(st.stdout, /render gate: 4 shot\(s\) approved/);
 });

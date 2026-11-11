@@ -1,0 +1,60 @@
+{
+ "about": "Every voice take placed in the cut: rec_s = where the WAV's file_in_s plays on the cut timeline (seconds from the cut's first frame); speech_rec_in/out = the words. Per scene below.",
+ "fps": 24,
+ "scenes": {
+  "0A": [
+   {
+    "scene": "0A",
+    "shot": "0A-02",
+    "ref": "L001",
+    "id": "L001",
+    "part": 0,
+    "role": "VENDOR",
+    "file": "vo/L001.wav",
+    "file_in_s": 0,
+    "file_out_s": 0.625,
+    "rec_s": 4.27,
+    "shot_at_s": 0.27,
+    "speech_rec_in_s": 4.3,
+    "speech_rec_out_s": 4.935,
+    "gain_db": 3,
+    "continues": false
+   },
+   {
+    "scene": "0A",
+    "shot": "0A-02",
+    "ref": "L002",
+    "id": "L002",
+    "part": 0,
+    "role": "MUSICIAN",
+    "file": "vo/L002.wav",
+    "file_in_s": 0,
+    "file_out_s": 1.45,
+    "rec_s": 5.055,
+    "shot_at_s": 1.055,
+    "speech_rec_in_s": 5.085,
+    "speech_rec_out_s": 6.475,
+    "gain_db": 0,
+    "continues": false
+   },
+   {
+    "scene": "0A",
+    "shot": "0A-02",
+    "ref": "L003",
+    "id": "L003",
+    "part": 0,
+    "role": "VENDOR",
+    "file": "vo/L003.wav",
+    "file_in_s": 0,
+    "file_out_s": 0.795,
+    "rec_s": 6.595,
+    "shot_at_s": 2.595,
+    "speech_rec_in_s": 6.625,
+    "speech_rec_out_s": 7.36,
+    "gain_db": 0,
+    "continues": false
+   }
+  ],
+  "0B": []
+ }
+}

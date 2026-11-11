@@ -5,3 +5,17 @@ episodes/s01e01/style-frames/*.png
 
 # local Python environment for the voice tool (rebuilt per machine)
 episodes/s01e01/final/tools/preview-venv/
+
+# engine phase 4: scratch episodes (re-staged Episode 1 shots for the stager acceptance; never committed)
+episodes/scratch-*/
+
+# engine phase 6: per-episode binaries and the engine's own state (every episode; Episode 1 has its own .gitignores)
+episodes/*/engine/
+episodes/*/final/vo/*.wav
+episodes/*/final/cut/*.mp4
+episodes/*/final/cut/*.srt
+# (engine phase 7: an episode's sound delivery list and its timed subtitles are small and belong in git)
+episodes/*/final/audio/*
+!episodes/*/final/audio/delivery.json
+!episodes/*/final/audio/*.en.srt
+episodes/*/final/previs/*.png

@@ -1,0 +1,96 @@
+{
+ "cut": "0A-0B",
+ "made_with": "ffmpeg version n8.1.3-9-g29e619e767-20260930 Copyright (c) 2000-2026 the FFmpeg developers",
+ "inputs": {
+  "edl": "episodes/t00/final/cut/edl.json",
+  "cues": "episodes/t00/final/cut/audio-cues.json",
+  "video": "episodes/t00/final/cut/DragonsKingdom_T00_draft-cut_0A-0B.mp4",
+  "beds": "scenes/lib/sound/beds.json"
+ },
+ "duration_s": 15.5,
+ "targets": {
+  "integrated_lufs": -16,
+  "true_peak_dbtp_max": -1,
+  "dialogue_lufs_pre_master": -17,
+  "min_dialogue_margin_lu": 10
+ },
+ "program": "whole cut",
+ "result": {
+  "mix": "episodes/t00/final/audio/cuts/0A-0B/mix.wav",
+  "I": -17.1,
+  "I_full": -17.1,
+  "TP": -1.6,
+  "LRA": 18.1,
+  "sha256": "9997e0958e7cb4d48465c6acb2a91ca4b154edf4080ef4d9f7e23710647fa60f",
+  "master_gain_db": 2,
+  "limiter_ceiling_dbfs": -1.6,
+  "dialogue_gain_db": 11.8,
+  "min_dialogue_margin_lu": 23.11,
+  "anchored": "dialogue",
+  "pass": true
+ },
+ "muxed": {
+  "file": "episodes/t00/final/audio/cuts/0A-0B/DragonsKingdom_T00_draft-cut_0A-0B_sound.mp4",
+  "duration_s": 15.5,
+  "aac_I": -17.2,
+  "aac_I_full": -17.2,
+  "aac_TP": -1.6,
+  "bytes": 1534341
+ },
+ "beds": {
+  "grounds_wind": {
+   "target_lufs": -28,
+   "raw_lufs_60s": -31.3,
+   "duck_db": 6
+  },
+  "chamber_hush": {
+   "target_lufs": -37,
+   "raw_lufs_60s": -23.2,
+   "duck_db": 3
+  }
+ },
+ "music": [],
+ "music_not_in_cut": [],
+ "music_cue_sheet": null,
+ "fx": {
+  "spot_sheet": "auto (shot list sound: words) - no synth for: 0A-01 \"fountain\", 0A-02 \"fountain under the voices\", 0A-03 \"one lute chord\", 0B-01 \"oven fire\"",
+  "events": 1,
+  "peak_dbfs": -25.99,
+  "spaces": [
+   "open"
+  ],
+  "sha256": "b95009d36097366f8e6facf06d08226ee766e2d13291580dfb86ac55e4886b7f",
+  "spot_rows_not_in_cut": 0,
+  "by_sound": {
+   "wingbeat_light": 1
+  }
+ },
+ "runs": [
+  {
+   "bed": "grounds_wind",
+   "from_s": 0,
+   "to_s": 11.5,
+   "xf_in_s": 1.5,
+   "xf_out_s": 0.5,
+   "shots": "0A-01..0A-03 (3)"
+  },
+  {
+   "bed": "chamber_hush",
+   "from_s": 11.5,
+   "to_s": 15.5,
+   "xf_in_s": 0.5,
+   "xf_out_s": 0,
+   "shots": "0B-01..0B-01 (1)"
+  }
+ ],
+ "voice_cues": 3,
+ "speech_windows": [
+  {
+   "from_s": 4.3,
+   "to_s": 7.36,
+   "dialogue_M": -15.22,
+   "background_M": -38.33,
+   "margin_LU": 23.11
+  }
+ ]
+}

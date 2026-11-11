@@ -5,6 +5,8 @@
 //   b. the set scene named in the command (episodes/s01e01/final/scenes/<set>.js) plus its shot table
 //      <set>.shots.json with an entry for the shot: {"shots": [{"job": "P-02", "start_s": 0, "frames": 144}, ...]}
 //      (also accepted: "id"/"shot" for "job", "set_time_start_s"/"start" for "start_s", or an object keyed by shot id);
+//   b2. another shot table in the same folder with an entry for the shot (a shotSet scene: cling-square-2.shots.json
+//       holds CLING_SQUARE shots) and its scene file;
 //   c. a scene file for just this shot: <plan>/scenes/shots/<shot>.js (starts at 0).
 import fs from 'node:fs';
 import path from 'node:path';
@@ -40,6 +42,21 @@ export function resolveShot(job, planDir) {
     if (e && Number.isFinite(start)) {
       const warn = e.frames !== undefined && +e.frames !== job.frames ? `shot table says ${e.frames} frames, render-jobs.json ${job.frames} - rendering ${job.frames}` : null;
       return { ...base, ready: true, scene: setScene, startS: start, via: `${relp(table)}`, warn, entry: e };
+    }
+  }
+  // b2. a SECOND set scene on the same shot-list set (registry `shotSet`: CLING_SQUARE_2 holds CLING_SQUARE shots, engine
+  //     phase 7): any other shot table next to the named scene with an entry for the shot, whose own scene file exists
+  const dir = path.dirname(setScene);
+  if (fs.existsSync(dir)) {
+    for (const f of fs.readdirSync(dir).filter((x) => x.endsWith('.shots.json') && path.join(dir, x) !== table).sort()) {
+      const t = readJson(path.join(dir, f));
+      const e = (Array.isArray(t?.shots) ? t.shots : []).find((x) => (x.job ?? x.id ?? x.shot) === job.job);
+      const scene2 = path.join(dir, f.replace(/\.shots\.json$/, '.js'));
+      const start = e && Number(e.start_s ?? e.set_time_start_s ?? e.start);
+      if (e && Number.isFinite(start) && fs.existsSync(scene2)) {
+        const warn = e.frames !== undefined && +e.frames !== job.frames ? `shot table says ${e.frames} frames, render-jobs.json ${job.frames} - rendering ${job.frames}` : null;
+        return { ...base, ready: true, scene: scene2, startS: start, via: `${relp(path.join(dir, f))} (shotSet table)`, warn, entry: e };
+      }
     }
   }
   // c. a scene file for this shot alone

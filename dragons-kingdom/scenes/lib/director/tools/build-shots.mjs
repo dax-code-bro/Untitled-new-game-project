@@ -28,6 +28,7 @@ import { indexTakes, placeLines } from '../dialogue.js';
 import { SETS, continuityFor } from '../registry.js';
 import { estimateShot } from '../cost.js';
 import { dirs, episodeArg, episodeCuts } from '../episode-paths.js';
+import { applyContinuity } from '../staging/continuity.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '../../../..');                 // dragons-kingdom/
@@ -47,10 +48,19 @@ const CUTS = opt('--scenes') ? [{ name: opt('--scenes') === EP_CUTS[0].scenes.jo
   : EP_CUTS;
 const HANDLE = 12;                                                 // handle frames reserved on each side of every shot
 
+// per-episode continuity (engine phase 7: final/continuity.js; Episode 1 has none and is unchanged)
+const contFile = path.join(D.final, 'continuity.js');
+if (fs.existsSync(contFile)) applyContinuity((await import(pathToFileURL(contFile).href + `?v=${fs.statSync(contFile).mtimeMs}`)).default);
 const shotlist = readJson(D.shotlist);
 const jobs = fs.existsSync(D.renderJobs) ? readJson(D.renderJobs).jobs : [];
 const jobFrames = new Map(jobs.map((j) => [j.job, j.frames]));
-const takes = indexTakes(readJson(D.takes), readJson(D.words));
+// an episode with no voice takes yet (engine phase 4: a new episode before phase 6's voices) gets PLACEHOLDER takes
+// timed from dialogue.json's estimate, so its lines are placed and timed; Episode 1 has takes and is unchanged
+const placeholderTakes = () => ({ takes: (fs.existsSync(D.dialogue) ? readJson(D.dialogue).lines || [] : []).map((l) => {
+  const est = l.est_seconds ?? l.timing?.est_seconds ?? 1.5;
+  return { id: l.id, role: l.speaker, text: l.text, file: null, scene: l.scene, duration_s: +(est + 0.2).toFixed(3), segments: [{ start_s: 0.1, end_s: +(est + 0.1).toFixed(3) }], placeholder: true };
+}) });
+const takes = fs.existsSync(D.takes) ? indexTakes(readJson(D.takes), readJson(D.words)) : indexTakes(placeholderTakes(), null);
 const measured = fs.existsSync(D.timings) ? readJson(D.timings).shots || {} : {};
 // a gpu-check run on a machine without a GPU (SwiftShader: ratio 1) is no GPU measurement - the edit
 // list said "~157 h on the GPU" from this cloud machine's own CPU check

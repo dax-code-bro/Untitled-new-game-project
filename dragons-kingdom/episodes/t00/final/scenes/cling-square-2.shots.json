@@ -1,0 +1,190 @@
+{
+ "set": "CLING_SQUARE_2",
+ "scene_file": "episodes/t00/final/scenes/cling-square-2.js",
+ "spec": "episodes/t00/final/scenes/specs/cling-square-2.spec.js",
+ "fps": 24,
+ "handles": 12,
+ "generated_by": "scenes/lib/director/tools/build-shots.mjs",
+ "note": "start_s / frames are the render-jobs.json contract (episode.mjs); pre/post are handle frames the editor may render around each shot.",
+ "shots": [
+  {
+   "job": "0A-01",
+   "seq": 1,
+   "scene": "0A",
+   "set": "CLING_SQUARE_2",
+   "start_s": 1,
+   "start_frame": 24,
+   "frames": 96,
+   "pre": 12,
+   "post": 12,
+   "seconds": 4,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "sun": [
+     0.726905328038456,
+     0.20791169081775931,
+     0.6545084971874737
+    ],
+    "tod": "early morning in Cling before the festival: low sun from the south-east, long shadows",
+    "exposure": 1.5
+   },
+   "staging": "AUTO establish-wide 35 mm STATIC: The square before the festival. The vendor sets out his crate; the musician sits on the fountain rim.",
+   "deviation": null
+  },
+  {
+   "job": "0A-02",
+   "seq": 2,
+   "scene": "0A",
+   "set": "CLING_SQUARE_2",
+   "start_s": 7,
+   "start_frame": 168,
+   "frames": 108,
+   "pre": 12,
+   "post": 12,
+   "seconds": 4.5,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [
+    {
+     "id": "L001",
+     "part": 0,
+     "ref": "L001",
+     "role": "VENDOR",
+     "file": "vo/L001.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.625,
+     "at_s": 0.27,
+     "speech_in_s": 0.3,
+     "speech_out_s": 0.935,
+     "words": [
+      {
+       "w": "you're",
+       "start_s": 0.27,
+       "end_s": 0.46
+      },
+      {
+       "w": "early",
+       "start_s": 0.46,
+       "end_s": 0.88
+      }
+     ],
+     "gain_db": 3,
+     "continues": false,
+     "placeholder": false
+    },
+    {
+     "id": "L002",
+     "part": 0,
+     "ref": "L002",
+     "role": "MUSICIAN",
+     "file": "vo/L002.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.45,
+     "at_s": 1.055,
+     "speech_in_s": 1.085,
+     "speech_out_s": 2.475,
+     "words": [
+      {
+       "w": "the",
+       "start_s": 1.055,
+       "end_s": 1.155
+      },
+      {
+       "w": "crowd",
+       "start_s": 1.155,
+       "end_s": 1.725
+      },
+      {
+       "w": "won't",
+       "start_s": 1.725,
+       "end_s": 2.045
+      },
+      {
+       "w": "wait",
+       "start_s": 2.045,
+       "end_s": 2.455
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    },
+    {
+     "id": "L003",
+     "part": 0,
+     "ref": "L003",
+     "role": "VENDOR",
+     "file": "vo/L003.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.795,
+     "at_s": 2.595,
+     "speech_in_s": 2.625,
+     "speech_out_s": 3.36,
+     "words": [
+      {
+       "w": "then",
+       "start_s": 2.595,
+       "end_s": 2.825
+      },
+      {
+       "w": "play",
+       "start_s": 2.825,
+       "end_s": 3.305
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false
+    }
+   ],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "sun": [
+     0.726905328038456,
+     0.20791169081775931,
+     0.6545084971874737
+    ],
+    "tod": "early morning in Cling before the festival: low sun from the south-east, long shadows",
+    "exposure": 1.5
+   },
+   "staging": "AUTO two-shot 50 mm STATIC: The vendor calls across to the musician, who answers without looking up from his lute.",
+   "deviation": null
+  },
+  {
+   "job": "0A-03",
+   "seq": 3,
+   "scene": "0A",
+   "set": "CLING_SQUARE_2",
+   "start_s": 14,
+   "start_frame": 336,
+   "frames": 72,
+   "pre": 12,
+   "post": 12,
+   "seconds": 3,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "sun": [
+     0.726905328038456,
+     0.20791169081775931,
+     0.6545084971874737
+    ],
+    "tod": "early morning in Cling before the festival: low sun from the south-east, long shadows",
+    "exposure": 1.5
+   },
+   "staging": "AUTO insert 100 mm STATIC: The musician's fingers find the first chord on the lute.",
+   "deviation": null
+  }
+ ]
+}

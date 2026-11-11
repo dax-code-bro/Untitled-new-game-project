@@ -8,6 +8,7 @@
   The PC is kept awake (no sleep) while this window is open, and a click inside the window does
   not pause the render (QuickEdit is switched off for this window).
   Extra words are passed on, e.g.  Render-Episode.cmd --status   or   --max-hours 8   or   --no-pull
+  Another episode made by the engine:  Render-Episode.cmd --episode s01e02   (default: Episode 1, s01e01)
   GPU check instead of rendering (what pc\GPU-Check.cmd runs):  Render-Episode.cmd --gpu-check [gpu-check options]
   Logs for the Claude session (what pc\Send-Logs.cmd runs):     Render-Episode.cmd --send-logs
     (one text file pc\logs\send-to-claude-<date>.txt; its text is also copied, ready to paste with Ctrl+V)

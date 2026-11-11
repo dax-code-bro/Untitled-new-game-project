@@ -30,7 +30,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { spawn, spawnSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { readDelivery, packageState, installPackage, download, sha256File } from './sound-delivery.mjs';
+import { readDeliveries, packageState, installPackage, download, sha256File } from './sound-delivery.mjs';
 import { PINS } from '../render/lib/pins.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -431,11 +431,11 @@ export const FAMILIES = [
   withPackage(bpyFamily('props', PROPS, 'prop cloth bakes (sails, awnings, banners, pennants; Blender)')),
   {
     // sound files that are never in git (SERIES.md section 2): pc/sound-delivery.mjs, pc/pack-sound.mjs
-    name: 'sound', what: 'sound not in git: final voice takes + episode mix (episodes/s01e01/final/audio/delivery.json)',
+    name: 'sound', what: 'sound not in git: final voice takes + episode mixes (episodes/<ep>/final/audio/delivery.json, every episode)',
     optional: true, defaultRun: true,    // a render does not wait for it: scene files get their sound later
     check() {
-      const d = readDelivery();
-      if (!d) return { ok: true, note: 'no delivery list (episodes/s01e01/final/audio/delivery.json)' };
+      const d = readDeliveries();
+      if (!d) return { ok: true, note: 'no delivery list (episodes/<ep>/final/audio/delivery.json)' };
       const notes = [];
       const probs = [];
       for (const p of d.packages) {
@@ -449,8 +449,8 @@ export const FAMILIES = [
       return probs.length ? { ok: false, problem: probs.join('; '), note: notes.join('; ') || null } : { ok: true, note: notes.join('; ') };
     },
     async build(ctx) {
-      const d = readDelivery();
-      if (!d) return { ok: false, problem: 'episodes/s01e01/final/audio/delivery.json is missing' };
+      const d = readDeliveries();
+      if (!d) return { ok: false, problem: 'no episodes/<ep>/final/audio/delivery.json' };
       if (ctx.from) {
         const src = path.resolve(ctx.from);
         if (!exists(src)) return { ok: false, problem: `--from ${src}: not found` };

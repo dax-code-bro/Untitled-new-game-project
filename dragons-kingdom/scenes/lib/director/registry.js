@@ -18,6 +18,7 @@
 // Sun direction: a unit vector TOWARD the sun in the set's world frame, from azimuth (degrees,
 // 0 = north (-z), 90 = east (+x)) and elevation (degrees above the horizon): sunDir(az, el).
 
+import { GEN_SETS } from './registry-gen.js'; // @engine-gen: sets made by the engine's set generator (engine/setgen); render-shots leaves @engine-gen lines out of its core hash
 export function sunDir(azDeg, elDeg) {
   const a = (azDeg * Math.PI) / 180, e = (elDeg * Math.PI) / 180;
   return [Math.sin(a) * Math.cos(e), Math.sin(e), -Math.cos(a) * Math.cos(e)];
@@ -134,6 +135,7 @@ export const SETS = {
     from: 'new (assets-delta S1)',
     continuity: { '1A': { sun: sunDir(92, -2), sunVeiled: true, tod: 'first light: the sun not up, grey sky over the sea, no lamp lit', exposure: 1.0 } },
   },
+  ...GEN_SETS, // @engine-gen (generated sets come last: a hand-written set of the same id is never replaced)
 };
 
 /** The set entry + the continuity of story scene `scene` (with per-shot overrides) for shot `job`. */

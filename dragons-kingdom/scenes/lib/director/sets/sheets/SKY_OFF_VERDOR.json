@@ -151,6 +151,35 @@
     60,
     1292
    ]
+  ],
+  "flight-X6": [
+   [
+    560,
+    62,
+    2600
+   ],
+   [
+    700,
+    62,
+    2947
+   ]
+  ],
+  "flight-X6-return": [
+   [
+    800,
+    60,
+    3020
+   ],
+   [
+    700,
+    60,
+    2700
+   ],
+   [
+    650,
+    60,
+    2400
+   ]
   ]
  },
  "vantages": {
@@ -736,7 +765,14 @@
   }
  },
  "solids": [],
- "lines": {},
+ "lines": {
+  "1C": {
+   "travel": "heading",
+   "camSide": "right",
+   "tol": 25,
+   "note": "flight line 1C-1E: cameras on the flyers' right (inland going south), travel L -> R"
+  }
+ },
  "state": {
   "shadowAt": "[x, y, z] + shadowExtent (the sun's shadow box follows the action)"
  },

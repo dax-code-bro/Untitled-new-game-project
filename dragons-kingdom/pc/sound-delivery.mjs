@@ -2,7 +2,8 @@
 // never committed). Used by pc/pack-sound.mjs (packs on the computer that has the files) and by
 // pc/build-caches.mjs, family "sound" (downloads or installs them on the render PC).
 //
-// The list of packages is episodes/s01e01/final/audio/delivery.json (in git, small):
+// The list of packages is episodes/<ep>/final/audio/delivery.json, one per episode (in git, small; Episode 1's and every
+// engine-made episode's - engine/package.mjs writes it):
 //   { packages: [ { id, what, dir, files_from? | files?, archive: null | { file, bytes, sha256, url } } ] }
 //  - dir:        where the files go, relative to dragons-kingdom/ (the same path on every computer)
 //  - files_from: a JSON in git that lists every file with its sha256 (final-vo: vo/takes.json)
@@ -17,10 +18,19 @@ import { fileURLToPath } from 'node:url';
 
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const DELIVERY_FILE = path.join(ROOT, 'episodes', 's01e01', 'final', 'audio', 'delivery.json');
+/** An episode's delivery list (engine phase 7: every episode has its own, episodes/<ep>/final/audio/delivery.json). */
+export const deliveryFile = (ep = 's01e01') => path.join(ROOT, 'episodes', ep, 'final', 'audio', 'delivery.json');
 export const AUDIO_EXT = ['.wav', '.flac', '.m4a', '.mp3', '.aac', '.ogg'];
 
 const readJson = (f) => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch { return null; } };
-export const readDelivery = () => readJson(DELIVERY_FILE);
+export const readDelivery = (ep = 's01e01') => readJson(deliveryFile(ep));
+/** Every episode's delivery list in one: { packages: [...], episodes: [ids] } (Episode 1 first), or null when none exists. */
+export function readDeliveries() {
+  const eps = fs.existsSync(path.join(ROOT, 'episodes')) ? fs.readdirSync(path.join(ROOT, 'episodes')).filter((e) => fs.existsSync(deliveryFile(e))).sort((a, b) => (a === 's01e01' ? -1 : b === 's01e01' ? 1 : a < b ? -1 : 1)) : [];
+  if (!eps.length) return null;
+  const all = eps.map((e) => readDelivery(e)).filter(Boolean);
+  return { packages: all.flatMap((d) => d.packages || []), episodes: eps };
+}
 
 export function sha256File(f) {
   const h = crypto.createHash('sha256');

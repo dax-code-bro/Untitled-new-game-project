@@ -1,0 +1,290 @@
+{
+ "title": "Dragon's Kingdom T00 - draft cut: 0A + 0B",
+ "status": "DRAFT EDIT for the animatic / timing check (960x540 draft renders, computer voices, provisional designs). Not a master (SERIES.md section 2).",
+ "fps": 24,
+ "frames": 372,
+ "duration_s": 15.5,
+ "duration_tc": "00:00:15:12",
+ "generated_by": "scenes/lib/director/tools/build-shots.mjs",
+ "shots": [
+  {
+   "job": "0A-01",
+   "seq": 1,
+   "scene": "0A",
+   "set": "CLING_SQUARE",
+   "kind": "3d",
+   "frames": 96,
+   "rec_in": 0,
+   "rec_out": 96,
+   "tc_in": "00:00:00:00",
+   "tc_out": "00:00:04:00",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/t00/final/scenes/cling-square-2.js",
+    "start_s": 1,
+    "start_frame": 24
+   },
+   "dialogue": [],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 3.72,
+    "k4_cpu_s_per_frame": 49.6,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 5.95,
+    "k4_cpu_hours": 1.32,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1,
+     "total": 1.24
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.24 for the shot's content"
+   },
+   "staging": "AUTO establish-wide 35 mm STATIC: The square before the festival. The vendor sets out his crate; the musician sits on the fountain rim.",
+   "deviation": null,
+   "action": "The square before the festival. The vendor sets out his crate; the musician sits on the fountain rim.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "0A-02",
+   "seq": 2,
+   "scene": "0A",
+   "set": "CLING_SQUARE",
+   "kind": "3d",
+   "frames": 108,
+   "rec_in": 96,
+   "rec_out": 204,
+   "tc_in": "00:00:04:00",
+   "tc_out": "00:00:08:12",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/t00/final/scenes/cling-square-2.js",
+    "start_s": 7,
+    "start_frame": 168
+   },
+   "dialogue": [
+    {
+     "id": "L001",
+     "part": 0,
+     "ref": "L001",
+     "role": "VENDOR",
+     "file": "vo/L001.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.625,
+     "at_s": 0.27,
+     "speech_in_s": 0.3,
+     "speech_out_s": 0.935,
+     "words": [
+      {
+       "w": "you're",
+       "start_s": 0.27,
+       "end_s": 0.46
+      },
+      {
+       "w": "early",
+       "start_s": 0.46,
+       "end_s": 0.88
+      }
+     ],
+     "gain_db": 3,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 4.27
+    },
+    {
+     "id": "L002",
+     "part": 0,
+     "ref": "L002",
+     "role": "MUSICIAN",
+     "file": "vo/L002.wav",
+     "file_in_s": 0,
+     "file_out_s": 1.45,
+     "at_s": 1.055,
+     "speech_in_s": 1.085,
+     "speech_out_s": 2.475,
+     "words": [
+      {
+       "w": "the",
+       "start_s": 1.055,
+       "end_s": 1.155
+      },
+      {
+       "w": "crowd",
+       "start_s": 1.155,
+       "end_s": 1.725
+      },
+      {
+       "w": "won't",
+       "start_s": 1.725,
+       "end_s": 2.045
+      },
+      {
+       "w": "wait",
+       "start_s": 2.045,
+       "end_s": 2.455
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 5.055
+    },
+    {
+     "id": "L003",
+     "part": 0,
+     "ref": "L003",
+     "role": "VENDOR",
+     "file": "vo/L003.wav",
+     "file_in_s": 0,
+     "file_out_s": 0.795,
+     "at_s": 2.595,
+     "speech_in_s": 2.625,
+     "speech_out_s": 3.36,
+     "words": [
+      {
+       "w": "then",
+       "start_s": 2.595,
+       "end_s": 2.825
+      },
+      {
+       "w": "play",
+       "start_s": 2.825,
+       "end_s": 3.305
+      }
+     ],
+     "gain_db": 0,
+     "continues": false,
+     "placeholder": false,
+     "rec_s": 6.595
+    }
+   ],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 3.72,
+    "k4_cpu_s_per_frame": 49.6,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 6.7,
+    "k4_cpu_hours": 1.49,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.24,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1,
+     "total": 1.24
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.24 for the shot's content"
+   },
+   "staging": "AUTO two-shot 50 mm STATIC: The vendor calls across to the musician, who answers without looking up from his lute.",
+   "deviation": null,
+   "action": "The vendor calls across to the musician, who answers without looking up from his lute.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "0A-03",
+   "seq": 3,
+   "scene": "0A",
+   "set": "CLING_SQUARE",
+   "kind": "3d",
+   "frames": 72,
+   "rec_in": 204,
+   "rec_out": 276,
+   "tc_in": "00:00:08:12",
+   "tc_out": "00:00:11:12",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/t00/final/scenes/cling-square-2.js",
+    "start_s": 14,
+    "start_frame": 336
+   },
+   "dialogue": [],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 3.36,
+    "k4_cpu_s_per_frame": 44.8,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 4.03,
+    "k4_cpu_hours": 0.9,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.12,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1,
+     "move": 1,
+     "total": 1.12
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.12 for the shot's content"
+   },
+   "staging": "AUTO insert 100 mm STATIC: The musician's fingers find the first chord on the lute.",
+   "deviation": null,
+   "action": "The musician's fingers find the first chord on the lute.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "0B-01",
+   "seq": 4,
+   "scene": "0B",
+   "set": "CLING_BAKERY",
+   "kind": "3d",
+   "frames": 96,
+   "rec_in": 276,
+   "rec_out": 372,
+   "tc_in": "00:00:11:12",
+   "tc_out": "00:00:15:12",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/t00/final/scenes/cling-bakery.js",
+    "start_s": 1,
+    "start_frame": 24
+   },
+   "dialogue": [],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 3.46,
+    "k4_cpu_s_per_frame": 46.14,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 5.54,
+    "k4_cpu_hours": 1.23,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.12,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1.03,
+     "move": 1,
+     "total": 1.15
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.15 for the shot's content"
+   },
+   "staging": "AUTO establish-wide 24 mm STATIC: The vendor walks in from the door to the counter.",
+   "deviation": null,
+   "action": "The vendor walks in from the door to the counter.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  }
+ ]
+}

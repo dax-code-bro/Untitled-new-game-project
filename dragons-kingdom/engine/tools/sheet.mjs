@@ -111,6 +111,15 @@ const LAYOUT = {
       { box: [[T.x0, T.zb], [T.x1, T.zf]], y0: 0.9, h: 0.1, what: 'stall counter (cart)' },
       { box: [[MUSIC.at[0] - MUSIC.w / 2, MUSIC.at[1] - MUSIC.d / 2], [MUSIC.at[0] + MUSIC.w / 2, MUSIC.at[1] + MUSIC.d / 2]], h: MUSIC.h, what: 'music dais' },
       { box: [[WATCH.x0, WATCH.z0], [WATCH.x1, WATCH.z1]], y0: WATCH.deck - 0.2, h: 0.2, what: "watchman's platform deck" },
+      // (phase 5) the platform's timbers (cling-square.js: four posts, the rail posts, the rails on three sides) and the
+      // ladder leaning on the deck edge from the square: X5-16's watchman hid behind them while previs saw him clear
+      ...[[WATCH.x0 + 0.1, WATCH.z0 + 0.1], [WATCH.x0 + 0.1, WATCH.z1 - 0.1], [WATCH.x1 - 0.1, WATCH.z0 + 0.1], [WATCH.x1 - 0.1, WATCH.z1 - 0.1]].flatMap(([x, z]) => [
+        { box: [[x - 0.1, z - 0.1], [x + 0.1, z + 0.1]], h: WATCH.deck, what: 'watch platform post' },
+        { box: [[x - 0.06, z - 0.06], [x + 0.06, z + 0.06]], y0: WATCH.deck, h: 1.1, what: 'watch platform rail post' }]),
+      { box: [[WATCH.x0, WATCH.z0 + 0.06], [WATCH.x1, WATCH.z0 + 0.14]], y0: WATCH.deck + 1.0, h: 0.1, what: 'watch platform rail' },
+      { box: [[WATCH.x0, WATCH.z1 - 0.14], [WATCH.x1, WATCH.z1 - 0.06]], y0: WATCH.deck + 1.0, h: 0.1, what: 'watch platform rail' },
+      { box: [[WATCH.x1 - 0.14, WATCH.z0], [WATCH.x1 - 0.06, WATCH.z1]], y0: WATCH.deck + 1.0, h: 0.1, what: 'watch platform rail' },
+      { box: [[WATCH.ladderX - 0.05, (WATCH.z0 + WATCH.z1) / 2 - 0.28], [WATCH.x0, (WATCH.z0 + WATCH.z1) / 2 + 0.28]], h: WATCH.deck + 0.9, what: 'watch ladder' },
       { box: [[S.x1, gt.z - gt.w / 2 - gt.pier - 12], [S.x1 + 0.9, gt.z - gt.w / 2 - gt.pier]], h: 3.6, what: 'town wall north of the gate', approx: true },
       { box: [[S.x1, gt.z + gt.w / 2 + gt.pier], [S.x1 + 0.9, gt.z + gt.w / 2 + gt.pier + 12]], h: 3.6, what: 'town wall south of the gate', approx: true },
     );
@@ -153,7 +162,15 @@ const LAYOUT = {
         coast: Array.from({ length: 13 }, (_, i) => [coast(i * 300), 0, i * 300]),
         // the 1C formation's line (verdor-aerial.spec.js FLIGHT CLOCK: zF(T) = 300 + 16 T, the coast x ~295)
         'flight-1C': [[295, 60, 300], [295, 60, 1052], [300, 60, 1292]],
+        // (phase 5) the X6 legs (sky-off-verdor.spec.js map notes): SSE down the coast ~150 m offshore toward the outer
+        // rocks (heading 158, from Leaf's first X6 air position), and the return north along the coast
+        'flight-X6': [[560, 62, 2600], [700, 62, 2947]],
+        'flight-X6-return': [[800, 60, 3020], [700, 60, 2700], [650, 60, 2400]],
       },
+      // (phase 5) SCREEN DIRECTION (DESIGN 3.3): the 1C flight line runs L -> R with the cameras on the flyers' RIGHT
+      // (inland while they fly south over open water; shotlist flight_line_1C_to_1E). `travel`: the flyer's own heading
+      // is the line; a camera more than `tol` deg onto the other side is rejected unless the row's move says "reverse".
+      lines: { '1C': { travel: 'heading', camSide: 'right', tol: 25, note: 'flight line 1C-1E: cameras on the flyers\' right (inland going south), travel L -> R' } },
       solids: [],
       state: { shadowAt: '[x, y, z] + shadowExtent (the sun\'s shadow box follows the action)' },
       _coast: coast,
@@ -166,12 +183,16 @@ const LAYOUT = {
     const W = gapFrame(DEF), S = DEF.stacks, C = S.C;
     const cTop = stackRing(C, C.H, null), cW = W(cTop.cu, cTop.cv);
     const solids = [];
-    // each stack as 4 stacked convex prisms (its ellipse at the slice's middle; noise and ledges left out, +-7 %)
+    // each stack (every one of DEF.stacks) as 8 stacked convex prisms up to its full height H: the slice's centre at its
+    // middle, its radii at its BOTTOM (the widest ring of a tapering stack), the 14-gon CIRCUMSCRIBED round the ellipse
+    // (1 / cos(pi / 14)) and +4 % for the mean noise and ledges (phase 5b: the 4 mid-slice inscribed prisms ran ~10 %
+    // small, so a ray could graze past rock the render shows)
+    const grow = 1.04 / Math.cos(Math.PI / 14);
     for (const [k, s] of Object.entries(S)) {
-      const n = 4;
+      const n = 8;
       for (let i = 0; i < n; i++) {
-        const y0 = (s.H * i) / n, y1 = (s.H * (i + 1)) / n, r = stackRing(s, (y0 + y1) / 2, null);
-        solids.push({ poly: ring(0, 0, r.ru, r.rv, 14, 0, (u, v) => W(r.cu + u, r.cv + v)), y0: i ? y0 : -4, h: y1 - (i ? y0 : -4), what: `stack ${k}` });
+        const y0 = (s.H * i) / n, y1 = (s.H * (i + 1)) / n, c = stackRing(s, (y0 + y1) / 2, null), r = stackRing(s, y0, null);
+        solids.push({ poly: ring(0, 0, r.ru * grow, r.rv * grow, 14, 0, (u, v) => W(c.cu + u, c.cv + v)), y0: i ? y0 : -4, h: y1 - (i ? y0 : -4), what: `stack ${k}` });
       }
     }
     return {
@@ -360,7 +381,7 @@ export async function buildSheet(set, ep = 's01e01') {
     areas, paths: L.paths || {},
     vantages: await vantages(set, specs, rows),
     solids,
-    lines: {},
+    lines: L.lines || {},
     state: L.state || {},
     continuity: sun,
     cost,

@@ -21,13 +21,20 @@
 // on the cut: the outgoing shot runs on N/2 frames, the incoming one starts N/2 early; uses the shots'
 // rendered handle frames, else holds the edge frame) | ['fadein', N] (from black at the shot's start);
 // shots[].transOut: ['fadeout', N] (to black at its end). The cut keeps exactly the edit list's length.
+//
+// Draft tiers (engine phase 6, engine/DESIGN.md 5.5): the best picture available per shot, D2 > D1 > D0 > slate:
+//   D2 video    <shots>/<job>.mp4 (render-shots.mjs)
+//   D1 stills   <stills>/<job>_NNN.png (render-shots.mjs --stills), held in turn with a slow push (4 %)
+//   D0 animatic <previs>/<job>_<k>.png (engine/previs/animatic.mjs: schematic previs frames), held in turn
+// --stills DIR (default the episode's work folder /stills), --previs DIR (default final/previs). On for every episode
+// with an episode.json, or with --tiers; Episode 1 (none) keeps rendered-or-slate unless --tiers is given.
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { ffmpegPath, ffprobePath } from '../../../../render/lib/tools.mjs';
-import { dirs, episodeArg } from '../../../../scenes/lib/director/episode-paths.js';
+import { dirs, episodeArg, episodeConfig } from '../../../../scenes/lib/director/episode-paths.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..');
 // --episode <id> (engine phase 1): HERE / FINAL are that episode's cut / final folders (default s01e01 = this file's)
@@ -59,6 +66,11 @@ const shotsDirLabel = (() => {
 const tag = [...new Set(edl.shots.map((s) => s.scene))].join('-');
 const OUT = path.resolve(opt('--out', path.join(HERE, `DragonsKingdom_${D.tag}_draft-cut_${tag}.mp4`)));
 const CLEAN = flag('--clean'), NOAUDIO = flag('--no-audio');
+const TIERS = flag('--tiers') || !!episodeConfig(EP);
+const STILLS = path.resolve(opt('--stills', WORKROOT ? path.join(WORKROOT, 'stills') : path.join(D.work('draft'), 'stills')));
+const PREVIS = path.resolve(opt('--previs', D.previs));
+// the frames of a shot in a tier folder, in order (D1: <job>_NNN.png, D0: <job>_<k>.png)
+const tierFrames = (dir, job) => { try { return fs.readdirSync(dir).filter((f) => f.startsWith(`${job}_`) && /^_\d+\.png$/.test(f.slice(job.length))).sort().map((f) => path.join(dir, f)); } catch { return []; } };
 const WORK = fs.mkdtempSync(path.join(os.tmpdir(), 'dk-cut-'));
 const takes = new Map((readJson(path.join(FINAL, 'vo/takes.json'))?.takes || []).map((t) => [t.id, t]));
 
@@ -111,6 +123,21 @@ for (const s of segs) {
     src = side ? `rendered ${side.at?.slice(0, 16) || ''}` : 'rendered';
     const n = inputs.filter((x) => x === '-i').length - 1;
     vf.push(`[${n}:v]trim=start_frame=${hp - pre}:end_frame=${hp + e.frames + post},setpts=PTS-STARTPTS,scale=${W}:${H},fps=${FPS},format=yuv420p[${label}r]`);
+  } else if (TIERS && e.kind !== 'black' && (tierFrames(STILLS, e.job).length || tierFrames(PREVIS, e.job).length)) {
+    // D1 stills (a slow push on each) or D0 animatic frames (held), each image an equal part of the shot
+    const d1 = tierFrames(STILLS, e.job);
+    const imgs = d1.length ? d1 : tierFrames(PREVIS, e.job);
+    src = d1.length ? 'stills' : 'animatic';
+    const parts = imgs.map((f, j) => Math.round(e.frames * (j + 1) / imgs.length) - Math.round(e.frames * j / imgs.length));
+    const labs = [];
+    imgs.forEach((f, j) => {
+      inputs.push('-loop', '1', '-framerate', String(FPS), '-t', ((parts[j] + 2) / FPS).toFixed(4), '-i', f);
+      const n = inputs.filter((x) => x === '-i').length - 1;
+      const push = d1.length ? `scale=${W * 2}:${H * 2},zoompan=z='1+0.04*on/${Math.max(1, parts[j])}':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:s=${W}x${H}:fps=${FPS}` : `scale=${W}:${H}:flags=neighbor,fps=${FPS}`;
+      vf.push(`[${n}:v]${push},trim=end_frame=${parts[j]},setpts=PTS-STARTPTS,setsar=1,format=yuv420p[${label}i${j}]`);
+      labs.push(`[${label}i${j}]`);
+    });
+    vf.push(`${labs.join('')}concat=n=${labs.length}:v=1:a=0,settb=1/${FPS}${src === 'animatic' ? `,drawtext=${font(true, false)}text='D0 ANIMATIC  ${esc(e.job)}  ${esc((e.action || '').slice(0, 60))}':x=10:y=h-30:fontsize=13:fontcolor=white@0.85:box=1:boxcolor=black@0.4:boxborderw=3` : ''}[${label}r]`);
   } else {
     // a slate: what the shot will be
     inputs.push('-f', 'lavfi', '-i', `color=c=0x18191b:s=${W}x${H}:r=${FPS}:d=${e.frames / FPS + 1}`);
@@ -128,7 +155,7 @@ for (const s of segs) {
     if (c.style === 'title') dts.push(`drawtext=${font(true, true)}text='${esc(c.text)}':x=(w-text_w)/2:y=(h-text_h)/2:fontsize=${Math.round(H * 0.085)}:fontcolor=0xf2ece0:alpha='${alpha}'`);
     else dts.push(`drawtext=${font(false, true)}text='${esc(c.text.toUpperCase())}':x=(w-text_w)/2:y=h*0.80:fontsize=${Math.round(H * 0.05)}:fontcolor=0xf4f1ea:shadowcolor=black@0.5:shadowx=1:shadowy=1:alpha='${alpha}'`);
   }
-  if (!CLEAN) dts.push(`drawtext=${font(true, false)}text='DRAFT CUT  ${esc(e.job)}${src === 'slate' ? '' : ''}':x=10:y=8:fontsize=13:fontcolor=white@0.7:box=1:boxcolor=black@0.35:boxborderw=3`);
+  if (!CLEAN) dts.push(`drawtext=${font(true, false)}text='DRAFT CUT  ${esc(e.job)}${src === 'stills' ? '  D1 STILL' : src === 'animatic' ? '  D0' : ''}':x=10:y=8:fontsize=13:fontcolor=white@0.7:box=1:boxcolor=black@0.35:boxborderw=3`);
   let chain = dts.length ? `[${label}r]${dts.join(',')}[${label}c]` : `[${label}r]null[${label}c]`;
   // pad with held edge frames where a dissolve needs more than the rendered handles
   const padPre = s.needPre - pre, padPost = s.needPost - post;
@@ -214,7 +241,7 @@ const ts = (x) => { const ms = Math.max(0, Math.round(x * 1000)); const p = (n, 
 srt.sort((a, b) => a.a - b.a);
 fs.writeFileSync(OUT.replace(/\.mp4$/, '.en.srt'), srt.map((s, i) => `${i + 1}\n${ts(s.a)} --> ${ts(Math.max(s.b, s.a + 0.8))}\n${s.text}\n`).join('\n'));
 report.output = { file: rel(OUT), frames: pr.frames, duration_s: +(pr.frames / FPS).toFixed(3), size_mb: +(fs.statSync(OUT).size / 1048576).toFixed(1), assembled_s: Math.round((Date.now() - t0) / 1000) };
-report.summary = { rendered: report.shots.filter((s) => s.source.startsWith('rendered')).length, black: report.shots.filter((s) => s.source === 'black').length, slates: report.shots.filter((s) => s.source === 'slate').length, voice_cues: cues.length, review_flags: report.shots.filter((s) => s.notes && !s.accepted).length, review_flags_accepted: report.shots.filter((s) => s.notes && s.accepted).length };
+report.summary = { rendered: report.shots.filter((s) => s.source.startsWith('rendered')).length, ...(TIERS ? { stills: report.shots.filter((s) => s.source === 'stills').length, animatic: report.shots.filter((s) => s.source === 'animatic').length } : {}), black: report.shots.filter((s) => s.source === 'black').length, slates: report.shots.filter((s) => s.source === 'slate').length, voice_cues: cues.length, review_flags: report.shots.filter((s) => s.notes && !s.accepted).length, review_flags_accepted: report.shots.filter((s) => s.notes && s.accepted).length };
 fs.writeFileSync(path.join(HERE, EDL === 'edl' ? 'cut-report.json' : `cut-report-${EDL.slice(4)}.json`), JSON.stringify(report, null, 1) + '\n');
 if (!flag("--keep-work")) fs.rmSync(WORK, { recursive: true, force: true }); else console.log(`work kept: ${WORK}`);
 // the render's review flags (framing the solver could not hold, a speaking face that reads): look at these shots first
