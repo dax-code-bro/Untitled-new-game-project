@@ -22,7 +22,7 @@ await page.waitForTimeout(2000);
 const OUT = process.env.SHOTS_OUT || '/tmp/shots/'; fs.mkdirSync(OUT, { recursive: true });
 const tag = process.argv[2] || 'now', which = process.argv[3] || 'street';
 const cdp = await page.context().newCDPSession(page);
-const info = await page.evaluate(([which, hourArg, probe]) => {
+const info = await page.evaluate(([which, hourArg, probe, pickAt]) => {
   const SB = window.SB, G = SB.game, hm = SB.debug.hm;
   SB.freeze(true); SB.skipRender(true);
   const R = {};
@@ -133,7 +133,7 @@ const info = await page.evaluate(([which, hourArg, probe]) => {
   }
   G.sky.refreshClouds?.();
   if (probe === 'pick') {
-    const T = SB.THREE, rc = new T.Raycaster(); rc.setFromCamera(new T.Vector2(1110 / 640 - 1, -(680 / 360 - 1)), G.camera);
+    const T = SB.THREE, rc = new T.Raycaster(); const [pxX, pxY] = (pickAt || '1110,680').split(',').map(Number); rc.setFromCamera(new T.Vector2(pxX / (innerWidth / 2) - 1, -(pxY / (innerHeight / 2) - 1)), G.camera);
     const hits = rc.intersectObjects(G.scene.children, true).slice(0, 4);
     R.pick = hits.map((h) => { let o = h.object, chain = []; for (let q = o; q && chain.length < 5; q = q.parent) chain.push((q.name || q.type) + (q.userData?.kind ? '#' + q.userData.kind : '')); const m = Array.isArray(o.material) ? o.material[0] : o.material; return { d: +h.distance.toFixed(2), p: [h.point.x.toFixed(2), h.point.y.toFixed(3), h.point.z.toFixed(2)], chain, mat: m?.type, col: m?.color?.getHexString(), map: m?.map?.image ? [m.map.image.width, m.map.image.height, m.map.name || m.map.image.src?.slice(-40)] : null, ud: JSON.stringify(o.userData).slice(0, 120), inst: o.isInstancedMesh ? o.count : 0, geo: o.geometry?.type }; });
   }
@@ -163,7 +163,7 @@ const info = await page.evaluate(([which, hourArg, probe]) => {
   R.yards = G.yards?.counts; R.kerb = G.kerbside ? [G.kerbside.slots?.(), G.kerbside.live?.()] : null;
   R.info = SB.debug.renderer?.info ? { calls: SB.debug.renderer.info.render.calls, tris: SB.debug.renderer.info.render.triangles } : null;
   return R;
-}, [which, process.env.HOUR ? +process.env.HOUR : null, process.env.PROBE || '']);
+}, [which, process.env.HOUR ? +process.env.HOUR : null, process.env.PROBE || '', process.env.PICK || '']);
 await page.waitForTimeout(400);
 const { data } = await cdp.send('Page.captureScreenshot', { format: 'png' });
 fs.writeFileSync(`${OUT}${tag}-${which}.png`, Buffer.from(data, 'base64'));
