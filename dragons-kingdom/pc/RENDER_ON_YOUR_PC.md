@@ -179,6 +179,25 @@ Check progress without rendering: open `STATUS.txt`, or type `pc\Render-Episode.
 
 ---
 
+## Rendering a new episode made by the engine
+
+Episodes after Episode 1 are made by the episode engine in the cloud (`engine/README.md`). When one is
+ready for its masters, Claude tells you its id (for example `s01e02`). Render it with the same shortcut,
+adding the id (see "How to type a command"):
+
+```
+pc\Render-Episode.cmd --episode s01e02
+```
+
+- It pulls the newest files, checks the caches (and fetches that episode's sound when it is published), and
+  renders the episode's approved shots on your RTX 5090, scene by scene, like Episode 1. Stop with Ctrl+C;
+  the same command continues.
+- Progress: `pc\Render-Episode.cmd --episode s01e02 --status`.
+- The video appears in `output\episode-s01e02\` (`DragonsKingdom_S01E02_4K.mp4`, `..._1080p.mp4`,
+  `scenes\`, `STATUS.txt`). Without `--episode` the shortcut renders Episode 1, as before.
+
+---
+
 ## Talking to Claude
 
 ### What to send back

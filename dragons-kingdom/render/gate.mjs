@@ -9,6 +9,7 @@
 //                                                         its approval (run it before pushing scene work)
 //   <shots>: ids (P-02 1A-01,1A-02), --scene <key> (every shot of a schedule scene, e.g. 1A or END)
 //            or --set <SET> (every shot of a set, e.g. BIRTHING_CHAMBER)
+//   --episode <id>                  another episode's plan (episodes/<id>/final/render-schedule.md; default s01e01)
 //   --schedule FILE / --jobs FILE   another plan (default episodes/s01e01/final/render-schedule.md)
 //
 // Approve a shot only after its frames were reviewed (whole frame + 1:1 crops, SERIES.md section 3):
@@ -17,7 +18,7 @@
 import path from 'node:path';
 import { parseArgs } from './lib/args.mjs';
 import { PROJECT_ROOT } from './lib/tools.mjs';
-import { loadJobs, DEFAULT_SCHEDULE } from './lib/schedule.mjs';
+import { loadJobs, DEFAULT_SCHEDULE, scheduleFor } from './lib/schedule.mjs';
 import { resolveShot } from './lib/shots.mjs';
 import { readGate, writeGate, gateVerdict, computeLock, GATE_NAME } from './lib/gate.mjs';
 
@@ -28,7 +29,7 @@ function main() {
   const cmd = argv[0] && !argv[0].startsWith('--') ? argv.shift() : 'status';
   const a = parseArgs(argv, { booleans: ['all', 'help'] });
   if (a.help || cmd === 'help') { console.log(HELP); return 0; }
-  const schedule = path.resolve(a.schedule || DEFAULT_SCHEDULE);
+  const schedule = path.resolve(a.schedule || (a.episode ? scheduleFor(a.episode) : DEFAULT_SCHEDULE));
   const planDir = path.dirname(schedule);
   const { jobs } = loadJobs(schedule, a.jobs ? path.resolve(a.jobs) : undefined);
   const gate = readGate(planDir);
@@ -129,6 +130,7 @@ The render gate (${GATE_NAME}): only approved shots are rendered into the Episod
   node render/gate.mjs check          (exit 1: an approved shot changed after its approval)
 
   <shots>: ids (P-02 1A-01,1A-02), --scene <key> (e.g. 1A, END) or --set <SET> (e.g. BIRTHING_CHAMBER)
+  --episode <id>   another episode (default s01e01)
 `;
 
 try { process.exitCode = main(); } catch (e) { console.error(`error: ${e.message}`); process.exitCode = 1; }

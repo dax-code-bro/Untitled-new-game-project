@@ -14,5 +14,8 @@ episodes/*/engine/
 episodes/*/final/vo/*.wav
 episodes/*/final/cut/*.mp4
 episodes/*/final/cut/*.srt
-episodes/*/final/audio/
+# (engine phase 7: an episode's sound delivery list and its timed subtitles are small and belong in git)
+episodes/*/final/audio/*
+!episodes/*/final/audio/delivery.json
+!episodes/*/final/audio/*.en.srt
 episodes/*/final/previs/*.png

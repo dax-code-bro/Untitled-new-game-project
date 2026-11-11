@@ -28,6 +28,7 @@ import { indexTakes, placeLines } from '../dialogue.js';
 import { SETS, continuityFor } from '../registry.js';
 import { estimateShot } from '../cost.js';
 import { dirs, episodeArg, episodeCuts } from '../episode-paths.js';
+import { applyContinuity } from '../staging/continuity.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '../../../..');                 // dragons-kingdom/
@@ -47,6 +48,9 @@ const CUTS = opt('--scenes') ? [{ name: opt('--scenes') === EP_CUTS[0].scenes.jo
   : EP_CUTS;
 const HANDLE = 12;                                                 // handle frames reserved on each side of every shot
 
+// per-episode continuity (engine phase 7: final/continuity.js; Episode 1 has none and is unchanged)
+const contFile = path.join(D.final, 'continuity.js');
+if (fs.existsSync(contFile)) applyContinuity((await import(pathToFileURL(contFile).href + `?v=${fs.statSync(contFile).mtimeMs}`)).default);
 const shotlist = readJson(D.shotlist);
 const jobs = fs.existsSync(D.renderJobs) ? readJson(D.renderJobs).jobs : [];
 const jobFrames = new Map(jobs.map((j) => [j.job, j.frames]));

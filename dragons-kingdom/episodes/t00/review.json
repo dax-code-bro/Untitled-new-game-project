@@ -1,0 +1,6 @@
+{
+  "about": "The owner's review sign-off for flagged shots (engine/package.mjs): a shot listed here is approved by make-episode --final even though the stager flagged it. Write what you looked at.",
+  "ok": {
+    "0A-03": "D1 still looked at: the lute insert reads; the strum itself is not staged (a held insert is fine for the test episode)"
+  }
+}

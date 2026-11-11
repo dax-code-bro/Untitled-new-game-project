@@ -2,7 +2,7 @@
   "episode": "T00",
   "status": "Planning data. Nothing has been designed or rendered yet.",
   "source": "episodes/t00/input/screenplay.fountain",
-  "source_sha256": "d9aa02e05ef056c353fbee2616e543e074c491f3818cac0770152d883c001bd6",
+  "source_sha256": "9439ab087a98f1419b0ae6bc976a67a40f1f6863c7e049ad76436204845bcdb8",
   "generated_by": "engine/input/fountain.mjs",
   "about": "Text that appears in the picture itself (captions, lettering, credits), separate from dialogue subtitles. Cards are listed in running order.",
   "suggested_hold_seconds_note": "Suggestions for the animatic only; adjust in the edit.",

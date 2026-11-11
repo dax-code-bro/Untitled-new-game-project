@@ -1,0 +1,27 @@
+{
+ "about": "Sound files of t00 that are not in git (SERIES.md section 2) and how they reach the render PC (pc/sound-delivery.mjs, pc/pack-sound.mjs, pc/build-caches.mjs family 'sound'). Written by engine/package.mjs.",
+ "packages": [
+  {
+   "id": "t00-vo",
+   "what": "t00 voice takes (engine/vo/make_vo.py)",
+   "dir": "episodes/t00/final",
+   "files_from": "episodes/t00/final/vo/takes.json",
+   "needed_for": "mixing the sound. Not needed to render pictures.",
+   "archive": null
+  },
+  {
+   "id": "t00-mix",
+   "what": "t00 sound mix: T00_mix.wav (the whole episode) + T00.en.srt timed to it (scenes/lib/sound/mix.mjs of the draft cut 0A-0B)",
+   "dir": "episodes/t00/final/audio",
+   "files": [
+    {
+     "path": "T00_mix.wav",
+     "bytes": 4464068,
+     "sha256": "9997e0958e7cb4d48465c6acb2a91ca4b154edf4080ef4d9f7e23710647fa60f"
+    }
+   ],
+   "needed_for": "the sound of the scene files and of the episode (render/episode.mjs adds it without rendering pictures again)",
+   "archive": null
+  }
+ ]
+}

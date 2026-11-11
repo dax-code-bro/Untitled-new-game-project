@@ -1,0 +1,41 @@
+{
+ "set": "CLING_BAKERY",
+ "scene_file": "episodes/t00/final/scenes/cling-bakery.js",
+ "spec": "episodes/t00/final/scenes/specs/cling-bakery.spec.js",
+ "fps": 24,
+ "handles": 12,
+ "generated_by": "scenes/lib/director/tools/build-shots.mjs",
+ "note": "start_s / frames are the render-jobs.json contract (episode.mjs); pre/post are handle frames the editor may render around each shot.",
+ "shots": [
+  {
+   "job": "0B-01",
+   "seq": 4,
+   "scene": "0B",
+   "set": "CLING_BAKERY",
+   "start_s": 1,
+   "start_frame": 24,
+   "frames": 96,
+   "pre": 12,
+   "post": 12,
+   "seconds": 4,
+   "trans": [
+    "cut"
+   ],
+   "dialogue": [],
+   "captions": [],
+   "fx": [],
+   "continuity": {
+    "tod": "morning",
+    "sun": [
+     0.894,
+     0.309,
+     0.325
+    ],
+    "lamps": 0.8,
+    "exposure": 1.3
+   },
+   "staging": "AUTO establish-wide 24 mm STATIC: The vendor walks in from the door to the counter.",
+   "deviation": null
+  }
+ ]
+}

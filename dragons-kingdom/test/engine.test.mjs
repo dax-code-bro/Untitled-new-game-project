@@ -74,7 +74,7 @@ test('engine phase 2: t00 validates with 0 errors and its committed final/ files
     fs.copyFileSync(path.join(ROOT, 'episodes/t00/final/lines.lock.json'), path.join(dir, 'lines.lock.json'));
     const r = await validateEpisode('t00', { out: dir, write: true });
     assert.deepEqual(r.errors, []);
-    assert.equal(r.totals.shots, 3);
+    assert.equal(r.totals.shots, 4);                                        // 3 on the Cling square + 1 in the generated bakery (phase 7)
     for (const f of ['dialogue.json', 'onscreen-text.json', 'lines.lock.json', 'shotlist.json', 'sets.plan.json', 'validation.md'])
       assert.equal(fs.readFileSync(path.join(dir, f), 'utf8'), fs.readFileSync(path.join(ROOT, 'episodes/t00/final', f), 'utf8'), `${f} is stale: node engine/input/validate.mjs --episode t00 --write`);
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
@@ -353,7 +353,7 @@ test('engine phase 6: queue files, animatic frames, auto sound spots, make-episo
   } finally { fs.rmSync(path.join(ROOT, 'episodes', ep), { recursive: true, force: true }); }
   // D0: a schematic frame of t00's two-shot is a real PNG with both talkers in frame
   const { drawFrame, loadEpisodeSets } = await import('../engine/previs/animatic.mjs');
-  const [{ spec, table, sheet }] = await loadEpisodeSets('t00');
+  const { spec, table, sheet } = (await loadEpisodeSets('t00')).find((x) => x.table.shots.some((r) => r.job === '0A-02'));
   const row = table.shots.find((r) => r.job === '0A-02');
   const { png, r } = drawFrame(spec, '0A-02', row, 1, sheet, 160);
   assert.deepEqual([...png.subarray(1, 4)].map((c) => String.fromCharCode(c)).join(''), 'PNG');
@@ -371,4 +371,31 @@ test('engine phase 6: queue files, animatic frames, auto sound spots, make-episo
   const st = node('engine/make-episode.mjs', '--episode', 't00', '--status');
   assert.equal(st.status, 0, st.stderr);
   assert.match(st.stdout, /\| 0A \| 3 \| 3 \|/);
+});
+
+test('engine phase 7: set generator (describe, plan, CLING_BAKERY sheet inside the room), PC package, shotSet masters', async () => {
+  const { matchFeatures, parseTod, parseWorld } = await import('../engine/setgen/describe.mjs');
+  const tpl = await import('../engine/setgen/templates/interior-room.mjs');
+  const m = matchFeatures(['oven on north wall', 'counter across the middle', 'window east', 'door south', 'two oil lamps', 'a stuffed bear'], tpl.VOCAB);
+  assert.deepEqual(m.matched.map((x) => [x.kind, x.wall, x.n]), [['oven', 'north', 1], ['counter', null, 1], ['window', 'east', 1], ['door', 'south', 1], ['lamp', null, 2]]);
+  assert.deepEqual(m.unmatched, ['a stuffed bear']);
+  assert.deepEqual([parseTod('0B morning, sun az 110 el 18').scene, parseWorld('CLING at [-14, 0, 9] facing east').at], ['0B', [-14, 0, 9]]);
+  // the generated files of t00 are current, and every mark of the bakery's sheet is inside the room (or declared outside)
+  const r = node('engine/setgen/plan.mjs', '--episode', 't00', '--check');
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  assert.match(r.stdout, /CLING_BAKERY\s+generate/);
+  const sh = JSON.parse(fs.readFileSync(path.join(ROOT, 'scenes/lib/director/sets/sheets/CLING_BAKERY.json'), 'utf8'));
+  const [[x0, , z0], [x1, , z1]] = [[-3, 0, -2.5], [3, 3.2, 2.5]];
+  const inside = Object.entries(sh.marks).filter(([, k]) => !k.outside);
+  assert.ok(inside.length >= 10);
+  for (const [k, mk] of inside) assert.ok(mk.at[0] >= x0 && mk.at[0] <= x1 && mk.at[2] >= z0 && mk.at[2] <= z1 && mk.at[1] >= 0 && mk.at[1] <= 3.2, `${k} ${mk.at}`);
+  assert.ok(Object.keys(sh.vantages).length >= 8 && Object.keys(sh.paths).length >= 2);
+  // the PC package is current; masters find a shotSet table (0A-01 lives in cling-square-2.shots.json)
+  assert.equal(node('engine/package.mjs', '--episode', 't00', '--check').status, 0);
+  const { resolveShot } = await import('../render/lib/shots.mjs');
+  const jobs = JSON.parse(fs.readFileSync(path.join(ROOT, 'episodes/t00/final/render-jobs.json'), 'utf8')).jobs;
+  const res = resolveShot(jobs.find((j) => j.job === '0A-01'), path.join(ROOT, 'episodes/t00/final'));
+  assert.ok(res.ready && /cling-square-2\.js$/.test(res.scene), JSON.stringify(res));
+  const st = node('render/episode.mjs', '--episode', 't00', '--status', '--cpu');
+  assert.match(st.stdout, /render gate: 4 shot\(s\) approved/);
 });

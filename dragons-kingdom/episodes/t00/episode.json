@@ -1,8 +1,19 @@
 {
   "id": "t00",
-  "title": "Engine test episode (three shots in Cling)",
+  "title": "Engine test episode (three shots in Cling, one in a generated bakery)",
   "test": true,
-  "scenes": ["0A"],
-  "cuts": [{ "name": "edl", "scenes": ["0A"] }],
+  "scenes": [
+    "0A",
+    "0B"
+  ],
+  "cuts": [
+    {
+      "name": "edl",
+      "scenes": [
+        "0A",
+        "0B"
+      ]
+    }
+  ],
   "faces": "avoid"
 }

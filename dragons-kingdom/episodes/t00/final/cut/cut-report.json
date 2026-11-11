@@ -1,6 +1,6 @@
 {
- "title": "Dragon's Kingdom T00 - draft cut: 0A",
- "made_at": "2026-11-11T02:59",
+ "title": "Dragon's Kingdom T00 - draft cut: 0A + 0B",
+ "made_at": "2026-11-11T03:21",
  "shots_dir": "output/director/t00/draft/shots",
  "size": "960x540",
  "fps": 24,
@@ -61,6 +61,25 @@
     0,
     0
    ]
+  },
+  {
+   "job": "0B-01",
+   "scene": "0B",
+   "kind": "3d",
+   "source": "stills",
+   "frames": 96,
+   "rec_in": 276,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
   }
  ],
  "audio": [
@@ -96,15 +115,15 @@
   }
  ],
  "output": {
-  "file": "episodes/t00/final/cut/DragonsKingdom_T00_draft-cut_0A.mp4",
-  "frames": 276,
-  "duration_s": 11.5,
-  "size_mb": 0.9,
+  "file": "episodes/t00/final/cut/DragonsKingdom_T00_draft-cut_0A-0B.mp4",
+  "frames": 372,
+  "duration_s": 15.5,
+  "size_mb": 1.1,
   "assembled_s": 3
  },
  "summary": {
   "rendered": 0,
-  "stills": 3,
+  "stills": 4,
   "animatic": 0,
   "black": 0,
   "slates": 0,

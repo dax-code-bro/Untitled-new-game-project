@@ -4,6 +4,7 @@
 //
 //   node pc/pack-sound.mjs final-vo                  pack the final voice takes (checks every sha256 first)
 //   node pc/pack-sound.mjs mix                       pack the mix: every sound file in episodes/s01e01/final/audio
+//   --episode <id>     another episode's delivery (episodes/<id>/final/audio/delivery.json; engine phase 7)
 //                                                    (S01E01_mix.*, scenes/<scene>.*) plus S01E01.en.srt if present
 //   options: --out DIR      where the .tar goes (default output/delivery; git-ignored)
 //            --record       write the archive (and, for the mix, its file list) into
@@ -22,7 +23,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
-import { ROOT, DELIVERY_FILE, AUDIO_EXT, readDelivery, expectedFiles, packageState, sha256File, writeTar, safeRel } from './sound-delivery.mjs';
+import { ROOT, deliveryFile, AUDIO_EXT, readDelivery, expectedFiles, packageState, sha256File, writeTar, safeRel } from './sound-delivery.mjs';
 
 const rel = (f) => path.relative(ROOT, f).split(path.sep).join('/');
 
@@ -33,7 +34,7 @@ function listMixFiles(dir) {
     for (const n of fs.readdirSync(d).sort()) {
       const f = path.join(d, n);
       if (fs.statSync(f).isDirectory()) { if (n === 'scenes') walk(f, `${prefix}${n}/`); continue; }
-      if (AUDIO_EXT.includes(path.extname(n).toLowerCase()) || n === 'S01E01.en.srt') out.push(`${prefix}${n}`);
+      if (AUDIO_EXT.includes(path.extname(n).toLowerCase()) || /^[A-Z0-9_-]+\.en\.srt$/.test(n)) out.push(`${prefix}${n}`);
     }
   };
   walk(dir, '');
@@ -47,15 +48,17 @@ function main() {
     return argv.length ? 0 : 1;
   }
   const id = argv[0];
-  const opt = { out: path.join(ROOT, 'output', 'delivery'), record: false, url: null };
+  const opt = { out: path.join(ROOT, 'output', 'delivery'), record: false, url: null, ep: 's01e01' };
   for (let i = 1; i < argv.length; i++) {
     if (argv[i] === '--out') opt.out = path.resolve(argv[++i]);
     else if (argv[i] === '--record') opt.record = true;
     else if (argv[i] === '--url') opt.url = argv[++i];
+    else if (argv[i] === '--episode') opt.ep = argv[++i];
     else throw new Error(`unknown option ${argv[i]}`);
   }
   if (opt.url && !opt.record) throw new Error('--url only makes sense with --record');
-  const delivery = readDelivery();
+  const DELIVERY_FILE = deliveryFile(opt.ep);
+  const delivery = readDelivery(opt.ep);
   if (!delivery) throw new Error(`${rel(DELIVERY_FILE)} is missing`);
   const pkg = delivery.packages.find((p) => p.id === id);
   if (!pkg) throw new Error(`no package "${id}" in ${rel(DELIVERY_FILE)} (have: ${delivery.packages.map((p) => p.id).join(', ')})`);
@@ -76,7 +79,7 @@ function main() {
 
   // name by content: the same files always give the same archive name and bytes
   const listHash = createHash('sha256').update(files.map((f) => `${f.sha256}  ${f.path}`).join('\n')).digest('hex');
-  const out = path.join(opt.out, `dk-s01e01-${id}-${listHash.slice(0, 12)}.tar`);
+  const out = path.join(opt.out, `dk-${opt.ep}-${id}-${listHash.slice(0, 12)}.tar`);
   writeTar(out, files.map((f) => ({ name: f.path, file: path.join(dir, f.path) })));
   const archive = { file: path.basename(out), bytes: fs.statSync(out).size, sha256: sha256File(out), files: files.length, url: opt.url, packed_at: new Date().toISOString() };
   console.log(`wrote ${out}`);

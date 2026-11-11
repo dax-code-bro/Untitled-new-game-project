@@ -3,7 +3,7 @@
   "series": "Dragon's Kingdom",
   "status": "Planning data extracted from the owner's screenplay by the episode engine. No voices recorded, nothing rendered.",
   "source": "episodes/t00/input/screenplay.fountain",
-  "source_sha256": "d9aa02e05ef056c353fbee2616e543e074c491f3818cac0770152d883c001bd6",
+  "source_sha256": "9439ab087a98f1419b0ae6bc976a67a40f1f6863c7e049ad76436204845bcdb8",
   "generated_by": "engine/input/fountain.mjs",
   "title": "Dragon's Kingdom",
   "rating": "mature",
@@ -97,6 +97,19 @@
       "est_seconds": 3.1,
       "first_line": "L001",
       "last_line": "L003",
+      "parts": []
+    },
+    {
+      "id": "0B",
+      "title": "CLING BAKERY",
+      "slugline": "INT. CLING BAKERY — MORNING",
+      "source_line": 24,
+      "time_of_day": "MORNING",
+      "lines": 0,
+      "words": 0,
+      "est_seconds": 0,
+      "first_line": null,
+      "last_line": null,
       "parts": []
     }
   ],

@@ -6,6 +6,7 @@
 #   3. node render/episode.mjs (renders what is ready, scene by scene; Ctrl+C stops cleanly)
 # The computer is kept awake while it runs (caffeinate on macOS, systemd-inhibit on Linux).
 # Extra words go to the episode runner:  bash pc/render-episode.sh --status | --max-hours 8 | ...
+# Another episode made by the engine:    bash pc/render-episode.sh --episode s01e02   (default: Episode 1, s01e01)
 # GPU check instead of rendering:        bash pc/render-episode.sh --gpu-check [gpu-check options]
 # Logs for the Claude session:           bash pc/render-episode.sh --send-logs   (one file: pc/logs/send-to-claude-<date>.txt)
 set -u

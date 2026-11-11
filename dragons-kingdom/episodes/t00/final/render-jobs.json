@@ -1,0 +1,117 @@
+{
+ "meta": {
+  "status": "PLAN for the render PC. Seconds per frame are Episode 1 estimates per set (or the generated set's sheet estimate); the PC measures the real ones (STATUS.txt).",
+  "source": "episodes/t00/final/shotlist.json",
+  "source_sha256": "0792024461ec286b1d5fb9ef90c40d68ec6aeb9cdd153a2727168e18ab67e7b6",
+  "generated_by": "engine/package.mjs (a Node port of episodes/s01e01/tools/shotlist/final_render_schedule.py)",
+  "rules": [
+   "Native 3840x2160, --preset final on every frame. No final-fast, no --twos for masters.",
+   "One render.mjs job per shot; chunks of at most ~25 min of one browser.",
+   "Intermediates: 10-bit CRF 12."
+  ],
+  "totals": {
+   "frames": 372,
+   "frames_3d": 372,
+   "hours_1_browser": 17.4,
+   "hours_range": [
+    13.9,
+    23
+   ],
+   "wall_hours_2_browsers": 16
+  }
+ },
+ "jobs": [
+  {
+   "job": "0A-01",
+   "seq": 1,
+   "scene": "0A",
+   "part": null,
+   "set": "CLING_SQUARE",
+   "render": "3d",
+   "frames": 96,
+   "seconds": 4,
+   "s_per_frame": 205,
+   "s_per_frame_range": [
+    164,
+    271
+   ],
+   "basis": "ESTIMATE: median of the Episode 1 shots on CLING_SQUARE",
+   "chunk_frames": 6,
+   "chunk_seconds": 0.25,
+   "chunks": 16,
+   "hours_1_browser": 5.467,
+   "setup_s": 100,
+   "sub_frames": null,
+   "command": "node render/render.mjs episodes/t00/final/scenes/cling-square.js --preset final --cinematic velocity --start <shot start, s> --seconds 4.000000 --workers 2 --chunk-seconds 0.2500 --bit-depth 10 --crf 12 --out output/t00/0A/0A-01"
+  },
+  {
+   "job": "0A-02",
+   "seq": 2,
+   "scene": "0A",
+   "part": null,
+   "set": "CLING_SQUARE",
+   "render": "3d",
+   "frames": 108,
+   "seconds": 4.5,
+   "s_per_frame": 205,
+   "s_per_frame_range": [
+    164,
+    271
+   ],
+   "basis": "ESTIMATE: median of the Episode 1 shots on CLING_SQUARE",
+   "chunk_frames": 6,
+   "chunk_seconds": 0.25,
+   "chunks": 18,
+   "hours_1_browser": 6.15,
+   "setup_s": 100,
+   "sub_frames": null,
+   "command": "node render/render.mjs episodes/t00/final/scenes/cling-square.js --preset final --cinematic velocity --start <shot start, s> --seconds 4.500000 --workers 2 --chunk-seconds 0.2500 --bit-depth 10 --crf 12 --out output/t00/0A/0A-02"
+  },
+  {
+   "job": "0A-03",
+   "seq": 3,
+   "scene": "0A",
+   "part": null,
+   "set": "CLING_SQUARE",
+   "render": "3d",
+   "frames": 72,
+   "seconds": 3,
+   "s_per_frame": 205,
+   "s_per_frame_range": [
+    164,
+    271
+   ],
+   "basis": "ESTIMATE: median of the Episode 1 shots on CLING_SQUARE",
+   "chunk_frames": 6,
+   "chunk_seconds": 0.25,
+   "chunks": 12,
+   "hours_1_browser": 4.1,
+   "setup_s": 100,
+   "sub_frames": null,
+   "command": "node render/render.mjs episodes/t00/final/scenes/cling-square.js --preset final --cinematic velocity --start <shot start, s> --seconds 3.000000 --workers 2 --chunk-seconds 0.2500 --bit-depth 10 --crf 12 --out output/t00/0A/0A-03"
+  },
+  {
+   "job": "0B-01",
+   "seq": 4,
+   "scene": "0B",
+   "part": null,
+   "set": "CLING_BAKERY",
+   "render": "3d",
+   "frames": 96,
+   "seconds": 4,
+   "s_per_frame": 64,
+   "s_per_frame_range": [
+    51,
+    85
+   ],
+   "basis": "ESTIMATE: ALEXANDRIA_ROOM class (0.6 x F4: an interior, a few people, window light)",
+   "chunk_frames": 12,
+   "chunk_seconds": 0.5,
+   "chunks": 8,
+   "hours_1_browser": 1.707,
+   "setup_s": 100,
+   "sub_frames": null,
+   "command": "node render/render.mjs episodes/t00/final/scenes/cling-bakery.js --preset final --cinematic velocity --start <shot start, s> --seconds 4.000000 --workers 2 --chunk-seconds 0.5000 --bit-depth 10 --crf 12 --out output/t00/0B/0B-01"
+  }
+ ]
+}

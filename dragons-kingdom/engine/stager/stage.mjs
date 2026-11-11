@@ -30,7 +30,12 @@ const T_povGround = { name: 'pov', params: (I, B) => ({ ...T_establish.params(I,
 export const TEMPLATES = Object.fromEntries([T_establish, T_medium, T_two, T_close, T_ots, T_insert, T_crowd, T_pan, T_card, T_povGround].map((m) => [m.name, m]));
 const HERE = new URL('.', import.meta.url);
 export const loadVerbs = () => JSON.parse(fs.readFileSync(new URL('verbs.json', HERE), 'utf8'));
-export const loadPlaces = (set) => JSON.parse(fs.readFileSync(new URL('places.json', HERE), 'utf8'))[set] || {};
+// places.json (hand knowledge per set); a GENERATED set (engine/setgen) carries its own in its sheet's `places` (phase 7)
+export const loadPlaces = (set) => {
+  const hand = JSON.parse(fs.readFileSync(new URL('places.json', HERE), 'utf8'))[set];
+  if (hand) return hand;
+  try { return JSON.parse(fs.readFileSync(new URL(`../../scenes/lib/director/sets/sheets/${set}.json`, HERE), 'utf8')).places || {}; } catch { return {}; }
+};
 const HEAD = 1.62;
 const sunHeading = (sheet, scene) => {
   const c = sheet?.continuity?.[scene] || Object.values(sheet?.continuity || {})[0];

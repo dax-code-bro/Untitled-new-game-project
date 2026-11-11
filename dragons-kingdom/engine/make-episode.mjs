@@ -2,13 +2,14 @@
 // Engine phase 6: ONE COMMAND for an episode (engine/DESIGN.md 5).
 //
 //   node engine/make-episode.mjs --episode t00 [--stage parse|validate|cast|sets|stage|previs|vo|draft|cut|mix|package|all]
-//        [--draft animatic|stills|video] [--scenes 0A,..] [--only 0A-02,..] [--restage] [--force] [--status] [--detach]
+//        [--draft animatic|stills|video] [--scenes 0A,..] [--only 0A-02,..] [--restage] [--force] [--status] [--detach] [--final]
 //
 // Stages, in the order `all` runs them (vo before stage: build-shots times the lines from the real takes):
 //   parse     input/ -> dialogue.json, onscreen-text.json, lines.lock.json, shotlist.json, sets.plan.json  (validate.mjs --write)
 //   validate  the inputs -> validation.md; errors stop the run                                           (validate.mjs)
 //   cast      shotlist.json -> cast.lock.json                                                            (casting.mjs)
-//   sets      every set of the shot list has a registry entry, a builder and a sheet (phase 7 adds the generator)
+//   sets      the set generator (engine/setgen/plan.mjs): reuse / variant / generate per set -> wrapper, sheet, registry-gen.js,
+//             final/continuity.js; then every set of the shot list has a registry entry, a builder and a sheet
 //   vo        dialogue.json -> voices.json, vo/<line>.wav, vo/takes.json + words.json  (engine/vo/make_vo.py; Kokoro, else espeak-ng)
 //   stage     the auto-stager -> specs/<builder>.auto|touch|spec.js + stage-report, then build-shots (shot tables, EDLs,
 //             audio cues). Per-shot keys hash(row, sheet, cast lock entry, touch entry) say which shots changed; the stager
@@ -21,7 +22,9 @@
 //   cut       the draft cut, best picture per shot D2 > D1 > D0 > slate, with the voice takes (make-cut.mjs)
 //   mix       the shared mixer (scenes/lib/sound/mix.mjs): beds by set, spots from `sound:`, -16 LUFS; the mixed mp4 is
 //             copied to final/cut/DragonsKingdom_<EP>_draft-cut_<cut>_mix.mp4
-//   package   phase 7 (the PC package): reported as not built yet
+//   package   (--final, or --stage package) the PC package (engine/package.mjs): render-jobs.json, render-schedule.md, the
+//             gate (render-ready.json: reviewed + unflagged shots approved), the sound delivery. Then on the PC:
+//             pc\Render-Episode.cmd --episode <ep>
 // Stamps: episodes/<ep>/engine/state.json { stages: { <stage>: { inputsHash, outputsHash, at, ok, ms } }, shots: {...} }.
 // A stage whose inputs and outputs are unchanged is skipped (--force runs it anyway). --status / every run writes
 // episodes/<ep>/engine/REPORT.md (per scene: staged / flagged / approved, draft tier, renders done and left + ETA,
@@ -94,12 +97,22 @@ const STAGES = {
     run: () => [sh(NODE, ['engine/cast/casting.mjs', '--episode', EP], 'cast').trim().split('\n').pop()],
   },
   sets: {
-    inputs: () => ({ files: [D.shotlist, path.join(D.final, 'sets.plan.json')], extra: setsOfShots().map((s) => `${s}:${!!SETS[s]}:${!!SHEET(s)}`) }),
-    outputs: () => [],
-    run: () => {
+    // phase 7: the set generator (engine/setgen/plan.mjs --write): reuse | variant | generate | error per set; generated
+    // sets get a wrapper, a sheet, a registry-gen.js entry and the episode's continuity (final/continuity.js)
+    inputs: () => ({ files: [D.shotlist, path.join(D.final, 'sets.plan.json'), ...codeOf('engine/setgen/', 'engine/setgen/templates/', 'scenes/lib/director/sets/gen/')], extra: setsOfShots().map((s) => `${s}:${!!SETS[s]}:${!!SHEET(s)}`) }),
+    outputs: () => [path.join(ROOT, 'scenes/lib/director/registry-gen.js'), path.join(D.final, 'sets-report.md'), ...setsOfShots().map(SHEET).filter(Boolean)],
+    run: async () => {
+      const o = sh(NODE, ['engine/setgen/plan.mjs', '--episode', EP, '--write'], 'sets');
+      // this process imported the registry before the generator ran: lay the fresh generated sets over it
+      const g = await import(pathToFileURL(path.join(ROOT, 'scenes/lib/director/registry-gen.js')).href + `?t=${Date.now()}`);
+      for (const [k, v] of Object.entries(g.GEN_SETS)) if (!SETS[k] || SETS[k].generated) SETS[k] = v;
+      const cf = path.join(D.final, 'continuity.js');
+      if (fs.existsSync(cf)) (await import('../scenes/lib/director/staging/continuity.js')).applyContinuity((await import(pathToFileURL(cf).href + `?t=${Date.now()}`)).default);
       const bad = setsOfShots().filter((s) => !SETS[s] || !SHEET(s));
-      if (bad.length) throw new Error(`sets without a registry entry / sheet: ${bad.join(', ')} (the set generator is phase 7)`);
-      return [`${setsOfShots().length} set(s) exist: ${setsOfShots().join(', ')}`];
+      if (bad.length) throw new Error(`sets without a registry entry / sheet: ${bad.join(', ')} (see final/sets-report.md)`);
+      const lines = o.trim().split('\n').filter((l) => /^\S/.test(l) && !/^wrote /.test(l));
+      const wrote = o.split('\n').filter((l) => /^wrote /.test(l)).length;
+      return [...lines.slice(0, 6), `${setsOfShots().length} set(s) ready${wrote ? `, ${wrote} generated file(s) written` : ''}`];
     },
   },
   vo: {
@@ -224,7 +237,14 @@ const STAGES = {
       return [`${rel(mixMp4())}: I ${rep.result.I} LUFS, TP ${rep.result.TP} dBTP (${rep.result.anchored}${rep.result.pass ? ', PASS' : ', CHECK'})`, ...(rep.fx?.spot_sheet?.includes('no synth') ? [rep.fx.spot_sheet] : [])];
     },
   },
-  package: { inputs: () => ({ extra: ['phase 7'] }), outputs: () => [], run: () => ['not built yet (engine phase 7: render-jobs.json, gate, PC package)'], noStamp: true },
+  // phase 7: THE PC PACKAGE (engine/package.mjs): render-jobs.json + render-schedule.md, the gate (approve reviewed +
+  // unflagged shots), the sound delivery. Only with --final or --stage package (never part of a plain `all`).
+  package: {
+    inputs: () => ({ files: [D.shotlist, path.join(D.final, 'stage-report.json'), path.join(D.episode, 'review.json'), ...filesIn(D.scenes, /\.(shots\.json|js)$/), ...codeOf('engine/package.mjs')] }),
+    outputs: () => [D.renderJobs, path.join(D.final, 'render-schedule.md'), path.join(D.final, 'render-ready.json')],
+    run: () => sh(NODE, ['engine/package.mjs', '--episode', EP], 'package').trim().split('\n').filter((l) => !/^wrote /.test(l)),
+    noStamp: true,
+  },
 };
 const DEFER = new Set();
 
@@ -276,6 +296,7 @@ async function report() {
   const done = q.jobs.filter((j) => j.wall_s && j.rendered?.length);
   const perShot = done.length ? done.reduce((a, j) => a + j.wall_s, 0) / done.reduce((a, j) => a + j.rendered.length, 0) : 90;
   const want = TIER === 'video' ? tiers.video : TIER === 'stills' ? tiers.stills : null;
+  const gate = readJson(path.join(D.final, 'render-ready.json'))?.approved || {};
   L.push('| scene | shots | staged | flagged | approved | tier reached | renders done / left | ETA |', '|---|---:|---:|---:|---:|---|---|---|');
   for (const sc of [...new Set(sl.map((s) => s.scene))]) {
     const rows = sl.filter((s) => s.scene === sc && s.render !== 'black');
@@ -284,7 +305,8 @@ async function report() {
     const tr = rows.map((r) => tierOf(r.id));
     const counts = Object.entries(tr.reduce((o, t) => ((o[t] = (o[t] || 0) + 1), o), {})).map(([t, n]) => `${t} ${n}`).join(', ');
     const left = want ? rows.filter((r) => !want.get(r.id)?.fresh).length : 0;
-    L.push(`| ${sc} | ${rows.length} | ${staged.length} | ${flagged.length} | 0 (gate: phase 7) | ${counts} | ${want ? `${rows.length - left} / ${left}` : '-'} | ${left ? `~${Math.ceil((left * perShot + 60) / 60)} min` : '-'} |`);
+    const appr = rows.filter((r) => gate[r.id]).length;
+    L.push(`| ${sc} | ${rows.length} | ${staged.length} | ${flagged.length} | ${appr} | ${counts} | ${want ? `${rows.length - left} / ${left}` : '-'} | ${left ? `~${Math.ceil((left * perShot + 60) / 60)} min` : '-'} |`);
   }
   L.push('', '## Stages', '', '| stage | state | at | took |', '|---|---|---|---:|');
   for (const n of ORDER) { const s = state.stages[n]; L.push(`| ${n} | ${s ? (s.ok ? 'ok' : `FAILED: ${(s.error || '').split('\n')[0].slice(0, 80)}`) : '-'} | ${s?.at?.slice(0, 16) || ''} | ${s?.ms != null ? `${(s.ms / 1000).toFixed(1)} s` : ''} |`); }
@@ -310,8 +332,10 @@ async function report() {
 // -------------------------------------------------------------------- main ---
 const t0 = Date.now();
 if (flag('--status')) { console.log(await report()); process.exit(0); }
+const FINAL = flag('--final');
 const asked = (opt('--stage', 'all')).split(',');
-const list = asked.includes('all') ? ORDER : ORDER.filter((s) => asked.includes(s));
+// `all` is the draft pipeline; the PC package only with --final (all + package) or --stage package
+const list = asked.includes('all') ? ORDER.filter((s) => s !== 'package' || FINAL) : ORDER.filter((s) => asked.includes(s) || (FINAL && s === 'package'));
 if (!list.length) throw new Error(`--stage: one of ${ORDER.join('|')}|all`);
 console.log(`make-episode ${EP}: ${list.join(' -> ')} (draft ${TIER}${DETACH ? ', detached' : ''})`);
 let ok = true;

@@ -4,6 +4,48 @@
  "generated_by": "engine/stager/write.mjs",
  "shots": [
   {
+   "id": "0B-01",
+   "template": "establish-wide",
+   "why": "wide",
+   "score": 1,
+   "tries": 1,
+   "fixes": [],
+   "flags": [],
+   "unstaged": [],
+   "subjects": [
+    {
+     "name": "Vendor",
+     "actor": "vendor",
+     "side": "R",
+     "p": [
+      0.07526893441352756,
+      1.62,
+      1.2813620560056365
+     ]
+    }
+   ],
+   "cam": {
+    "rig": "static",
+    "pos": [
+     -2.6,
+     1.75,
+     -2.1
+    ],
+    "look": [
+     4.89,
+     0.58,
+     4.43
+    ],
+    "mm": 24,
+    "fstop": 8,
+    "focus": [
+     0.08,
+     1.62,
+     1.28
+    ]
+   }
+  },
+  {
    "id": "0A-01",
    "template": "establish-wide",
    "why": "wide",

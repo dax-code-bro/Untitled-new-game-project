@@ -37,6 +37,14 @@ export const CLING = {
   watchman: { x: -1.6, z: 11.8 },
 };
 
+/** CLING with some parts moved / resized (engine set generator, town-square template): { square: {x0..}, fountain:
+ *  {...}, steps, arch, gate, alley, ... } - each part merged over CLING's (the same parts are always built). */
+export function clingLayout(over = {}) {
+  const out = {};
+  for (const k of new Set([...Object.keys(CLING), ...Object.keys(over)])) out[k] = { ...(CLING[k] || {}), ...(over[k] || {}) };
+  return out;
+}
+
 /**
  * A freestanding stone archway (escape route 1): two piers, a voussoir arch through the full
  * depth (its soffit visible underneath), stones on both faces, a coping on top.
@@ -658,6 +666,8 @@ export function alley(kit, F, o = {}) {
  * Returns { group, houses: [{ ...info, frame }], layout: CLING, tris }.
  */
 export async function clingSquare(ctx, opts = {}) {
+  // (opts.layout: another square on the same plan - clingLayout(); without it the fixed CLING layout, as before)
+  const CL = opts.layout ? clingLayout(opts.layout) : CLING;
   // (opts.layoutOnly: lay everything out without materials or meshes - for checks in node)
   const M = opts.layoutOnly ? null : await archMaterials(ctx, opts.materials || {});
   const rnd = makeRand(opts.seed ?? 5);
@@ -670,7 +680,7 @@ export async function clingSquare(ctx, opts = {}) {
   const kits = { north: new Kit(0), west: new Kit(0), east: new Kit(0), south: new Kit(0), centre: new Kit(0) };
   const houses = [];
   let hs = 1;
-  const S = CLING.square;
+  const S = CL.square;
   // a row of houses from (x0, z0) along dir (unit), facing `out` (the square side), with gaps
   const row = (key, x0, z0, dir, len, yaw, gaps = [], lodOver = null) => {
     let off = 0;
@@ -710,17 +720,17 @@ export async function clingSquare(ctx, opts = {}) {
     }
   };
   // north row (faces south, +z): an alley gap behind the vendor stall
-  const al = CLING.alley;
+  const al = CL.alley;
   row('north', S.x0 - 3, S.z0, [1, 0], (S.x1 + 3) - (S.x0 - 3), 0, [[al.x - al.w / 2 - (S.x0 - 3), al.x + al.w / 2 - (S.x0 - 3)]]);
   // west side (faces east, +x): the arch between two houses
-  const ar = CLING.arch;
+  const ar = CL.arch;
   row('west', S.x0, S.z1 + 1, [0, -1], S.z1 + 1 - S.z0, Math.PI / 2, [[(S.z1 + 1) - (ar.z + 3.7), (S.z1 + 1) - (ar.z - 3.7)]]);
   // east side (faces west, -x): the gate gap
-  const gt = CLING.gate;
+  const gt = CL.gate;
   const gHalf = gt.w / 2 + gt.pier + 3.6;
   row('east', S.x1, S.z0 + 2.5, [0, 1], S.z1 + 1 - S.z0 - 2.5, -Math.PI / 2, [[gt.z - gHalf - S.z0 - 2.5, gt.z + gHalf - S.z0 - 2.5]]);
   // south side either side of the steps (faces north, -z)
-  const st = CLING.steps;
+  const st = CL.steps;
   row('south', S.x0 - 3, S.z1 + 2.5, [1, 0], (st.x - st.w / 2 - 1.2) - (S.x0 - 3), Math.PI);
   row('south', st.x + st.w / 2 + 3.5, S.z1 + 2.5, [1, 0], (S.x1 + 3) - (st.x + st.w / 2 + 3.5), Math.PI);
   // the stone arch (escape route 1): a gate passage through a house of the west row - a rubble
@@ -743,8 +753,8 @@ export async function clingSquare(ctx, opts = {}) {
     }
   }
   gateway(kits.east, yawFrame([gt.x, 0, gt.z], gt.yaw), { w: gt.w, lod: lodAt(gt.x, gt.z), seed: 81, wall: 3.6 });
-  fountain(kits.centre, frame([CLING.fountain.x, 0, CLING.fountain.z]), { r: CLING.fountain.r, pillarH: CLING.fountain.pillarH, lod: lodAt(CLING.fountain.x, CLING.fountain.z) });
-  stonePier(kits.south, frame([CLING.support.x, 0, CLING.support.z]), { lod: lodAt(CLING.support.x, CLING.support.z) });
+  fountain(kits.centre, frame([CL.fountain.x, 0, CL.fountain.z]), { r: CL.fountain.r, pillarH: CL.fountain.pillarH, lod: lodAt(CL.fountain.x, CL.fountain.z) });
+  stonePier(kits.south, frame([CL.support.x, 0, CL.support.z]), { lod: lodAt(CL.support.x, CL.support.z) });
   kingsSteps(kits.south, yawFrame([st.x, 0, st.z], Math.PI), { n: st.n, w: st.w, rise: st.rise, tread: st.tread, lod: lodAt(st.x, st.z) });
   // the alley (the vendor's crate is stored here): a lane north between the houses, bending east
   // after ~10 m; a house closes the view up it from the square, more houses line its far leg
@@ -780,7 +790,7 @@ export async function clingSquare(ctx, opts = {}) {
   // crates, sacks, a hand cart - the life of the square
   if (opts.dressing !== false) {
     const dr = makeRand((opts.seed ?? 5) + 303);
-    const keep = [[CLING.arch.x, CLING.arch.z, 6], [CLING.gate.x, CLING.gate.z, 7], [CLING.alley.x, CLING.alley.z, 4], [CLING.stall.x, CLING.stall.z, 4], [CLING.music.x, CLING.music.z, 4], [CLING.steps.x, CLING.steps.z, 9], [CLING.support.x, CLING.support.z, 4]];
+    const keep = [[CL.arch.x, CL.arch.z, 6], [CL.gate.x, CL.gate.z, 7], [CL.alley.x, CL.alley.z, 4], [CL.stall.x, CL.stall.z, 4], [CL.music.x, CL.music.z, 4], [CL.steps.x, CL.steps.z, 9], [CL.support.x, CL.support.z, 4]];
     let placed = 0;
     for (const h of houses) {
       if (placed >= 7 || h.back || !h.doors || !h.doors.length || dr() < 0.55) continue;
@@ -803,7 +813,7 @@ export async function clingSquare(ctx, opts = {}) {
   // the square's paving (its own kit: one mesh), clear of the fountain, the steps and the wall feet
   if (opts.paving !== false) {
     kits.paving = new Kit(0);
-    const fx = CLING.fountain.x, fz = CLING.fountain.z, fr = CLING.fountain.r + 0.85;
+    const fx = CL.fountain.x, fz = CL.fountain.z, fr = CL.fountain.r + 0.85;
     // the walking lines worn into the cobbles: steps, arch, gate and alley to the fountain, and out
     // of every door
     const paths = [[[st.x, st.z - 0.5], [1.5, 5], [fx, fz + fr]], [[ar.x + 1.2, ar.z - 0.2], [-8, 8], [fx - fr, fz + 1]], [[gt.x - 0.9, gt.z], [8, 2], [fx + fr, fz]], [[al.x, S.z0 + 0.5], [-4, -8], [fx - 1.5, fz - fr]]];
@@ -831,13 +841,13 @@ export async function clingSquare(ctx, opts = {}) {
       grimeBand(kits.paving, Fg, 0.05, L - 0.05, 0.0, 0.55, rnd, { strength: 0.55, z: 0.014 });
     }
   }
-  if (opts.layoutOnly) return { houses, layout: CLING, kits };
+  if (opts.layoutOnly) return { houses, layout: CL, kits };
   const group = new THREE.Group();
   group.name = 'cling-square';
   let tris = 0;
   for (const [k, kt] of Object.entries(kits)) { const g = kt.build(M, { name: `cling-${k}` }); g.name = `cling-${k}`; tris += g.userData.tris; group.add(g); }
   const beamMesh = group.children.find((g) => g.name === 'cling-beam') || null;
-  return { group, houses, layout: CLING, tris, materials: M, beam: { group: beamMesh, ...(beamInfo || {}) } };
+  return { group, houses, layout: CL, tris, materials: M, beam: { group: beamMesh, ...(beamInfo || {}) } };
 }
 void door; void archRing;
 

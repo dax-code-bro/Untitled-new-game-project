@@ -140,7 +140,9 @@ export function intentOf(row, ctx = {}) {
       if (f.v.kind === 'still' || f.v.kind === 'camera') continue;
       const after = s.slice(f.idx);
       // a move's destination needs a preposition ("to his stall", "across the square"); "pushes his cart" is not one
-      const dest = f.v.kind === 'move' ? after.match(/\b(?:to|toward|towards|into|onto|across|back to|round|over|from)\s+(?:the\s+|his\s+|her\s+|their\s+|a\s+)?(.{0,40})/) : null;
+      // ("from the door to the counter": the destination is after "to"; "from" alone only when nothing else is named - phase 7)
+      const destRe = (w) => new RegExp(`\\b(?:${w})\\s+(?:the\\s+|his\\s+|her\\s+|their\\s+|a\\s+)?(.{0,40})`);
+      const dest = f.v.kind === 'move' ? after.match(destRe('to|toward|towards|into|onto|across|back to|round|over')) || after.match(destRe('from')) : null;
       const place = f.v.kind === 'move' ? (dest ? findPlace(dest[1].split(/[,.;]| and /)[0], pw) : null) : findPlace(after, pw);
       const toPerson = people.find((p) => !who.includes(p) && new RegExp(`\\b${esc(words(p.role).replace(/\d+$/, ''))}\\b`).test(after));
       for (const p of who) acts.push({ who: p.actor, verb: f.k, act: f.v.act, kind: f.v.kind, word: f.w, ...(place ? { to: place } : {}), ...(toPerson ? { at: toPerson.actor } : {}), frac: Math.round(frac * 100) / 100, order: f.k2, ...(/\bacross\b/.test(after) ? { across: true } : {}), ...(f.v.enter ? { enter: true } : {}), ...(f.v.exit ? { exit: true } : {}) });

@@ -1,10 +1,10 @@
 {
- "title": "Dragon's Kingdom T00 - draft cut: 0A",
+ "title": "Dragon's Kingdom T00 - draft cut: 0A + 0B",
  "status": "DRAFT EDIT for the animatic / timing check (960x540 draft renders, computer voices, provisional designs). Not a master (SERIES.md section 2).",
  "fps": 24,
- "frames": 276,
- "duration_s": 11.5,
- "duration_tc": "00:00:11:12",
+ "frames": 372,
+ "duration_s": 15.5,
+ "duration_tc": "00:00:15:12",
  "generated_by": "scenes/lib/director/tools/build-shots.mjs",
  "shots": [
   {
@@ -235,6 +235,52 @@
    "staging": "AUTO insert 100 mm STATIC: The musician's fingers find the first chord on the lute.",
    "deviation": null,
    "action": "The musician's fingers find the first chord on the lute.",
+   "need": {
+    "pre": 0,
+    "post": 0
+   }
+  },
+  {
+   "job": "0B-01",
+   "seq": 4,
+   "scene": "0B",
+   "set": "CLING_BAKERY",
+   "kind": "3d",
+   "frames": 96,
+   "rec_in": 276,
+   "rec_out": 372,
+   "tc_in": "00:00:11:12",
+   "tc_out": "00:00:15:12",
+   "trans": [
+    "cut"
+   ],
+   "src": {
+    "scene_file": "episodes/t00/final/scenes/cling-bakery.js",
+    "start_s": 1,
+    "start_frame": 24
+   },
+   "dialogue": [],
+   "captions": [],
+   "cost": {
+    "draft_s_per_frame": 3.46,
+    "k4_cpu_s_per_frame": 46.14,
+    "k4_gpu_s_per_frame": null,
+    "draft_minutes": 5.54,
+    "k4_cpu_hours": 1.23,
+    "k4_gpu_hours": null,
+    "factors": {
+     "people": 1.12,
+     "creatures": 1,
+     "fx": 1,
+     "walk": 1.03,
+     "move": 1,
+     "total": 1.15
+    },
+    "basis": "ESTIMATE: unknown set, generic; x 1.15 for the shot's content"
+   },
+   "staging": "AUTO establish-wide 24 mm STATIC: The vendor walks in from the door to the counter.",
+   "deviation": null,
+   "action": "The vendor walks in from the door to the counter.",
    "need": {
     "pre": 0,
     "post": 0

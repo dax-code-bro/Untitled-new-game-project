@@ -4,6 +4,8 @@
 //
 //   node pc/selftest-episode.mjs            (uses the GPU if gpu-check found one, else the CPU)
 //   node pc/selftest-episode.mjs --cpu | --gpu | --keep
+//   node pc/selftest-episode.mjs --episode t00 [--size 128x72] [--test-preset draft|preview] [--cpu]   (a REAL engine-made
+//        episode at a test size, every approved shot through render/episode.mjs: see episodeMain)
 //
 // What it checks:
 //  0. the render gate: with nothing approved (render-ready.json), no shot and no credits card is
@@ -272,4 +274,57 @@ async function main() {
   return failures ? 1 : 0;
 }
 
-main().then((c) => process.exit(c), (e) => { console.error(e); process.exit(1); });
+/**
+ * --episode <id>: the same runner on a REAL episode made by the engine (engine/make-episode.mjs --final): its approved shots
+ * are rendered at a small TEST size (--size, default 128x72; never a master), the scenes joined and the episode assembled
+ * with its delivered sound; then a second run must have nothing left to do. Output: output/selftest-episode-<id>/ (removed
+ * afterwards unless --keep).
+ */
+async function episodeMain(ep) {
+  const size = args.includes('--size') ? args[args.indexOf('--size') + 1] : '128x72';
+  const out = path.join(ROOT, 'output', `selftest-episode-${ep}`);
+  // the pictures: --preset draft by default (a CPU draws the Cling square's final preset at ~30 s a frame even at 128x72);
+  // --test-preset final checks the masters' preset too (slow on a CPU, quick on the render PC's GPU)
+  const testPreset = args.includes('--test-preset') ? args[args.indexOf('--test-preset') + 1] : 'draft';
+  const tag = ep.toUpperCase();
+  say(`episode self-test of ${ep} (${size}, ${MODE || 'renderer: as gpu-check decided'}) in ${path.relative(ROOT, out)}`);
+  const sched = path.join(ROOT, 'episodes', ep, 'final', 'render-schedule.md');
+  if (!check(fs.existsSync(sched), `${path.relative(ROOT, sched)} exists (the PC package: node engine/make-episode.mjs --episode ${ep} --final)`)) return 1;
+  const jobs = JSON.parse(fs.readFileSync(path.join(ROOT, 'episodes', ep, 'final', 'render-jobs.json'), 'utf8')).jobs;
+  const g = spawnSync(process.execPath, [path.join(ROOT, 'render', 'gate.mjs'), 'status', '--episode', ep], { cwd: ROOT, encoding: 'utf8' });
+  const appr = +(/approved, files unchanged \(the render PC renders these\): (\d+)/.exec(g.stdout || '')?.[1] ?? 0);
+  const n3d = jobs.filter((j) => j.render === '3d').length;
+  check(appr === n3d, `the gate: ${appr} of ${n3d} 3D shot(s) approved with their files unchanged`);
+  const run = (extra = []) => new Promise((resolve) => {
+    const a = [path.join(ROOT, 'render', 'episode.mjs'), '--episode', ep, '--size', size, '--out', out, '--skip-cache-check', '--master-preset', 'veryfast', '--workers', '1', '--test-preset', testPreset, ...(MODE ? [MODE] : []), ...extra];
+    const p = spawn(process.execPath, a, { cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'] });
+    let o = '';
+    p.stdout.on('data', (d) => { o += d; process.stdout.write(d); }); p.stderr.on('data', (d) => { o += d; process.stdout.write(d); });
+    p.on('close', (code) => resolve({ code, out: o }));
+  });
+  say('\nrun 1: render the approved shots, join the scenes, assemble the episode');
+  let r = await run();
+  if (r.code === 2 && /No graphics card has been checked/.test(r.out)) { say('-> run with --cpu, or run the GPU check first'); return 2; }
+  check(r.code === 0, `exit code 0 (got ${r.code})`);
+  const epMp4 = path.join(out, `DragonsKingdom_${tag}_TEST_${size}.mp4`);
+  check(fs.existsSync(epMp4), `the episode file ${path.relative(ROOT, epMp4)} exists`);
+  if (fs.existsSync(epMp4)) {
+    const v = probe(epMp4, ['-count_packets', '-select_streams', 'v:0', '-show_entries', 'stream=nb_read_packets,width,height']);
+    const total = jobs.reduce((a2, j) => a2 + j.frames, 0);
+    const st = v?.streams?.[0] || {};
+    check(+st.nb_read_packets === total, `${total} frames in the episode (got ${st.nb_read_packets})`);
+    check(`${st.width}x${st.height}` === size, `picture ${size} (got ${st.width}x${st.height})`);
+    const au = probe(epMp4, ['-select_streams', 'a', '-show_entries', 'stream=codec_name']);
+    const delivered = fs.existsSync(path.join(ROOT, 'episodes', ep, 'final', 'audio', `${tag}_mix.wav`));
+    check(!delivered || (au?.streams || []).length > 0, delivered ? 'the delivered mix is the episode\'s sound track' : 'no mix delivered: silent track allowed');
+  }
+  say('\nrun 2: nothing left to do');
+  r = await run();
+  check(r.code === 0 && !/frames, set /.test(r.out) && /episode: up to date/.test(r.out), 'a second run renders nothing and the episode is up to date');
+  say(`\n${failures ? `${failures} check(s) FAILED` : 'all checks passed'} in ${((Date.now() - t0) / 1000).toFixed(0)} s`);
+  if (!failures && !KEEP) fs.rmSync(out, { recursive: true, force: true });
+  return failures ? 1 : 0;
+}
+
+const EP_ARG = args.includes('--episode') ? args[args.indexOf('--episode') + 1] : null;
+(EP_ARG ? episodeMain(EP_ARG) : main()).then((c) => process.exit(c), (e) => { console.error(e); process.exit(1); });

@@ -126,8 +126,13 @@ const fnText = (v) => JSON.stringify(v, (k, x) => (typeof x === 'function' ? `fn
 const fileHash = (f) => { try { return sha1(fs.readFileSync(f)); } catch { return 'missing'; } };
 // (episode-paths.js / previs-core.js are Node-only tooling that never reaches a picture: left out, so adding
 // them in engine phase 1 did not make every shot 'core'-stale)
-const NOT_PICTURE = new Set(['episode-paths.js', 'previs-core.js']);
-const coreHash = sha1(fs.readdirSync(DIRECTOR).filter((f) => f.endsWith('.js') && !NOT_PICTURE.has(f)).sort().map((f) => fileHash(path.join(DIRECTOR, f))).join(','));
+// (engine phase 7: registry-gen.js holds only the engine's generated sets - each one's own builder file is in its
+// `set` key - and registry.js's lines tagged @engine-gen only spread them in: both are left out, so generating a set
+// for a new episode does not make Episode 1 'core'-stale)
+const NOT_PICTURE = new Set(['episode-paths.js', 'previs-core.js', 'registry-gen.js']);
+const coreFileHash = (f) => (path.basename(f) === 'registry.js' && fs.existsSync(f)
+  ? sha1(fs.readFileSync(f, 'utf8').split('\n').filter((l) => !l.includes('@engine-gen')).join('\n')) : fileHash(f));
+const coreHash = sha1(fs.readdirSync(DIRECTOR).filter((f) => f.endsWith('.js') && !NOT_PICTURE.has(f)).sort().map((f) => coreFileHash(path.join(DIRECTOR, f))).join(','));
 
 async function loadSpec(setId) {
   const f = path.join(SCENES, 'specs', `${SETS[setId].builder}.spec.js`);

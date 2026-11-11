@@ -1,5 +1,12 @@
-# Engine test episode t00: three shots on the existing Cling square.
+# Engine test episode t00: three shots on the existing Cling square, one in a generated set (the bakery).
 SET CLING_SQUARE                       # existing set: reuse
+
+SET CLING_BAKERY                       # new set: generated from a template (engine/setgen)
+template: interior-room
+size: 6 x 5 x 3.2
+world: CLING at [-14, 0, 9] facing east
+features: oven on north wall; counter across the middle; window east; door south; two oil lamps
+tod: 0B morning, sun az 110 el 18
 
 SHOT 0A-01
 scene: 0A
@@ -33,3 +40,15 @@ frame: lute C
 action: The musician's fingers find the first chord on the lute.
 sound: one lute chord
 trans: cut
+
+SHOT 0B-01
+scene: 0B
+set: CLING_BAKERY
+size: wide
+lens: 24
+move: static
+from: north-west corner
+frame: Vendor R (at the door)
+action: The vendor walks in from the door to the counter.
+sound: oven fire
+seconds: 4

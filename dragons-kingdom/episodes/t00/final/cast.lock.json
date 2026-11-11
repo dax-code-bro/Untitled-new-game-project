@@ -45,7 +45,15 @@
     "build": "musician"
    }
   ],
-  "0A-03": []
+  "0A-03": [],
+  "0B-01": [
+   {
+    "name": "Vendor",
+    "role": "VENDOR",
+    "kind": "human",
+    "build": "vendor"
+   }
+  ]
  },
  "errors": [],
  "warnings": []
