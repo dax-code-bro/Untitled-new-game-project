@@ -140,7 +140,23 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 - [x] Loading screen with in-game art, tips and progress
 - [x] Fewer touch buttons: ◎ interact replaces the car button; map, phone, arsenal, free cam moved to pause
 
-## Phase 1.68 — A2 (parts 2 and 3): the rest of the instant things, acted out
+## Phase 1.69 — G14 (part 1): the owner's picture, fields, city pavements
+
+The owner: "why does our game not look like GTA six? ... do everything you can to make our game look like
+GTA six". Watching them play showed what they actually see: the Low preset on built-in Intel graphics,
+the game's own work ~25 ms a frame (CPU-bound), yet drawn at 60% resolution (1024x559 on a 1707x932
+window). A screenshot survey at their settings and on High (street, downtown) picked the first fixes.
+- [x] Sharper picture on CPU-bound machines: when the game's own work is what's slow, fewer pixels
+      don't help, but the resolution controller still cut the picture to its minimum (and never raised
+      it again while the frame rate stayed under the target). Now, CPU-bound, it draws less detail first
+      and then tries the pixels back 10% at a time, keeping each step only if the frame rate holds
+- [x] Fields and lawns aren't one even green near the camera: patches a few metres across, lusher or
+      drier, with darker clover/weed clumps and slow drifts over tens of metres (terrain shader, free)
+- [x] City pavements are furnished: benches, planters with clipped shrubs, rows of newspaper boxes and
+      bike hoops in the strip inside the kerb, on both sides in turn, closer together downtown
+      (instanced, near only: four draw calls; you walk round them)
+
+: the rest of the instant things, acted out
 
 The second and third groups from the survey of things that used to be instant (a toast, money, a teleport).
 All of them go through `systems/acts.js`; each falls back to the old instant version if a scene can't

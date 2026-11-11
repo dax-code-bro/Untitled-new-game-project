@@ -1422,9 +1422,21 @@ vec3 CustomToneMapping( vec3 color ) {
     // frame, a blurrier picture changes nothing: draw fewer things, nearer, instead (core/detail.js)
     const frameMs = 1000 / Math.max(S.fps, 1), cpuBound = (S.cpuMs || 0) > frameMs * 0.6;
     S.bound = cpuBound ? 'cpu' : 'gpu';
+    // a sharper picture being tried (below): kept if the frame rate held, or put back
+    if (S.resProbe) {
+      const p = S.resProbe; S.resProbe = null;
+      if (S.fps < p.fps * 0.93) { dynScale = p.from; applySize(); S.resProbeBan = performance.now() + 30000; }
+      S.renderScale = dynScale;
+      return;
+    }
     if (S.fps < target * 0.9) {
-      if ((cpuBound || dynScale <= q.minScale + 0.001) && detail.pressure > 0.46) detail.setPressure(detail.pressure - 0.1);
-      else if (dynScale > q.minScale) { dynScale = Math.max(q.minScale, dynScale - 0.08); applySize(); }
+      if (cpuBound) {
+        // the game's own work is what's slow: fewer pixels don't help (the owner's laptop sat at 60%
+        // resolution, blurry, for no frames at all). Draw less instead, and try the pixels back
+        if (detail.pressure > 0.46) detail.setPressure(detail.pressure - 0.1);
+        else if (dynScale < 1 && performance.now() > (S.resProbeBan || 0)) { S.resProbe = { from: dynScale, fps: S.fps }; dynScale = Math.min(1, dynScale + 0.1); applySize(); }
+      } else if (dynScale > q.minScale) { dynScale = Math.max(q.minScale, dynScale - 0.08); applySize(); }
+      else if (detail.pressure > 0.46) detail.setPressure(detail.pressure - 0.1);
       S.highTimer = 0;
     } else if (S.fps >= target * 0.98) {
       if (++S.highTimer >= 3) {

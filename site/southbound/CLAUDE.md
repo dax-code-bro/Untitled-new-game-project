@@ -174,6 +174,13 @@ the fewest additions next. Be honest in reports about what is and isn't done.
   it captured, clicks go to the game, and the owner couldn't click a setting on their PC. Headless
   Playwright: a lock taken just before Esc stays on unless that guard is there; use `{ force: true }`
   clicks in-game (the SwiftShader frames keep elements from ever counting as "stable").
+- G14 (graphics toward the owner's "look like GTA 6"): the owner plays on Low, built-in Intel graphics,
+  CPU-bound (~25 ms of game work a frame). `dynamicResolution` (main.js) probes resolution back up when
+  CPU-bound (`S.resProbe`, kept if fps holds within 7%, else a 30 s ban). Survey/compare screenshots:
+  `tools/southbound/view-shots.mjs <tag> <view>` (views street/downtown/field/pave...; `PRESET=low VW=1024
+  VH=559` = the owner's picture; `SHOTS_OUT` = where) with `ROOT=<site copy>`: build into a copy (symlinks + its own game.js) so a stash
+  can't swap the bundle under a running page. The owner's live frames (`$SBLIVE_OUT/f-*.jpg`) are the
+  best survey of what they really see.
 - Commit one batch at a time: if the next batch's edits are already in the tree, commit only the
   finished batch's files (and an `index.js` without the next batch's `add(...)` line), with the
   `game.js` that was built and QA'd for it.
