@@ -663,7 +663,7 @@ float sbH2(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); 
       for (const m of [seat, back, legs]) { m.castShadow = m.receiveShadow = true; m.userData.hitStatic = true; m.userData.surf = 'wood'; group.add(m); }
       return parks.map((b) => ({ cx: b.cx, cz: b.cz, W, ring }));
     },
-    update(night) { headMat.emissiveIntensity = night * 6; poolMat.opacity = night * 0.55 * (1 - worldUniforms.uWet.value * 0.3); pools.visible = night > 0.02;
+    update(night) { headMat.emissiveIntensity = night * 6; poolMat.opacity = night * 0.85 * (1 - worldUniforms.uWet.value * 0.3); pools.visible = night > 0.02;
       streakMat.uniforms.uOpacity.value = night * worldUniforms.uWet.value; streaks.visible = streakMat.uniforms.uOpacity.value > 0.01; },
   };
 }

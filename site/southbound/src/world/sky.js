@@ -116,12 +116,12 @@ export function createSky(renderer, scene, quality) {
       const warm = smoothstep(0.0, lerp(0.35, 0.62, lookK), elev);
       if (useMoon) {
         sun.color.setRGB(0.55, 0.65, 1.0);
-        sun.intensity = 0.6 * smoothstep(-0.05, -0.3, elev);
+        sun.intensity = 0.46 * smoothstep(-0.05, -0.3, elev); // (G14: a little darker, so the lamps' pools read)
       } else {
         sun.color.setRGB(1.0, lerp(lerp(0.55, 0.52, lookK), lerp(0.985, 0.955, lookK), warm), lerp(lerp(0.3, 0.24, lookK), lerp(0.955, 0.885, lookK), warm));
         sun.intensity = 4.1 * day;
       }
-      hemi.intensity = lerp(0.5, 0.58, day);
+      hemi.intensity = lerp(0.42, 0.58, day);
       hemi.color.setRGB(lerp(0.22, 0.62, day), lerp(0.28, 0.76, day), lerp(0.55, 1.0, day));
       // what bounces up off sunlit ground is warm: earth and dry grass, more so in the gold hours
       const gold = (1 - warm) * day * lookK;
