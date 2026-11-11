@@ -32,9 +32,10 @@ export function installLoot(game) {
     scene.add(m);
     const g = { id, m, t: 600 };
     g.point = interact.add({ x, z, y, r: 1.4, marker: false, label: `Pick up the ${w.name}`, use: () => {
-      take(id);
-      hud.toast(`Picked up: ${w.name}`, 1.6);
-      remove(g);
+      const got = () => { take(id); hud.toast(`Picked up: ${w.name}`, 1.6); remove(g); };
+      // (A2) crouch for it: your hand closes on it and it comes up with you
+      if (game.acts && game.S.mode === 'foot' && !game.S.doorWalk) { g.point.show = () => false; const run = game.acts.play(game.acts.pickupBeats(m, { x, y, z }), { done: got }); if (run) return; }
+      got();
     } });
     guns.push(g);
   };

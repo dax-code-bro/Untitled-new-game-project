@@ -6,6 +6,9 @@ import { installTools } from './tools.js';
 import { installHunting } from './hunting.js';
 import { installFishing } from './fishing.js';
 import { installJobs } from './jobs.js';
+import { installWorkplaces } from './workplaces.js';
+import { installInspect } from './inspect.js';
+import { installActs } from './acts.js';
 import { installMissions } from './missions.js';
 import { installPhone } from './phone.js';
 import { installKerbside } from './kerbside.js';
@@ -32,6 +35,7 @@ import { installDefense } from './defense.js';
 export function installSystems(game) {
   const list = [];
   const add = (name, sys) => { game[name] = sys; list.push(sys); return sys; };
+  add('actsSys', installActs(game)); // A2: little scenes (hands, hand-offs, doorsteps) for everything you do with people
   add('garage', installGarage(game));
   add('marineAir', installMarineAir(game));
   // GPS waypoint: a tall marker + map blip that clears when you arrive
@@ -51,6 +55,8 @@ export function installSystems(game) {
   add('hunting', installHunting(game));
   add('fishing', installFishing(game));
   add('jobs', installJobs(game));
+  add('inspect', installInspect(game)); // U: look at your weapon: what it takes, how much you carry
+  add('work', installWorkplaces(game)); // employers for every job: buildings, managers, schedules, warnings, promotions; the barbershops (F15)
   add('missions', installMissions(game));
   add('phoneSys', installPhone(game));
   add('phonePlus', installPhonePlus(game)); // battery, bank and ATMs, news, texts, contacts, forecast, camera, cabs

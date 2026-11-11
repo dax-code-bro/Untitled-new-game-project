@@ -165,12 +165,16 @@ export function installShops(game) {
   // ---------------- Gulf Mart
   P.food = P.food || {};
   game.buffs = game.buffs || {};
-  const eat = (f) => {
+  const eat = (f, here = false) => {
     player.health = Math.min(player.maxHealth || 100, player.health + f.heal);
     game.feed?.(f.id === 'water' || f.id === 'tea' || f.id === 'coffee' || f.id === 'energy' ? 4 : f.id === 'firstaid' ? 0 : f.heal * 0.9);
     if (f.steady) game.buffs.steady = Math.max(game.buffs.steady || 0, f.steady);
     hud.toast(`${f.name}: +${f.heal} health${f.steady ? ' · steadier hands' : ''}`, 2.2);
-    player.h.play?.('Interact', 0.2);
+    // (A2) eaten for real: bite by bite (handed over the counter first when you eat in)
+    const A = game.acts;
+    if (A && here) A.nextGoods = { mesh: foodModel(f), then: (m) => A.eatBeats(m) };
+    else if (A && S.mode === 'foot' && !S.doorWalk) A.play(A.eatBeats(foodModel(f)));
+    else player.h.play?.('Interact', 0.2);
   };
   // what's on the counter (for the showroom stand)
   const foodModel = (f) => {
@@ -200,7 +204,7 @@ export function installShops(game) {
     act: (f, t) => {
       if (t === 'go' && (P.food[f.id] || 0) >= 5) return;
       if (!career.spend(Math.round(f.price * mart.k))) return;
-      if (t === 'here') eat(f); else { P.food[f.id] = (P.food[f.id] || 0) + 1; hud.toast(`${f.name} to go`, 1.5); }
+      if (t === 'here') eat(f, true); else { P.food[f.id] = (P.food[f.id] || 0) + 1; hud.toast(`${f.name} to go`, 1.5); }
     },
   });
   mart.k = 1;

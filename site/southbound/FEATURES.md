@@ -9,7 +9,7 @@ feature with the fewest additions next. Batches ship as F# (features) alternatin
 Counts are additions made in the "add to every feature" programme (F1 onwards, plus the S3/S4
 side batches where they extended a feature). The original build of each feature isn't counted.
 
-## Status (last updated: Phase 1.55, after the owner's list: guns in first person, saves, defence, cover, unique tools)
+## Status (last updated: Phase 1.68, A2 parts 2+3: acted out)
 
 | # | Feature | Files | Added | Batches | Status |
 |---|---------|-------|------:|---------|--------|
@@ -22,26 +22,26 @@ side batches where they extended a feature). The original build of each feature 
 | 2 | Police & law | police.js, policeplus.js, law.js | 14 | S3, F4, P3 | 16 to go |
 | 3 | Phone | phone.js, phoneplus.js | 10 | F6 | 20 to go |
 | 4 | Residents / people | population.js, residents.js, peds.js | 8 | S3, S4 | 22 to go |
-| 5 | Jobs | jobs.js | 8 | F7 | 22 to go |
-| 6 | Driving & cars | driving.js, vehicle.js | 8 | F1, G4, P2 | 22 to go |
+| 5 | Jobs & workplaces | jobs.js, workplaces.js | 38 | F7, F15 | **done (38)** |
+| 6 | Driving & cars | driving.js, vehicle.js | 10 | F1, G4, P2, 1.66 | 20 to go |
 | 7 | Fishing | fishing.js | 7 | F5 | 23 to go |
 | 8 | Property | estate.js, propertyplus.js | 8 | S2, F8 | 22 to go |
 | 9 | Street life | ambient.js, streetlife.js | 5 | F3 | 25 to go |
 | 10 | Food & Gulf Marts | shops.js, foodplus.js | 4 | F9 | 26 to go |
-| 11 | Guns & combat | gunwork.js, combat.js | 11 | F2, P1 | 19 to go |
+| 11 | Guns & combat | gunwork.js, combat.js, inspect.js | 18 | F2, P1, A1 | 12 to go |
 | 12 | Robbery & street crime | robbery.js, streetcrime.js, kerbside.js | 4 | S2, S4, F5 | 26 to go |
 | 13 | Weather & time | weather.js, sky.js | 3 | F6, G8 | 27 to go |
 | 14 | Boats & water | marine-air.js, splashes.js | 2 | G5 | 28 to go |
 | 15 | Garage & customs | garage.js | 2 | F1 | 28 to go |
-| 16 | Interiors | estate.js | 2 | S2, S4 | 28 to go |
+| 16 | Interiors | estate.js | 4 | S2, S4, A1 | 26 to go |
 | 17 | HUD, map & UI | hud.js, ui/ | 2 | F5, F6 | 28 to go |
 | 18 | Needs (sleep, food, weight) | needs.js | 1 | F9 | 29 to go |
 | 19 | Wounds & health | wounds.js | 1 | F9 | 29 to go |
 | 20 | Tools & inventory | tools.js | 2 | F2, P4 | 28 to go |
-| 26 | Gunsmiths | gunstores.js | 0 | | 30 to go |
+| 26 | Gunsmiths | gunstores.js, ui/gunstore.js | 4 | A1 | 26 to go |
 | 27 | Stray & farm animals | strays.js | 0 | | 30 to go |
 | 28 | World events | world-events.js | 0 | | 30 to go |
-| 29 | Demolition & damage | demolition.js, holes.js | 0 | | 30 to go |
+| 29 | Demolition, damage & rebuilding | demolition.js, holes.js, destruction.js | 14 | F16 | 16 to go |
 | 30 | Property auction | auction.js | 0 | | 30 to go |
 | 31 | Audio | core/audio.js | 0 | | 30 to go |
 | 32 | Camera & controls | core/camera.js, input.js | 0 | | 30 to go |
@@ -53,7 +53,7 @@ side batches where they extended a feature). The original build of each feature 
 | 38 | Car combat | carcombat.js | 0 | | 30 to go |
 | 39 | Movement & footing | footing.js, player.js | 1 | P1 | 29 to go |
 
-**Totals: about 228 additions across 25 features; 14 features untouched; 1 feature at 30+ (gangs).**
+**Totals: about 243 additions across 26 features; 13 features untouched; 1 feature at 30+ (gangs).**
 Brand-new features added this programme (not extensions): banking, news, contacts, cabs,
 legendary animals and fish, poaching, property market, burglaries, food spoilage, tracks in the
 ground, boat wakes, rain soak, crew jobs, hideout raids, 12 side jobs, flight school, laundromats,
@@ -77,6 +77,44 @@ and peeking; P4 unique models for all 244 tools.)
 every catalogue gun beyond the photo-scanned few is built as its own firearm by the gun kit. Still
 possible later: photo-real downloads from Sketchfab once a valid API token is saved in the
 "Untitled-new-game-project" environment (the one entered was rejected).
+
+**Done (Phase 1.59):** "Let Claude watch me play" (Settings > Display): errors and a report with a
+screenshot every few minutes reach Claude (`api/sb-watch.js`, `tools/southbound/watch.mjs`); Claude's
+notes show up in the game. Needs a private Vercel Blob store connected to the project to keep reports
+longer than the function log's hour.
+
+## The owner's list after watching them play (2026-11-09) — do in this order
+
+1. ~~**R1 Reactions that fit the situation.**~~ (first pass shipped, Phase 1.60; keep extending the matrix) People robbed the owner while they were in a speeding car.
+   Every system that approaches or targets the player (muggers, street crime, beggars, armed
+   civilians, world events, gang ambushes, witnesses) must check what the player is doing (driving and
+   how fast, indoors, in a cutscene, dead/arrested, armed and aiming, wanted). Cops AND bystanders take
+   cover during robberies and gunfights (behind cars, walls, counters), not just cower in place.
+   "Prepared for every combination of scenario": keep a situation matrix and test it.
+2. ~~**G13 Blood and injuries.**~~ (shipped, Phase 1.62) Real blood: spatter on ground/walls, pools under the downed and dead,
+   trails from the bleeding; wounds on bodies (bullet holes, cuts, bruises, scrapes from crashes and
+   falls) on the player and everyone else, healing over days; the Gore setting turns it off.
+3. ~~**F15 Real workplaces and careers.**~~ (shipped, Phase 1.63; bikes to ride are still missing) Barbershop: walk into the building, talk to the manager: buy
+   a cut, or work as a trainee and rise through the ranks; shifts you must turn up to (late = warning,
+   missed = fired). Then the same for every job (bike messenger depot with a dispatcher, etc.).
+4. ~~**F16/G14 Destruction and rebuilding.**~~ (shipped, Phase 1.64: buildings of every size; props and cars already react to blasts) Realistic destruction physics for everything; blow up a
+   skyscraper and the city hires crews who rebuild it over ~7 game days, in visible stages (cleanup,
+   scaffolding, cranes, floors rising).
+6. ~~**A2 Animations for every little thing**~~ (shipped: part 1 Phase 1.67, parts 2+3 Phase 1.68) Arrests x3 by
+   crime, doorstep deliveries + a paper route, trades' tools, riders, carjack, getting out, tickets, bribes,
+   muggings, counters, eating, bandaging (yourself and others), skinning, pick-ups, waves, fishing,
+   knocking/kicking doors, walking to job vehicles, hitchhikers through the door, mission contacts in person,
+   sleeping, the doctor, the fuel can, takedowns, hideout chores/kitchen/ammo rack/crew payments, buying
+   property, the fire alarm, demolition charges, the ATM, the laundromat, the basin, antagonizing, the
+   desk sergeant, spare change, the broken-down car, a rescued victim's thanks, boarding planes and boats,
+   hold-ups (the bag over the counter), the street cart, the phone back in your pocket, the first-aid
+   cabinet. Still instant (honest list): the auction paddle and the barber chair (both happen behind a
+   paused screen), cleaning a gun (a crouch, no rag), cash on the ground (walk-over pickup), the phone's
+   screen itself (the game is paused and not drawn while it's open).
+5. ~~**A1 Ammunition by caliber; door hands.**~~ (shipped, Phase 1.65) Asked for in-game while playing:
+   every gun says what it takes (store, wheel, phone, the U card); 13 calibers shared by the guns
+   that take them, at most 500 of a caliber, 50 rockets/grenades, 20 arrows; boxes by caliber at the
+   gun store counter. Doors: reach for the handle, the door swings, step through (in and out).
 
 ## Backlog: ideas per feature (take from here, strike when shipped)
 

@@ -5,7 +5,7 @@
 // paint, custom colour). You can own up to three of the same gun; some guns
 // unlock as the story goes on.
 import * as THREE from 'three';
-import { WEAPONS, CATEGORIES, ATTACHMENTS, SKINS, buildWeaponModel, applyFinish } from '../entities/arsenal.js';
+import { WEAPONS, CATEGORIES, ATTACHMENTS, SKINS, buildWeaponModel, applyFinish, CALIBERS, ammoCap, unitOf } from '../entities/arsenal.js';
 
 const CSS = `
 #gunstore{position:fixed;inset:0;z-index:45;display:none;background:radial-gradient(ellipse at 70% 40%,rgba(40,32,26,.94),rgba(8,7,6,.97));color:#eee6da;font:14px Inter,system-ui,sans-serif}
@@ -159,7 +159,7 @@ export class GunStore {
         <img src="${img}" alt="">
         <div><b>${w.name}</b><small>${w.fireMode || ''} · ${w.caliber || ''}${w.scope ? ` · ${w.scope}x scope` : ''}</small></div>
         <div><span class="p">${locked ? '🔒' : '$' + this.price(w).toLocaleString('en-US')}</span>${n ? `<span class="own">Owned ${n}/3</span>` : ''}</div>
-        <div class="desc">${w.desc || ''}${locked ? `<br><b>Unlocks after ${w.unlock} story missions</b> (you've done ${done}).` : ''}</div></div>`;
+        <div class="desc">${w.desc || ''}${w.melee ? '' : ` Takes ${w.caliber}.`}${locked ? `<br><b>Unlocks after ${w.unlock} story missions</b> (you've done ${done}).` : ''}</div></div>`;
     }).join('');
     list.querySelectorAll('.item').forEach((it) => {
       it.onclick = () => { this.sel = it.dataset.id; this.mode = 'info'; this.render(); if (innerWidth < 760) this.el.querySelector('.side').classList.add('show'); };
@@ -177,12 +177,13 @@ export class GunStore {
     const st = [['Damage', `${Math.round(dmg * 0.8)}–${Math.round(dmg * 1.15)}`, dmg / STAT_MAX.dmg], ['Penetration', `${w.pen || 1} / 5`, (w.pen || 1) / 5], ['Fire rate', `${Math.round(60 / w.rate)} rpm`, 1 / w.rate / STAT_MAX.rate],
       ['Range', `${w.range} m`, w.range / STAT_MAX.range], ['Accuracy', '', 1 - Math.min(1, w.spread * 9)], ['Magazine', `${w.clip}`, w.clip / STAT_MAX.mag]];
     const info = this.el.querySelector('.info');
-    info.innerHTML = `<h3>${w.name}</h3><div class="tags">${w.fireMode || ''} · ${w.caliber || ''} · ${w.platform}</div>
+    const ammoLine = w.melee ? '' : `<div class="tags" style="margin-top:2px">Takes <b>${w.caliber}</b> · you carry ${this.g.combat.rounds[w.caliber] || 0} / ${ammoCap(w.caliber)} ${unitOf(w.caliber)}</div>`;
+    info.innerHTML = `<h3>${w.name}</h3><div class="tags">${w.fireMode || ''} · ${w.caliber || ''} · ${w.platform}</div>${ammoLine}
       <div class="stats">${st.map(([k, v, f]) => `<div class="stat"><span>${k} ${v}</span><i><b style="width:${Math.max(4, Math.min(100, f * 100)).toFixed(0)}%"></b></i></div>`).join('')}</div>
       <div class="acts">
         <button class="go" data-a="buy" ${locked || n >= 3 ? 'disabled' : ''}>${locked ? 'Locked' : n >= 3 ? 'You own 3 (max)' : `Buy · $${this.price(w).toLocaleString('en-US')}`}</button>
         ${n ? '<button data-a="equip">Equip</button><button data-a="cust">Customize</button>' : ''}
-        ${!w.melee ? `<button data-a="ammo">Ammo · $${Math.round(this.price(w) * 0.03 + 20)}</button>` : ''}
+        ${!w.melee ? (() => { const cal = w.caliber, B = CALIBERS[cal] || { box: w.clip * 3, price: 40 }, have = this.g.combat.rounds[cal] || 0, cap = ammoCap(cal); return have >= cap ? `<button disabled>${cal}: full (${have}/${cap})</button>` : `<button data-a="ammo">${cal} · box of ${B.box} · $${B.price}</button>`; })() : ''}
         <button data-a="back" class="mob">Back</button>
       </div>`;
     info.querySelectorAll('button[data-a]').forEach((b) => { b.onclick = () => this.action(b.dataset.a); });
@@ -204,7 +205,12 @@ export class GunStore {
       g.toast?.(`Bought: ${w.name}${n ? ` (#${n + 1})` : ''}`);
     } else if (a === 'equip') { c.weapon = id; c.holstered = false; c.dual = false; }
     else if (a === 'cust') this.mode = this.mode === 'cust' ? 'info' : 'cust';
-    else if (a === 'ammo') { if (g.spend(Math.round(this.price(w) * 0.03 + 20))) { const am = c.ammo[id] || (c.ammo[id] = { clip: w.clip, reserve: 0 }); am.reserve += w.clip * 3; } }
+    else if (a === 'ammo') {
+      // a box of this gun's caliber, up to what you can carry
+      const cal = w.caliber, B = CALIBERS[cal] || { box: w.clip * 3, price: 40 }, have = c.rounds[cal] || 0, cap = ammoCap(cal);
+      if (have >= cap) g.toast?.(`You can't carry more ${cal} (${cap} max).`);
+      else if (g.spend(B.price)) { c.rounds[cal] = Math.min(cap, have + B.box); g.toast?.(`${cal}: ${c.rounds[cal]} / ${cap} ${unitOf(cal)}`); }
+    }
     g.career.saveSoon();
     this.render();
   }

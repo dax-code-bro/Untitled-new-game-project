@@ -119,6 +119,8 @@ export function installArmory(game) {
   // ---------------- medical
   const treat = (m) => {
     if (!P.med[m.id]) return false;
+    // (A2) you do it with your hands: a knee for a leg, round the arm, against your side
+    if (game.acts && S.mode === 'foot' && !S.doorWalk && S.dead <= 0) game.acts.play(game.acts.treatBeats(W.leg ? 'leg' : W.arm ? 'arm' : 'side', m.id === 'painkillers' || m.id === 'antibiotics' ? 1.0 : 2.6));
     P.med[m.id]--;
     player.health = Math.min(100, player.health + (m.heal || 0));
     if (m.bleed) W.bleed = Math.max(0, W.bleed - m.bleed);
@@ -253,6 +255,11 @@ export function installArmory(game) {
     use: () => {
       if (police.wanted > 0) { hud.toast('"Come back when you\'re not wanted, genius."', 2.5); return; }
       if (!career.spend(evFee())) return;
+      const sgt = game.civic?.precinct?.staff || Object.values(game.civic || {}).find((c) => c.staff && /precinct|police/i.test(c.name))?.staff;
+      if (game.acts && sgt && !S.doorWalk && sgt.root.position.distanceTo(player.pos) < 5) { // (A2) a box across the desk, signed for
+        const who = game.acts.fromHuman(sgt), box = game.acts.prop('box'); who.hold(box, true);
+        if (!game.acts.play([...game.acts.handBeats(who, box, 'take', 1.2), { t: 0.6, ik: (F, k, ctx, P) => ctx.held && game.acts.carry(P, F, ctx.held, true) }, { t: 0.01, start: (ctx) => { box.parent?.remove(box); ctx.held = null; } }], { done: () => who.release() })) who.release();
+      }
       for (const e of P.evidence) { combat.give(e.id); if (e.ammo) combat.ammo[e.id] = e.ammo; }
       hud.toast(`Signed for ${P.evidence.length} weapon${P.evidence.length > 1 ? 's' : ''}. Try to keep them out of sight.`, 3.5);
       P.evidence = []; career.save();

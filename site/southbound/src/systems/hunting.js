@@ -239,7 +239,16 @@ export function installHunting(game) {
       if (c.s.protected) return `${c.s.name} — protected animal, no pelt`;
       if (!game.tools.best('knife')) return `${c.s.name} — buy a knife to skin it (Hunting tools)`;
       const q = c.quality || 2, stars = '★'.repeat(q) + '☆'.repeat(3 - q);
-      if (a.enter && free) {
+      if (a.enter && free && game.acts && !c.skinning && game.S.mode === 'foot' && !game.S.doorWalk) {
+        c.skinning = true;
+        const at = c.group.position.clone();
+        const run = game.acts.play(game.acts.knifeBeats(at, c.s.size > 1.3 ? 4.2 : 3.0), { done: (ok) => { c.skinning = false; if (ok) c.cut = true; } });
+        if (run) { a.enter = false; return ''; }
+        c.skinning = false; // (couldn't act it out: skinned on the spot)
+      }
+      if (c.skinning) return '';
+      if ((a.enter && free) || c.cut) {
+        c.cut = false;
         P.pelts[c.sp] = (P.pelts[c.sp] || 0) + 1; P.stats.animals++;
         P.peltVal[c.sp] = (P.peltVal[c.sp] || 0) + Math.round(c.s.pelt * QMULT[q]);
         const lb = Math.round((MEAT[c.s.base || c.sp] || 0) * (0.8 + Math.random() * 0.4) * (c.s.legend ? 1.4 : 1));

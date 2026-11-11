@@ -2,7 +2,7 @@
 // hold the gun button (phone) to open it; time slows down while it is open.
 // Point at a slot (mouse, right stick or drag) and let go to draw that weapon.
 // Scroll / Q-E / the small arrows change which weapon a slot holds.
-import { WEAPONS } from '../entities/arsenal.js';
+import { WEAPONS, ammoCap } from '../entities/arsenal.js';
 import { Combat } from '../entities/combat.js';
 
 export const SLOTS = [
@@ -106,7 +106,7 @@ export class WeaponWheel {
     const w = id ? WEAPONS[id] : null;
     this.midB.textContent = s.k === 'unarmed' ? 'Holster weapons' : w ? (s.k === 'dual' ? 'Dual · ' : '') + w.name : s.label;
     const a = id ? c.ammo[id] : null;
-    this.midS.textContent = w && a ? `${a.clip} / ${a.reserve}` : s.k === 'unarmed' ? 'hands free · cops won’t open fire' : 'none owned';
+    this.midS.textContent = w && a ? `${w.caliber} · ${a.clip} / ${a.reserve} (max ${ammoCap(w.caliber)})` : s.k === 'unarmed' ? 'hands free · cops won’t open fire' : 'none owned';
     this.midE.textContent = w && c.ownedIn(k).length > 1 ? 'scroll or ‹ › to switch' : '';
   }
 }

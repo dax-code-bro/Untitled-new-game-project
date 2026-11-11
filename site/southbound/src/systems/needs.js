@@ -38,7 +38,15 @@ export function installNeeds(game) {
     if (before + amount > 100) N.weight += (before + amount - 100) * 0.012; // eating past full
     show();
   };
-  game.sleep = (hours = 8, where = '') => {
+  game.sleep = (hours = 8, where = '', now = false) => {
+    if (!now && game.acts && S.mode === 'foot' && !S.doorWalk && S.dead <= 0) {
+      // (the night itself is slept by the function below, not game.sleep again: crew.js wraps game.sleep)
+      const run = game.acts.play(game.acts.sleepBeats(), { done: () => { slept(hours, where); setTimeout(() => game.acts.fade(false), 400); } });
+      if (run) return;
+    }
+    slept(hours, where);
+  };
+  const slept = (hours, where) => {
     N.energy = Math.min(100, N.energy + hours * 13);
     N.food = Math.max(0, N.food - hours * 2.5);
     sky.hour += hours; if (sky.hour >= 24) { sky.hour -= 24; sky.day += 1; }

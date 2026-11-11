@@ -140,6 +140,299 @@ Status key: `[x]` done · `[~]` started / partial · `[ ]` not started
 - [x] Loading screen with in-game art, tips and progress
 - [x] Fewer touch buttons: ◎ interact replaces the car button; map, phone, arsenal, free cam moved to pause
 
+## Phase 1.68 — A2 (parts 2 and 3): the rest of the instant things, acted out
+
+The second and third groups from the survey of things that used to be instant (a toast, money, a teleport).
+All of them go through `systems/acts.js`; each falls back to the old instant version if a scene can't
+start (in a car, already in a scene, dead).
+
+- [x] Job vehicles: the work van/truck is parked at the curb and you walk round to its door and get in
+      (it used to teleport you into the seat). At a delivery door F is for the delivery (the house's own
+      door and "say hello" to a passer-by step aside)
+- [x] Hitchhikers walk round to the passenger door, it opens, they get in and you can see them in the seat;
+      at the drop-off the door opens and they step out
+- [x] Mission givers have a body: they wait at the start, turn to you, brief you face to face, then walk
+      off; a mission's pay is handed to you (cash from their hand)
+- [x] Sleeping: you sit on the edge of the bed, lie back, the screen goes dark through the hours. The fuel
+      can: you tip it over the filler and pour. The doctor: you sit on the exam table, the screen goes
+      dark while you're patched up
+- [x] Bandaging someone else: down on one knee, wrapping their wound. A takedown: you step in behind
+      them, an arm round them, and down they go
+- [x] The hideout: a bowl from the kitchen eaten bite by bite, the ammo rack (a hand to each shelf),
+      chores with the tool in your hands (the axe at the woodpile, the bucket, the hammer), Marisol
+      patching you up while you sit
+- [x] Buying a property: the papers signed against your hand, then the keys. The fire alarm: your hand
+      up on the handle and down it comes. A demolition charge: both hands press it to the wall, then you
+      step back
+- [x] The ATM: your card in the slot, a few keys, then the screen. The Runr courier puts the parcel into
+      your hands. The laundromat: the clothes into the machine, the lid down, half an hour in the dark.
+      The basin: bent over it, scrubbing. Antagonizing someone: your finger in their face; they flinch
+      or square up
+- [x] The precinct: the desk sergeant takes the bounty money from your hand; your confiscated things come
+      back across the desk in a box
+- [x] Spare change: you crouch and put the bills in their hand. A car broken down by the road: round to
+      the front, both hands in the engine bay, then the driver pays you from their hand. The robbery you
+      broke up: the victim presses the cash into your hand
+- [x] Boats and planes: you walk to the plane's side and climb up into it; you step down into a boat
+- [x] A hold-up: the clerk fills a bag at the register and holds it out over the counter while you keep
+      the gun on them. The street cart: the vendor hands it over the cart like a shop counter
+- [x] Paying anyone in the hideout crew for a service: the cash goes from your hand to theirs
+- [x] The phone: when you close it you're holding it, you glance at it and put it back in your pocket (the
+      game is paused and not drawn while its screen is open, so that's the part you can see)
+- [x] A fade to black for the phone's ride to the hideout (it used to cut)
+- [x] Fixed on the way: holding up a store threw an error the moment the clerk complied (the panic call
+      used a position clerks don't have); a scene that couldn't start ran its ending as well as the
+      instant version (two nights' sleep, a bounty paid twice); the crew's bunkhouse hook dropped the
+      sleep's "now" flag, so a night acted out started itself again for ever; F at a door could still go
+      to a point the game had hidden a moment earlier (the list is rebuilt 4x a second; it's re-checked
+      now); quitting a shift while walking to the work van left you walking to it
+
+## Phase 1.67 — A2 (part 1): things are acted out, not toasted
+
+The owner: "add animations for every little thing ... the cops never even touch you ... depending on what
+crime you did they'll do it more aggressively ... you can't just go to an objective marker and be done ...
+you knock on the door, give them the newspaper ... do that for every little thing in the game".
+A survey listed ~80 interactions that were instant (a marker, money, a toast or a teleport); this batch
+does the engine and the first big group. `systems/acts.js` (game.acts): little scenes that lock your
+controls and play beats (walk, face, clip, IK arms, props in your hands, the other person in step).
+
+- [x] Arrests in three kinds, by the worst crime this chase (police.heat) and how wanted you are:
+      *cuff* (hands up, the officer comes round behind you, hands on your wrists, cuffs on, a hand on your
+      arm to the cruiser, the door, a hand on your head, into the back); *hood* (marched to the cruiser,
+      hands on the hood, patted down, cuffed against the car); *ground* (on your knees, hands on your head,
+      a second officer covering you, shoved flat, a knee in your back, cuffed on the ground, hauled up by
+      the arms, pushed into the car). The cruiser pulls up on the road beside you; the camera finds a side
+      a wall or a parked car isn't in the way of; the arresting officer is no longer animated twice a frame
+- [x] Deliveries at the door: parcels, pizza, envelopes and the new **Paper Route** (The Calvera Courier,
+      7 houses around Mill Creek): stops are real front doors; you park, walk it up, knock (three knocks
+      you hear), the door opens and the resident steps out, takes it from your hands, says something
+      (pizza: pays you on the step), steps back in, the door shuts; nobody home: it goes on the mat.
+      Walking into a delivery door no longer lets you in
+- [x] Trades do the work at each stop on foot with their tool in their hands: road crew (shovel), mechanic
+      and plumber (a wrench, kneeling), electrician (a screwdriver at the panel), construction and ranch
+      (a hammer), landscaper (a trimmer), lumberjack (a chainsaw), garbage (the bin lifted and tipped),
+      security (a flashlight, the other hand trying the door)
+- [x] Riders: a taxi fare waits at the curb, walks to the passenger door, opens it and gets in, and at the
+      drop-off gets out and walks off; bus riders get off and on at every shelter; a hurt patient gets up
+      off the curb and climbs into the ambulance, and out at the hospital
+- [x] Carjacking: the car stops, you yank the driver's door open and drag the driver out by the collar;
+      they stumble and run. Getting out of a car: you step out of the door's swing, turn and push it shut
+- [x] Pulled over for speeding: the officer walks up to your window, has a word, hands the ticket in
+      through it and you take it; they walk back to the cruiser. Hot-wiring: your hands under the dash
+- [x] Money changes hands: bribing an officer (they take it, or look at it and then at you), paying a
+      witness to keep quiet, getting mugged (hands up, the wallet held out, snatched), and at every
+      shop counter (you pay, the clerk hands you a bag; eat-in food comes over the counter and you eat it)
+- [x] Eating bite by bite (the food gets smaller), patching yourself up (a knee for a leg, round the arm,
+      against your side), skinning a kill on your knees with a knife, crouching to pick up a dropped gun,
+      a wave when you say hello, a fishing rod held in both hands with a real cast (back over the shoulder,
+      the bobber flies out) and the reel turned as you reel in, knocking on a locked door, kicking one in
+      (three kicks, the third bursts it), the hideout crew talking with their hands when you talk to them
+
+## Phase 1.66 — From watching the owner play: smooth roads, suspension, the big map
+
+- [x] Fixed (owner: "road is very bumpy"): a road is a chain of 8 m pieces, each a slab round its centre
+      line, and the ground under a car took the HIGHEST piece in reach; near every joint that was the
+      neighbouring piece's end height, so every sloping road was a staircase (a flat step, then a drop).
+      The surface is now the nearest piece's. Driving the highway the owner came down: hard jolts
+      413 → 0 in 40 s, lane points on the asphalt 66% → 99%
+- [x] Fixed: where a road is cut into a slope, the coarse terrain mesh (a vertex every 10.7 m on Low)
+      reached across the road from the bank and rose through the asphalt (up to 0.67 m on that highway);
+      past a road's edge the ground now climbs only as a gentle 8% bank for 22 m
+- [x] Suspension: the car body rides on springs (about 1.5 Hz, 12 cm each way); the wheels stay on the
+      ground and the camera rides with the body, so a kink in the ground is a soft dip, not a jolt
+- [x] Fixed (owner: "map does not work"): the full map and the big banner shared one name in the HUD, so
+      M (and the pause menu's and phone's map buttons) toggled the banner; the map opens again
+
+## Phase 1.65 — From watching the owner play: door hands, ammo by caliber, a shader fix
+
+- [x] Doors (owner: "add animation for opening doors"): walk into a building's door and you line up,
+      reach for the handle as it swings in, and step through; on the way out you reach for the handle
+      inside, step out, and it swings shut behind you; running into one is a shoulder into it (car
+      doors already had the walk-round, reach and open)
+- [x] Ammunition by caliber (owner: "every weapon shows what ammo it takes; different calibers you can
+      buy; max 500 of each, rockets 50, arrows 20"): 13 calibers (9mm, .357 Magnum, .38 Special,
+      4.6×30mm, 5.56 NATO, 7.62 NATO, 12 gauge, .308, .338 Lapua, .30-30, 84mm rockets, 40mm grenades,
+      arrows); every gun keeps its own magazine and shares its caliber's spares with the other guns that
+      take it; carry at most 500 of a caliber, 50 rockets or grenades, 20 arrows; boxes by caliber at the
+      gun store counter ("I need ammunition") and on each gun's page; old saves' per-gun spares join
+      their caliber
+- [x] What it takes, everywhere: the gun store (list and page: "Takes 5.56 NATO · you carry 120/500"),
+      the weapon wheel, the phone's Weapons tab, and U any time: a card with the gun, what it takes,
+      what's loaded, what you carry (with a bar), damage, range, where to buy more
+- [x] Fixed (seen live): every sprite with fog (gun smoke, cigarette smoke, muzzle flashes) failed to
+      compile its shader and logged an error each time: the fog's world position now comes from the
+      view-space position every shader has
+- [x] Fixed (found by QA): people caught under a collapsing building got NaN positions (the blast had no
+      origin)
+
+## Phase 1.64 — F16: destruction and rebuilding
+
+The owner: "everything has realistic destruction physics, and people come out to repair it; blow up a
+skyscraper and over seven game days the city realistically rebuilds it." (systems/destruction.js;
+houses and small shops keep demolition.js: they burn and go back up in a day and a half)
+- [x] Every bigger building (offices, towers, apartment blocks, warehouses) has a structure that can
+      take so much, by its size (a 90 m tower ~3,000): explosions hurt it, most at the base (a rocket
+      up near the top does a third as much); a blast scorches that wall, leaves a fire in that floor
+      and throws glass into the street; a weakened building groans and drops dust
+- [x] Demolition charges (hardware store, $650): plant one on any wall with F, it blinks, ten
+      seconds later it goes off (a real explosion: people, cars, props) and takes a big bite out of the
+      structure; on a house it starts the fire
+- [x] The collapse: the storeys give way from the bottom one after another and the rest drops onto
+      them, leaning as it falls (8-9 s for a 90 m tower); chunks of concrete and glass fly out and
+      bounce (600 pieces, one draw call); a dust cloud rolls out down the streets and settles; the
+      ground shakes and rumbles; anyone and any car underneath is crushed, the player hurt; people
+      for blocks run; the buildings next to it take damage (a house next door can catch fire); the
+      police come for whoever did it (3-4 stars); it makes the news
+- [x] What's left: a smoking pile of broken concrete with beams sticking out, behind concrete
+      barriers and police tape; you can climb on it
+- [x] The rebuild, by size (a tower the full 7 game days, a warehouse ~2): the rubble cleared, the pit
+      dug and the slab poured behind a site fence, a tower crane assembled at the corner, the concrete
+      frame rising floor by floor (slab, core and columns) under a mesh safety sleeve, the walls going
+      on a few floors behind, the crane turning with a load on the hook and climbing ahead of the
+      frame, then taken down; the building is back. Crews in hard hats work days. It's saved with
+      the game and carries on while you sleep
+- [x] QA: blast damage at the base vs the top, a planted charge, the collapse, the phases, the
+      rebuild finishing
+
+## Phase 1.63 — F15: real workplaces and careers
+
+The owner: "for the barbershop there's no building; you should go in, talk to the manager, buy something
+or work as a trainee and work your way up, and manage going to work so you don't get fired. Same for
+the bike messenger and every job." (systems/workplaces.js)
+- [x] An employer for every one of the 27 jobs and both barbershops: a company with a named manager
+      (dispatcher, foreman, captain, watch sergeant...). 15 work out of a real building you walk into
+      (a sign over the door; estate.js `claim` gives a building its own kind, hours, room size,
+      furniture and people); country employers have a site office (a trailer with a sign, placed off
+      the road); the hospital, fire station and precinct managers wait outside
+- [x] Offices inside: the manager's desk with the company sign behind it, a punch clock and card rack,
+      a roster board that shows your shifts this week, lockers, a bench, a water cooler, and the
+      company's own things (tyres, parcels, pizza boxes, a stretcher, coats and helmets, hard hats
+      and cones)
+- [x] The job board is the manager: ask for a job (you start at the bottom of that trade's ladder:
+      Trainee, Probie, Cadet, EMT trainee, Apprentice, Deckhand, Hand, Trainee pilot...), clock in, pick
+      up an extra shift, check your schedule, hand in your notice; a trial shift right after hiring
+- [x] Schedules: three shifts a week at set times, texted when you're hired, on the roster and the
+      phone; a text two hours before, the GPS set half an hour before
+- [x] Clock in up to 15 minutes late; later is a warning. A no-show is a warning (two in a row and
+      you're out). Walking off a shift or wrecking the company vehicle is a warning. Three warnings:
+      fired, and they won't talk to you for a week. Four good shifts in a row take a warning off.
+      Call in sick from the phone before a shift: once a week is fine, more is a warning (unless
+      you're really hurt)
+- [x] Promotions: enough good shifts at a rank with a clean record and you move up (pay up to
+      1.9x); the top rank adds a daily salary. Pilots need a licence to get past trainee
+- [x] The manager notices how you turn up: covered in blood ("go clean up"), wanted by the police
+      ("not today"; a police officer is suspended), a gun out, filthy, dead on your feet
+- [x] The barbershops are real shops: three red barber chairs facing mirrors, a counter of tonics,
+      combs in blue disinfectant and clippers, a shampoo sink, towels, a waiting bench with magazines,
+      a price list, a checkered floor, the till; the manager at the till, a barber cutting a seated
+      customer, people waiting; the pole moved out front, the name over the door. Mill Creek's barber
+      works out of a house
+- [x] Buy a cut or a shave, or products: pomade and aftershave (a sharp look tips better for days),
+      beard oil, a grooming kit (trim yourself at home or the hideout)
+- [x] Work there: a trainee sweeps up hair, shampoos at the sink, folds towels and makes change at the
+      till (get it wrong and it comes out of your pay); a barber cuts what the customer asks for (pick
+      the right cut from four; the wrong one is an angry customer and on the house), tips by rating;
+      walking out mid-shift is a warning. At the top, buy the shop: daily takings, work the chair
+      and keep it all
+- [x] The courier depot: pigeonholes of envelopes, bikes, bags on hooks, the day's runs on a
+      whiteboard; punch in, grab a bag, run envelopes between real office doors downtown (pick up at
+      one address, deliver to the next)
+- [x] The phone: a Work tab (each job, rank, next shift, warnings, progress to the next rank, call in
+      sick, GPS); the Jobs tab names the company and your rank
+- [x] QA: hiring, schedule, on time, walking off, late, fired on the third warning, two no-shows,
+      promotion and pay, blood at the door, calling in sick, a full barbershop trainee shift, the
+      wrong cut, walking out (747 → ~790 checks)
+
+## Phase 1.62 — G13: blood and injuries
+
+The owner: "there's no actual blood in the game; people should get realistic bruises, injuries".
+- [x] Wounds on bodies where they're actually hit (entities/woundfx.js): a bullet hole with the stain
+      spreading (4 to ~13 cm over 40 s) and blood running down the body while they bleed; a cut; a
+      bruise (skin only, purple going green-yellow as it heals); a scrape (cars, falls); a burn
+      (blasts); a bullet a vest stops leaves a bruise. Blood in cloth is a dark wet stain, on skin red
+- [x] No extra draw calls: a person's skin/clothes/shoes materials are copied the first time they're
+      hurt, with up to 8 wounds as uniforms in the bind pose (they stay on the same patch of skin as
+      the body moves); the copies are freed with the person
+- [x] Blood in the world (world/blood.js, 4 draw calls): spatter thrown behind someone shot (on the
+      ground, and on a wall right behind), pools spreading under the dead and the badly hurt, drip
+      trails behind the bleeding (people and you), smears where a car hit someone; fresh blood wet and
+      dark red, drying darker over minutes, thinned by rain
+- [x] The player: wounds on the side a shot came from (fists bruise, knives cut), a drip trail while
+      bleeding, healing over game days (bullet 6, cut 3, bruise 4, scrape 3, burn 8)
+- [x] Settings > Content > "Blood & gore" off: none of it
+- [x] Found while testing it: a body shot against a building fell into the wall (ragdolls only knew
+      the ground). Ragdolls now stop at walls (entities/ragdoll.js RAGDOLL_WALLS, collision.resolve);
+      pools sit under the hips, darker and with firm edges
+- [x] QA: wound where hit, spatter, own materials, bruise, spreading stain, a killing shot's wound and
+      pool, the player's wound and healing, gore off, materials freed
+
+## Phase 1.61 — Live feed: Claude watches along, and chat (Y)
+
+The owner: a live feed "no matter what it takes", so Claude can watch them play, spot errors and
+physical glitches, keep them company, and take their comments and ideas as they play.
+- [x] The game (watching on) posts an update every 2 s: position, height above the ground, which way
+      the player and the camera face, on foot or in what and how fast, the car's tilt, health, police,
+      money, weapon, who's near, frame rate, the game's messages; and a 480 px picture every 5 s
+- [x] api/sb-live.js: no storage needed (the warm function's memory; every request reached the same
+      instance in a 20-update test on the live site); a copy goes to the function log
+- [x] Y (or /) opens a box to message Claude; Claude's replies show at the top of the screen and are
+      sent again until the game has shown them
+- [x] tools/southbound/live.mjs: waits in a lobby (a secret only Claude has; its hash in the API) until
+      the owner starts, follows the feed, saves pictures, and prints a line for each thing worth a look
+      (messages, errors, deaths, police, vehicles, places, below/above the ground, a car on its roof or
+      side, crashes, sudden jumps, frame-rate drops, a summary every 90 s), for Monitor to wake Claude
+- [x] live-test.mjs: all local, end to end (updates, pictures, a note shown, a Y message received, the
+      lobby, a body under the ground caught)
+
+## Phase 1.60 — R1: reactions that fit the situation, and people take cover
+
+From watching the owner play: a mugger robbed them while they were speeding away in a car (he walked
+to where they'd got in, "reached" them and took the wallet six seconds later); and nobody took cover
+in a robbery. The owner wants a reaction ready for every combination of what the player is doing.
+- [x] `game.situation()` (systems/situation.js): one answer to "what is the player doing": where (the
+      car if in one), on foot or driving and how fast, indoors, cutscene/arrest, down, armed, wanted,
+      mission; `reachable` (someone on foot can walk up: on foot and not running, or a stopped car) and
+      `muggable` (outdoors, on foot, unarmed, not wanted, standing or walking)
+- [x] Muggers: only pick someone `muggable`; walk to where you really are; follow if you step back
+      (the clock waits); give up if you drive off, go inside, a scene starts or you're 40 m away
+      ("Damn it!"), now and then with a parting shot at the car; the wallet goes only if you're still
+      within reach (on foot, or at the window of a stopped car: "Window down. Wallet. Now.")
+- [x] Bystanders take cover: the far side of a parked car, a wall's corner or a tree (the police cover
+      finder), run there bent low, crouch and peek until it's over, then walk away from it; about 30% of
+      a crowd at gunfire, 60% when a gun is pointed (muggings, robberies, store hold-ups, shoot-outs)
+- [x] A robbery in the street brings the nearest officer on foot (95 m): runs to cover with the robber
+      in sight, "Police! Drop the weapon!"; the robber gives up (cuffed and taken away), runs, or shoots
+      it out (both from cover; people around get down)
+- [x] Store hold-ups: customers and passers-by get down; a victim only tips you if you were there
+- [x] Reports to Claude: the server log puts the timeline first and the samples on their own line
+- [x] QA: the owner's exact case (demand, get in, floor it: money kept), the situation flags, cover,
+      the officer answering a robbery
+
+## Phase 1.59 — "Let Claude watch me play" (errors, play reports, notes from Claude)
+
+The owner: "I want you to be able to see the latest error I hit, and also watch me play", so Claude can
+comment now and then, have a reference for what went wrong, and spot and fix things that look off.
+- [x] Settings > Display > "Let Claude watch me play" (or `?watch=1` once); off by default, so other
+      players send nothing; test browsers never send
+- [x] Errors sent straight away (uncaught errors, failed promises, console errors such as a person's AI
+      failing) with the stack, what you were doing, the last 30 game messages and a picture of the moment
+- [x] Every ~3 minutes of play: samples every 10 s (place, on foot/which car and speed, wanted level,
+      health, armour, money, weapon, mission, hour, weather, frame rate, CPU ms, draw calls), the
+      timeline (messages, getting in/out, places, police, deaths, frame-rate drops) and a 640 px screenshot;
+      sooner (45 s) after a death or a police chase
+- [x] The error box: "Claude has been sent this error" when watching, else a "Send to Claude" button
+- [x] Notes from Claude show up in the game as a card at the top ("Claude: ...")
+- [x] Server: `api/sb-watch.js` (private Vercel Blob store when connected; the function log, ~1 hour,
+      until then). Reader: `tools/southbound/watch.mjs` (list / new / show / say)
+- [x] The screenshot is copied right after the frame is drawn and encoded off the main thread
+      (createImageBitmap + convertToBlob), so it never holds up a frame; tested by
+      `tools/southbound/watch-test.mjs`
+- [x] Fix (the owner couldn't click it on the PC): menus always get the mouse back (a capture that
+      lands after the pause is released at once; no capture while a menu is up); the whole row of an
+      on/off setting flips it
+- [ ] Needs the owner: a private Blob store connected to the project (Claude's Vercel access can't
+      create one: 403)
+
 ## Phase 1.58a — Crash fix: hitchhikers dropped off in town
 
 The owner hit "Something went wrong" (TypeError reading '0' in the pedestrian AI). A roadside walker

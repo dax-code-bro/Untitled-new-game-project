@@ -60,9 +60,21 @@ export function installWounds(game) {
         use: () => {
           const has = ['bandage', 'dressing', 'gauze', 'ifak'].find((k) => P.med?.[k] > 0);
           if (!has) { hud.toast('You need a bandage or a dressing', 2); return; }
-          P.med[has]--; W.saved = true; W.bleedOut = 1e9; player.h.play('Interact', 0.2);
-          hud.toast('"Thank you... thank you. God bless you."', 2.5);
-          if (Math.random() < 0.6) career.earn(20 + ((Math.random() * 60) | 0), 'a grateful stranger');
+          P.med[has]--; W.saved = true; W.bleedOut = 1e9;
+          const thanks = () => { hud.toast('"Thank you... thank you. God bless you."', 2.5); if (Math.random() < 0.6) career.earn(20 + ((Math.random() * 60) | 0), 'a grateful stranger'); };
+          // (A2) down on a knee beside them, the bandage wound round where they're hit
+          const A = game.acts;
+          if (A && !S.doorWalk) {
+            const at = p.pos, sx = player.pos.x - at.x, sz = player.pos.z - at.z, sl = Math.hypot(sx, sz) || 1;
+            const kneel = { x: at.x + (sx / sl) * 0.7, z: at.z + (sz / sl) * 0.7 }, roll = A.prop('bandage');
+            const run = A.play([{ walk: kneel, speed: 1.4, max: 2, face: at }, { t: 2.8, pose: 'crouch', start: (ctx) => A.hold(ctx, roll), ik: (F, k, ctx, P) => {
+              const c = new (at.constructor)(at.x, at.y + 0.28, at.z), a = k * Math.PI * 8;
+              const h = c.clone().addScaledVector(F.right, Math.cos(a) * 0.1).addScaledVector(F.fw, Math.sin(a) * 0.06);
+              P.reach(P.R, h, F, 'R'); P.attachToHand(roll, P.R); P.reach(P.L, c.clone().addScaledVector(F.right, -0.14), F, 'L');
+            } }, { t: 0.3, pose: 'idle', start: (ctx) => { ctx.held = null; roll.parent?.remove(roll); } }], { done: thanks });
+            if (run) return;
+          }
+          player.h.play('Interact', 0.2); thanks();
         } });
     }
   };

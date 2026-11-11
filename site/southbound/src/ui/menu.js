@@ -153,6 +153,7 @@ const SCHEMA = {
   Display: [
     { key: 'units', label: 'Speed units', type: 'select', options: [['mph', 'MPH'], ['kmh', 'KM/H']] },
     { key: 'showFps', label: 'Show FPS counter', type: 'toggle' },
+    { key: 'claudeWatch', label: 'Let Claude watch me play', hint: 'Sends errors straight away, and every few minutes what you\'re doing with a small screenshot, to this game\'s own server so Claude can see bugs, fix them and leave you notes. Off: nothing is sent', type: 'toggle' },
     { key: 'hudScale', label: 'HUD size', type: 'range', min: 0.7, max: 1.5, step: 0.05 },
     { key: 'timeScale', label: 'Day speed', hint: '1 = a game day lasts 48 minutes', type: 'range', min: 0, max: 10, step: 0.25 },
   ],
@@ -191,6 +192,8 @@ export function setupSettingsPanel(settings, onChange) {
         b.className = 'toggle' + (settings[it.key] ? ' on' : '');
         b.onclick = () => { set(!settings[it.key]); b.classList.toggle('on', settings[it.key]); };
         val.appendChild(b);
+        row.style.cursor = 'pointer'; // the whole row flips it, not just the small switch
+        row.addEventListener('click', (e) => { if (!b.contains(e.target)) b.click(); });
       } else {
         const r = document.createElement('input');
         r.type = 'range'; r.min = it.min; r.max = it.max; r.step = it.step; r.value = settings[it.key];
@@ -204,7 +207,7 @@ export function setupSettingsPanel(settings, onChange) {
   };
   $('#restart').onclick = () => { location.reload(); };
   return {
-    open() { render(); $('#settings').classList.add('show'); },
+    open() { render(); $('#settings').classList.add('show'); if (document.pointerLockElement) document.exitPointerLock(); }, // the mouse belongs to the menu
     close() { $('#settings').classList.remove('show'); },
   };
 }

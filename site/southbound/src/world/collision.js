@@ -91,27 +91,34 @@ export class CollisionWorld {
   }
 
   // Ground height under (x,z) for something currently at height y.
+  // A road is a chain of short pieces, each a slab round its centre line; near a joint a point is inside
+  // the next piece's slab too, at that piece's END height. Taking the highest of them turned every
+  // sloping road into a staircase (a flat step for the first metres of each 8 m piece, then a drop: "the
+  // road is very bumpy"), so the road surface here is the NEAREST piece's (of those not overhead).
   surface(x, z, y) {
     const pv = this.paved(x, z);
     let h = pv !== null ? pv : this.terrainY(x, z);
+    let rib = null, ribD = Infinity, deck = null, deckD = Infinity;
     this.query(x, z, 1, (it) => {
       if (it.t === 3) {
         if (pv !== null) return;
         const r = distToSeg(x, z, it.ax, it.az, it.bx, it.bz);
-        if (r.d < it.hw) {
+        if (r.d < it.hw && r.d < ribD) {
           const dy = lerp(it.ya, it.yb, r.t) + 0.1;
-          if (dy > h && dy < y + 1.0) h = dy;
+          if (dy < y + 1.0) { rib = dy; ribD = r.d; }
         }
       } else if (it.t === 2) {
         const r = distToSeg(x, z, it.ax, it.az, it.bx, it.bz);
-        if (r.d < it.hw) {
+        if (r.d < it.hw && r.d < deckD) {
           const dy = lerp(it.ya, it.yb, r.t) + 0.1;
-          if (dy > h && dy < y + 1.6) h = dy;
+          if (dy < y + 1.6) { deck = dy; deckD = r.d; }
         }
       } else if (it.t === 0) {
         if (x > it.minX && x < it.maxX && z > it.minZ && z < it.maxZ && it.y1 < y + 0.6 && it.y1 > h) h = it.y1;
       }
     });
+    if (rib !== null && rib > h) h = rib;
+    if (deck !== null && deck > h) h = deck;
     return h;
   }
 

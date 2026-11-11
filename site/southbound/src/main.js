@@ -14,6 +14,10 @@ import { setWorld as setSubstrateWorld, describe as describeSubstrate, SUBSTRATE
 import { createFooting } from './systems/footing.js';
 import { setupMenu, setupSettingsPanel } from './ui/menu.js';
 import { installRecovery } from './ui/recovery.js';
+import { installWatch } from './core/watch.js';
+import { installSituation } from './systems/situation.js';
+import { installGore } from './systems/gore.js';
+import { RAGDOLL_WALLS } from './entities/ragdoll.js';
 import { buildRoadGraph, CITY, TOWN, regionAt } from './world/layout.js';
 import { Heightmap } from './world/heightmap.js';
 import { createTerrain, makeWorldTextures, worldUniforms } from './world/terrain.js';
@@ -28,7 +32,7 @@ import { CollisionWorld } from './world/collision.js';
 import { Player } from './entities/player.js';
 import { Vehicle, initCarWarmup, warmCars, carsWarming } from './entities/vehicle.js';
 import { specOf } from './assets/carbuilder.js';
-import { locomotion } from './entities/human.js';
+import { locomotion, Human } from './entities/human.js';
 import { Traffic } from './entities/traffic.js';
 import { Peds } from './entities/peds.js';
 import { Combat, WEAPONS } from './entities/combat.js';
@@ -54,6 +58,7 @@ import { buildStreetClutter } from './world/streetclutter.js';
 import { buildShoulders, buildFootings } from './world/shoulders.js';
 import { createHoles } from './world/holes.js';
 import { installDemolition } from './systems/demolition.js';
+import { installDestruction } from './systems/destruction.js';
 import { installWounds } from './systems/wounds.js';
 import { installStreetCrime } from './systems/streetcrime.js';
 import { installAuction } from './systems/auction.js';
@@ -64,7 +69,7 @@ import { installRobbery } from './systems/robbery.js';
 import { installStreetLife } from './systems/streetlife.js';
 import { installWorldEvents } from './systems/world-events.js';
 import { installDetails } from './systems/details.js';
-import { buildWeaponModel, applyFinish, gunModelFor } from './entities/arsenal.js';
+import { buildWeaponModel, applyFinish, gunModelFor, ammoCap } from './entities/arsenal.js';
 import { kitSignature } from './entities/gunkit.js';
 import { vehiclesOverlap } from './world/collision.js';
 import { LAND } from './assets/catalog.js';
@@ -404,13 +409,14 @@ vec3 CustomToneMapping( vec3 color ) {
   if (!profile.cash50k) { if (profile.money < 50000) profile.money = 50000; profile.cash50k = 1; }
   S.money = profile.money;
   if (profile.weapons.owned) { for (const id of profile.weapons.owned) combat.give(id); Object.assign(combat.ammo, profile.weapons.ammo || {}); }
+  if (profile.weapons.rounds) for (const [cal, n] of Object.entries(profile.weapons.rounds)) combat.rounds[cal] = Math.max(0, Math.min(ammoCap(cal), n)); // spare ammo by caliber
   const career = new Career(profile, {
     getMoney: () => S.money, setMoney: (n) => { S.money = Math.max(0, Math.round(n)); }, toast: (m, t) => hud.toast(m, t),
     snapshot: (p) => {
       p.money = S.money; p.hour = sky.hour; p.day = sky.day; p.weather = weather.kind;
       // where you'll come back: only moves while you're safe (systems/saves.js), never mid-fight
       if (S.safeSpot !== false) { const at = S.mode === 'car' && S.vehicle ? S.vehicle.pos : player.pos; p.pos = [+at.x.toFixed(1), +at.z.toFixed(1)]; }
-      p.weapons = { ...p.weapons, owned: combat.owned.slice(), ammo: combat.ammo }; // keep counts and finishes
+      p.weapons = { ...p.weapons, owned: combat.owned.slice(), ammo: combat.ammo, rounds: { ...combat.rounds } }; // keep counts and finishes; spare ammo by caliber
     },
   });
   sky.hour = profile.hour; sky.day = profile.day;
@@ -490,6 +496,7 @@ vec3 CustomToneMapping( vec3 color ) {
     if (S.mode === 'car') { damageVehicle(S.vehicle, amount * 0.6, from ? from.x : S.vehicle.pos.x, from ? from.z : S.vehicle.pos.z + 1); player.damage(amount * 0.35); }
     else player.damage(amount);
     S.dmgFlash = Math.min(1, S.dmgFlash + 0.35);
+    game.onPlayerHurt?.(amount, from, pen); // a wound where it came from (systems/gore.js)
   };
   police.onPlayerHit = (amount, from, pen) => hurtPlayer(amount, from, pen);
   const respawn = (at, title, sub, fee) => {
@@ -515,6 +522,7 @@ vec3 CustomToneMapping( vec3 color ) {
     if (S.mode === 'foot' && player.pos.distanceTo(pt) < 6) hurtPlayer(dmg * (1 - player.pos.distanceTo(pt) / 6) * 0.5, pt);
     else if (S.mode === 'car' && S.vehicle.pos.distanceTo(pt) < 7) hurtPlayer(dmg * 0.4, pt);
   };
+  game.explodeAt = explodeAt; // (demolition charges: systems/destruction.js)
   police.onShell = (pt) => explodeAt(pt, 180);
   const law = installLaw({ ...game, hurtPlayer, PRECINCT, Vehicle: game.Vehicle || Vehicle, gunPose, audio, wheelOpen: () => wheel.open, explodeAt,
     tracer: (a, b) => combat.tracer(a, b), get rig() { return rig; } });
@@ -633,10 +641,15 @@ vec3 CustomToneMapping( vec3 color ) {
   game.scanner = scanner;
   game.refreshHitStatics = () => { hitStatics.length = 0; scene.traverse((o) => { if (o.userData.hitStatic) hitStatics.push(o); }); };
   installStreetLife(game);
+  game.situationSys = installSituation(game); // what you're doing right now, for everyone who reacts to you (R1)
+  peds.findCover = (p, from) => police.findCover(p, { pos: from }); // bystanders duck behind the same cover the police use
   const worldEvents = installWorldEvents(game);
+  game.gore = installGore(game); // blood on the ground, wounds on bodies (G13)
+  RAGDOLL_WALLS.fn = (x, z, r, y) => collision.resolve(x, z, r, y, 0.35); // bodies stop at walls
   game.worldEvents = worldEvents;
   game.audio = audio;
   const demolition = installDemolition(game); // houses burn, the fire department comes, builders rebuild
+  game.destructionSys = installDestruction(game); // bigger buildings come down; the city rebuilds them over up to a week (F16)
   game.nearestRoadPoint = (x, z) => { const r = nearestRoad(x, z); if (!r) return null; const p = {}; traffic.sampleEdge(r.e, r.s, p); return p; };
   const details = installDetails(game);
   game.onCarExploded = (v) => { peds.panic(v.pos, 50); if (witnesses(v.pos, 60) || police.nearPolice(80)) police.crime(v.type === 'police' ? 'copKill' : 'kill'); };
@@ -668,7 +681,7 @@ vec3 CustomToneMapping( vec3 color ) {
       peds.spawnAt(v.pos.x + sx * 2.2, v.pos.z + sz * 2.2, player.pos);
       if (witnesses(v.pos, 30) || police.nearPolice(60)) police.crime('carjack');
     } else {
-      parked.splice(parked.indexOf(v), 1);
+      const pi = parked.indexOf(v); if (pi >= 0) parked.splice(pi, 1);
       // a parked car that isn't yours: that's car theft if anyone sees it
       if (!v.uid && !v.issued && !v.taken && !v.isAir && !v.isBoat) {
         v.taken = true; v.stolenNow = true;
@@ -688,13 +701,35 @@ vec3 CustomToneMapping( vec3 color ) {
   }
   // walk round to the driver's door, open it, climb in (parked cars)
   function beginEnter(v, fromTraffic) {
-    if (fromTraffic || v.isBoat || v.isAir) return enterVehicle(v, fromTraffic);
+    if (v.isBoat || v.isAir) {
+      if (game.acts && !fromTraffic && S.mode === 'foot' && !S.doorWalk) { // (A2) over to it and aboard
+        const side = new THREE.Vector3(Math.cos(v.heading), 0, -Math.sin(v.heading)), s = Math.sign(side.x * (player.pos.x - v.pos.x) + side.z * (player.pos.z - v.pos.z)) || 1;
+        const beats = v.isAir ? [{ walk: { x: v.pos.x + side.x * s * 1.7, z: v.pos.z + side.z * s * 1.7 }, face: v.pos, max: 3.5 }, { t: 0.8, clip: 'Interact', speed: 1.1 }]
+          : [{ face: v.pos, t: 0.3 }, { t: 0.45, pose: 'crouch' }];
+        if (game.acts.play(beats, { done: (ok) => { if (ok && S.mode === 'foot' && S.dead <= 0) enterVehicle(v); } })) return;
+      }
+      return enterVehicle(v, fromTraffic);
+    }
+    // a carjacking (A2): the car stops, you yank the driver's door open and drag them out by the collar
+    let jack = null;
+    if (fromTraffic) {
+      if (Math.abs(fromTraffic.speed) > 3.5 || !v.cabLayout) return enterVehicle(v, fromTraffic); // (still rolling: you swing in)
+      traffic.release(fromTraffic); v.vel.set(0, 0); v.speed = 0; parked.push(v);
+      const h = new Human(lib, lib.peopleIds[(Math.random() * lib.peopleIds.length) | 0]); scene.add(h.root); h.play('Driving_Loop', 0); v.seat(h, 0);
+      jack = { h, seat: h.root.position.clone() };
+      v.taken = true; // (not a second "theft" when you get in)
+      if (witnesses(v.pos, 30) || police.nearPolice(60)) police.crime('carjack');
+    }
     const left = new THREE.Vector3(Math.cos(v.heading), 0, -Math.sin(v.heading)), fwd = new THREE.Vector3(Math.sin(v.heading), 0, Math.cos(v.heading));
     const at = v.pos.clone().addScaledVector(left, v.spec.width / 2 + 0.55).addScaledVector(fwd, (v.spec.wf || 1.3) * 0.2);
     combat.holstered = true;
-    S.entering = { v, t: 0, phase: 0, at, door: v.door ? v.door('door-drv') : v.group.getObjectByName('door-drv') };
+    S.entering = { v, t: 0, phase: 0, at, jack, left, door: v.door ? v.door('door-drv') : v.group.getObjectByName('door-drv') };
     game.onDoorOpen?.(v);
   }
+  // (A2) for systems that hand you a vehicle (a job's van): you walk round to the driver's door and get in
+  game.walkIntoVehicle = (v) => { if (S.mode !== 'foot' || S.entering || S.doorWalk || S.dead > 0 || v.isBoat || v.isAir || !v.cabLayout) return false; beginEnter(v, null); return true; };
+  // stop walking to a car (a teleport, a shift quit before you got in); a carjack can't be called off
+  game.cancelEnter = () => { const e = S.entering; if (!e || e.jack) return; S.entering = null; if (e.door) S.doorClose = { door: e.door, t: 0 }; player.h.locked = 0; };
   function updateEnter(dt) {
     const e = S.entering, v = e.v;
     e.t += dt;
@@ -707,17 +742,31 @@ vec3 CustomToneMapping( vec3 color ) {
         player.pos.addScaledVector(d.normalize(), sp * dt);
         player.pos.y = collision.surface(player.pos.x, player.pos.z, player.pos.y + 0.5);
         const [clip, k] = locomotion(sp); player.h.play(clip, 0.2, k);
-      } else { e.phase = 1; e.t = 0; player.h.play('Interact', 0.1, 1.5, true); }
+      } else { e.phase = 1; e.t = 0; player.h.play('Interact', 0.1, e.jack ? 2.2 : 1.5, true); }
     } else if (e.phase === 1) {
       player.heading += wrapAngle(v.heading - Math.PI / 2 - player.heading) * Math.min(1, dt * 10); // face the door
-      if (e.door) e.door.rotation.y = e.door.userData.open * Math.min(1, e.t / 0.45);
-      if (e.t > 0.6) { e.phase = 2; S.entering = null; if (e.door) S.doorClose = { door: e.door, t: 0 }; enterVehicle(v, null); return; }
+      if (e.door) e.door.rotation.y = e.door.userData.open * Math.min(1, e.t / (e.jack ? 0.2 : 0.45));
+      if (e.jack && e.t > 0.3) { e.phase = 3; e.t = 0; player.h.play('Punch_Cross', 0.08, 0.9, true); e.jack.h.play('Hit_Chest', 0.1, 0.6, true); e.jack.out = e.at.clone().addScaledVector(e.left, 1.0).addScaledVector(new THREE.Vector3(Math.sin(v.heading), 0, Math.cos(v.heading)), 0.9); }
+      else if (!e.jack && e.t > 0.6) { e.phase = 2; S.entering = null; if (e.door) S.doorClose = { door: e.door, t: 0 }; enterVehicle(v, null); return; }
+    } else if (e.phase === 3) {
+      // the driver comes out by the collar, stumbles and runs
+      const J = e.jack, k = Math.min(1, e.t / 0.75), ke = k * k * (3 - 2 * k);
+      J.h.root.position.lerpVectors(J.seat, J.out, ke); J.h.root.position.y = J.seat.y + (collision.surface(J.out.x, J.out.z, v.pos.y + 1) - J.seat.y) * ke;
+      J.h.root.rotation.set(0, v.heading + Math.PI / 2 + ke * 0.9, 0);
+      J.h.update(dt);
+      if (e.t > 0.9) {
+        scene.remove(J.h.root); J.h.dispose?.();
+        const p = peds.spawnAt(J.out.x, J.out.z, player.pos); if (p) { p.mode = 'flee'; p.threat = player.pos.clone(); p.timer = 12; }
+        e.jack = null; e.phase = 1; e.t = 0.31; // (and climb in)
+        S.entering = null; if (e.door) S.doorClose = { door: e.door, t: -0.1 }; enterVehicle(v, null); return;
+      }
     }
     player.h.update(dt);
     player.h.root.position.copy(player.pos); player.h.root.rotation.y = player.heading;
   }
   function exitVehicle() {
     const v = S.vehicle;
+    let stepOut = null;
     const sx = Math.cos(v.heading), sz = -Math.sin(v.heading);
     let x = v.pos.x + sx * (v.spec.width / 2 + 0.9), z = v.pos.z + sz * (v.spec.width / 2 + 0.9);
     const ep = v.exitPoint ? v.exitPoint(hm) : null;
@@ -729,10 +778,24 @@ vec3 CustomToneMapping( vec3 color ) {
     player.h.root.rotation.set(0, v.heading, 0); player.h.root.position.copy(player.pos);
     player.h.play('Idle_Loop', 0.2, 1, true);
     v.vel.set(0, 0); v.speed = 0;
-    { const door = v.group.getObjectByName('door-drv'); if (door) { door.rotation.y = door.userData.open; S.doorClose = { door, t: -0.35 }; } }
+    const door = v.group.getObjectByName('door-drv');
+    if (door) { door.rotation.y = door.userData.open; S.doorClose = { door, t: -0.35 }; }
+    // (A2) step out of the door's swing, turn, and push it shut behind you
+    if (door && !ep && game.acts && !v.isAir && !v.isBoat) {
+      S.doorClose = { door, t: -99 };
+      const left = new THREE.Vector3(sx, 0, sz), fwd = new THREE.Vector3(Math.sin(v.heading), 0, Math.cos(v.heading));
+      player.pos.copy(v.pos).addScaledVector(left, v.spec.width / 2 + 0.45).addScaledVector(fwd, (v.spec.wf || 1.3) * 0.2 - 0.25); player.pos.y = collision.surface(player.pos.x, player.pos.z, v.pos.y + 1);
+      const out = player.pos.clone().addScaledVector(left, 0.35).addScaledVector(fwd, -0.75);
+      stepOut = () => game.acts.play([
+        { walk: { x: out.x, z: out.z }, speed: 1.3, max: 0.9 },
+        { face: { x: v.pos.x, z: v.pos.z }, t: 0.25 },
+        { clip: 'Interact', speed: 2.0, t: 0.55, start: () => { S.doorClose = { door, t: -0.12 }; } },
+      ], { done: () => { if (S.doorClose?.t < -50) S.doorClose = { door, t: 0 }; } });
+    }
     parked.push(v);
     S.lastVehicle = v;
     S.mode = 'foot'; S.vehicle = null;
+    if (stepOut && !stepOut()) S.doorClose = { door, t: 0 }; // (on foot now: out of the door's swing; or it just shuts)
   }
 
   function frame(now) {
@@ -748,6 +811,7 @@ vec3 CustomToneMapping( vec3 color ) {
     tick(Math.min(dt, 0.05));
     // how long the game's own code took this frame (simulation + handing the frame to the GPU)
     S.cpuMs = (S.cpuMs || 0) * 0.9 + (performance.now() - t0) * 0.1;
+    game.watch?.update(Math.min(dt, 0.25), S.paused);
   }
 
   function tick(dt) {
@@ -812,6 +876,9 @@ vec3 CustomToneMapping( vec3 color ) {
     } else if (S.entering) {
       updateEnter(dt);
       focus.copy(player.pos);
+    } else if (S.doorWalk) {
+      // your hands on a building's door (systems/estate.js): reach, push, step through
+      if (S.mode !== 'foot' || S.dead > 0) { S.doorWalk.cancel?.(); S.doorWalk = null; } else { S.doorWalk.update(dt); focus.copy(player.pos); }
     } else if (S.mode === 'foot') {
       needs.update(dt, a);
       if (S.limp) { a.sprint = false; if (a.moveX) a.moveX *= 0.5; if (a.moveY) a.moveY *= 0.5; }
@@ -967,6 +1034,7 @@ vec3 CustomToneMapping( vec3 color ) {
       if (v.cabLayout && player.char.root.visible) {
         v.seat(player.h, 0); player.h.update(dt);
         v.updateCabin(dt); v.handsOnWheel(gunPose);
+        if (S.carReach) { try { S.carReach(gunPose, v); } catch (e) { S.carReach = null; } } // a hand out of the window (a ticket: A2)
       }
       if (v.impact > 4) rig.shake = Math.min(1, v.impact / 15);
       if (v.impact > 4 && !v._hitLatch) { v._hitLatch = true; const f = v.forward ? v.forward() : { x: 0, z: 1 }, dir = (v.speed || 0) >= 0 ? 1 : -1; damageVehicle(v, (v.impact - 3) * 2.2, v.pos.x + f.x * 3 * dir, v.pos.z + f.z * 3 * dir); }
@@ -975,7 +1043,7 @@ vec3 CustomToneMapping( vec3 color ) {
       if (a.enter && (Math.abs(v.speed) < 6 || v.isAir)) exitVehicle();
       else if (a.enter) prompt = 'Slow down to get out';
       if (v.drowned) prompt = 'The engine is flooded — press F to get out';
-      focus.copy(v.pos);
+      focus.copy(v.pos); focus.y += v.sy || 0; // the camera rides with the body on its springs
     }
     for (const p of parked) { p.night = p.lightsOn ? sky.night : 0; p.sync(dt); } // parked: engine off, lights off
     // vehicle level of detail: a car is ~100k triangles; past a few hundred metres it is a few pixels
@@ -1002,6 +1070,7 @@ vec3 CustomToneMapping( vec3 color ) {
       const ip = interact.update(dt, focus, S.mode === 'car', S.mode === 'foot' && a.enter && !prompt, S.vehicle ? S.vehicle.speed : 0);
       if (!prompt) prompt = ip;
     }
+    game.situationSys.update(dt);
     const sp = systems.update(dt, a, !prompt && !interact.consumed && S.mode === 'foot' && !S.dead);
     if (!prompt && sp) prompt = sp;
     const lp = law.update(dt, a);
@@ -1010,6 +1079,8 @@ vec3 CustomToneMapping( vec3 color ) {
     if (rp && !prompt) prompt = rp;
     const gp = gang.update(dt, a);
     if (gp && !prompt) prompt = gp;
+    const dpp = game.destructionSys?.update(dt, a, !prompt && !interact.consumed && S.mode === 'foot' && !S.dead);
+    if (dpp && !prompt) prompt = dpp;
     gunStores.update(dt);
     shops.update(dt);
     billboards.update(sky.hour);
@@ -1024,6 +1095,7 @@ vec3 CustomToneMapping( vec3 color ) {
     demolition.update(dt);
     wayfinding.update(dt);
     worldEvents.update(dt);
+    game.gore.update(dt);
     details.update(dt);
     career.update(dt);
     if (S.vehicle && S.vehicle.health <= 0 && !S.vehicle.wrecked) { S.vehicle.wrecked = true; hud.toast('The engine is wrecked — get out (F)', 4); }
@@ -1067,7 +1139,7 @@ vec3 CustomToneMapping( vec3 color ) {
     // looking through a scope: first-person, magnified, the body hidden
     const scoped = S.mode === 'foot' && player.aiming && armed && (combat.def.scope || 0) >= 2 && S.dead <= 0;
     if (scoped && a.sprint && (S.breath ?? 4) > 0) { S.breath = (S.breath ?? 4) - dt; S.steady = Math.min(1, (S.steady || 0) + dt * 4); } else { S.breath = Math.min(4, (S.breath ?? 4) + dt * 0.8); S.steady = Math.max(0, (S.steady || 0) - dt * 2); }
-    if (scoped !== !!S.scoped) { S.scoped = scoped; document.body.classList.toggle('scoped', scoped); player.h.model.visible = !scoped; if (scoped) hud.toast('Hold Shift to hold your breath', 1.6); }
+    if (scoped !== !!S.scoped) { S.scoped = scoped; document.body.classList.toggle('scoped', scoped); player.h.model.visible = !scoped; if (scoped && (S.breathHints = (S.breathHints || 0) + 1) <= 2) hud.toast('Hold Shift to hold your breath', 1.6); } // (a hint, twice a session: it showed every time you aimed)
     if (scoped) for (const m of Object.values(combat.models)) m.visible = false;
     rig.update(dt, a, focus, { vehicle: S.vehicle, cabEye: S.vehicle?.cabLayout && player.char.root.visible ? S.vehicle.eyeWorld(_cabEye) : null, cabQ: S.vehicle?.group.quaternion, heading: S.vehicle?.heading, speed: S.vehicle?.speed || 0, lastLook: input.lastLookTime, aiming: S.mode === 'foot' && player.aiming && armed, eye: S.mode === 'foot' && player.char.root.visible ? getEye() : null, scope: scoped ? combat.def.scope : 0, steady: Math.max(S.steady || 0, game.buffs?.steady > 0 ? 0.55 : 0) }, collision);
 
@@ -1245,6 +1317,7 @@ vec3 CustomToneMapping( vec3 color ) {
     renderer.info.reset();
     water.renderReflection(scene, camera);
     if (post) post.render(1 / 60); else renderer.render(scene, camera);
+    if (game.watch?.wantsShot) game.watch.grab(renderer.domElement); // "Claude is watching": a picture of this frame, taken while it's still there
     stats.drawCalls = renderer.info.render.calls;  // all passes this frame
     stats.tris = renderer.info.render.triangles;
   }
@@ -1389,6 +1462,8 @@ vec3 CustomToneMapping( vec3 color ) {
     setOverride(o) { S.override = o; },
     teleport(x, z, heading = 0) {
       if (S.indoors && game.estate) game.estate.leave(); // never carry the indoor state across a teleport
+      if (S.doorWalk) { S.doorWalk.cancel?.(); S.doorWalk = null; } // (or a little scene: systems/acts.js)
+      game.cancelEnter?.(); // (or on the way to a car's door)
       const y = collision.surface(x, z, 500);
       if (S.mode === 'car') { S.vehicle.pos.set(x, y, z); S.vehicle.heading = heading; S.vehicle.vel.set(0, 0); }
       else { player.pos.set(x, y, z); player.heading = heading; }
@@ -1469,6 +1544,24 @@ vec3 CustomToneMapping( vec3 color ) {
   game.Vehicle = Vehicle;
   api.trace = (ox, oy, oz, dx, dy, dz, far = 200) => { const t = combat.trace(new THREE.Vector3(ox, oy, oz), new THREE.Vector3(dx, dy, dz).normalize(), far, { peds, vehicles: [...traffic.cars.map((c) => c.v), ...police.cars.map((c) => c.v), ...parked], animals: game.hunting ? game.hunting.list : [], statics: hitStatics }); return { kind: t.kind, t: +t.t.toFixed(3), head: !!t.head }; };
   window.SB = api;
+
+  // "Let Claude watch me play" (Settings > Display; off unless the player turns it on): errors and a
+  // few-minutely report of what's going on, with a small screenshot, to the game's own server
+  game.watch = window.__sbWatch = installWatch({ settings, saveSettings, hud, automated: AUTOMATED, pause: game.pause, isFrozen: () => !!S.frozen, getState: () => {
+    const run = game.missions?.active;
+    // for spotting physical errors on the live feed: how far above the ground, which way you and the
+    // camera face, whether the car is on its roof, who's around
+    const v = S.vehicle, at = v ? v.pos : player.pos;
+    const ground = S.indoors ? null : +collision.surface(at.x, at.z, at.y + 1.5).toFixed(2);
+    let near = 0, cops = 0; for (const q of peds.list) { if (q.mode === 'dead') continue; const d = Math.hypot(q.pos.x - at.x, q.pos.z - at.z); if (d < 30) near++; if (q.role === 'cop' && d < 80) cops++; }
+    const cars = traffic.cars.filter((c) => Math.hypot(c.v.pos.x - at.x, c.v.pos.z - at.z) < 50).length;
+    const live = { y: +at.y.toFixed(2), ground, yaw: +((v ? v.heading : player.heading) || 0).toFixed(2), cam: [+rig.yaw.toFixed(2), +rig.pitch.toFixed(2)],
+      up: v ? +v.group.matrixWorld.elements[5].toFixed(2) : null, near: { people: near, cops, cars, copCars: police.cars.length } };
+    return { ...api.state, vehicle: S.vehicle ? S.vehicle.type : null, wanted: police.wanted, health: Math.round(player.health), armor: Math.round(player.armor || 0),
+      money: Math.round(S.money), weapon: combat.drawn ? combat.weapon : null, indoors: !!S.indoors, dead: S.dead > 0 && !S.cutscene, cutscene: !!S.cutscene, paused: !!S.paused, /* (cutscenes and arrests hold the death timer to freeze your controls) */
+      mission: run ? (run.m?.title || run.m?.name || run.m?.id || '?') : null, weather: weather.kind, day: sky.day, cpuMs: +(S.cpuMs || 0).toFixed(1), gpu: GPU_NAME, idleCard: CARD, res: settings.resolution, drawing: [renderer.domElement.width, renderer.domElement.height], ...live };
+  } });
+  addEventListener('pagehide', () => game.watch.flush());
   // a saved game: back within 20 m of where you saved, in the middle of something ordinary
   // (after the test API exists: game.teleport goes through it)
   if (profile.saved && Array.isArray(profile.pos) && profile.story?.prologue) game.arrival?.arrive();

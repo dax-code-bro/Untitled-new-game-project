@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { clamp } from '../util.js';
 
-import { WEAPONS, buildWeaponModel, gunModelFor, gunRel, applyFinish } from './arsenal.js';
+import { WEAPONS, buildWeaponModel, gunModelFor, gunRel, applyFinish, ammoCap } from './arsenal.js';
 import { loaded, Q } from '../assets/open.js';
 import { raycastObjects, raycastStatic } from '../core/hits.js';
 import { HOLE } from '../world/holes.js';
@@ -63,7 +63,21 @@ export class Combat {
   constructor(scene, hm, collision, settings, audio) {
     this.scene = scene; this.hm = hm; this.collision = collision; this.settings = settings; this.audio = audio;
     this.owned = [];
-    this.ammo = {};
+    // Spare ammunition is kept by caliber (this.rounds), shared by every gun that takes it; each gun
+    // keeps its own loaded magazine. ammo[id].reserve reads and writes the caliber's pool (capped:
+    // 500, rockets/grenades 50, arrows 20), so every place that adds or takes spares works unchanged.
+    this.rounds = {};
+    const self = this;
+    const entry = (id, v) => {
+      const w = WEAPONS[id];
+      if (!w || w.melee || !v || typeof v !== 'object') return v;
+      const cal = w.caliber || id, e = { clip: Math.max(0, v.clip ?? w.clip) };
+      Object.defineProperty(e, 'reserve', { enumerable: false, get: () => self.rounds[cal] || 0, set: (n) => { self.rounds[cal] = Math.max(0, Math.min(ammoCap(cal), Math.round(n) || 0)); } });
+      const old = Object.getOwnPropertyDescriptor(v, 'reserve');
+      if (old && !old.get && typeof v.reserve === 'number') e.reserve = Math.max(e.reserve, v.reserve); // (an older save: its spares join the pool)
+      return e;
+    };
+    this.ammo = new Proxy({}, { set(t, k, v) { t[k] = entry(k, v); return true; } });
     for (const id of STARTER) this.give(id);
     this.weapon = 'fists';
     this.ammoType = {}; // weapon id -> AMMO key

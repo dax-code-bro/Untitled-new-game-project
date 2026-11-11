@@ -63,11 +63,21 @@ function hook(game) {
     spots.push({ x, z });
     interact.add({ x, z, r: 2.2, color: 0x80c8ff, blip: { color: '#80c8ff', size: 4, global: true, icon: '🧺', badge: 'S' }, show: () => S.mode === 'foot' && !S.indoors,
       label: () => `${keyHint(game)} ${name}: wash your clothes ($8, half an hour)${G.dirt + G.blood < 0.05 ? ' · already clean' : ''}`,
-      use: () => { if (G.dirt + G.blood < 0.05) return; if (!career.spend(8)) return; sky.hour += 0.5; if (sky.hour >= 24) { sky.hour -= 24; sky.day++; } clean('Washed and dried. Like new.'); } });
+      use: () => {
+        if (G.dirt + G.blood < 0.05) return; if (!career.spend(8)) return;
+        const done = () => { sky.hour += 0.5; if (sky.hour >= 24) { sky.hour -= 24; sky.day++; } clean('Washed and dried. Like new.'); };
+        // (A2) a bundle into the machine, the lid shut, the wait
+        if (game.acts && !S.doorWalk) { const A = game.acts; if (A.play([{ t: 0.9, clip: 'Interact', speed: 1.3 }, { t: 0.8, clip: 'Interact', speed: 1.6 }, { t: 1.8, pose: 'sit', start: () => A.fade(true, 'LAUNDRY', 'half an hour later') }], { done: () => { done(); setTimeout(() => A.fade(false), 400); } })) return; }
+        done();
+      } });
   }
   if (game.gang?.local) {
     const p = game.gang.local(-4, 7);
-    interact.add({ x: p.x, z: p.z, r: 1.8, color: 0x80c8ff, show: () => S.mode === 'foot', label: () => `${keyHint(game)} wash up at the basin`, use: () => clean('Scrubbed the worst of it out.') });
+    interact.add({ x: p.x, z: p.z, r: 1.8, color: 0x80c8ff, show: () => S.mode === 'foot', label: () => `${keyHint(game)} wash up at the basin`, use: () => {
+      // (A2) bent over the basin, scrubbing at it
+      if (game.acts && !S.doorWalk) { const A = game.acts, b = { x: p.x, z: p.z, y: game.player.pos.y }; if (A.play([...A.workBeats(b, 'wrench', 2.6, false).map((x) => ({ ...x, start: (ctx) => { x.start?.(ctx); } }))], { done: () => clean('Scrubbed the worst of it out.') })) return; }
+      clean('Scrubbed the worst of it out.');
+    } });
   }
 
   // ---- the barber: styles and dye, added to the barber's chair

@@ -50,11 +50,17 @@ export function installRoadside(game) {
       // walk to the car's passenger door, then get in
       const v = ride && ride.v;
       if (!v) { p.mode = 'walk'; return; }
-      const door = new THREE.Vector3(v.pos.x + Math.cos(v.heading) * (v.spec.width / 2 + 0.6), v.pos.y, v.pos.z - Math.sin(v.heading) * (v.spec.width / 2 + 0.6));
+      const door = new THREE.Vector3(v.pos.x - Math.cos(v.heading) * (v.spec.width / 2 + 0.6), v.pos.y, v.pos.z + Math.sin(v.heading) * (v.spec.width / 2 + 0.6)); // (the passenger side)
       const dx = door.x - p.pos.x, dz = door.z - p.pos.z, d = Math.hypot(dx, dz);
-      p.heading += wrapAngle(Math.atan2(dx, dz) - p.heading) * Math.min(1, dt * 6);
-      if (d > 0.5) { p.pos.x += (dx / d) * 2.6 * dt; p.pos.z += (dz / d) * 2.6 * dt; p.h.play('Jog_Fwd_Loop', 0.2, 0.75); }
-      else { p.mode = 'riding'; p.h.root.visible = false; hud.toast('Passenger aboard', 1.5); game.law && game.law.say?.('Passenger', ride.line, 3.5); }
+      const pd = v.door?.('door-pass');
+      if (d > 0.5 && !p.atDoor) { p.heading += wrapAngle(Math.atan2(dx, dz) - p.heading) * Math.min(1, dt * 6); p.pos.x += (dx / d) * 2.6 * dt; p.pos.z += (dz / d) * 2.6 * dt; p.h.play('Jog_Fwd_Loop', 0.2, 0.75); }
+      else {
+        // (A2) a hand on the handle, the door opens, in they get
+        if (!p.atDoor) { p.atDoor = 0.01; p.h.play('Interact', 0.1, 1.6, true); }
+        p.atDoor += dt; p.heading += wrapAngle(Math.atan2(v.pos.x - p.pos.x, v.pos.z - p.pos.z) - p.heading) * Math.min(1, dt * 8);
+        if (pd) pd.rotation.y = pd.userData.open * Math.min(1, p.atDoor / 0.4);
+        if (p.atDoor > 0.65) { p.mode = 'riding'; p.atDoor = 0; p.shut = 0.5; p.h.play('Sitting_Idle_Loop', 0.2, 1, true); if (!v.cabLayout) p.h.root.visible = false; hud.toast('Passenger aboard', 1.5); game.law && game.law.say?.('Passenger', ride.line, 3.5); }
+      }
       p.pos.y = collision.surface(p.pos.x, p.pos.z, p.pos.y + 0.5);
     } else {
       p.s += p.dir * p.speed * dt;
@@ -86,15 +92,18 @@ export function installRoadside(game) {
             p.mode = 'walk'; p.h.root.visible = true; p.pos.copy(player.pos).add(new THREE.Vector3(1.2, 0, 0)); p.role = undefined; peds.home(p); ride = null;
             hud.toast('Your passenger got out', 2); return '';
           }
-          p.pos.copy(v.pos);
+          // in the passenger seat (peds.update puts them wherever p.pos says, so it says the seat)
+          if (v.cabLayout && p.h.root.visible) { v.seat(p.h, 1); p.pos.copy(p.h.root.position); p.heading = v.heading; } else p.pos.copy(v.pos);
+          if (p.shut > 0) { p.shut -= dt; const pd = v.door?.('door-pass'); if (pd) pd.rotation.y = pd.userData.open * Math.max(0, p.shut / 0.5); }
           const d = Math.hypot(ride.to.x - v.pos.x, ride.to.z - v.pos.z);
           if (d < 30 && Math.abs(v.speed) < 2) {
             const tip = 40 + Math.round(Math.random() * 110);
             game.S.money += tip;
             game.law && game.law.say?.('Passenger', THANKS[(Math.random() * THANKS.length) | 0], 3);
             hud.toast(`+$${tip} for the ride`, 2.5);
-            p.mode = 'walk'; p.role = undefined; p.h.root.visible = true;
-            p.pos.set(v.pos.x + Math.cos(v.heading) * (v.spec.width / 2 + 0.9), v.pos.y, v.pos.z - Math.sin(v.heading) * (v.spec.width / 2 + 0.9));
+            p.mode = 'walk'; p.role = undefined; p.h.root.visible = true; p.h.play('Walk_Loop', 0.3, 1, true);
+            p.pos.set(v.pos.x - Math.cos(v.heading) * (v.spec.width / 2 + 0.9), v.pos.y, v.pos.z + Math.sin(v.heading) * (v.spec.width / 2 + 0.9)); // (out of the passenger door)
+            { const pd = v.door?.('door-pass'); if (pd) { pd.rotation.y = pd.userData.open; setTimeout(() => { pd.rotation.y = 0; }, 900); } }
             p.pos.y = collision.surface(p.pos.x, p.pos.z, p.pos.y + 1);
             peds.home(p); // off to the nearest street corner, like anyone else in town
             game.career.p.stats.rides = (game.career.p.stats.rides || 0) + 1;

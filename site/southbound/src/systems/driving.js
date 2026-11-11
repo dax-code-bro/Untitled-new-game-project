@@ -17,6 +17,56 @@ const MARKS = 700;
 
 export function installDriving(game) {
   const { scene, hud, player, S, peds, police, career } = game;
+  // (A2) pulled over: the officer gets out, walks up to your window, has a word, and hands you the ticket
+  // through it; you take it; they walk back to the cruiser
+  const sideOf = (v, k) => { const h = v.heading; return new THREE.Vector3(Math.cos(h) * k, 0, -Math.sin(h) * k); };
+  const fwdOf = (v, k) => new THREE.Vector3(Math.sin(v.heading) * k, 0, Math.cos(v.heading) * k);
+  const chargeTicket = (c, fine, line = '') => { career.spend?.(Math.min(fine, S.money)) || (S.money = Math.max(0, S.money - fine)); hud.toast(`Speeding ticket: ${c.over} over the limit · $${fine}${line}`, 3.2); };
+  function startTicket(v) {
+    const c = clocked, W = (v.spec.width || 1.9) / 2;
+    const pc = c.cop?.pos ? c.cop : null;
+    const from = pc && pc.pos.distanceTo(v.pos) < 40 ? pc.pos.clone().add(sideOf(pc, (pc.spec?.width || 1.9) / 2 + 0.7)) : v.pos.clone().add(fwdOf(v, -11)).add(sideOf(v, W + 0.8));
+    const win = v.pos.clone().add(sideOf(v, W + 0.5)).add(fwdOf(v, 0.05));
+    const off = game.acts ? game.acts.person(from, v.heading, 'mh_cop') : null;
+    if (!off) { chargeTicket(c, 50 + c.over * 5); police.clear?.(); clocked = null; stopT = 0; return; }
+    c.scene = { off, from, win, t: 0, ph: 0, fine: 50 + c.over * 5, ticket: game.acts.prop('ticket') };
+    S.holdCar = 'ticket';
+  }
+  function endTicket() {
+    const c = clocked, sc = c.scene;
+    sc.off.remove(); sc.ticket.parent?.remove(sc.ticket);
+    if (S.holdCar === 'ticket') S.holdCar = false;
+    S.carReach = null;
+    if (c.cop) c.cop.siren = false;
+    police.clear?.(); clocked = null; stopT = 0;
+  }
+  function ticketScene(v, dt) {
+    const c = clocked, sc = c.scene, off = sc.off;
+    sc.t += dt;
+    if (S.mode !== 'car' || S.vehicle !== v) { if (!sc.paid) chargeTicket(c, sc.fine); endTicket(); return; }
+    const winPt = sc.win.clone(); winPt.y = v.pos.y + 1.15;
+    if (sc.ph === 0) { // out of the cruiser and up to your window
+      if (off.walk(sc.win, dt, 1.5) || sc.t > 12) { sc.ph = 1; sc.t = 0; police.radio?.('License and registration, please.', 0); }
+    } else if (sc.ph === 1) { // a word through the window
+      off.face(v.pos, dt); off.h.play('Idle_Talking_Loop', 0.2);
+      if (sc.t > 1.4 && !sc.said) { sc.said = true; hud.toast(`Officer: "${c.over} over the limit. I'm writing you up."`, 2.4); }
+      if (sc.t > 2.8) { sc.ph = 2; sc.t = 0; off.hold(sc.ticket, false); off.h.play('Idle_Loop', 0.2); }
+    } else if (sc.ph === 2) { // the ticket goes in through the window; you take it
+      off.face(v.pos, dt);
+      const k = Math.min(1, sc.t / 1.3);
+      if (k < 0.55) off.ik = (F, P) => { game.acts.reachTo(P, F, 'R', winPt, 0.15 + k * 0.6); P.attachToHand(sc.ticket, P.R); };
+      else {
+        if (off.held === sc.ticket) { off.drop(); off.ik = (F, P) => game.acts.reachTo(P, F, 'R', winPt, 0.5 + (k - 0.55) * 1.1); }
+        // your left hand takes it (main.js: S.carReach runs after your hands are on the wheel)
+        S.carReach = (gp) => { const F = gp.frame(v.heading); gp.reach(gp.L, winPt, F, 'L'); gp.attachToHand(sc.ticket, gp.L); };
+      }
+      if (k >= 1 && !sc.paid) { sc.paid = true; chargeTicket(c, sc.fine, '. "Slow it down out there."'); sc.ph = 3; sc.t = 0; off.ik = null; }
+    } else { // back to the cruiser; the ticket goes on the dash
+      if (sc.t > 0.7 && S.carReach) { S.carReach = null; sc.ticket.parent?.remove(sc.ticket); }
+      if (off.walk(sc.from, dt, 1.4) || sc.t > 9) { endTicket(); return; }
+    }
+    off.sync(dt);
+  }
 
   // ---- skid marks: one instanced mesh, a ring buffer of dark strips on the road
   const markGeo = new THREE.PlaneGeometry(0.22, 0.55).rotateX(-Math.PI / 2);
@@ -86,7 +136,17 @@ export function installDriving(game) {
       // hot-wiring
       if (wire) {
         wire.t -= dt;
-        if (wire.t <= 0 || S.mode !== 'car') { if (S.mode === 'car') { wire.v.wired = true; hud.toast('The engine catches', 1.2); } S.holdCar = false; wire = null; }
+        // (A2) your hands are under the dash: two wires twisted together (or a pick working the ignition)
+        if (!wire.hands && S.mode === 'car') {
+          wire.hands = true;
+          S.carReach = (gp, car) => {
+            const F = gp.frame(car.heading), T = performance.now() * 0.001;
+            const col = F.chest.clone().addScaledVector(F.fw, 0.42).addScaledVector(F.up, -0.28);
+            gp.reach(gp.R, col.clone().addScaledVector(F.right, 0.04 + Math.sin(T * 9) * 0.025).addScaledVector(F.up, Math.cos(T * 7) * 0.02), F, 'R');
+            gp.reach(gp.L, col.clone().addScaledVector(F.right, -0.06 + Math.cos(T * 8) * 0.02), F, 'L');
+          };
+        }
+        if (wire.t <= 0 || S.mode !== 'car') { if (wire.hands) S.carReach = null; if (S.mode === 'car') { wire.v.wired = true; hud.toast('The engine catches', 1.2); } S.holdCar = false; wire = null; }
       }
       // the pumps out front of every Gulf Mart (where the clerk faces)
       if (!pumps && game.shopSpots) pumps = marts().map((m) => ({ x: m.x + Math.sin(m.face || 0) * 11, z: m.z + Math.cos(m.face || 0) * 11 }));
@@ -96,7 +156,16 @@ export function installDriving(game) {
       if (!v && S.mode === 'foot') {
         const car = game.lastVehicle?.(), canId = game.tools?.list?.find((t) => /fuel can/i.test(t.name))?.id;
         if (car && !car.isBoat && !car.isAir && fuelOf(car) < 0.6 && canId && career.p.tools?.[canId] && car.pos.distanceTo(player.pos) < 3.2) {
-          if (free && a.enter) { a.enter = false; car.fuel = Math.min(1, car.fuel + 0.35); hud.toast('Emptied the fuel can into the tank', 1.8); return ''; }
+          if (free && a.enter) {
+            a.enter = false;
+            const pour = () => { car.fuel = Math.min(1, car.fuel + 0.35); hud.toast('Emptied the fuel can into the tank', 1.8); };
+            // (A2) the filler's on the back quarter, driver's side
+            const fw = { x: Math.sin(car.heading), z: Math.cos(car.heading) }, lf = { x: Math.cos(car.heading), z: -Math.sin(car.heading) }, W = (car.spec.width || 1.9) / 2, L = (car.spec.len || 4.6) / 2;
+            const fill = { x: car.pos.x - fw.x * L * 0.6 + lf.x * W, z: car.pos.z - fw.z * L * 0.6 + lf.z * W };
+            const run = game.acts && !S.doorWalk ? game.acts.play(game.acts.pourBeats({ x: fill.x + lf.x * 0.55, z: fill.z + lf.z * 0.55, face: fill }), { done: (ok) => ok && pour() }) : null;
+            if (!run) pour();
+            return '';
+          }
           return 'F  pour the fuel can into the tank';
         }
       }
@@ -136,15 +205,13 @@ export function installDriving(game) {
       if (clocked) {
         clocked.t -= dt;
         if (sp < 1.2) stopT += dt; else stopT = 0; // (pulled over: braking at a standstill backs up a little)
-        if (stopT > 2.2 && police.wanted <= 1 && police.heat <= 1) {
-          const fine = 50 + clocked.over * 5;
-          career.spend?.(Math.min(fine, S.money)) || (S.money = Math.max(0, S.money - fine));
-          hud.toast(`Speeding ticket: ${clocked.over} over the limit · $${fine}`, 3);
-          police.clear?.(); clocked.cop.siren = false; clocked = null; stopT = 0;
-        } else if (clocked.t <= 0 || police.wanted === 0 || police.heat > 1) { if (clocked.cop) clocked.cop.siren = false; clocked = null; }
+        if (clocked.scene) { ticketScene(v, dt); }
+        else if (stopT > 2.2 && police.wanted <= 1 && police.heat <= 1) startTicket(v);
+        else if (clocked.t <= 0 || police.wanted === 0 || police.heat > 1) { if (clocked.cop) clocked.cop.siren = false; clocked = null; }
       }
       return '';
     },
+    get ticketing() { return !!clocked?.scene; },
     get marks() { return marks.count; },
   };
 }

@@ -3,7 +3,7 @@
 // nearly everything (at city prices); Mill Creek and the bayou trading post
 // carry less and charge less.
 import * as THREE from 'three';
-import { WEAPONS, CATEGORIES, buildWeaponModel } from '../entities/arsenal.js';
+import { WEAPONS, CATEGORIES, buildWeaponModel, CALIBERS, ammoCap, unitOf } from '../entities/arsenal.js';
 import { CITY, TOWN, BAYOU } from '../world/layout.js';
 import { nearestRoad, keyHint } from './world-util.js';
 import { dressMember, placeAccessories } from './gang.js';
@@ -77,9 +77,28 @@ export function installGunStores(game) {
       label: () => `${keyHint(game)} talk to ${st.keeper}`,
       use: () => !shopOpen(st.id, game.sky.hour) ? hud.toast(`${st.name} is closed. Open ${(SHOP_H[st.id] || [9, 19]).map((h) => (h > 12 ? h - 12 + ' PM' : h + ' AM')).join(' – ')}.`, 3) : openDialog(st.keeper, st.look.lines[(Math.random() * st.look.lines.length) | 0], [
         ['I\'m interested in buying something.', () => ui.show(st)],
-        ['Got any ammo deals?', () => { const w = combat.def; if (w.melee) { hud.toast('Draw a gun first and I\'ll find the right box.', 3); return; } if (career.spend(60)) { const a = combat.ammo[combat.weapon]; if (a) a.reserve += w.clip * 4; hud.toast(`Bulk ammo for your ${w.name}`, 2.5); } }],
+        ['I need ammunition.', () => ammoCounter(st)],
         ['Just looking. Bye.', () => {}],
       ]) });
+  }
+  // the ammunition counter: a box of any caliber you own a gun for (and the rest, on a second page)
+  function ammoCounter(st, page = 0) {
+    const mine = [...new Set(combat.owned.map((id) => WEAPONS[id]).filter((w) => w && !w.melee && w.caliber).map((w) => w.caliber))];
+    const rest = Object.keys(CALIBERS).filter((c) => !mine.includes(c));
+    const list = page ? rest : mine.length ? mine : rest;
+    const opts = list.slice(0, 7).map((cal) => {
+      const B = CALIBERS[cal], have = combat.rounds[cal] || 0, cap = ammoCap(cal);
+      return [have >= cap ? `${cal}: full (${have}/${cap})` : `${cal} · box of ${B.box} · $${B.price} (you have ${have}/${cap})`, () => {
+        if (have >= cap) { hud.toast(`You can't carry any more ${cal}. ${cap} is the most.`, 2.6); return ammoCounter(st, page); }
+        if (!career.spend(B.price)) return;
+        combat.rounds[cal] = Math.min(cap, have + B.box); career.saveSoon();
+        hud.toast(`${cal}: ${combat.rounds[cal]} / ${cap} ${unitOf(cal)}`, 2.2);
+        ammoCounter(st, page);
+      }];
+    });
+    if (!page && mine.length && rest.length) opts.push(['Other calibers…', () => ammoCounter(st, 1)]);
+    opts.push(['That\'s all.', () => {}]);
+    openDialog(st.keeper, page ? 'Everything else I stock.' : 'For what you\'re carrying. Boxes only; the law says you can\'t haul more than 500 rounds of a caliber, 50 rockets or grenades, 20 arrows.', opts);
   }
   game.gunStoreDefs = STORES;
   game.gunShops = keepers.map((k) => ({ id: k.st.id, name: k.st.name, x: k.shop.counter.x, z: k.shop.counter.z, face: k.shop.keeperFace }));

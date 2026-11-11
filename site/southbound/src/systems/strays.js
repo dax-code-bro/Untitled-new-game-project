@@ -75,8 +75,19 @@ export function installStrays(game) {
       label: () => `${keyHint(game)} spare some change ($5)`,
       use: () => {
         if (!career.spend(5)) return;
-        c.gave++; hud.toast(pick(SPARE), 2.5);
-        if (c.gave === 3) setTimeout(() => hud.toast('"You\'re alright. Here, I found this." (+$20 lottery scratch-off)', 3), 1200), career.earn?.(20, 'a scratch-off');
+        const thanks = () => {
+          c.gave++; hud.toast(pick(SPARE), 2.5);
+          if (c.gave === 3) setTimeout(() => hud.toast('"You\'re alright. Here, I found this." (+$20 lottery scratch-off)', 3), 1200), career.earn?.(20, 'a scratch-off');
+        };
+        // (A2) down on your heels, the bills into their hand
+        const A = game.acts, s = c.sitter;
+        if (A && s && !S.doorWalk) {
+          const at = s.h.root.position.clone(), bills = A.prop('cash'); at.y += 0.6;
+          const run = A.play([{ face: at, t: 0.3 }, { t: 1.0, pose: 'crouch', start: (ctx) => A.hold(ctx, bills), ik: (F, k, ctx, P) => { P.reach(P.R, F.chest.clone().addScaledVector(F.fw, 0.25).lerp(at, Math.min(1, k * 1.5) * 0.8), F, 'R'); P.attachToHand(bills, P.R); } },
+            { t: 0.35, pose: 'crouch', start: (ctx) => { bills.parent?.remove(bills); ctx.held = null; } }], { done: thanks });
+          if (run) return;
+        }
+        thanks();
       } });
   }
 

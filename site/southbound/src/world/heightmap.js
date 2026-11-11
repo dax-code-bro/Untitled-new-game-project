@@ -256,6 +256,39 @@ export class Heightmap {
         else if (d < hw + 1.5) this.splat[k * 4 + 3] = 255;
       }
     }
+    this.capRoadBanks(graph);
+  }
+
+  // The terrain is drawn as a coarser mesh than this grid (Low: a vertex every 10.7 m, Phone 16 m), and a
+  // triangle reaching from the bank across the road rose through the asphalt wherever the road is cut into a
+  // slope: cars rode over the hidden ground, not the road (the owner: "the road is very bumpy"; on the
+  // highways a third of lane points were up to 1.2 m above the road surface). So past a road's edge the
+  // ground may climb only as a gentle bank (8%) for the first 22 m; further out it is untouched. Each cell
+  // answers to its nearest road only (on a switchback the upper road keeps its own ground). Inside the
+  // city and town grids the streets are paved slabs and the ground is already flat.
+  capRoadBanks(graph) {
+    const grid = (x, z) => [CITY, TOWN].some((G) => x > G.x0 - 20 && z > G.z0 - 20 && x < G.x0 + G.nx * G.pitch + 20 && z < G.z0 + G.nz * G.pitch + 20);
+    const best = new Map(); // cell -> [distance past the road edge, road height]
+    for (const e of graph.edges) {
+      if (!e.ys) continue;
+      const pts = e.pts, ys = e.ys, hw = e.width / 2, reach = hw + 22;
+      for (let s = 0; s < pts.length - 1; s++) {
+        const [ax, az] = pts[s], [bx, bz] = pts[s + 1];
+        this.forEachCellIn(Math.min(ax, bx) - reach, Math.min(az, bz) - reach, Math.max(ax, bx) + reach, Math.max(az, bz) + reach, (k, x, z) => {
+          const r = distToSeg(x, z, ax, az, bx, bz);
+          if (r.d > reach) return;
+          const past = r.d - hw, prev = best.get(k);
+          if (!prev || past < prev[0]) best.set(k, [past, lerp(ys[s], ys[s + 1], r.t), x, z]);
+        });
+      }
+    }
+    let n = 0;
+    for (const [k, [past, y, x, z]] of best) {
+      if (grid(x, z)) continue;
+      const cap = y - 0.15 + 0.08 * Math.max(0, past - 0.5);
+      if (this.h[k] > cap) { this.h[k] = cap; n++; }
+    }
+    this.bankCells = n;
   }
 
   // RGBA = sand/mud, forest floor, dry grass, paved/road

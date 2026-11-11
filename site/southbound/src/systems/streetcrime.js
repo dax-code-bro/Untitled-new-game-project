@@ -153,8 +153,15 @@ export function installStreetCrime(game) {
   const bribe = (w) => {
     const cost = PRICE[w.kind] || 200;
     if (w.honest) { hud.toast(pick(['"Keep your money. I\'m calling them."', '"You think I can be bought?"', '"Get away from me!"']), 2.5); w.t = w.call; return; }
+    // (A2) the money changes hands first (they hold off on the call while you pay), then it's spent
+    if (game.acts && !w.handing && !w.handed && S.money >= cost) {
+      w.handing = true; const who = game.acts.fromPed(w.p), wcall = w.call; w.call = 1e9;
+      const run = game.acts.play(game.acts.payBeats(who, 'give', 1.1), { done: () => { who.release(); w.call = wcall; w.handing = false; w.handed = true; bribe(w); w.handed = false; } });
+      if (run) return;
+      w.call = wcall; w.handing = false; who.release();
+    }
     if (!career.spend(cost)) return;
-    player.h.play('Interact', 0.2);
+    if (!w.handed) player.h.play('Interact', 0.2);
     if (w.crook) { hud.toast('"Pleasure doing business." (they pocket it)', 2.5); w.t = w.call - 6; w.honest = true; return; }
     hud.toast(pick(['"Didn\'t see nothing."', '"What crime? I was looking at my phone."', '"We never talked."']), 2.5);
     done(w, false);

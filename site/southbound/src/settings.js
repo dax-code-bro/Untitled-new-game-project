@@ -175,6 +175,7 @@ export const DEFAULTS = {
   sfxVolume: 0.9,
   ambienceVolume: 0.7,
   showFps: true,
+  claudeWatch: false, // Settings > Display: send errors and a few-minutely report with a screenshot so Claude can watch (core/watch.js)
   hudScale: 1.0,
   // Content filters (for the planned mature content)
   gore: true,

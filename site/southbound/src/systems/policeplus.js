@@ -116,8 +116,19 @@ export function installPolicePlus(game) {
     if (free && a.enter) {
       a.enter = false; bribeCool = performance.now() + 20000;
       if (S.money < amount) { hud.toast('You don\'t have that kind of money on you.', 2); return ''; }
-      if (rnd() < 0.55) { career.spend(amount); hud.toast(`Officer: "I didn't see anything. Move along." (-$${amount})`, 3); police.clear?.(); }
-      else { hud.toast('Officer: "Are you trying to bribe a police officer?"', 2.6); police.wanted = Math.min(5, police.wanted + 1); police.heat = Math.max(police.heat, 2); police.cool = 0; }
+      const takes = rnd() < 0.55;
+      const outcome = () => {
+        if (takes) { career.spend(amount); hud.toast(`Officer: "I didn't see anything. Move along." (-$${amount})`, 3); police.clear?.(); }
+        else { hud.toast('Officer: "Are you trying to bribe a police officer?"', 2.6); police.wanted = Math.min(5, police.wanted + 1); police.heat = Math.max(police.heat, 2); police.cool = 0; }
+      };
+      // (A2) a fold of bills, held low; they take it and pocket it, or look at it and then at you
+      const A = game.acts;
+      if (!A) { outcome(); return ''; }
+      const who = A.fromPed(cop);
+      const beats = takes ? A.payBeats(who, 'give', 1.2)
+        : [{ face: cop.pos, t: 0.35 }, { t: 1.3, start: (ctx) => A.hold(ctx, A.prop('cash')), ik: (F, k, ctx, P) => ctx.held && A.carry(P, F, ctx.held, false, 0.28, 0.2), each: (dt) => who.face(player.pos, dt) }];
+      const run = A.play(beats, { done: () => { who.release(); outcome(); } });
+      if (!run) { who.release(); outcome(); }
       return '';
     }
     return `${keyHint(game)} offer the officer $${amount}`;

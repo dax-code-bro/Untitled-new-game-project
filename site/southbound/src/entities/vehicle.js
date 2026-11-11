@@ -132,9 +132,13 @@ export class Vehicle {
       wheelR = (_box.max.y - _box.min.y) / 2 * k;
       // which way does this wheel's local X point? (mirrored wheels spin the other way)
       const sign = _v.copy(X).applyQuaternion(o.quaternion).x >= 0 ? 1 : -1;
-      this.wheels.push({ node: o, base: o.quaternion.clone(), front: m[1] === 'front', sign });
+      this.wheels.push({ node: o, base: o.quaternion.clone(), front: m[1] === 'front', sign, py: o.position.y });
       if (m[1] === 'front') wf = (o.position.z - ctr.z) * k; else wr = (o.position.z - ctr.z) * k;
     });
+    // the wheels' parent's scale (the model is scaled to the car's real length): to move a wheel by
+    // metres in its own parent's units
+    model.updateMatrixWorld(true);
+    for (const wh of this.wheels) wh.ps = wh.node.parent ? wh.node.parent.getWorldScale(_v).y || 1 : 1;
     const w = size.x * k, h = size.y * k;
     this.spec = { ...v, width: this.procSpec ? this.procSpec.W * k : w, height: h, wf: wf || v.len * 0.3, wr: wr || -v.len * 0.3, wheelR };
     // lights
@@ -166,6 +170,7 @@ export class Vehicle {
     this.heading = 0; this.pitch = 0; this.roll = 0;
     this.vy = 0; this.speed = 0; this.steer = 0; this.braking = false;
     this.airborne = false; this.drowned = false; this.wheelSpin = 0;
+    this.sy = 0; this.sv = 0; this.by = NaN; // suspension: the body's height over the wheels' contact, its vertical speed, its height
     this.lean = 0; this.impact = 0; this.health = 100; this.maxHealth = 100; this.night = 0;
     this.dirt = Math.random() * Math.random() * 0.55; // cars out in the world aren't showroom-clean
     this.nitro = 0; this.nitroTank = 1; this.spoiler = null;
@@ -374,6 +379,7 @@ export class Vehicle {
       this.pos.y += this.vy * dt;
       if (this.pos.y <= ground) { this.pos.y = ground; this.airborne = false; this.impact = Math.max(this.impact, -this.vy * 0.5); this.vy = 0; }
     }
+    this.spring(dt);
     // water
     const wl = hm.waterLevel(this.pos.x, this.pos.z);
     if (wl - ground > 1.1 && this.pos.y < wl - 0.3) {
@@ -386,9 +392,30 @@ export class Vehicle {
   }
 
 
+  // Suspension: the body rides on springs over the wheels (about 1.5 Hz, a little under critically
+  // damped, 12 cm of travel each way), so a kink or a seam in the ground is a soft dip you feel, not a
+  // jolt; the wheels stay on the ground and the camera rides with the body.
+  spring(dt) {
+    const h = Math.min(dt, 0.05), vy = this.vy || 0;
+    if (!(Math.abs(this.by - this.pos.y) < 1) || h <= 0) { this.by = this.pos.y; this.sv = vy; this.sy = 0; return; } // (teleported, or the first step)
+    this.sv += (-89 * (this.by - this.pos.y) - 11.3 * (this.sv - vy)) * h;
+    this.by += this.sv * h;
+    const off = this.by - this.pos.y;
+    if (off > 0.12) { this.by = this.pos.y + 0.12; this.sv = Math.min(this.sv, vy); }
+    else if (off < -0.12) { this.by = this.pos.y - 0.12; this.sv = Math.max(this.sv, vy); }
+    this.sy = this.by - this.pos.y;
+  }
+
   sync(dt) {
     if (this.contactShadow) this.contactShadow.visible = !this.airborne && !this.drowned;
     this.group.position.copy(this.pos);
+    // the body on its springs; the wheels stay where the tyres touch
+    const sy = this.sy || 0;
+    if (sy !== this._syShown) {
+      this._syShown = sy;
+      this.body.position.y = sy;
+      for (const w of this.wheels) if (w.py !== undefined) w.node.position.y = w.py - sy / (w.ps || 1);
+    }
     this.group.rotation.order = 'YXZ';
     this.group.rotation.set(-this.pitch, this.heading, this.roll);
     this.body.rotation.z = this.lean;

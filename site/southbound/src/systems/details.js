@@ -74,6 +74,14 @@ export function installDetails(game) {
   game.groom = { apply: () => applyGroom(), DYE };
   applyGroom();
   game.barbers = [[CITY.x0 + 2 * CITY.pitch + 14, CITY.z0 - 6, 'Slick\'s Barbershop'], [TOWN.x0 + TOWN.pitch + 10, TOWN.z0 + TOWN.nz * TOWN.pitch + 4, 'Mill Creek Barber']];
+  // the barber's chair: a cut, a shave or the works (styles and dye are added by systems/grooming.js)
+  const cut = (what, price) => { if (!career.spend(price)) return false; if (what !== 'shave') P.groom.hair = 0; if (what !== 'cut') P.groom.beard = 0; applyGroom(); hud.toast(what === 'shave' ? 'Clean shaven' : what === 'cut' ? 'Fresh cut' : 'Looking sharp', 2); game.onGroomed?.(what); return true; };
+  game.barberChair = (line) => game.openDialog?.('Barber', line || (P.groom.beard > 3 || P.groom.hair > 12 ? 'Lord, look at you. Sit down.' : 'Just a touch-up?'), [
+    ['Haircut · $25', () => cut('cut', 25)],
+    ['Shave · $15', () => cut('shave', 15)],
+    ['The works (cut + shave) · $35', () => cut('works', 35)],
+    ['Never mind.', () => {}],
+  ]);
   for (const [x, z, name] of game.barbers) {
     const pole = new THREE.Group();
     const tex = (() => { const c = document.createElement('canvas'); c.width = 16; c.height = 64; const x2 = c.getContext('2d'); for (let i = 0; i < 8; i++) { x2.fillStyle = ['#c22', '#fff', '#23c', '#fff'][i % 4]; x2.fillRect(0, i * 8, 16, 8); } const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; return t; })();
@@ -83,14 +91,10 @@ export function installDetails(game) {
     pole.position.set(x, collision.surface(x, z, 200), z);
     pole.userData.spin = tex;
     scene.add(pole);
-    interact.add({ x, z, r: 2.2, marker: false, blip: { color: '#d84040', size: 4, global: true, icon: '✂️', badge: 'S' }, label: () => `${keyHint(game)} ${name}`,
-      use: () => game.openDialog?.('Barber', P.groom.beard > 3 || P.groom.hair > 12 ? 'Lord, look at you. Sit down.' : 'Just a touch-up?', [
-        ['Haircut · $25', () => { if (career.spend(25)) { P.groom.hair = 0; applyGroom(); hud.toast('Fresh cut', 2); } }],
-        ['Shave · $15', () => { if (career.spend(15)) { P.groom.beard = 0; applyGroom(); hud.toast('Clean shaven', 2); } }],
-        ['The works (cut + shave) · $35', () => { if (career.spend(35)) { P.groom.hair = 0; P.groom.beard = 0; applyGroom(); hud.toast('Looking sharp', 2); } }],
-        ['Never mind.', () => {}],
-      ]) });
+    // (the barbershop building takes this spot over: systems/workplaces.js moves the pole to its door)
+    const point = interact.add({ x, z, r: 2.2, marker: false, blip: { color: '#d84040', size: 4, global: true, icon: '✂️', badge: 'S' }, label: () => `${keyHint(game)} ${name}`, use: () => game.barberChair() });
     (game._poles = game._poles || []).push(tex);
+    (game.barberSpots = game.barberSpots || []).push({ x, z, name, pole, point });
   }
 
   // ---------------- cracked windows and the repairman
@@ -139,6 +143,11 @@ export function installDetails(game) {
   game.fireAlarm = (inside) => {
     if (alarm) { hud.toast('The alarm is already going', 1.5); return; }
     const d = inside.d, a = inside.it.alarm;
+    // (A2) your hand up on the handle, and down it comes
+    if (game.acts && !game.S.doorWalk && a.pull) {
+      const hp = a.pull.getWorldPosition(new THREE.Vector3());
+      game.acts.play([{ face: hp, t: 0.3 }, { t: 0.7, ik: (F, k, ctx, P) => { P.reach(P.R, hp.clone().addScaledVector(F.up, k > 0.55 ? -0.08 : 0.02), F, 'R'); } }]);
+    }
     a.pull.children[0].position.y = -0.06; // the handle stays down
     alarm = { t: 0, d, a, pos: new THREE.Vector3(d.x, collision.surface(d.x, d.z, 300), d.z) };
     hud.toast('FIRE ALARM — everybody out. The fire department is coming.', 3.5);
