@@ -8,9 +8,10 @@ import { dirOf } from '../../../scenes/lib/director/staging/ground.js';
 export const name = 'camera-ship';
 export function params(I, B) {
   const mm = lensOf(I) >= 85 ? lensOf(I) : 160;
-  const rel = I.size === 'EWS' ? 165 : 90;
+  // (phase 5b) a prior vantage (another shot's hand camera of the same class) gives the bearing and the frame height
+  const rel = B.prior ? B.prior.rel : I.size === 'EWS' ? 165 : 90;
   const Lmax = Math.max(9, ...B.subjects.map((s) => s.L || 0));
-  const fh = I.size === 'EWS' ? 6.5 * Lmax : I.size === 'WS' ? 2.2 * Lmax : 2 * Lmax;
+  const fh = B.prior ? B.prior.fh : I.size === 'EWS' ? 6.5 * Lmax : I.size === 'WS' ? 2.2 * Lmax : 2 * Lmax;
   // the subjects' spread across the view
   const d = dirOf(B.hMid + rel), r = [-d[1], d[0]];
   const xs = B.subjects.filter((s) => s.p && s.w >= 1).map((s) => s.p[0] * r[0] + s.p[2] * r[1]);

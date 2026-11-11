@@ -41,7 +41,7 @@ export function shotEnv(spec, s1, sheet = null) {
   const missing = new Set();
   const cast = s1.cast || {};
   const env = {
-    missing,
+    missing, spec, cast,
     // the set's ground height (spec.previs.ground: a number, the Verdor field is at y 9) - 0 by default
     // + spec.previs.floors: name prefixes of marks that are raised walkable surfaces (a stair's steps, a deck):
     // an actor within 2 m of such marks stands at their height (inverse-distance blend) - stairs and decks
@@ -284,7 +284,20 @@ export function occlude(r, sheet, env) {
   if (r.skip || !sheet?.solids?.length) return r;
   for (const a of r.actors) {
     const pts = [a.head, env.point(`${a.name}.chest`, r.t), env.point(`${a.name}.hips`, r.t)].filter(Boolean);
-    const hits = pts.map((p) => rayBlock(sheet.solids, r.cam.pos, p));
+    // (phase 5b) a creature's wing tips too: chest +- 0.5 x its length across its heading (a dragon hidden behind a
+    // stack but for a sliver of wing is mostly occluded, not visible)
+    const def = env.spec?.cast?.[a.name];
+    if (def?.kind === 'creature' && pts[1]) {
+      const st = env.state(a.name, r.t), b = env.cast?.[a.name] || {};
+      const L = b.length ?? def.length ?? CREATURE_LEN[def.id] ?? 2;
+      const side = new THREE.Vector3(Math.cos(st.yaw), 0, -Math.sin(st.yaw));
+      pts.push(pts[1].clone().addScaledVector(side, L * 0.5), pts[1].clone().addScaledVector(side, -L * 0.5));
+    }
+    // (phase 5b) a solid whose footprint holds the actor itself (a lookout in the masthead, someone on an `approx`
+    // palace terrace) cannot say whether it hides them: only the other solids are tested
+    const own = (s) => { const q = xyz(a.head); return !!footprint(s, [q[0] - 0.01, 0, q[2] - 0.01], [q[0] + 0.01, 0, q[2] + 0.01]); };
+    const solids = sheet.solids.filter((s) => !own(s));
+    const hits = pts.map((p) => rayBlock(solids, r.cam.pos, p));
     a.visibleFrac = +(hits.filter((h) => !h).length / pts.length).toFixed(2);
     a.occludedBy = hits[0] ? hits[0].what : null;
     if (!a.occludedBy && a.visibleFrac === 0) a.occludedBy = hits.find(Boolean)?.what ?? null;

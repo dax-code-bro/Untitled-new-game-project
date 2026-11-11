@@ -20,6 +20,7 @@ The plan is in [DESIGN.md](DESIGN.md), and the build log is in [PROGRESS.md](PRO
 | `previs-core.js` `{ sheet }` | `measure(..., { sheet })`: marks from the sheet, occlusion rays against its solids (`occludedBy`, `visibleFrac`); `rayBlock()`. |
 | `scenes/lib/humans/cast-list.js` | The cast as pure data: build ids → role, sex, age class (adult/child), variants, mounts; named people and creatures. |
 | `engine/stager/` | The auto-stager v1 (ground): `intent.mjs` (row → intent, `verbs.json`, `places.json`), `select.mjs` (template table), `templates/*.mjs`, `check.mjs` (score + adjust loop on previs-core), `stage.mjs` (`stageShot`, `stageRows`), `write.mjs` (→ `<builder>.auto.js` + `.touch.js` + `.spec.js` + `final/stage-report.md|json`), `accept.mjs` (re-stage the 22 Cling shots vs the hand specs; `--air`: the 1C X4 aerials + X6-01..18). Phase 5 adds `air.mjs` (flight blocking on the sheet paths and the scene clock, riders cast with their mounts) and the air templates air-to-air, camera-ship, pov, pass-by, drone-reveal; `check.mjs` adds the long-lens horizon rule, the sheet's screen-direction line and a size floor for mediums / two-shots. |
+| `engine/stager/priors.mjs` | (phase 5b) air camera priors: the nearest-matching hand camera of ANOTHER shot (leave-one-out) from `templates.mined.json` starts the air-to-air / camera-ship search. Occlusion is a hard fail (> 50 % of head / chest / hips / wing tips behind sheet solids), `ground.js` `walkable` / `nudgeOut` keep people out of solids and water. STAGER_VERSION 3. |
 | `scenes/lib/director/staging/flight.js` | Shared, pure flight helpers mined from the air specs: `fly`, `inForm`, `pair`, `posAt`, `localFrame`, `shadowOf` / `shTrack`, LEAF_FLY / LEAF_SKIM / CHAR_FLY (CHAR_HZ 0.625, locked by the sound spots) / CHAR_GLIDE, `perch`, `formationClock`. |
 | `scenes/lib/director/staging/` | Pure staging helpers: `ground.js`, `talk.js`, `merge.js` (`mergeSpecs`). |
 | `engine/cast/casting.mjs` | Shot list → `final/cast.lock.json`: named roles and variants, riders with mounts, dragons, generic roles → crowd## (hashed, unique per scene, locked), hard rating guard. |
@@ -47,7 +48,7 @@ A new episode works once it has `episodes/<id>/final/` with the same layout as E
 
 These parts don't exist yet:
 
-- the stager's hand-match is below target: ground 55 %, air 35 % (target 70 %, see PROGRESS.md);
+- the stager's hand-match is below target: ground 55 %, air 41 % (target 70 %, see PROGRESS.md phase 5b);
 - `make-episode.mjs`, the queue and draft tiers (phase 6);
 - the set generator and `--episode` for `render/` and `pc/` (phase 7).
 

@@ -10,7 +10,7 @@ import { scoreShot, adjust, insideSolid } from './check.mjs';
 import { shoot, SIDE_X, centroid, frameHAt, project } from './templates/common.mjs';
 import { shotEnv } from '../../scenes/lib/director/previs-core.js';
 import { headingFromYaw } from '../../scenes/lib/director/blocking.js';
-import { place, walkTo, postureFor, reachTo, lookAtEvent, gesture, dirOf, headingTo, angDiff, norm360, r2 } from '../../scenes/lib/director/staging/ground.js';
+import { place, walkTo, postureFor, reachTo, lookAtEvent, gesture, dirOf, headingTo, angDiff, norm360, r2, walkable, nudgeOut } from '../../scenes/lib/director/staging/ground.js';
 import { lineCues, lineTimes, talkLooks, listenerActs } from '../../scenes/lib/director/staging/talk.js';
 import * as T_establish from './templates/establish-wide.mjs';
 import * as T_medium from './templates/medium-action.mjs';
@@ -24,7 +24,7 @@ import * as T_card from './templates/card.mjs';
 import { airFacts, isAir, stageAir, AIR_TEMPLATES } from './air.mjs';
 
 // v2 (phase 5): air templates, the two-shot blocking / size-band fix, the stall built during the shot
-export const STAGER_VERSION = 2;
+export const STAGER_VERSION = 3;
 // pov on a ground set: the camera at the eye of the shot's person (the air pov template is air.mjs's)
 const T_povGround = { name: 'pov', params: (I, B) => ({ ...T_establish.params(I, B), mm: I.mm || 35, vantage: false }) };
 export const TEMPLATES = Object.fromEntries([T_establish, T_medium, T_two, T_close, T_ots, T_insert, T_crowd, T_pan, T_card, T_povGround].map((m) => [m.name, m]));
@@ -230,7 +230,7 @@ export function stageShot(row, ctx = {}) {
         const S = blocks[st.actor], M = blocks[mv.actor];
         // the nearest free spot round the other one (not inside the fountain basin, a stall, a house)
         const h0 = headingTo(S.at, M.at);
-        const free = (q) => [[0, 0], [0.35, 0], [-0.35, 0], [0, 0.35], [0, -0.35]].every(([dx, dz]) => !insideSolid(ctx.sheet, [q[0] + dx, (ctx.sheet?.ground?.y ?? 0) + 0.3, q[1] + dz]));
+        const free = (q) => walkable(ctx.sheet, q);
         const h = [0, 40, -40, 80, -80, 120, -120, 180].map((k) => norm360(h0 + k)).find((k) => { const dd = dirOf(k); return free([S.at[0] + dd[0] * 1.4, S.at[1] + dd[1] * 1.4]); }) ?? h0;
         const d = dirOf(h);
         M.at = [r2(S.at[0] + d[0] * 1.4), r2(S.at[1] + d[1] * 1.4)];
@@ -239,6 +239,14 @@ export function stageShot(row, ctx = {}) {
         report.fixes.push(`two-shot: ${mv.actor} brought to 1.4 m of ${st.actor} (was ${gap.toFixed(1)} m apart)`);
       }
     }
+  }
+  // (phase 5b) KEEP-OUT: everyone standing (not seated on a rim, not on a raised mark) is on walkable ground - outside every
+  // sheet solid at body height and every water area (the fountain basin); a blocked spot (or walk target) is nudged out
+  for (const [a, b] of Object.entries(blocks)) {
+    if (!b?.at || b.y > 0.3 || b.posture?.sit) continue;
+    const n = nudgeOut(ctx.sheet, b.at, { toward: null });
+    if (n.moved) { report.fixes.push(`keep-out: ${a} moved ${n.moved} m out of ${n.what}`); b.at = n.at; }
+    for (const act of b.acts || []) if (act[1] === 'walk' && act[2]?.to) { const w = nudgeOut(ctx.sheet, act[2].to, { toward: b.at }); if (w.moved) { report.fixes.push(`keep-out: ${a}'s walk target moved ${w.moved} m out of ${w.what}`); act[2].to = w.at; } }
   }
   // talk: looks, listener nods, cues
   const times = lineTimes(row.id, I.lines, I.seconds);

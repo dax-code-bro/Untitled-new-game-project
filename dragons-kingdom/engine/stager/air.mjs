@@ -15,6 +15,7 @@ import { headingFromYaw } from '../../scenes/lib/director/blocking.js';
 import { dirOf, headingTo, angDiff, norm360, r2 } from '../../scenes/lib/director/staging/ground.js';
 import { formationClock, localFrame, posAt, beatFor, shadowOf, shTrack, V } from '../../scenes/lib/director/staging/flight.js';
 import { lineCues, lineTimes } from '../../scenes/lib/director/staging/talk.js';
+import { airPrior } from './priors.mjs';
 import * as T_a2a from './templates/air-to-air.mjs';
 import * as T_ship from './templates/camera-ship.mjs';
 import * as T_pov from './templates/pov.mjs';
@@ -143,7 +144,9 @@ export function stageAir(row, ctx, I, sel) {
     if (c.mount) {
       const m = actorKey(c.mount);
       if (!castDefs[m]) { castDefs[m] = { kind: 'creature', id: m }; flyers.push({ actor: m, id: m, length: CREATURE_LEN[m] ?? 9, name: c.mount }); report.fixes.push(`mount ${m} cast with its rider ${a}`); }
-      castDefs[a] = { kind: 'human', id: c.build, ride: { on: m } };
+      // (phase 5b) the hand specs' rider form: the build the cast lock chose (its variant per the continuity flags),
+      // the rider's outfit (= its role's name: abby / remi / fall) and its ROLE (lip-sync, faces), on its mount
+      castDefs[a] = { kind: 'human', id: c.build, ride: { on: m }, outfit: String(c.role || a).toLowerCase().replace(/[^a-z]/g, ''), role: c.role || a.toUpperCase() };
     } else castDefs[a] = { kind: 'human', id: c.build };
     cast[a] = {};
   }
@@ -168,11 +171,25 @@ export function stageAir(row, ctx, I, sel) {
     cast[a] = { at, y: r2(m[1]), face: r2(leadMid ? headingTo(at, [leadMid[0], leadMid[2]]) : 90), ...(leadMid ? { look: `${flyers[0].actor}.chest`, lookAmount: 0.7 } : {}) };
   }
   // riders look where their words say (another rider, a place), and wave / raise a hand
+  // (phase 5b) look targets the act parser left open, in the row's order: "looks at the gap, then at Remi" -> a mark of
+  // this set, a person in the shot, or a RIDER of the scene off screen (the TALK formation's partner of the lead flyer)
+  const lookWords = [...`${row.action || ''} ${I.subjects.map((q) => q.note || '').join(' ')}`.matchAll(/\bat (?:the )?([A-Za-z][\w'-]*(?: [a-z]+)?)/g)].map((m) => m[1]);
+  const openLooks = [];
+  for (const w of lookWords) {
+    const who = I.subjects.find((q) => q.kind === 'person' && new RegExp(`^${q.name}\\b`, 'i').test(w));
+    if (who && cast[who.actor]) { openLooks.push(`${who.actor}.head`); continue; }
+    const mk = findPlace(w, pw);
+    if (mk) { const m = markPos(mk, sheet, places); if (m) { openLooks.push(m.map(r2)); continue; } }
+    const partner = /^(remi|abby|fall)\b/i.test(w) && leadF && flyers.length ? partnerPoint(leadF.entry, secs * 0.6, flyers[0], w) : null;
+    if (partner) openLooks.push(partner);
+  }
+  for (let i = openLooks.length - 1; i > 0; i--) if (openLooks.slice(0, i).some((q) => JSON.stringify(q) === JSON.stringify(openLooks[i]))) openLooks.splice(i, 1);
+  let li = 0;
   for (const act of I.acts) {
     const b = cast[act.who];
     if (!b || !castDefs[act.who] || castDefs[act.who].kind !== 'human') continue;
     const t = r2(Math.min(secs * 0.8, Math.max(0.2, (act.frac - 0.3) * secs)));
-    if (act.kind === 'look') { const at = act.at && cast[act.at] ? `${act.at}.head` : act.to ? markPos(act.to, sheet, places)?.map(r2) : null; if (at) (b.acts ||= []).push([t, 'look', { at, amount: 0.8 }]); }
+    if (act.kind === 'look') { const at = act.at && cast[act.at] ? `${act.at}.head` : act.to ? markPos(act.to, sheet, places)?.map(r2) : castDefs[act.who].ride ? openLooks[li++] ?? null : null; if (at) (b.acts ||= []).push([t, 'look', { at, amount: 0.8 }]); }
     else if (act.kind === 'gesture' && /wave|raiseHand|point/.test(act.act)) (b.acts ||= []).push([t, act.act, { side: /left/i.test(row.action) && act.who === 'abby' ? 'L' : 'R', in: 0.3, hold: 1.2, out: 0.4 }]);
   }
   // two riders on screen talk to each other
@@ -236,6 +253,12 @@ export function stageAir(row, ctx, I, sel) {
   const B = { subjects, main, hMid, sun, secs, line, reverse, flyer: flyerOf, movePlace: movePlace ? markPos(movePlace, sheet, places) : null, povWho, castDefs, env,
     groundY: sheet.ground?.y ?? sheet.ground?.sea ?? 0, air: true, facesPolicy: ctx.policy?.faces || 'avoid',
     talk: times.map((l) => ({ role: l.speaker, speech_in_s: l.from, speech_out_s: l.to })) };
+  // (phase 5b) the camera prior: the nearest-matching hand-written vantage of ANOTHER shot (leave-one-out, priors.mjs)
+  // only for ONE flyer group in frame (a rider with its mount counts once): the mined frame heights are measured at one
+  // subject, so a pair's spread keeps the template's own recipe
+  const groups = new Set(subjects.filter((q) => q.actor).map((q) => q.flyer || q.actor));
+  B.prior = groups.size !== 1 ? null : airPrior(row, I, { template: sel.template, kind: main.actor && castDefs[main.actor]?.kind === 'human' ? 'human' : 'creature', mm: lensOf(I), sheet, people: I.subjects.filter((q) => q.kind === 'person').length });
+  if (B.prior) report.prior = `${B.prior.from} (bearing ${Math.round(B.prior.rel)}, frame ${B.prior.fh} m)`;
   const T = AIR_TEMPLATES[sel.template];
   const P = T.params(I, B);
   const build = (Q) => {
@@ -267,6 +290,15 @@ export function stageAir(row, ctx, I, sel) {
   return { id: row.id, entry: final, cast: spec.cast, variant: false, report, end: ctx.prev?.blocking || {}, flyers: { ...(ctx.prev?.flyers || {}), ...flyEnd }, lastPerson: ctx.prev?.lastPerson || null };
 }
 
+/** where an off-screen rider of the scene sits at time t: the TALK formation's partner of the lead flyer (Charcoal 30 m to
+ *  Leaf's left, 16 m ahead, 2 m lower; Leaf 30 m to Charcoal's right, 16 m behind, 2 m higher), at its seat height */
+function partnerPoint(leadEntry, t, lead, word) {
+  const p = posAt(leadEntry, t), { f, l } = localFrame(leadEntry.yawKeys);
+  const k = lead.id === 'leaf' ? 1 : -1, seat = /remi/i.test(word) ? 22 * 0.18 + 0.75 : 9 * 0.18 + 0.75;
+  if ((lead.id === 'leaf') === /abby/i.test(word)) return null;
+  return [r2(p[0] + k * (l[0] * 30 + f[0] * 16)), r2(p[1] - k * 2 + seat), r2(p[2] + k * (l[1] * 30 + f[1] * 16))];
+}
+
 /** the camera of air params Q: kind frame (the stage's framing solver, tracking), ship (keyed with the flyers), static,
  *  drone (keyed, a slow push), pov (on the eye) */
 function camFor(Q, B, I, spec) {
@@ -286,7 +318,14 @@ function camFor(Q, B, I, spec) {
     return { rig: 'follow', pos: [[0, `${B.povWho.actor}.head`]], offset: [0, 0.08, 0], look: [[0, ptAt(tgt, 0).map(r2)]], mm: Q.mm, fstop: Q.fstop, focus: ptAt(tgt, 0).map(r2), ...(ride ? { shake: { kind: 'dragonback', amount: 0.12, seed: 15 } } : {}) };
   }
   if (Q.kind === 'static' && B.movePlace) {
-    const p = [B.movePlace[0] - d[0] * 0, B.movePlace[1] + (Q.up ?? 1.6), B.movePlace[2]];
+    // (phase 5b) a STAND-OFF: never on the flyer's line at the place (it would fly through the lens). The camera stands
+    // `ahead` m past the place along the flyer's heading (at least past where the flyer is at the cut, so it comes
+    // TOWARD the lens), `side` m off its line, `up` m over the flyer's height at the end
+    const h = dirOf(B.hMid), l = [-h[1], h[0]];
+    const end = ptAt(B.main, secs);
+    const along = (end[0] - B.movePlace[0]) * h[0] + (end[2] - B.movePlace[2]) * h[1];
+    const ahead = Math.max(along + 6, 0) + (Q.ahead ?? 0), side = Q.side ?? 3;
+    const p = [B.movePlace[0] + h[0] * ahead + l[0] * side, end[1] + (Q.up ?? 1.6), B.movePlace[2] + h[1] * ahead + l[1] * side];
     const tgt = mid(secs * 0.5);
     const near = ptAt(B.main, secs), far = ptAt(B.main, 0);
     const dist = (q) => Math.hypot(q[0] - p[0], q[1] - p[1], q[2] - p[2]);
@@ -306,7 +345,11 @@ const LENSES = [24, 35, 50, 85, 135, 180];
 export function airMutations(P, I) {
   const m = [];
   if (P.kind === 'pov') return m;
-  if (P.kind === 'static') { m.push(['raise 2 m', { ...P, up: (P.up ?? 1.6) + 2 }]); return m; }
+  if (P.kind === 'static') {
+    m.push(['raise 2 m', { ...P, up: (P.up ?? 1.6) + 2 }], ['stand-off +8 m', { ...P, ahead: (P.ahead ?? 0) + 8 }], ['side +3 m', { ...P, side: (P.side ?? 3) + 3 }], ['side -3 m', { ...P, side: (P.side ?? 3) - 3 }]);
+    if ((P.ahead ?? 0) >= 4) m.push(['stand-off -4 m', { ...P, ahead: P.ahead - 4 }]);
+    return m;
+  }
   m.push(['distance x1.2', { ...P, dist: P.dist * 1.2, rise: P.rise * 1.2 }], ['distance /1.2', { ...P, dist: P.dist / 1.2, rise: P.rise / 1.2 }]);
   for (const d of [20, -20, 40, -40]) m.push([`bearing ${d > 0 ? '+' : ''}${d}`, { ...P, rel: norm360((P.rel ?? 0) + d) }]);
   m.push(['rise +', { ...P, rise: P.rise + Math.max(1, P.dist * 0.06) }], ['rise -', { ...P, rise: P.rise - Math.max(1, P.dist * 0.06) }]);

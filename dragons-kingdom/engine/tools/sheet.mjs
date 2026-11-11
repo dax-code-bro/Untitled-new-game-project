@@ -183,12 +183,16 @@ const LAYOUT = {
     const W = gapFrame(DEF), S = DEF.stacks, C = S.C;
     const cTop = stackRing(C, C.H, null), cW = W(cTop.cu, cTop.cv);
     const solids = [];
-    // each stack as 4 stacked convex prisms (its ellipse at the slice's middle; noise and ledges left out, +-7 %)
+    // each stack (every one of DEF.stacks) as 8 stacked convex prisms up to its full height H: the slice's centre at its
+    // middle, its radii at its BOTTOM (the widest ring of a tapering stack), the 14-gon CIRCUMSCRIBED round the ellipse
+    // (1 / cos(pi / 14)) and +4 % for the mean noise and ledges (phase 5b: the 4 mid-slice inscribed prisms ran ~10 %
+    // small, so a ray could graze past rock the render shows)
+    const grow = 1.04 / Math.cos(Math.PI / 14);
     for (const [k, s] of Object.entries(S)) {
-      const n = 4;
+      const n = 8;
       for (let i = 0; i < n; i++) {
-        const y0 = (s.H * i) / n, y1 = (s.H * (i + 1)) / n, r = stackRing(s, (y0 + y1) / 2, null);
-        solids.push({ poly: ring(0, 0, r.ru, r.rv, 14, 0, (u, v) => W(r.cu + u, r.cv + v)), y0: i ? y0 : -4, h: y1 - (i ? y0 : -4), what: `stack ${k}` });
+        const y0 = (s.H * i) / n, y1 = (s.H * (i + 1)) / n, c = stackRing(s, (y0 + y1) / 2, null), r = stackRing(s, y0, null);
+        solids.push({ poly: ring(0, 0, r.ru * grow, r.rv * grow, 14, 0, (u, v) => W(c.cu + u, c.cv + v)), y0: i ? y0 : -4, h: y1 - (i ? y0 : -4), what: `stack ${k}` });
       }
     }
     return {

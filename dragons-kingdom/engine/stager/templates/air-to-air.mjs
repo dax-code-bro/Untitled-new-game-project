@@ -9,7 +9,9 @@ export const name = 'air-to-air';
 export function params(I, B) {
   const m = B.main, rider = !!B.castDefs[m.actor]?.ride, L = m.L || 9;
   const T = { CU: [85, rider ? 1.0 : 0.3 * L, 30, 0.4], MS: [50, rider ? 2.0 : 0.6 * L, 35, 1.0], WS: [100, 1.3 * L, 100, null], EWS: [160, 7 * L, 165, null] }[I.size] || [50, 2, 35, 1];
-  const mm = lensOf(I) || T[0];
+  const mm = lensOf(I) || B.prior?.mm || T[0];
+  // (phase 5b) a prior vantage (another shot's hand camera of the same class): its relative bearing and frame height
+  if (B.prior) { T[2] = B.prior.rel; T[1] = B.prior.fh; }
   const dist = distFor(T[1], mm);
   let rise = T[3] ?? dist * Math.tan((6 * Math.PI) / 180);
   if (mm >= 100) rise = Math.max(rise, riseForHorizon(dist, mm));

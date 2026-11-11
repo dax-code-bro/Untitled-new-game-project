@@ -84,6 +84,7 @@ export function scoreShot(spec, id, I, B, sheet) {
   // (phase 5) a medium / two-shot whose people fill under ~25 % of the frame height is a wide: it fails
   const tight = (I.size === 'MS' || I.size === 'CU' || I.move.kind === 'two-shot') && !B.air;
   let small = 0, worstFrac = 1;
+  const occl = [];
   for (const S of B.subjects) {
     const ts = S.checkAt != null ? [S.checkAt / secs] : times;
     for (const u of ts) {
@@ -95,7 +96,10 @@ export function scoreShot(spec, id, I, B, sheet) {
       if (S.actor) {
         const a = r.actors.find((q) => q.name === S.actor);
         if (!a) { if (S.hidden) continue; checks.push({ name: S.name, t, inFrame: false, side: false, visible: false, size: false, s: 0 }); continue; }
-        ({ x, y, inFrame } = a); dist = a.dist; visible = !a.hiddenBy && (a.visibleFrac ?? 1) > 0; speaking = a.speaking; reads = a.reads;
+        ({ x, y, inFrame } = a); dist = a.dist; visible = !a.hiddenBy && (a.visibleFrac ?? 1) >= 0.5; speaking = a.speaking; reads = a.reads;
+        // (phase 5b) more than half of a requested subject's sample points (head, chest, hips; a creature's wing tips)
+        // behind sheet solids at any sample time is a HARD fail, not a 0.2 deduction
+        if ((a.visibleFrac ?? 1) < 0.5 && !S.hands) { occl.push(`${S.name} ${Math.round((1 - (a.visibleFrac ?? 1)) * 100)} % behind ${a.occludedBy || 'a solid'} at ${t.toFixed(1)} s`); }
         if (S.hands) { const pp = project(cam, S.p); x = pp.x; y = pp.y; inFrame = pp.z > 0 && Math.abs(x) <= 1 && Math.abs(y) <= 1; dist = pp.z; }
       } else {
         const pp = project(cam, S.p);
@@ -113,6 +117,7 @@ export function scoreShot(spec, id, I, B, sheet) {
   }
   // graded, so the adjust loop can climb toward the band (a person at 18 % scores 0.52, at 23 % 0.85)
   if (small) { pen *= Math.max(0.4, worstFrac / 0.25) ** 2; flags.push(`W_SIZE ${small} person(s) under 25 % of the frame height in a ${I.move.kind === 'two-shot' ? 'two-shot' : I.size} (smallest ${Math.round(worstFrac * 100)} %)`); }
+  if (occl.length) { pen *= 0.25; flags.push(`W_OCCLUDED ${occl[0]}${occl.length > 1 ? ` (+${occl.length - 1})` : ''}`); }
   if (B.facesPolicy === 'avoid' && checks.some((c) => c.speaking && c.reads)) flags.push('FACE: a speaking face reads (faces policy avoid)');
   const score = checks.length ? (checks.reduce((a, c) => a + c.s, 0) / checks.length) * pen : 0.5 * pen;
   return { score: +score.toFixed(3), checks, flags, cam: cam0 };
@@ -151,7 +156,22 @@ export function adjust(P0, evalP, I, { maxTries = 12, good = 0.97, fallback = nu
   if (best.score < 0.75 && fallback && tries < maxTries) {
     tries++;
     const r = evalP(fallback.P);
-    if (r.score > best.score + 0.005) { best = { P: fallback.P, ...r }; fixes.push(`fallback ${fallback.name}`); }
+    if (r.score > best.score + 0.005) { best = { P: fallback.P, ...r }; fixes.push(`fallback ${fallback.name}`); climb(); }
   }
   return { best, tries, fixes };
+  // (phase 5b) the same steepest ascent from the fallback with the tries left (an occluded fallback walks clear)
+  function climb() {
+    let up = true;
+    while (up && tries < maxTries && best.score < good) {
+      up = false;
+      let round = null;
+      for (const [what, P] of muts(best.P, I)) {
+        if (tries >= maxTries) break;
+        tries++;
+        const r = evalP(P);
+        if (r.score > (round ? round.score : best.score) + 0.005) round = { P, ...r, what };
+      }
+      if (round) { const { what, ...b } = round; best = b; fixes.push(what); up = true; }
+    }
+  }
 }

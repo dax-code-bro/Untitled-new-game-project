@@ -176,9 +176,10 @@ test('engine phase 3: occlusion rays against sheet solids reproduce X6-01 r1 (th
     cast: { ...r2.cast, leaf: { ...r2.cast.leaf, root: P([[0, -350, -28, 70], [6, -240, -28, 62, 'linear']]) }, charcoal: { ...r2.cast.charcoal, root: P([[0, -390, -42, 92], [6, -290, -42, 88, 'linear']]) } } };
   for (const t of [0, 3, 5.9]) {
     const a = measure(spec, r1, t, { sheet, frames: 144 }).actors.find((x) => x.name === 'leaf');
-    assert.ok(a.inFrame && /^stack [AB]$/.test(a.occludedBy) && a.visibleFrac === 0, `r1 t ${t}: leaf ${a.occludedBy} ${a.visibleFrac}`);
+    // (phase 5b: a creature's wing tips are sampled too; the body behind the stack, at most a wing tip out = a hard fail)
+    assert.ok(a.inFrame && /^stack [AB]$/.test(a.occludedBy) && a.visibleFrac < 0.5, `r1 t ${t}: leaf ${a.occludedBy} ${a.visibleFrac}`);
     const b = measure(spec, 'X6-01', t, { sheet, frames: 144 }).actors.find((x) => x.name === 'leaf');
-    assert.ok(b.inFrame && !b.occludedBy && b.visibleFrac === 1, `r2 (hand-written) t ${t}: leaf clear of the stacks`);
+    assert.ok(b.inFrame && !b.occludedBy && b.visibleFrac === 1, `r2 (hand-written) t ${t}: leaf clear of the stacks ${b.occludedBy} ${b.visibleFrac}`);
   }
 });
 
@@ -305,4 +306,31 @@ test('engine phase 5: flight.js helpers, the horizon rule, the line side, the tw
   const r = await a.restageCling();
   const x504 = r.staged.spec.shots['X5-04'].set.stall;
   assert.ok(Array.isArray(x504.poles) && Array.isArray(x504.cloth), 'X5-04: the stall is built during the shot');
+});
+
+test('engine phase 5b: occlusion is a hard fail (X6-09 clear, all 34 air shots), keep-out, leave-one-out air priors', async () => {
+  const a = await import('../engine/stager/accept.mjs');
+  const r = await a.restageAir();
+  // no requested subject more than half hidden behind sheet solids at t 0.15 / 0.5 / 0.85 in any re-staged air shot
+  const occl = r.per.filter((p) => p.flags.some((f) => f.startsWith('W_OCCLUDED')));
+  assert.deepEqual(occl.map((p) => p.id), []);
+  const x609 = r.per.find((p) => p.id === 'X6-09');
+  assert.ok(x609.subjects.every((s) => s.ok) && x609.cmp.ok, 'X6-09: Leaf + Abby in frame, a pass-by from inside the gap');
+  const rep = r.stagedBySet.OUTER_ROCKS.reports.find((q) => q.id === 'X6-09');
+  assert.ok(rep.checks.every((c) => c.visible), 'X6-09: visible at every sample time');
+  // priors never come from the shot being staged
+  for (const st of Object.values(r.stagedBySet)) for (const q of st.reports) if (q.prior) assert.ok(!q.prior.startsWith(`${q.id} `), `${q.id}: its own vantage`);
+  // X6-04: Abby rides Leaf as abby_ride (the hand spec's build, outfit and role)
+  const ab = r.stagedBySet.SKY_OFF_VERDOR.spec.cast.abby;
+  assert.deepEqual([ab.id, ab.ride.on, ab.outfit, ab.role], ['abby_ride', 'leaf', 'abby', 'ABBY']);
+  // keep-out: every standing person of t00 is on walkable ground (not in the fountain basin, not in a solid)
+  const { walkable } = await import('../scenes/lib/director/staging/ground.js');
+  const sheet = JSON.parse(fs.readFileSync(path.join(ROOT, 'scenes/lib/director/sets/sheets/CLING_SQUARE.json'), 'utf8'));
+  const auto = (await import('../episodes/t00/final/scenes/specs/cling-square-2.auto.js')).default;
+  for (const [id, sh] of Object.entries(auto.shots)) for (const [n, b] of Object.entries(sh.cast || {})) if (b.at && !(b.y > 0.3) && !b.posture?.sit) assert.ok(walkable(sheet, b.at), `${id} ${n} at ${b.at}`);
+  // every stack of the outer-rocks DEF is a solid up to its full height
+  await import('../engine/tools/sheet.mjs');                                     // registers the dk/ resolve hook
+  const { DEF } = await import('../scenes/lib/director/sets/outer-rocks.js');
+  const rocks = JSON.parse(fs.readFileSync(path.join(ROOT, 'scenes/lib/director/sets/sheets/OUTER_ROCKS.json'), 'utf8'));
+  for (const [k, s] of Object.entries(DEF.stacks)) assert.equal(Math.max(...rocks.solids.filter((q) => q.what === `stack ${k}`).map((q) => q.y0 + q.h)), s.H, `stack ${k}`);
 });
