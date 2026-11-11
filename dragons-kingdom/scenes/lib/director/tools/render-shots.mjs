@@ -29,6 +29,8 @@
 //                     stop loses only the segment in flight, the next run resumes the shot
 //   --timings FILE    measured seconds per frame go here (default episodes/s01e01/final/cut/timings.json; only
 //                     written for video renders of the draft preset)
+//   --episode ID      the episode (default s01e01): its shot tables, edit lists and timings; dailies go to
+//                     output/director/<ID>/<preset> (Episode 1 keeps output/director/<preset>)
 //   --all             no --only / --sets: render every stale shot of every cut (required: a bare run, --help,
 //                     -h or any unknown flag / stray word prints this usage and renders NOTHING)
 // Interrupt (Ctrl+C) and run again: finished shots are kept. Several processes may share one --work
@@ -48,12 +50,16 @@ import { runtimeConfig, newId } from '../../../../render/lib/session.mjs';
 import { resolvePreset } from '../../../../render/lib/presets.mjs';
 import { checkFfmpeg, ffmpegPath } from '../../../../render/lib/tools.mjs';
 import { SETS } from '../registry.js';
+import { dirs, DEFAULT_EPISODE } from '../episode-paths.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const DIRECTOR = path.resolve(HERE, '..');
 const ROOT = path.resolve(HERE, '../../../..');
-const FINAL = path.join(ROOT, 'episodes/s01e01/final');
-const SCENES = path.join(FINAL, 'scenes');
+// --episode <id> (engine phase 1): every per-episode path from episode-paths.js
+const EPI = process.argv.indexOf('--episode');
+const D = dirs(EPI >= 0 ? process.argv[EPI + 1] : DEFAULT_EPISODE);
+const FINAL = D.final;
+const SCENES = D.scenes;
 const rel = (f) => path.relative(ROOT, f).split(path.sep).join('/');
 const readJson = (f, d = null) => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch { return d; } };
 const readText = (f) => { try { return fs.readFileSync(f, 'utf8').trim(); } catch { return ''; } };
@@ -64,7 +70,7 @@ const FPS = 24;
 const argv = process.argv.slice(2);
 // strict: a mistyped or unknown option must never start a render (session 9 lost 20 min of CPU to a
 // `--help` that this tool did not know and so rendered every stale shot)
-const VALUE_OPTS = ['--preset', '--cinematic', '--workers', '--work', '--redo-on', '--stills', '--only', '--sets', '--segment', '--timings'];
+const VALUE_OPTS = ['--episode', '--preset', '--cinematic', '--workers', '--work', '--redo-on', '--stills', '--only', '--sets', '--segment', '--timings'];
 const FLAG_OPTS = ['--twos', '--force', '--dry-run', '--adopt-v2', '--reverse', '--all'];
 function usage(code, why) {
   const head = fs.readFileSync(fileURLToPath(import.meta.url), 'utf8').split('\n');
@@ -99,8 +105,8 @@ const REVERSE = flag('--reverse');
 const STILLS = opt('--stills') ? opt('--stills').split(',').map(Number) : null;
 const ONLY = opt('--only') ? new Set(opt('--only').split(',')) : null;
 const SETS_F = opt('--sets') ? new Set(opt('--sets').split(',')) : null;
-const WORK = path.resolve(opt('--work', path.join(ROOT, 'output/director', PRESET)));
-const TIMINGS = path.resolve(opt('--timings', path.join(FINAL, 'cut/timings.json')));
+const WORK = path.resolve(opt('--work', D.work(PRESET)));
+const TIMINGS = path.resolve(opt('--timings', D.timings));
 // a shot is rendered and encoded in SEGMENTS of this many frames (0 = one piece): a renderer killed for
 // memory (other renders on the machine) loses only the segment in flight, the retry / the next run
 // resumes from <job>.segs.json (same keys) and the finished segments are joined without re-encoding
@@ -118,7 +124,10 @@ const need = new Map((edl?.shots || []).map((s) => [s.job, s.need || { pre: 0, p
 
 const fnText = (v) => JSON.stringify(v, (k, x) => (typeof x === 'function' ? `fn:${x.toString()}` : x));
 const fileHash = (f) => { try { return sha1(fs.readFileSync(f)); } catch { return 'missing'; } };
-const coreHash = sha1(fs.readdirSync(DIRECTOR).filter((f) => f.endsWith('.js')).sort().map((f) => fileHash(path.join(DIRECTOR, f))).join(','));
+// (episode-paths.js / previs-core.js are Node-only tooling that never reaches a picture: left out, so adding
+// them in engine phase 1 did not make every shot 'core'-stale)
+const NOT_PICTURE = new Set(['episode-paths.js', 'previs-core.js']);
+const coreHash = sha1(fs.readdirSync(DIRECTOR).filter((f) => f.endsWith('.js') && !NOT_PICTURE.has(f)).sort().map((f) => fileHash(path.join(DIRECTOR, f))).join(','));
 
 async function loadSpec(setId) {
   const f = path.join(SCENES, 'specs', `${SETS[setId].builder}.spec.js`);
