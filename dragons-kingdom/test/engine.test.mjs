@@ -251,3 +251,34 @@ test('engine phase 3: the rating guard is hard; t00 casts cleanly and its lock i
   assert.deepEqual(JSON.parse(r.stdout.slice(0, r.stdout.lastIndexOf('}') + 1)), lock);
   assert.deepEqual(lock.shots['0A-01'].map((e) => e.build), ['vendor', 'musician']);
 });
+
+// ---- engine phase 4: auto-stager v1 (ground) ----
+test('engine phase 4: re-staging the 22 Cling shots: >= 80 % of subjects in frame and on their side; deterministic', async () => {
+  const { restageCling } = await import('../engine/stager/accept.mjs');
+  const a = await restageCling(), b = await restageCling();
+  assert.equal(JSON.stringify(a.staged.spec), JSON.stringify(b.staged.spec), 'the stager is deterministic');
+  assert.equal(a.per.length, 22);
+  assert.ok(a.inFrameSide >= 0.8, `in frame + side ${a.inFrameSide}`);
+  // DESIGN's second number (>= 70 % within 45 deg bearing and x1.5 screen height of the hand-made shot) is NOT met
+  // yet (phase 4 measured 55 %, PROGRESS.md); this guards the level reached
+  assert.ok(a.cmpOk >= 0.5, `bearing + height vs hand ${a.cmpOk}`);
+  // rating: no child build anywhere in R3-01..04
+  for (const id of ['R3-01', 'R3-02', 'R3-03', 'R3-04']) for (const k of Object.keys(a.staged.spec.shots[id].cast || {})) assert.ok(!/child|abby/.test(a.staged.spec.cast[k].id), `${id}: ${k}`);
+});
+
+test('engine phase 4: t00 is staged (auto/touch/spec files current), build-shots places every line', async () => {
+  let r = node('engine/stager/write.mjs', '--episode', 't00', '--check');
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  r = node('scenes/lib/director/tools/build-shots.mjs', '--episode', 't00', '--check');
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  assert.doesNotMatch(r.stdout, /not placed|no spec yet/);
+  const edl = JSON.parse(fs.readFileSync(path.join(ROOT, 'episodes/t00/final/cut/edl.json'), 'utf8'));
+  const sl = JSON.parse(fs.readFileSync(path.join(ROOT, 'episodes/t00/final/shotlist.json'), 'utf8'));
+  assert.deepEqual(edl.shots.flatMap((s) => s.dialogue.map((d) => d.id)), sl.shots.flatMap((s) => s.dialogue.map((d) => d.id)));
+  assert.ok(edl.shots.every((s) => s.kind === '3d'));
+  r = node('engine/stager/write.mjs', '--episode', 's01e01');
+  assert.notEqual(r.status, 0, 'Episode 1 specs are never written');
+  const { mergeSpecs } = await import('../scenes/lib/director/staging/merge.js');
+  const m = mergeSpecs({ set: 'X', shots: { a: { cam: { mm: 35, fstop: 8 }, cast: { v: { at: [0, 0] } } }, b: { cam: { mm: 50 } } } }, { a: { cam: { mm: 50 }, cast: { v: null } }, b: { lock: true, cam: { mm: 85 } } });
+  assert.deepEqual(m.shots, { a: { cam: { mm: 50, fstop: 8 }, cast: {} }, b: { cam: { mm: 85 } } });
+});

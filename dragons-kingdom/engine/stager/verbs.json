@@ -1,0 +1,26 @@
+{
+  "about": "Auto-stager verb table (engine/DESIGN.md 3.1): words in a shot row's action -> a blocking act. kind: move | posture | gesture | look | dragon | camera | still. Words are matched as whole words (lower case, any inflection listed). Unknown verbs on a person are reported as unstaged, never guessed.",
+  "verbs": {
+    "walk":     { "kind": "move",    "act": "walk", "speed": 1.15, "words": ["walk", "walks", "walking", "goes", "go", "going", "crosses", "cross", "crossing", "comes", "come", "heads", "moves", "steps", "carry", "carries", "carrying", "pushes", "push", "pushing"] },
+    "enter":    { "kind": "move",    "act": "walk", "speed": 1.15, "enter": true, "words": ["enter", "enters", "entering", "arrives", "arrive"] },
+    "exit":     { "kind": "move",    "act": "walk", "speed": 1.15, "exit": true, "words": ["exit", "exits", "leaves", "leave", "walks off", "goes back", "go back"] },
+    "run":      { "kind": "move",    "act": "run",  "speed": 3.2,  "words": ["run", "runs", "running", "rushes", "hurries", "dashes"] },
+    "climb":    { "kind": "move",    "act": "walk", "speed": 0.6,  "climb": true, "words": ["climb", "climbs", "climbing"] },
+    "turn":     { "kind": "posture", "act": "turn", "words": ["turn", "turns", "turning"] },
+    "look":     { "kind": "look",    "act": "look", "words": ["look", "looks", "looking", "watches", "watch", "watching", "glances", "stares", "sees", "notice", "notices", "knows"] },
+    "kneel":    { "kind": "posture", "act": "kneel", "words": ["kneel", "kneels", "kneeling", "wedges", "wedge"] },
+    "crouch":   { "kind": "posture", "act": "crouch", "words": ["crouch", "crouches", "crouching", "stoops", "bends"] },
+    "sit":      { "kind": "posture", "act": "sit", "words": ["sit", "sits", "sitting", "seated"] },
+    "bow":      { "kind": "posture", "act": "bow", "words": ["bow", "bows", "bowing"] },
+    "lean":     { "kind": "posture", "act": "lean", "words": ["lean", "leans", "leaning"] },
+    "wave":     { "kind": "gesture", "act": "wave", "words": ["wave", "waves", "calls", "call", "calling", "beckons"] },
+    "point":    { "kind": "gesture", "act": "point", "words": ["point", "points", "pointing"] },
+    "raise":    { "kind": "gesture", "act": "raiseHand", "words": ["raises a hand", "raise hand", "raises his hand", "raises her hand", "lifts a hand"] },
+    "reach":    { "kind": "gesture", "act": "reach", "words": ["reach", "reaches", "reaching", "takes", "take", "grabs", "lights", "presses", "tests", "ties", "reties", "wraps", "builds", "sets out", "finds", "moves it", "slides"] },
+    "nod":      { "kind": "gesture", "act": "nod", "words": ["nod", "nods", "nodding", "accepts"] },
+    "shake":    { "kind": "gesture", "act": "headShake", "words": ["shakes his head", "shakes her head", "shake head", "shakes head"] },
+    "talk":     { "kind": "still",   "act": "talk", "words": ["answers", "answer", "says", "speaks", "replies", "conversation", "deadpan", "smokes", "smoking", "drags", "unrolls", "lifts", "rocks", "jolts", "hangs", "drifts"] },
+    "fly":      { "kind": "dragon",  "act": "fly", "words": ["fly", "flies", "flying", "skim", "skims", "glide", "glides", "bank", "banks", "dive", "dives", "hover", "hovers", "land", "lands", "launch", "launches", "roll", "rolls"] },
+    "pov":      { "kind": "camera",  "act": "pov", "words": ["pov", "view", "point of view"] }
+  }
+}

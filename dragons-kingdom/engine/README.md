@@ -2,7 +2,7 @@
 
 The plan is in [DESIGN.md](DESIGN.md), and the build log is in [PROGRESS.md](PROGRESS.md). The aim is a screenplay plus a shot list in, and a staged, rendered, cut and mixed episode out. Everything is free or open source.
 
-## What exists (phases 1-3 of 7: plumbing, template mining, input and validator, set sheets and casting)
+## What exists (phases 1-4 of 7: plumbing, template mining, input and validator, set sheets and casting, the ground auto-stager)
 
 | Piece | What it does |
 |---|---|
@@ -19,6 +19,8 @@ The plan is in [DESIGN.md](DESIGN.md), and the build log is in [PROGRESS.md](PRO
 | `engine/tools/sheet.mjs` | Set sheets → `scenes/lib/director/sets/sheets/<SET>.json` (marks + aliases, set objects, homes, areas with slots, paths, every hand-written camera as a vantage, occlusion solids, shot state, cost) for CLING_SQUARE, VERDOR_AERIAL, VERDOR_HARBOR, OUTER_ROCKS, SKY_OFF_VERDOR, BIRTHING_CHAMBER. `--check` for staleness. |
 | `previs-core.js` `{ sheet }` | `measure(..., { sheet })`: marks from the sheet, occlusion rays against its solids (`occludedBy`, `visibleFrac`); `rayBlock()`. |
 | `scenes/lib/humans/cast-list.js` | The cast as pure data: build ids → role, sex, age class (adult/child), variants, mounts; named people and creatures. |
+| `engine/stager/` | The auto-stager v1 (ground): `intent.mjs` (row → intent, `verbs.json`, `places.json`), `select.mjs` (template table), `templates/*.mjs`, `check.mjs` (score + adjust loop on previs-core), `stage.mjs` (`stageShot`, `stageRows`), `write.mjs` (→ `<builder>.auto.js` + `.touch.js` + `.spec.js` + `final/stage-report.md|json`), `accept.mjs` (re-stage the 22 Cling shots vs the hand specs). |
+| `scenes/lib/director/staging/` | Pure staging helpers: `ground.js`, `talk.js`, `merge.js` (`mergeSpecs`). |
 | `engine/cast/casting.mjs` | Shot list → `final/cast.lock.json`: named roles and variants, riders with mounts, dragons, generic roles → crowd## (hashed, unique per scene, locked), hard rating guard. |
 
 ## Run it
@@ -32,6 +34,8 @@ node scenes/lib/director/tools/previs.mjs --episode s01e01 --set CLING_SQUARE --
 node engine/input/validate.mjs --episode t00 --write       # parse + validate the test episode
 node engine/tools/sheet.mjs [--set X] [--check]           # set sheets
 node engine/cast/casting.mjs --episode t00                 # -> episodes/t00/final/cast.lock.json
+node engine/stager/write.mjs --episode t00                 # stage t00 -> final/scenes/specs/*.auto.js + stage-report
+node engine/stager/accept.mjs                             # the phase 4 acceptance table (re-staged Cling vs hand)
 npm test                                                 # includes test/engine.test.mjs
 ```
 
@@ -41,7 +45,7 @@ A new episode works once it has `episodes/<id>/final/` with the same layout as E
 
 These parts don't exist yet:
 
-- the auto-stager (phases 4 and 5);
+- the air auto-stager (phase 5); the ground stager's hand-match is 55 % (target 70 %, see PROGRESS.md);
 - `make-episode.mjs`, the queue and draft tiers (phase 6);
 - the set generator and `--episode` for `render/` and `pc/` (phase 7).
 

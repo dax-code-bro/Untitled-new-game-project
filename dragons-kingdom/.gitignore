@@ -5,3 +5,6 @@ episodes/s01e01/style-frames/*.png
 
 # local Python environment for the voice tool (rebuilt per machine)
 episodes/s01e01/final/tools/preview-venv/
+
+# engine phase 4: scratch episodes (re-staged Episode 1 shots for the stager acceptance; never committed)
+episodes/scratch-*/
