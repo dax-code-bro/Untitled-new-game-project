@@ -1,0 +1,44 @@
+# Validator fixture: SIX planted errors (test/engine.test.mjs). Do not "fix" it.
+SET CLING_SQUARE
+
+SHOT 0A-01
+scene: 0A
+set: CLING_BAKRY                       # planted 1: unknown set (no SET block with a template)
+size: wide
+move: static
+frame: Vendor L; Musician R
+
+SHOT 0A-02
+scene: 0A
+set: CLING_SQUARE
+size: medium
+move: static two-shot
+frame: Vendor L; Musician R
+lines: VENDOR "You're early."; VENDOR "Then play."
+
+SHOT 0A-03
+scene: 0A
+set: CLING_SQUARE
+size: close
+move: static
+frame: Musician C
+lines: MUSICIAN "The crowd won't wait."    # planted 2: out of order (after "Then play.")
+
+SHOT 0A-04
+scene: 0A
+set: CLING_SQUARE
+size: medium
+move: static
+frame: Vendor L; Bob R                 # planted 3: unknown character
+lines: MUSICIAN "After breakfast." (off)
+seconds: 0                             # planted 4: frames <= 0
+
+SHOT R1-01
+scene: 0A
+part: R1
+set: CLING_SQUARE
+size: wide
+move: static
+frame: Child C; Musician R (lighting a pipe)   # planted 5: a child in a rating-pass shot
+action: The musician lights a small pipe.
+# planted 6: VENDOR "Now." is in no shot

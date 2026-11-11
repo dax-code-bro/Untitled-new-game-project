@@ -1,0 +1,35 @@
+# Engine test episode t00: three shots on the existing Cling square.
+SET CLING_SQUARE                       # existing set: reuse
+
+SHOT 0A-01
+scene: 0A
+set: CLING_SQUARE
+size: wide
+lens: 35
+move: static
+from: steps
+frame: Vendor L (at his stall); Musician R (on the fountain rim); fountain C
+action: The square before the festival. The vendor sets out his crate; the musician sits on the fountain rim.
+sound: fountain; pigeons
+seconds: 4
+
+SHOT 0A-02
+scene: 0A
+set: CLING_SQUARE
+size: medium
+move: static two-shot
+frame: Vendor L; Musician R
+action: The vendor calls across to the musician, who answers without looking up from his lute.
+lines: VENDOR "You're early."; MUSICIAN "The crowd won't wait."; VENDOR "Then play."
+sound: fountain under the voices
+
+SHOT 0A-03
+scene: 0A
+set: CLING_SQUARE
+size: insert
+lens: 100
+move: static
+frame: lute C
+action: The musician's fingers find the first chord on the lute.
+sound: one lute chord
+trans: cut

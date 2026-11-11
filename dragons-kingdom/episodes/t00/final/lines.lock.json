@@ -1,0 +1,10 @@
+{
+  "about": "Stable line ids for this episode (engine/input/fountain.mjs). Key: scene|SPEAKER|normalised text (#n for a repeat). Never edit an id; a removed line keeps its id reserved.",
+  "key": "scene|SPEAKER|normalised text",
+  "next": 4,
+  "lines": {
+    "0A|VENDOR|you're early": "L001",
+    "0A|MUSICIAN|the crowd won't wait": "L002",
+    "0A|VENDOR|then play": "L003"
+  }
+}

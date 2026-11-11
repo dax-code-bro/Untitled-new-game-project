@@ -1,0 +1,253 @@
+{
+  "meta": {
+    "title": "Dragon's Kingdom - T00 - shot list",
+    "status": "PLAN ONLY. Parsed from the owner's shot list by the episode engine. Durations are animatic estimates.",
+    "source": "episodes/t00/input/shotlist.txt",
+    "source_sha256": "765e5f7f16d647bfc0c9dbe7e6c15f4df0da817d792c373eda3f7f029831f19d",
+    "dialogue": "episodes/t00/final/dialogue.json",
+    "generated_by": "engine/input/shotlist-parse.mjs",
+    "fps": 24,
+    "delivery": "native 3840x2160, 24 fps, --preset final on every frame (SERIES.md section 2)",
+    "ids": "Shot ids as written in the shot list (SHOT <id>).",
+    "estimate_model": "Episode 1 model: expected = dialogue + action + breath (rounded to 0.5 s) unless seconds:/frames: is given; dialogue = dialogue.json est_seconds + 0.35 s cue gap per line; action/breath default to the Episode 1 medians per shot size; low = 0.9/0.8/0.5 x; high = 1.15/1.3/1.5 x.",
+    "lens": "Full-frame-equivalent focal length: as written, else by shot size (EWS 24, WS 35, MS 50, CU 85, INS 100 macro).",
+    "native_4k_s_per_frame": "Median of the Episode 1 shots on the same set, where there are any.",
+    "dropped_shots": [],
+    "check_final_estimate_s": null
+  },
+  "sets": [
+    {
+      "id": "CLING_SQUARE",
+      "description": "Exterior, Cling (within Scrapper): approach street, festival square with a fountain at the center (raised edge plus a central stone pillar: the continuous reference landmark, readable at foot level and above the dust), a separate substantial stone support by the king's steps (cover for the king and captain), vendor stall (left-center) with alley behind, music space (right-center), stone arch exit (screen LEFT from the steps), gate to broad road (screen RIGHT from the steps), banners, timber and gray stone. Must also exist in a damaged/dusty state for 3C-3D. Same layout as assets.json set.cling_village_square.",
+      "shots": 3,
+      "expected_s": 11.5,
+      "new_in_final": false
+    }
+  ],
+  "conventions": {},
+  "continuity_flag_definitions": {},
+  "difficulty_tag_definitions": {},
+  "shots": [
+    {
+      "seq": 1,
+      "id": "0A-01",
+      "scene": "0A",
+      "part": null,
+      "origin": "handoff",
+      "set": "CLING_SQUARE",
+      "time_of_day": "MORNING",
+      "lighting": "",
+      "shot_size": "wide",
+      "lens": "35 mm",
+      "camera_move": "static",
+      "in_frame": [
+        {
+          "name": "Vendor",
+          "screen_pos": "L (at his stall)",
+          "kind": "person"
+        },
+        {
+          "name": "Musician",
+          "screen_pos": "R (on the fountain rim)",
+          "kind": "person"
+        },
+        {
+          "name": "fountain",
+          "screen_pos": "C",
+          "kind": "element"
+        }
+      ],
+      "action": "The square before the festival. The vendor sets out his crate; the musician sits on the fountain rim.",
+      "dialogue": [],
+      "sound": "fountain; pigeons",
+      "continuity_flags": [],
+      "timing": {
+        "dialogue_s": 0,
+        "action_s": 4,
+        "breath_s": 0
+      },
+      "est_seconds": 4,
+      "est_low_s": 3,
+      "est_high_s": 5,
+      "frames_at_24fps": 96,
+      "render": "3d",
+      "difficulty": 2,
+      "difficulty_tags": [],
+      "hard": false,
+      "native_4k_s_per_frame": {
+        "expected": 205,
+        "low": 164,
+        "high": 271,
+        "basis": "ESTIMATE: median of the Episode 1 shots on CLING_SQUARE"
+      },
+      "realism_strategy": null,
+      "engine": {
+        "from": "steps"
+      }
+    },
+    {
+      "seq": 2,
+      "id": "0A-02",
+      "scene": "0A",
+      "part": null,
+      "origin": "handoff",
+      "set": "CLING_SQUARE",
+      "time_of_day": "MORNING",
+      "lighting": "",
+      "shot_size": "medium",
+      "lens": "50 mm",
+      "camera_move": "static two-shot",
+      "in_frame": [
+        {
+          "name": "Vendor",
+          "screen_pos": "L",
+          "kind": "person"
+        },
+        {
+          "name": "Musician",
+          "screen_pos": "R",
+          "kind": "person"
+        }
+      ],
+      "action": "The vendor calls across to the musician, who answers without looking up from his lute.",
+      "dialogue": [
+        {
+          "id": "L001",
+          "speaker": "VENDOR",
+          "first_words": "You're early.",
+          "origin": "original",
+          "spoken_s": 0.8,
+          "line_seconds": 1.15,
+          "speaker_on_screen": true,
+          "delivery": "calling across"
+        },
+        {
+          "id": "L002",
+          "speaker": "MUSICIAN",
+          "first_words": "The crowd won't wait.",
+          "origin": "original",
+          "spoken_s": 1.5,
+          "line_seconds": 1.85,
+          "speaker_on_screen": true
+        },
+        {
+          "id": "L003",
+          "speaker": "VENDOR",
+          "first_words": "Then play.",
+          "origin": "original",
+          "spoken_s": 0.8,
+          "line_seconds": 1.15,
+          "speaker_on_screen": true,
+          "delivery": "dry"
+        }
+      ],
+      "sound": "fountain under the voices",
+      "continuity_flags": [],
+      "timing": {
+        "dialogue_s": 4.15,
+        "action_s": 0.5,
+        "breath_s": 0
+      },
+      "est_seconds": 4.5,
+      "est_low_s": 4,
+      "est_high_s": 5.5,
+      "frames_at_24fps": 108,
+      "render": "3d",
+      "difficulty": 2,
+      "difficulty_tags": [],
+      "hard": false,
+      "native_4k_s_per_frame": {
+        "expected": 205,
+        "low": 164,
+        "high": 271,
+        "basis": "ESTIMATE: median of the Episode 1 shots on CLING_SQUARE"
+      },
+      "realism_strategy": null
+    },
+    {
+      "seq": 3,
+      "id": "0A-03",
+      "scene": "0A",
+      "part": null,
+      "origin": "handoff",
+      "set": "CLING_SQUARE",
+      "time_of_day": "MORNING",
+      "lighting": "",
+      "shot_size": "insert",
+      "lens": "100 mm",
+      "camera_move": "static",
+      "in_frame": [
+        {
+          "name": "lute",
+          "screen_pos": "C",
+          "kind": "element"
+        }
+      ],
+      "action": "The musician's fingers find the first chord on the lute.",
+      "dialogue": [],
+      "sound": "one lute chord",
+      "continuity_flags": [],
+      "timing": {
+        "dialogue_s": 0,
+        "action_s": 3,
+        "breath_s": 0
+      },
+      "est_seconds": 3,
+      "est_low_s": 2.5,
+      "est_high_s": 4,
+      "frames_at_24fps": 72,
+      "render": "3d",
+      "difficulty": 2,
+      "difficulty_tags": [],
+      "hard": false,
+      "native_4k_s_per_frame": {
+        "expected": 205,
+        "low": 164,
+        "high": 271,
+        "basis": "ESTIMATE: median of the Episode 1 shots on CLING_SQUARE"
+      },
+      "realism_strategy": null,
+      "engine": {
+        "trans": "cut"
+      }
+    }
+  ],
+  "scene_totals": [
+    {
+      "scene": "0A",
+      "title": "CLING VILLAGE SQUARE",
+      "start_s": 0,
+      "shots": 3,
+      "spoken_lines": 3,
+      "parts": [],
+      "low_s": 9.5,
+      "expected_s": 11.5,
+      "high_s": 14.5,
+      "frames_expected": 276,
+      "hard_shots": 0,
+      "sets": [
+        "CLING_SQUARE"
+      ]
+    }
+  ],
+  "unit_totals": {},
+  "totals": {
+    "shots": 3,
+    "spoken_lines": 3,
+    "low_s": 9.5,
+    "expected_s": 11.5,
+    "high_s": 14.5,
+    "low_min": 0.16,
+    "expected_min": 0.19,
+    "high_min": 0.24,
+    "frames_expected": 276,
+    "frames_total": 276,
+    "hard_shots": 0,
+    "shots_by_origin": {
+      "handoff": 3
+    },
+    "shots_with_realism_strategy": 0,
+    "shots_per_tag": {},
+    "shots_per_flag": {}
+  }
+}

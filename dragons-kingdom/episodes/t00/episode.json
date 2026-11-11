@@ -1,0 +1,8 @@
+{
+  "id": "t00",
+  "title": "Engine test episode (three shots in Cling)",
+  "test": true,
+  "scenes": ["0A"],
+  "cuts": [{ "name": "edl", "scenes": ["0A"] }],
+  "faces": "avoid"
+}
