@@ -160,8 +160,21 @@ window). A screenshot survey at their settings and on High (street, downtown) pi
       matter (it was an even grey, like dusk). The car customs garages were flat-painted boxes: their
       walls are now painted concrete block and the floor real concrete (the photo-scanned library,
       tiled at its real size)
+- [x] Part 3: downtown has people and shop names. The survey shot of downtown on Low had empty pavements
+      and blank grey sign bands. Now a crowd walks the city's pavements from about 15 m out to where the
+      haze takes over (`world/crowd.js`): each walker is worked out on the graphics card (their block, a
+      lane, a direction and pace; walking round the block, turning at the corners, legs and arms
+      swinging, their own clothes, skin and hair; about half women, some in skirts, most with long hair;
+      a few carrying a bag; a soft shadow), so the processor does nothing per walker per frame: two draw
+      calls, a few numbers. Every few seconds only the walkers on the blocks round the camera who are out
+      at that hour are handed to the card, so its work follows what can be seen. A walker every few
+      metres downtown, a few a block at the city's edge; thinning out at night (nearly nobody at 3 am)
+      and in the rain; they fade in and out with a dither; not drawn on Phone, indoors or away from the
+      city. The real people (who you can talk to, rob, run over) stay the ones nearest you. And every shop bay's sign
+      band carries its shop's name (32 made-up local businesses, each its own colours and lettering;
+      an empty unit now and then), lit at night; one draw call for the whole city
 
-: the rest of the instant things, acted out
+## Phase 1.68 — A2 (parts 2 and 3): the rest of the instant things, acted out
 
 The second and third groups from the survey of things that used to be instant (a toast, money, a teleport).
 All of them go through `systems/acts.js`; each falls back to the old instant version if a scene can't

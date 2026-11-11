@@ -1,6 +1,6 @@
 // Survey shots: eye-level views around the map (one fresh page per shot).
 // usage: [ROOT=<site dir>] [PRESET=low|high] [VW=1024 VH=559] [SHOTS_OUT=/tmp/shots/] node tools/southbound/view-shots.mjs <tag> <view>
-// views: street main cross downtown avenue outskirts night rain yard yardhigh traffic corner gutter coasthw dunes beach field pave highway
+// views: street main cross downtown avenue outskirts night rain yard yardhigh traffic corner gutter coasthw dunes beach field pave highway shops shopsnight
 // The owner's picture (G14): PRESET=low VW=1024 VH=559. Compare builds with ROOT pointing at a copy of the site.
 import http from 'node:http'; import fs from 'node:fs'; import path from 'node:path'; import { createRequire } from 'node:module';
 const require = createRequire('/home/user/Untitled-new-game-project/tools/southbound/');
@@ -126,6 +126,15 @@ const info = await page.evaluate(([which, hourArg, probe, pickAt]) => {
     cam(x, y0 + 1.7, z, x + fx * 40 - rx * 1.2, y0 + 1.0, z + fz * 40 - rz * 1.2); R.at = [Math.round(x), Math.round(z)];
     { const T = SB.THREE, m = new T.Matrix4(), v = new T.Vector3(); R.furn = {};
       G.scene.traverse((o) => { if (!o.isInstancedMesh || !/^clutter:(bench|planter|news|bikerack)$/.test(o.name)) return; let best = 1e9; for (let i = 0; i < o.count; i++) { o.getMatrixAt(i, m); v.setFromMatrixPosition(m); best = Math.min(best, Math.hypot(v.x - x, v.z - z)); } R.furn[o.name.slice(8)] = o.count + ' shown, nearest ' + best.toFixed(1) + ' m'; }); }
+  } else if (which === 'shops' || which === 'shopsnight') {
+    // G14: across a downtown street at the shopfronts opposite (signs, awnings), and the people walking past
+    const A = N('c3_2'), B = N('c3_4'), dx = B.x - A.x, dz = B.z - A.z, L = Math.hypot(dx, dz), fx = dx / L, fz = dz / L, rx = -fz, rz = fx;
+    const w = (G.graph.edges.find((e) => (e.a === 'c3_2' && e.b === 'c3_3') || (e.a === 'c3_3' && e.b === 'c3_2'))?.width || 12) / 2;
+    const x = A.x + fx * 30 + rx * (w + 2.2), z = A.z + fz * 30 + rz * (w + 2.2);
+    SB.setHour(hourArg ?? (which === 'shopsnight' ? 21.2 : 15.5)); SB.setWeather('clear'); SB.teleport(x, z, 0); SB.step(40, 1 / 30);
+    const y0 = hm.height(x, z); SB.step(3, 1 / 30);
+    cam(x, y0 + 1.7, z, x + fx * 16 - rx * (2 * w + 14), y0 + 3.4, z + fz * 16 - rz * (2 * w + 14)); R.at = [Math.round(x), Math.round(z)];
+    R.signs = G.scene.getObjectByName('facade-signs')?.count; R.crowd = G.crowd?.count;
   } else if (which === 'highway') {
     const e = G.graph.edges.find((e) => e.kind === 'highway'); const p = e.pts[30], q = e.pts[40];
     SB.setHour(hourArg ?? 10.5); SB.setWeather('clear'); SB.teleport(p[0], p[1], 0); SB.step(40, 1 / 30);

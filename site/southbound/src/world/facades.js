@@ -9,11 +9,43 @@
 //    on the glass and office towers
 //  - real shopfronts on the ground floor: piers between the bays, a sign band,
 //    a granite stall riser under the glass, and canvas awnings over some bays
+//  - (G14) each shop's name lettered on the sign band over its bay (lit at night)
 // Near the camera (rebuilt as you move):
 //  - every window gets a sill and a head (stone on brick, painted casings on
 //    houses and stucco), placed exactly on the shader's window grid
 //  - shopfront mullions and transoms
 import * as THREE from 'three';
+import { worldUniforms } from './terrain.js';
+
+// (G14) the shop names on the sign bands: one picture with 32 signs on it (2 across, 16 down), each
+// its own colours and lettering. Made-up local businesses, no real brands.
+const SHOP_NAMES = ['GULF COAST PHARMACY', 'BAYOU BOOKS', 'CALVERA SHOES', "ROSA'S TAQUERIA", 'HARBOR DELI', 'PAWN & LOAN',
+  'NAILS & SPA', 'DRY CLEANERS', 'MAGNOLIA FLORIST', 'CORNER MARKET', 'THIBODEAUX JEWELERS', 'LEVEE HARDWARE', 'CAFE DU PORT',
+  'PECAN BAKERY', 'PHONE REPAIR', 'OPTICAL', 'TAX SERVICE', 'BARBER SHOP', 'LIQUOR', 'PALMETTO FURNITURE', 'ROYAL THRIFT',
+  'FRESH SEAFOOD', 'SUSHI BAR', 'PHO 88', 'CHECK CASHING', 'LAUNDROMAT', 'TATTOO', 'GAMES & COMICS', 'INSURANCE', 'FAMILY DENTAL',
+  'BAIL BONDS', 'NEWS & TOBACCO'];
+const SIGN_STYLES = [ // [background, letters, border, font]
+  ['#14301f', '#f2e6c4', '#c9b27a', 'serif'], ['#0f1c33', '#ffffff', null, 'sans-serif'], ['#5a1414', '#f6efe0', '#e0c27a', 'serif'],
+  ['#f1ece0', '#1b1b1b', '#1b1b1b', 'sans-serif'], ['#111111', '#f2c230', null, 'sans-serif'], ['#ffffff', '#b3191f', null, 'sans-serif'],
+  ['#1f4d5c', '#f4f4ee', null, 'serif'], ['#3a2a1c', '#e8d4a8', '#b8925a', 'serif'],
+];
+let signAtlas = null;
+export function shopSignAtlas() {
+  if (signAtlas) return signAtlas;
+  const c = document.createElement('canvas'); c.width = 1024; c.height = 1024;
+  const x = c.getContext('2d');
+  SHOP_NAMES.forEach((name, i) => {
+    const cx = (i % 2) * 512, cy = Math.floor(i / 2) * 64, [bg, fg, line, fam] = SIGN_STYLES[(i * 5 + 3) % SIGN_STYLES.length];
+    x.fillStyle = bg; x.fillRect(cx, cy, 512, 64);
+    if (line) { x.strokeStyle = line; x.lineWidth = 3; x.strokeRect(cx + 7, cy + 7, 498, 50); }
+    let px = 40; x.font = `bold ${px}px ${fam}`;
+    const w = x.measureText(name).width; if (w > 440) { px = Math.floor(px * 440 / w); x.font = `bold ${px}px ${fam}`; }
+    x.fillStyle = fg; x.textAlign = 'center'; x.textBaseline = 'middle';
+    x.fillText(name, cx + 256, cy + 33);
+  });
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
+  signAtlas = t; return t;
+}
 
 // the facade shader's window grid (buildings.js): cell size, window size as a share of the cell, first row offset
 export function windowGrid(style) {
@@ -113,12 +145,14 @@ export function createFacades(B, { scene, quality, surf, roofOf, roofs, hm, grap
 
   // ---- the static architecture
   const S = { stone: makeList(), paint: makeList(), metal: makeList(), canvas: makeList(), brick: makeList() };
+  const SG = makeList(); // (G14) the shop signs: c holds the sign's place in the atlas
   const ranges = new Map(); // bi -> { stone: [a, n], ... } for hiding a building
   B.forEach((b, bi) => {
     owner = bi;
     const st = b.style, seed = hash(b.x, b.z), top = b.y + b.h;
     const gable = roofOf && roofOf.has(bi);
     const start = {}; for (const k in S) start[k] = S[k].c.length;
+    const sign0 = SG.c.length;
     const trim = pickC(TRIM[st] || TRIM[1], seed);
     const atGround = ground(b);
     const W4 = walls(b);
@@ -216,6 +250,16 @@ export function createFacades(B, { scene, quality, surf, roofOf, roofs, hm, grap
           const len = W.u1 - W.u0, mid = (W.u0 + W.u1) / 2;
           onWall(S.paint, W, mid, b.y + (SHOP_GLASS + SHOP_TOP) / 2, len + 0.3, SHOP_TOP - SHOP_GLASS, 0.22, sign);           // sign band
           onWall(S.stone, W, mid, b.y + SHOP_TOP + 0.06, len + 0.4, 0.12, 0.34, 0xb6b0a4);                                  // its cap
+          // (G14) the shop's name over each bay, on the face of the band
+          for (let k = Math.floor(W.u0 / BAY); k * BAY < W.u1; k++) {
+            const a = Math.max(k * BAY, W.u0 + 0.5), z = Math.min((k + 1) * BAY, W.u1 - 0.5), bw = z - a;
+            if (bw < 2.6) continue;
+            const hs = hash(k * 1.37 + seed * 17.1, W.nx * 3.1 + W.nz * 5.3);
+            if (hs > 0.86) continue; // (an empty unit now and then)
+            const sw = Math.min(4.4, bw - 0.9), u = (a + z) / 2, y = b.y + (SHOP_GLASS + SHOP_TOP) / 2, o = 0.226;
+            const px = W.ax === 'x' ? u : W.c + W.nx * o, pz = W.ax === 'x' ? W.c + W.nz * o : u;
+            add(SG, px, y, pz, Math.atan2(W.nx, W.nz), 0, sw, 0.46, 1, Math.floor(hash(hs * 91.7, k + seed) * SHOP_NAMES.length) % SHOP_NAMES.length);
+          }
           onWall(S.stone, W, mid, b.y + 0.17, len + 0.02, 0.34, 0.05, 0x2a2b2d);                                            // granite stall riser
           for (let k = Math.ceil(W.u0 / BAY); k * BAY <= W.u1 + 0.01; k++) {
             const u = k * BAY;
@@ -272,7 +316,7 @@ export function createFacades(B, { scene, quality, surf, roofOf, roofs, hm, grap
         add(S.metal, x, top + 0.78, z, Math.PI / 4, 0, 0.9, 0.12, 0.9, 0x7a7d80);
       }
     }
-    const r = {}; for (const k in S) r[k] = [start[k], S[k].c.length - start[k]]; ranges.set(bi, r);
+    const r = {}; for (const k in S) r[k] = [start[k], S[k].c.length - start[k]]; r.sign = [sign0, SG.c.length - sign0]; ranges.set(bi, r);
   });
 
   const Cone = { f: [], c: [], o: [] };
@@ -392,6 +436,43 @@ export function createFacades(B, { scene, quality, surf, roofOf, roofs, hm, grap
     mesh.name = 'facade-' + k;
     scene.add(mesh);
     statics[k] = mesh;
+  }
+
+  // (G14) the shop signs: one draw call; each picks its own sign out of the atlas, and they light up at night
+  let signs = null;
+  const writeSigns = (i0, n, on = true) => {
+    for (let i = i0; i < i0 + n; i++) {
+      const o = i * 9;
+      if (!on) { signs.setMatrixAt(i, m4.makeScale(0, 0, 0)); continue; }
+      qY.setFromAxisAngle(AY, SG.f[o + 3]);
+      m4.compose(p.set(SG.f[o], SG.f[o + 1], SG.f[o + 2]), qY, s.set(SG.f[o + 5], SG.f[o + 6], 1));
+      signs.setMatrixAt(i, m4);
+    }
+    signs.instanceMatrix.needsUpdate = true;
+  };
+  if (SG.c.length) {
+    const g = new THREE.PlaneGeometry(1, 1);
+    g.setAttribute('aCell', new THREE.InstancedBufferAttribute(new Float32Array(SG.c), 1));
+    const atlas = shopSignAtlas();
+    const mat = new THREE.MeshStandardMaterial({ map: atlas, emissiveMap: atlas, emissive: 0xffffff, emissiveIntensity: 1, roughness: 0.5 });
+    mat.onBeforeCompile = (sh) => {
+      sh.uniforms.uNight = worldUniforms.uNight;
+      sh.vertexShader = sh.vertexShader
+        .replace('#include <common>', '#include <common>\nattribute float aCell;')
+        .replace('#include <uv_vertex>', `#include <uv_vertex>
+vMapUv = (vec2(uv.x, 1.0 - uv.y) * vec2(0.98, 0.9) + vec2(0.01, 0.05) + vec2(mod(aCell, 2.0), floor(aCell / 2.0))) * vec2(0.5, 0.0625);
+vMapUv.y = 1.0 - vMapUv.y; vEmissiveMapUv = vMapUv;`);
+      sh.fragmentShader = sh.fragmentShader
+        .replace('#include <common>', '#include <common>\nuniform float uNight;')
+        .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance *= uNight * 1.3;');
+    };
+    mat.customProgramCacheKey = () => 'sb-shopsigns';
+    signs = new THREE.InstancedMesh(g, mat, SG.c.length);
+    writeSigns(0, SG.c.length);
+    signs.castShadow = false; signs.receiveShadow = true; signs.userData.noHit = true;
+    signs.computeBoundingSphere(); signs.name = 'facade-signs';
+    scene.add(signs);
+    statics.signs = signs;
   }
 
   for (const [name, L, geo, mat] of [['cyl', C, new THREE.CylinderGeometry(0.5, 0.5, 1, 20), MATS.paint], ['cone', Cone, new THREE.ConeGeometry(0.5, 1, 20), MATS.paint]]) {
@@ -546,6 +627,7 @@ export function createFacades(B, { scene, quality, surf, roofOf, roofs, hm, grap
         else for (let i = 0; i < n; i++) statics[k].setMatrixAt(a + i, m4.makeScale(0, 0, 0));
         statics[k].instanceMatrix.needsUpdate = true;
       }
+      if (r && signs && r.sign && r.sign[1]) writeSigns(r.sign[0], r.sign[1], on);
       last.set(1e9, 0, 1e9);
     },
   };

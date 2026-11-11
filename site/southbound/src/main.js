@@ -55,6 +55,7 @@ import { planYards, buildYards } from './world/yards.js';
 import { createPalms } from './world/palms.js';
 import { buildContactShadows } from './world/contact.js';
 import { buildStreetClutter } from './world/streetclutter.js';
+import { createCrowd } from './world/crowd.js';
 import { buildShoulders, buildFootings } from './world/shoulders.js';
 import { createHoles } from './world/holes.js';
 import { installDemolition } from './systems/demolition.js';
@@ -231,6 +232,7 @@ vec3 CustomToneMapping( vec3 color ) {
   const palms = createPalms(scene, { hm, collision, quality: q, cityBlocks: city.cityBlocks, graph }); // cabbage palms on the coast (G11)
   buildContactShadows(city.buildings, { scene, hm, collision }); // dark ground along every wall's foot (G12)
   const clutter = buildStreetClutter({ scene, graph, hm, collision, quality: q, yards }); // stop signs, street names, drains, litter, weeds (G12)
+  const crowd = createCrowd({ scene, quality: q, worldUniforms, cityBlocks: city.cityBlocks }); // far-off people on the city pavements, all on the GPU (G14)
   buildShoulders(graph, { scene, hm, surf, collision }); // gravel and dirt along the country roads' edges (G12)
   buildFootings(city.buildings, { scene, hm, surf, collision }); // bare soil round the foot of houses on open ground (G12)
   veg.cover?.setLawns?.(city.buildings); // yards and lots round every building are mown
@@ -434,6 +436,7 @@ vec3 CustomToneMapping( vec3 color ) {
   const recovery = installRecovery({ canvas, settings, saveSettings, PRESETS, save: () => career.save(), pause: game.pause, automated: AUTOMATED });
   game.recovery = recovery;
   game.roads = roads; // (gravelAt: the dust off the county roads)
+  game.crowd = crowd; // (G14: the far-off walkers)
   // public services first, so jobs, arrests and the hospital use the real buildings
   const HOSPITAL = { x: CITY.x0 + CITY.nx * CITY.pitch + 24, z: CITY.z0 + 2 * CITY.pitch, name: 'Port Calvera Medical Center' };
   const PRECINCT = { x: CITY.x0 - 24, z: CITY.z0 + 1 * CITY.pitch, name: 'Calvera PD · Central Precinct' };
@@ -1159,6 +1162,7 @@ vec3 CustomToneMapping( vec3 color ) {
     veg.update(camera.position, dd);
     city.facades?.update(camera.position, dt);
     yards.update(sky.night); // door lanterns at dusk
+    crowd.update(camera, sky.hour, sky.night, weather.rain, !!S.indoors);
     if (veg.cover.update) {
       veg.cover.update(camera.position, sky.sunDir, _sunC.copy(sky.sun.color).multiplyScalar(sky.sun.intensity), weather);
       const pp = S.mode === 'foot' ? player.pos : S.vehicle ? S.vehicle.pos : focus;

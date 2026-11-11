@@ -181,6 +181,11 @@ the fewest additions next. Be honest in reports about what is and isn't done.
   VH=559` = the owner's picture; `SHOTS_OUT` = where) with `ROOT=<site copy>`: build into a copy (symlinks + its own game.js) so a stash
   can't swap the bundle under a running page. The owner's live frames (`$SBLIVE_OUT/f-*.jpg`) are the
   best survey of what they really see.
+  The far crowd (`world/crowd.js`) is all in the vertex shader; `crowd.where(i)` is its CPU twin for tests.
+  To check a shader-only thing quickly, render it alone in a tiny page (import map to `vendor/three`, import
+  the module from `src/`) instead of a 10-minute full game load in SwiftShader. An InstancedBufferGeometry's
+  `instanceCount` must be the number of instances (not the length of a vec4 array): asking for more than the
+  buffers hold makes WebGL drop the whole draw, silently.
 - Commit one batch at a time: if the next batch's edits are already in the tree, commit only the
   finished batch's files (and an `index.js` without the next batch's `add(...)` line), with the
   `game.js` that was built and QA'd for it.
