@@ -1,0 +1,84 @@
+{
+ "schema": "dragons-kingdom voices v1 (engine)",
+ "generated_by": "engine/vo/make_vo.py",
+ "rules": [
+  "One voice per role for the whole episode; a cast role is never recast (edit this file to recast).",
+  "A role Episode 1 cast keeps Episode 1's voice; new roles get a free allowed Kokoro voice.",
+  "Kokoro-82M v1.0 voices only; never the do-not-cast list (engines.kokoro.caution)."
+ ],
+ "roles": {
+  "VENDOR": {
+   "primary": {
+    "engine": "kokoro",
+    "voice": "am_puck",
+    "speed": 1.0,
+    "lang": "en-us",
+    "pitch_semitones": 0.0,
+    "measured_f0_median_hz_at_speed_1": 122.4,
+    "measured_pitch_span_semitones": 8.5
+   },
+   "source": "Episode 1 voices.json (series continuity)"
+  },
+  "MUSICIAN": {
+   "primary": {
+    "engine": "kokoro",
+    "voice": "bm_lewis",
+    "speed": 1.0,
+    "lang": "en-gb",
+    "pitch_semitones": 0.0,
+    "measured_f0_median_hz_at_speed_1": 102.3,
+    "measured_pitch_span_semitones": 10.1
+   },
+   "source": "Episode 1 voices.json (series continuity)"
+  }
+ },
+ "render_defaults": {
+  "working_format": "mono WAV per line, 48000 Hz, 24-bit PCM",
+  "resample": "ffmpeg -af aresample=48000:resampler=soxr  (or: sox in.wav -b 24 out.wav rate -v 48k)",
+  "pitch_shift": "sox in.wav out.wav pitch <semitones*100>   (apply each role's primary.pitch_semitones; roles with a non-zero shift: CHILD +4, WATCHMAN +2, QUEEN FALL -2, GUARD -2)",
+  "sentence_gap_s": {
+   "default": 0.3,
+   "NARRATOR": 0.6,
+   "urgent_or_shouted": 0.12
+  },
+  "how_to_split": "Synthesize each sentence of a line separately and join with sentence_gap_s of silence; this gives control over pauses that TTS does not.",
+  "trim": "Trim leading/trailing silence to 40 ms, then add a 5 ms fade at both ends.",
+  "line_level": "Normalize every line to the same speech level (-20 dBFS RMS over the voiced part, peak below -3 dBFS). Performance level (quiet, whisper, shout) is set in the mix, not in the file.",
+  "output_path": "episodes/s01e01/audio/vo/tts/<role-slug>/<line_id>.wav  (role-slug = lowercase, spaces to '-', e.g. king-of-cling)"
+ },
+ "pronunciation": [
+  {
+   "word": "Bashion, Bashions, Nightwings, Slitherwing",
+   "in_lines": [],
+   "status": "Not spoken in the final script: Daxtyn approved new wording for every line that used these scrapped species names (2026-10-18; final/CHANGES.md section 9). ../voices.json still lists them for the handoff."
+  },
+  {
+   "word": "Verdor",
+   "in_lines": [
+    "L003"
+   ],
+   "espeak_default_ipa": "vˈɜːdoːɹ",
+   "sounds_like": "VER-dor",
+   "tts_respelling": null,
+   "status": "ASK DAXTYN."
+  },
+  {
+   "word": "Tara",
+   "in_lines": [
+    "L003"
+   ],
+   "espeak_default_ipa": "tˈɑːɹə",
+   "sounds_like": "TAR-uh",
+   "tts_respelling": null,
+   "status": "ASK DAXTYN (TAR-uh or TAIR-uh?)."
+  },
+  {
+   "word": "Charcoal, Starlight, Cling, Scrapper, Santa Maria, Fallen, Citadel, Proxy, Leaf",
+   "status": "Read as ordinary English; no change needed."
+  },
+  {
+   "word": "Remi, Alexandria",
+   "status": "Not spoken in any line of this episode (no pronunciation needed yet)."
+  }
+ ]
+}

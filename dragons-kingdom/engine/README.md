@@ -2,7 +2,7 @@
 
 The plan is in [DESIGN.md](DESIGN.md), and the build log is in [PROGRESS.md](PROGRESS.md). The aim is a screenplay plus a shot list in, and a staged, rendered, cut and mixed episode out. Everything is free or open source.
 
-## What exists (phases 1-5 of 7: plumbing, template mining, input and validator, set sheets and casting, the ground and air auto-stager)
+## What exists (phases 1-6 of 7: plumbing, template mining, input and validator, set sheets and casting, the ground and air auto-stager, the orchestrator)
 
 | Piece | What it does |
 |---|---|
@@ -24,6 +24,13 @@ The plan is in [DESIGN.md](DESIGN.md), and the build log is in [PROGRESS.md](PRO
 | `scenes/lib/director/staging/flight.js` | Shared, pure flight helpers mined from the air specs: `fly`, `inForm`, `pair`, `posAt`, `localFrame`, `shadowOf` / `shTrack`, LEAF_FLY / LEAF_SKIM / CHAR_FLY (CHAR_HZ 0.625, locked by the sound spots) / CHAR_GLIDE, `perch`, `formationClock`. |
 | `scenes/lib/director/staging/` | Pure staging helpers: `ground.js`, `talk.js`, `merge.js` (`mergeSpecs`). |
 | `engine/cast/casting.mjs` | Shot list → `final/cast.lock.json`: named roles and variants, riders with mounts, dragons, generic roles → crowd## (hashed, unique per scene, locked), hard rating guard. |
+| `engine/make-episode.mjs` | (phase 6) ONE command: `--episode E --stage parse|validate|cast|sets|vo|stage|previs|draft|cut|mix|package|all [--draft animatic|stills|video] [--scenes ..] [--only ..] [--restage] [--force] [--status] [--detach]`. Stamps in `episodes/<ep>/engine/state.json` (inputs / outputs hash per stage, per-shot keys for stage / previs / draft); an unchanged stage is skipped. Writes `episodes/<ep>/engine/REPORT.md` (also `--status`). |
+| `engine/queue.mjs` | (phase 6) the DETACHED render queue: `start|run|status|stop --episode E`. One job per set (render-shots, workers 1), heartbeat, stale-pid take-over and resume, memory guard, set locks + `<builder>.auto.next.js` swap, re-queue of shots changed mid-render (max 2), then the post step (cut + mix). |
+| `engine/lib/drafts.mjs` | (phase 6) per-shot render keys (the render-shots key parts + tier), D1/D2 sidecars `<work>/stills/<job>.d1.json`, queue paths. |
+| `engine/previs/animatic.mjs` | (phase 6) D0 animatic frames from previs-core (sky / ground grid, sheet solids as prisms, people and dragons as shapes), pure Node PNG → `final/previs/<job>_<k>.png`. |
+| `engine/vo/make_vo.py` | (phase 6) `--episode E`: voices.json (Episode 1's voice for a series role, else a free allowed Kokoro voice), takes with the Episode 1 preview DSP, pocketsphinx words; espeak-ng fallback. Run with `episodes/s01e01/final/tools/preview-venv/bin/python -I`. |
+| `scenes/lib/sound/mix.mjs` | (phase 6) the shared mixer (`--episode`, default s01e01; `episodes/s01e01/final/sound/mix.mjs` is now a wrapper, same 1C bytes). Beds by set (`scenes/lib/sound/beds.json` unless the episode has its own), spots from the shot list's `sound:` (`sound-words.json`, `auto.mjs`), music only from a hand-made `sound/music/cues.json`. |
+| `make-cut.mjs` tiers | (phase 6) best picture per shot: D2 video > D1 stills (slow push) > D0 animatic > slate; on for every episode with an episode.json (`--tiers` for Episode 1). |
 
 ## Run it
 
@@ -39,6 +46,10 @@ node engine/cast/casting.mjs --episode t00                 # -> episodes/t00/fin
 node engine/stager/write.mjs --episode t00                 # stage t00 -> final/scenes/specs/*.auto.js + stage-report
 node engine/stager/accept.mjs                             # the phase 4 acceptance table (re-staged Cling vs hand)
 node engine/stager/accept.mjs --air                       # the phase 5 acceptance table (re-staged air shots vs hand)
+node engine/make-episode.mjs --episode t00 --stage all --draft stills --detach   # everything; renders run detached
+node engine/make-episode.mjs --episode t00 --status        # REPORT.md: per scene, tier, queue, ETA, next command
+node engine/queue.mjs status --episode t00                 # the queue alone (start|run|status|stop)
+node scenes/lib/sound/mix.mjs --episode t00                # the mix of an episode's first cut
 npm test                                                 # includes test/engine.test.mjs
 ```
 
@@ -49,7 +60,6 @@ A new episode works once it has `episodes/<id>/final/` with the same layout as E
 These parts don't exist yet:
 
 - the stager's hand-match is below target: ground 55 %, air 41 % (target 70 %, see PROGRESS.md phase 5b);
-- `make-episode.mjs`, the queue and draft tiers (phase 6);
 - the set generator and `--episode` for `render/` and `pc/` (phase 7).
 
 The shared `SETS` registry and Episode 1 continuity are still in `registry.js`.

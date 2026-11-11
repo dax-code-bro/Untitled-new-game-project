@@ -1,0 +1,115 @@
+{
+ "title": "Dragon's Kingdom T00 - draft cut: 0A",
+ "made_at": "2026-11-11T02:59",
+ "shots_dir": "output/director/t00/draft/shots",
+ "size": "960x540",
+ "fps": 24,
+ "shots": [
+  {
+   "job": "0A-01",
+   "scene": "0A",
+   "kind": "3d",
+   "source": "stills",
+   "frames": 96,
+   "rec_in": 0,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "0A-02",
+   "scene": "0A",
+   "kind": "3d",
+   "source": "stills",
+   "frames": 108,
+   "rec_in": 96,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  },
+  {
+   "job": "0A-03",
+   "scene": "0A",
+   "kind": "3d",
+   "source": "stills",
+   "frames": 72,
+   "rec_in": 204,
+   "trans": [
+    "cut"
+   ],
+   "handles_used": [
+    0,
+    0
+   ],
+   "held_frames": [
+    0,
+    0
+   ]
+  }
+ ],
+ "audio": [
+  {
+   "ref": "L001",
+   "role": "VENDOR",
+   "shot": "0A-02",
+   "file": "vo/L001.wav",
+   "file_in_s": 0,
+   "file_out_s": 0.625,
+   "rec_s": 4.27,
+   "gain_db": 3
+  },
+  {
+   "ref": "L002",
+   "role": "MUSICIAN",
+   "shot": "0A-02",
+   "file": "vo/L002.wav",
+   "file_in_s": 0,
+   "file_out_s": 1.45,
+   "rec_s": 5.055,
+   "gain_db": 0
+  },
+  {
+   "ref": "L003",
+   "role": "VENDOR",
+   "shot": "0A-02",
+   "file": "vo/L003.wav",
+   "file_in_s": 0,
+   "file_out_s": 0.795,
+   "rec_s": 6.595,
+   "gain_db": 0
+  }
+ ],
+ "output": {
+  "file": "episodes/t00/final/cut/DragonsKingdom_T00_draft-cut_0A.mp4",
+  "frames": 276,
+  "duration_s": 11.5,
+  "size_mb": 0.9,
+  "assembled_s": 3
+ },
+ "summary": {
+  "rendered": 0,
+  "stills": 3,
+  "animatic": 0,
+  "black": 0,
+  "slates": 0,
+  "voice_cues": 3,
+  "review_flags": 0,
+  "review_flags_accepted": 0
+ }
+}

@@ -334,3 +334,41 @@ test('engine phase 5b: occlusion is a hard fail (X6-09 clear, all 34 air shots),
   const rocks = JSON.parse(fs.readFileSync(path.join(ROOT, 'scenes/lib/director/sets/sheets/OUTER_ROCKS.json'), 'utf8'));
   for (const [k, s] of Object.entries(DEF.stacks)) assert.equal(Math.max(...rocks.solids.filter((q) => q.what === `stack ${k}`).map((q) => q.y0 + q.h)), s.H, `stack ${k}`);
 });
+
+test('engine phase 6: queue files, animatic frames, auto sound spots, make-episode guards (no render)', async () => {
+  // the queue: enqueue merges pending jobs of a set; a scratch episode id keeps t00's queue untouched
+  const ep = `scratch-q${process.pid}`;
+  const { enqueue, loadQueue, liveness, statusText } = await import('../engine/queue.mjs');
+  const { queuePaths } = await import('../engine/lib/drafts.mjs');
+  try {
+    enqueue(ep, [{ set: 'CLING_SQUARE_2', tier: 'stills', shots: ['0A-01'] }]);
+    enqueue(ep, [{ set: 'CLING_SQUARE_2', tier: 'stills', shots: ['0A-02', '0A-01'] }, { set: 'OUTER_ROCKS', tier: 'stills', shots: ['X6-01'] }]);
+    const q = loadQueue(ep);
+    assert.equal(q.jobs.length, 2);
+    assert.deepEqual(q.jobs[0].shots, ['0A-01', '0A-02']);
+    assert.equal(liveness(ep).alive, false);
+    fs.writeFileSync(queuePaths(ep).pid, '999999');                                 // a dead pid is not a runner
+    assert.equal(liveness(ep).alive, false);
+    assert.match(statusText(ep), /not running/);
+  } finally { fs.rmSync(path.join(ROOT, 'episodes', ep), { recursive: true, force: true }); }
+  // D0: a schematic frame of t00's two-shot is a real PNG with both talkers in frame
+  const { drawFrame, loadEpisodeSets } = await import('../engine/previs/animatic.mjs');
+  const [{ spec, table, sheet }] = await loadEpisodeSets('t00');
+  const row = table.shots.find((r) => r.job === '0A-02');
+  const { png, r } = drawFrame(spec, '0A-02', row, 1, sheet, 160);
+  assert.deepEqual([...png.subarray(1, 4)].map((c) => String.fromCharCode(c)).join(''), 'PNG');
+  assert.ok(r.actors.filter((a) => a.inFrame).length >= 2);
+  // sound: a variant set takes its base set's bed; t00's "pigeons" becomes a wing-flutter spot, "fountain" is unmatched
+  const { bedTable, autoSpots } = await import('../scenes/lib/sound/auto.mjs');
+  assert.equal(bedTable({ sets: { CLING_SQUARE: 'grounds_wind' } }).sets.CLING_SQUARE_2, 'grounds_wind');
+  const edl = JSON.parse(fs.readFileSync(path.join(ROOT, 'episodes/t00/final/cut/edl.json'), 'utf8'));
+  const sp = autoSpots('t00', edl, { defaults: {}, spaces: { open: {} }, space_of_set: {} });
+  assert.ok(sp.events.some((e) => e.shot === '0A-01' && e.sound === 'wingbeat_light'));
+  assert.ok(sp.unmatched.some((u) => u.includes('fountain')));
+  // make-episode refuses Episode 1 and an unknown draft tier; --status works without a render
+  assert.notEqual(node('engine/make-episode.mjs', '--episode', 's01e01', '--stage', 'all').status, 0);
+  assert.notEqual(node('engine/make-episode.mjs', '--episode', 't00', '--draft', 'oil-paint').status, 0);
+  const st = node('engine/make-episode.mjs', '--episode', 't00', '--status');
+  assert.equal(st.status, 0, st.stderr);
+  assert.match(st.stdout, /\| 0A \| 3 \| 3 \|/);
+});

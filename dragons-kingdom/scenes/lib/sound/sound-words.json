@@ -1,0 +1,24 @@
+{
+ "about": "Shot-list `sound:` phrases -> a synthesised spot effect (episodes/s01e01/final/sound/fx/synth.mjs SOUNDS). The shared mixer (scenes/lib/sound/mix.mjs) uses these for an episode without its own fx/spots.json. First match wins; a phrase with no match is listed in the mix report (unmatched) and needs a recording or a new synth.",
+ "words": [
+  { "re": "pigeon|dove|flutter|bird.*wing", "sound": "wingbeat_light", "gain_db": -32, "pan": 0.4, "at": 0.8, "repeat_every_s": 2.5 },
+  { "re": "gull", "sound": "gull", "gain_db": -32, "pan": -0.3, "at": 0.6, "repeat_every_s": 3 },
+  { "re": "lark|songbird", "sound": "lark", "gain_db": -34, "pan": 0.3, "at": 0.5 },
+  { "re": "wingbeat|wings? beat|dragon.*wing", "sound": "wingbeat", "gain_db": -24, "at": 0.3, "repeat_every_s": 1.6 },
+  { "re": "rush|whoosh|pass(es)? by", "sound": "air_rush", "gain_db": -24, "at": 0.4 },
+  { "re": "roar|dragon call|bellow", "sound": "dragon_call", "gain_db": -22, "at": 0.5 },
+  { "re": "footstep|steps? on stone|walks?", "sound": "step_stone", "gain_db": -30, "at": 0.3, "repeat_every_s": 0.55 },
+  { "re": "runn(ing|ers)|run(s)? ", "sound": "runners", "gain_db": -28, "at": 0.2 },
+  { "re": "knock|crate|thud", "sound": "knock", "gain_db": -28, "at": 0.8 },
+  { "re": "door", "sound": "door", "gain_db": -26, "at": 0.5 },
+  { "re": "bell", "sound": "boat_bell", "gain_db": -30, "at": 0.6 },
+  { "re": "rope|rigging|creak", "sound": "rope_creak", "gain_db": -30, "at": 0.6 },
+  { "re": "chain", "sound": "chain_rattle", "gain_db": -30, "at": 0.5 },
+  { "re": "crowd|murmur|walla|chatter", "sound": "walla", "gain_db": -30, "at": 0.2 },
+  { "re": "cloth|rustle|cloak", "sound": "cloth", "gain_db": -32, "at": 0.4 },
+  { "re": "breath|sigh|pant", "sound": "breath", "gain_db": -30, "at": 0.4 },
+  { "re": "snort", "sound": "snort", "gain_db": -26, "at": 0.5 },
+  { "re": "goat|sheep|bleat", "sound": "bleat", "gain_db": -30, "at": 0.8 },
+  { "re": "grass|wind in", "sound": "wind_grass", "gain_db": -30, "at": 0.2 }
+ ]
+}

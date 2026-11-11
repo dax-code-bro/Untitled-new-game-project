@@ -56,48 +56,91 @@
      "part": 0,
      "ref": "L001",
      "role": "VENDOR",
-     "file": null,
+     "file": "vo/L001.wav",
      "file_in_s": 0,
-     "file_out_s": 1,
-     "at_s": 0.2,
+     "file_out_s": 0.625,
+     "at_s": 0.27,
      "speech_in_s": 0.3,
-     "speech_out_s": 1.1,
-     "words": [],
-     "gain_db": 0,
+     "speech_out_s": 0.935,
+     "words": [
+      {
+       "w": "you're",
+       "start_s": 0.27,
+       "end_s": 0.46
+      },
+      {
+       "w": "early",
+       "start_s": 0.46,
+       "end_s": 0.88
+      }
+     ],
+     "gain_db": 3,
      "continues": false,
-     "placeholder": true
+     "placeholder": false
     },
     {
      "id": "L002",
      "part": 0,
      "ref": "L002",
      "role": "MUSICIAN",
-     "file": null,
+     "file": "vo/L002.wav",
      "file_in_s": 0,
-     "file_out_s": 1.7,
-     "at_s": 1.15,
-     "speech_in_s": 1.25,
-     "speech_out_s": 2.75,
-     "words": [],
+     "file_out_s": 1.45,
+     "at_s": 1.055,
+     "speech_in_s": 1.085,
+     "speech_out_s": 2.475,
+     "words": [
+      {
+       "w": "the",
+       "start_s": 1.055,
+       "end_s": 1.155
+      },
+      {
+       "w": "crowd",
+       "start_s": 1.155,
+       "end_s": 1.725
+      },
+      {
+       "w": "won't",
+       "start_s": 1.725,
+       "end_s": 2.045
+      },
+      {
+       "w": "wait",
+       "start_s": 2.045,
+       "end_s": 2.455
+      }
+     ],
      "gain_db": 0,
      "continues": false,
-     "placeholder": true
+     "placeholder": false
     },
     {
      "id": "L003",
      "part": 0,
      "ref": "L003",
      "role": "VENDOR",
-     "file": null,
+     "file": "vo/L003.wav",
      "file_in_s": 0,
-     "file_out_s": 1,
-     "at_s": 2.8,
-     "speech_in_s": 2.9,
-     "speech_out_s": 3.7,
-     "words": [],
+     "file_out_s": 0.795,
+     "at_s": 2.595,
+     "speech_in_s": 2.625,
+     "speech_out_s": 3.36,
+     "words": [
+      {
+       "w": "then",
+       "start_s": 2.595,
+       "end_s": 2.825
+      },
+      {
+       "w": "play",
+       "start_s": 2.825,
+       "end_s": 3.305
+      }
+     ],
      "gain_db": 0,
      "continues": false,
-     "placeholder": true
+     "placeholder": false
     }
    ],
    "captions": [],

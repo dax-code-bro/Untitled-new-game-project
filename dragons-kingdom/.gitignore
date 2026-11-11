@@ -8,3 +8,11 @@ episodes/s01e01/final/tools/preview-venv/
 
 # engine phase 4: scratch episodes (re-staged Episode 1 shots for the stager acceptance; never committed)
 episodes/scratch-*/
+
+# engine phase 6: per-episode binaries and the engine's own state (every episode; Episode 1 has its own .gitignores)
+episodes/*/engine/
+episodes/*/final/vo/*.wav
+episodes/*/final/cut/*.mp4
+episodes/*/final/cut/*.srt
+episodes/*/final/audio/
+episodes/*/final/previs/*.png

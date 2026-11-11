@@ -1,0 +1,138 @@
+{
+ "schema": "dragons-kingdom vo takes v1 (engine)",
+ "episode": "t00",
+ "generated_by": "engine/vo/make_vo.py",
+ "engine": "kokoro",
+ "dsp_module": "episodes/s01e01/preview/tools/make_vo.py",
+ "takes": [
+  {
+   "id": "L001",
+   "seq": 1,
+   "scene": "0A",
+   "shots": [
+    "0A-02"
+   ],
+   "role": "VENDOR",
+   "text": "You're early.",
+   "tts_input": "You're early.",
+   "file": "vo/L001.wav",
+   "duration_s": 0.625,
+   "segments": [
+    {
+     "text": "You're early.",
+     "start_s": 0.03,
+     "end_s": 0.665
+    }
+   ],
+   "key": "3ba6dab2b4f06732",
+   "voice": {
+    "engine": "kokoro",
+    "voice": "am_puck",
+    "lang": "en-us",
+    "speed": 1.0,
+    "pitch_semitones": 0.0
+   },
+   "performance": {
+    "preset": "raised",
+    "why": "delivery note 'calling'"
+   },
+   "mix": {
+    "gain_db": 3.0,
+    "space": null
+   },
+   "asr": {
+    "free_hyp": "early",
+    "wer": 0.5,
+    "closed_set_pick": "you're early",
+    "closed_set_match": true
+   },
+   "sha256": "88c778297fe1d18b897ca2450dbfdee5ddcbbb8ae662403e7235ba4c53b62fc8"
+  },
+  {
+   "id": "L002",
+   "seq": 2,
+   "scene": "0A",
+   "shots": [
+    "0A-02"
+   ],
+   "role": "MUSICIAN",
+   "text": "The crowd won't wait.",
+   "tts_input": "The crowd won't wait.",
+   "file": "vo/L002.wav",
+   "duration_s": 1.45,
+   "segments": [
+    {
+     "text": "The crowd won't wait.",
+     "start_s": 0.03,
+     "end_s": 1.42
+    }
+   ],
+   "key": "e7c7df3c8f0598b8",
+   "voice": {
+    "engine": "kokoro",
+    "voice": "bm_lewis",
+    "lang": "en-gb",
+    "speed": 1.0,
+    "pitch_semitones": 0.0
+   },
+   "performance": {
+    "preset": "plain",
+    "why": "conversational"
+   },
+   "mix": {
+    "gain_db": 0.0,
+    "space": null
+   },
+   "asr": {
+    "free_hyp": "the crowd wouldn't wait",
+    "wer": 0.25,
+    "closed_set_pick": "the crowd won't wait",
+    "closed_set_match": true
+   },
+   "sha256": "a5764afa25a98d3b41eab4c572140908de2bef1277896806189a727e75677771"
+  },
+  {
+   "id": "L003",
+   "seq": 3,
+   "scene": "0A",
+   "shots": [
+    "0A-02"
+   ],
+   "role": "VENDOR",
+   "text": "Then play.",
+   "tts_input": "Then play.",
+   "file": "vo/L003.wav",
+   "duration_s": 0.795,
+   "segments": [
+    {
+     "text": "Then play.",
+     "start_s": 0.03,
+     "end_s": 0.765
+    }
+   ],
+   "key": "7b462ea60f25ccb1",
+   "voice": {
+    "engine": "kokoro",
+    "voice": "am_puck",
+    "lang": "en-us",
+    "speed": 1.0,
+    "pitch_semitones": 0.0
+   },
+   "performance": {
+    "preset": "plain",
+    "why": "conversational"
+   },
+   "mix": {
+    "gain_db": 0.0,
+    "space": null
+   },
+   "asr": {
+    "free_hyp": "then play",
+    "wer": 0.0,
+    "closed_set_pick": "then play",
+    "closed_set_match": true
+   },
+   "sha256": "3d02669529cca6d67cb6e731c26a67d5c1a5f797a33e92352cd2d80414b9ef3a"
+  }
+ ]
+}
