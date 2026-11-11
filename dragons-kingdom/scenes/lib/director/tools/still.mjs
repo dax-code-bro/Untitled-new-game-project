@@ -6,18 +6,20 @@
 // <shot>[@u] (u = fraction of the shot, default 0.5) or <shot>@<seconds>s. The set scene and the
 // shot's start come from the shot tables (episodes/s01e01/final/scenes/*.shots.json). Stills are
 // rendered as a 1-fps sequence of the chosen frames by render.mjs --still, one call per shot.
+// --episode <id> (default s01e01): that episode's shot tables (episode-paths.js).
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { dirs, episodeArg } from '../episode-paths.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '../../../..');
-const SCENES = path.join(ROOT, 'episodes/s01e01/final/scenes');
-const args = process.argv.slice(2);
+const { ep: EP, argv: args } = episodeArg(process.argv.slice(2));
+const SCENES = dirs(EP).scenes;
 const opt = (n, d) => { const i = args.indexOf(n); if (i < 0) return d; const v = args[i + 1]; args.splice(i, 2); return v; };
 const preset = opt('--preset', 'draft');
-const out = path.resolve(opt('--out', path.join(ROOT, 'output/director-stills')));
+const out = path.resolve(opt('--out', dirs(EP).stillsOut));
 const cin = opt('--cinematic', null);
 const size = opt('--size', null);
 fs.mkdirSync(out, { recursive: true });

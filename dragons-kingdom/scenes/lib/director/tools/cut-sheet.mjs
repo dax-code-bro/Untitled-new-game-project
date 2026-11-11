@@ -4,6 +4,7 @@
 // edit list, tiled into numbered contact-sheet pages labelled with the shot id and record timecode.
 //
 //   node scenes/lib/director/tools/cut-sheet.mjs --cut CUT.mp4 --out DIR [--at 0.2,0.8] [--per-page 24] [--only P-02,1A-18]
+//        [--episode s01e01] [--edl edl-1B]
 //
 // Writes DIR/cut-sheet-01.png ... (6 columns, 320 px wide frames) and prints the page list.
 import fs from 'node:fs';
@@ -12,10 +13,11 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { ffmpegPath } from '../../../../render/lib/tools.mjs';
+import { dirs, episodeArg } from '../episode-paths.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '../../../..');
-const argv = process.argv.slice(2);
+const { ep: EP, argv } = episodeArg(process.argv.slice(2));
 const opt = (n, d = null) => { const i = argv.indexOf(n); return i >= 0 ? argv[i + 1] : d; };
 const CUT = opt('--cut'); const OUT = path.resolve(opt('--out', 'cut-sheets'));
 if (!CUT || !fs.existsSync(CUT)) throw new Error('--cut FILE.mp4 (an assembled cut) is required');
@@ -25,7 +27,7 @@ const ONLY = opt('--only') ? new Set(opt('--only').split(',')) : null;
 // --edl edl-1B: the edit list the cut was made from (default edl = PROLOGUE+TITLE+1A; session 10: the 1B
 // sheets were cut from the first cut's shot times and labelled P-01..1A-34)
 const EDL_NAME = (opt('--edl', 'edl')).replace(/\.json$/, '');
-const edl = JSON.parse(fs.readFileSync(path.join(ROOT, `episodes/s01e01/final/cut/${EDL_NAME}.json`), 'utf8'));
+const edl = JSON.parse(fs.readFileSync(dirs(EP).edl(EDL_NAME), 'utf8'));
 const FPS = edl.fps;
 const font = ['/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', 'C:/Windows/Fonts/arialbd.ttf'].find((f) => fs.existsSync(f));
 const ff = font ? `fontfile='${font.replace(/:/g, '\\:')}':` : '';

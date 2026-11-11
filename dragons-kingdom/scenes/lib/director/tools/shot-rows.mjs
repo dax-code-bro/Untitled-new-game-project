@@ -6,7 +6,7 @@
 // to hold each picture against what the shot is meant to be (1A-22's swapped two-shot was found so).
 //
 //   node scenes/lib/director/tools/shot-rows.mjs --shots DIR/shots --out DIR/rows [--at 0.1,0.5,0.9]
-//        [--only 1A-22,X2-10] [--per-page 6] [--width 480]
+//        [--only 1A-22,X2-10] [--per-page 6] [--width 480] [--episode s01e01] [--edl edl-1C]
 //
 // Writes DIR/rows/rows-01.png ... and prints the page list. Shots without a video are skipped.
 import fs from 'node:fs';
@@ -15,17 +15,18 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { ffmpegPath, ffprobePath } from '../../../../render/lib/tools.mjs';
+import { dirs, episodeArg } from '../episode-paths.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '../../../..');
-const argv = process.argv.slice(2);
+const { ep: EP, argv } = episodeArg(process.argv.slice(2));
 const opt = (n, d = null) => { const i = argv.indexOf(n); return i >= 0 ? argv[i + 1] : d; };
-const SHOTS = path.resolve(opt('--shots', path.join(ROOT, 'output/director/draft/shots')));
+const SHOTS = path.resolve(opt('--shots', path.join(dirs(EP).work('draft'), 'shots')));
 const OUT = path.resolve(opt('--out', 'shot-rows'));
 const AT = opt('--at', '0.1,0.5,0.9').split(',').map(Number);
 const PER = +opt('--per-page', 6), TW = +opt('--width', 480), TH = Math.round(TW * 9 / 16 / 2) * 2;
 const ONLY = opt('--only') ? new Set(opt('--only').split(',')) : null;
-const edl = JSON.parse(fs.readFileSync(path.join(ROOT, 'episodes/s01e01/final/cut/edl.json'), 'utf8'));
+const edl = JSON.parse(fs.readFileSync(dirs(EP).edl(opt('--edl', 'edl')), 'utf8'));
 const font = ['/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', 'C:/Windows/Fonts/arialbd.ttf'].find((f) => fs.existsSync(f));
 const ff = font ? `fontfile='${font.replace(/\\/g, '/').replace(/:/g, '\\:')}':` : '';
 // drawtext text: escape for the filter-graph level and the option level

@@ -10,6 +10,7 @@
 //   node scenes/lib/director/tools/previs.mjs --set BIRTHING_CHAMBER --only 1A-27,1A-28 [--at 0.15,0.6,0.95] [--out DIR]
 //        [--cam '{"pos":[x,y,z],"look":[x,y,z],"mm":28,"fstop":1.4}']   try a camera over the shot's own (authoring loop)
 //        [--cast '{"alexandria":{"lookAmount":1}}']                       ... and cast changes (merged per actor)
+//   (every form takes --episode <id>, default s01e01; the measuring itself is ../previs-core.js)
 //   node scenes/lib/director/tools/previs.mjs --set BIRTHING_CHAMBER --cuts [--only X2-03]
 //        EDIT CHECK of the cuts between consecutive shots of this set in the edit list (the last frame of
 //        the outgoing shot against the first of the incoming one): a JUMP CUT (a subject both shots hold,
@@ -28,19 +29,16 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { pathToFileURL } from 'node:url';
 import * as THREE from 'three';
 import { SETS } from '../registry.js';
-import { actorState, actorVisible } from '../blocking.js';
-import { keyed, isKeyList } from '../timeline.js';
-import { solveFraming } from '../framing.js';
-import { speakerAt } from '../dialogue.js';
-import { faceReadability, cutCheck } from '../audit.js';
+import { cutCheck } from '../audit.js';
+import { mergeShot as merge, shotEnv as coreEnv, analyse as coreAnalyse } from '../previs-core.js';
+import { dirs, episodeArg } from '../episode-paths.js';
 
-const HERE = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = path.resolve(HERE, '../../../..');
-const SCENES = path.join(ROOT, 'episodes/s01e01/final/scenes');
-const argv = process.argv.slice(2);
+// --episode <id> (default s01e01): that episode's specs, shot tables and edit lists
+const { ep: EP, argv } = episodeArg(process.argv.slice(2));
+const SCENES = dirs(EP).scenes;
 const opt = (n, d = null) => { const i = argv.indexOf(n); return i >= 0 ? argv[i + 1] : d; };
 const SET = opt('--set');
 if (!SET || !SETS[SET]) { console.error(`previs: --set one of ${Object.keys(SETS).join(', ')}`); process.exit(2); }
@@ -54,192 +52,9 @@ const specFile = path.join(SCENES, 'specs', `${SETS[SET].builder}.spec.js`);
 const spec = (await import(pathToFileURL(specFile).href)).default;
 const table = JSON.parse(fs.readFileSync(path.join(SCENES, SETS[SET].file.replace(/\.js$/, '.shots.json')), 'utf8'));
 
-const CREATURE_LEN = { hatchling: 0.7, leaf: 9, charcoal: 14, starlight: 16, scout: 8 };
-const V = (a) => new THREE.Vector3(...a);
-const merge = (def = {}, s = {}) => {
-  const out = { ...def, ...s };
-  if (def.cast || s.cast) {
-    out.cast = {};
-    for (const k of new Set([...Object.keys(def.cast || {}), ...Object.keys(s.cast || {})])) {
-      if (s.cast && k in s.cast && s.cast[k] == null) continue;
-      out.cast[k] = { ...(def.cast?.[k] || {}), ...(s.cast?.[k] || {}) };
-    }
-  }
-  if (def.cam && s.cam) out.cam = { ...def.cam, ...s.cam };
-  return out;
-};
-
-function shotEnv(s1) {
-  const missing = new Set();
-  const cast = s1.cast || {};
-  const env = {
-    missing,
-    // the set's ground height (spec.previs.ground: a number, the Verdor field is at y 9) - 0 by default
-    // + spec.previs.floors: name prefixes of marks that are raised walkable surfaces (a stair's steps, a deck):
-    // an actor within 2 m of such marks stands at their height (inverse-distance blend) - stairs and decks
-    ground(x, z) {
-      const base = spec.previs?.ground ?? 0, fl = spec.previs?.floors;
-      if (!fl) return base;
-      let w = 0, wy = 0;
-      for (const [n, m] of Object.entries(spec.previs.marks || {})) {
-        if (m.length !== 3 || !fl.some((p) => n.startsWith(p))) continue;
-        const d = Math.hypot(m[0] - x, m[2] - z);
-        if (d > 2.0) continue;
-        const k = 1 / Math.max(d, 0.05) ** 2; w += k; wy += k * m[1];
-      }
-      return w ? wy / w : base;
-    },
-    mark(n) {
-      const m = spec.previs?.marks?.[n];
-      if (m) return m;
-      const b = cast[n];
-      if (b?.at) return Array.isArray(b.at) ? (b.at.length === 3 ? b.at : [b.at[0], spec.previs?.ground ?? 0, b.at[1]]) : env.mark(b.at);
-      if (spec.homes?.[n]) return spec.homes[n];
-      missing.add(n);
-      return null;
-    },
-    state(name, t) { return actorState(cast[name], t, env); },
-    /** an actor part's approximate point (head / eye / chest / hips / hand.*) or a mark */
-    point(name, t) {
-      if (name == null) return null;
-      if (Array.isArray(name)) return V(name);
-      const [an, ...rest] = String(name).split('.');
-      const part = rest.join('.');
-      const def = spec.cast?.[an], b = cast[an];
-      // a RIDER (cast def.ride): seated on its mount - the seat from spec.previs.marks['<mount>Seat'] or
-      // spec.previs.seatH[mount] above the mount's root (default 0.18 x its length); head 0.75 m above the seat
-      if (def?.ride && b && cast[def.ride]) {
-        const mdef = spec.cast?.[def.ride], ms = actorState(cast[def.ride], t, env);
-        const L = cast[def.ride].length ?? mdef?.length ?? CREATURE_LEN[mdef?.id] ?? 2;
-        const fwd = new THREE.Vector3(Math.sin(ms.yaw), 0, Math.cos(ms.yaw));
-        const sm = spec.previs?.marks?.[`${def.ride}Seat`];
-        const seat = sm ? V(sm) : new THREE.Vector3(ms.x, ms.y + (spec.previs?.seatH?.[def.ride] ?? L * 0.18), ms.z).addScaledVector(fwd, L * 0.1);
-        const dy = part === 'head' || part === 'eye' || part === 'eyes' ? 0.75 : part === 'chest' ? 0.4 : part.startsWith('hand') ? 0.25 : 0.1;
-        return seat.add(new THREE.Vector3(0, dy, 0));
-      }
-      if (def && b && def.kind !== 'object') {
-        const st = actorState(b, t, env);
-        const fwd = new THREE.Vector3(Math.sin(st.yaw), 0, Math.cos(st.yaw));
-        if (def.kind === 'creature') {
-          const L = b.length ?? def.length ?? CREATURE_LEN[def.id] ?? 2;
-          const k = part === 'head' || part === 'eye' ? 0.42 : part === 'tail' ? -0.5 : part === 'hips' ? -0.12 : 0.05;
-          const h = part === 'head' || part === 'eye' ? 0.16 : 0.1;
-          // a creature settled on a raised bed (the hatchling on the nest's linen): its home's height
-          const base = b.settle && spec.homes?.[an] ? spec.homes[an][1] - L * 0.08 : st.y;
-          return new THREE.Vector3(st.x, base + L * h, st.z).addScaledVector(fwd, L * k);
-        }
-        const H = (b.height ?? def.height ?? 1.72) / 1.72, P = st.posture;
-        const head = 1.62 - P.sit * 0.4 - P.crouch * 0.67 - P.kneel * 0.5;
-        const y = part === 'head' || part === 'eye' || part === 'eyes' ? head : part === 'chest' ? head - 0.42 : part.startsWith('hand') ? 0.85 - P.sit * 0.2 - P.crouch * 0.4 : part === 'feet' ? 0.05 : head - 0.7;
-        const lean = (P.bow + P.crouch * 0.45 + P.lean * 0.5) * 0.25;
-        return new THREE.Vector3(st.x, st.y + y * H, st.z).addScaledVector(fwd, (part === 'head' || part === 'eye' ? lean : 0) + (part.startsWith('hand') ? 0.3 : 0));
-      }
-      const m = env.mark(name);
-      return m ? V(m) : null;
-    },
-  };
-  env.approxPoint = (n, t) => env.point(n, t);
-  return env;
-}
-
-function cameraAt(s1, t, u, env) {
-  const c = s1.cam || {};
-  if (c.mount) return { skip: `mounted on ${c.mount}` };
-  const mm = typeof c.mm === 'number' ? c.mm : isKeyList(c.mm) ? keyed(t, c.mm) : 35;
-  const res = (v) => {
-    if (v == null) return null;
-    if (isKeyList(v)) {
-      const ks = v.map(([tk, val, e]) => [tk, Array.isArray(val) ? val : env.point(val, tk)?.toArray(), e]);
-      if (ks.some((k) => !k[1])) return null;
-      return V(keyed(t, ks));
-    }
-    return Array.isArray(v) ? V(v) : env.point(v, t);
-  };
-  let pos, look, worst = null, usedMm = mm;
-  if (c.frame) {
-    const lost = c.frame.subjects.map(([n]) => n).filter((n) => !env.point(n, c.frame.at ?? 0));
-    if (lost.length) return { skip: `frame subject(s) ${lost.join(', ')} not placeable here (spec.previs.marks)` };
-    let r = solveFraming(c.frame, mm, env, t, 16 / 9, 24.89, c.bounds || null);
-    const tol = c.frame.tolerance ?? 0.12;
-    if (r.worst > tol && !c.frame.track && c.frame.autoLens !== false) {
-      for (const m2 of [40, 35, 32, 28, 24, 21, 18].filter((m) => m < mm && m >= Math.max(18, mm * (c.frame.minLensRatio ?? 0.5)))) {
-        const r2 = solveFraming(c.frame, m2, env, t, 16 / 9, 24.89, c.bounds || null);
-        if (r2.worst < r.worst) { r = r2; usedMm = m2; }
-        if (r2.worst <= tol) break;
-      }
-    }
-    pos = r.pos; look = r.look; worst = r.worst;
-  } else if (c.follow) {
-    const f = c.follow, st = env.state(f.target, t);
-    const rot = (a) => (f.local !== false ? V(a).applyAxisAngle(new THREE.Vector3(0, 1, 0), f.yaw != null ? (keyed(t, f.yaw) * Math.PI) / 180 : st.yaw) : V(a));
-    const g = new THREE.Vector3(st.x, st.y, st.z);
-    // offsets may be key lists (X2-04's follow pulls back over the shot)
-    const kv = (v, d) => (v == null ? d : isKeyList(v) ? keyed(t, v) : v);
-    pos = g.clone().add(rot(kv(f.offset, [0, 2, -6])));
-    look = c.look != null ? res(c.look) : g.clone().add(rot(kv(f.lookOffset, [0, 1.2, 0])));
-  } else {
-    pos = res(c.pos); look = res(c.look);
-  }
-  if (!pos || !look) return { skip: 'camera position or aim not resolvable here' };
-  if (c.offset) pos.add(V(c.offset));
-  if (c.push && typeof c.push === 'number') { const d = look.clone().sub(pos).multiplyScalar(c.push * u); pos.add(d); look.add(d); }
-  const fstop = typeof c.fstop === 'number' ? c.fstop : 2.8;
-  const fo = c.focus ?? (c.frame ? c.frame.subjects[0][0] : null);
-  const fv = typeof fo === 'number' ? fo : isKeyList(fo) ? keyed(t, fo) : fo;
-  const fp = typeof fv === 'number' ? null : res(fv);
-  const focus = (typeof fv === 'number' ? fv : fp ? fp.distanceTo(pos) : look.distanceTo(pos)) + (c.focusOffset ?? 0);
-  return { pos, look, mm: usedMm, asked: mm, fstop, focus, worst };
-}
-
-function analyse(s1, row, t, env) {
-  const u = t / (row.frames / 24);
-  const cam = cameraAt(s1, t, u, env);
-  if (cam.skip) return { t, skip: cam.skip };
-  const vfov = 2 * Math.atan((24.89 * 9 / 16) / 2 / cam.mm) * 180 / Math.PI;
-  const C = new THREE.PerspectiveCamera(vfov, 16 / 9, 0.05, 2000);
-  C.position.copy(cam.pos); C.lookAt(cam.look); C.updateMatrixWorld(true);
-  const speaker = row.dialogue?.length ? speakerAt(row.dialogue, t) : null;
-  const tanV = Math.tan((vfov * Math.PI) / 360);
-  const actors = [];
-  for (const [name, b] of Object.entries(s1.cast || {})) {
-    const def = spec.cast?.[name];
-    if (!def || def.kind === 'object' || !actorVisible(b, t)) continue;
-    const head = env.point(`${name}.head`, t);
-    if (!head) continue;
-    const ndc = head.clone().project(C);
-    const dist = head.distanceTo(cam.pos);
-    const st = env.state(name, t);
-    // the face direction: the body's facing turned toward the eye-line by its amount
-    let fwd = new THREE.Vector3(Math.sin(st.yaw), 0, Math.cos(st.yaw));
-    if (st.look?.at != null) {
-      const tp = env.point(st.look.at, t);
-      if (tp) { const d = tp.clone().sub(head).normalize(); fwd = fwd.clone().lerp(d, Math.min(1, st.look.amount ?? 0.85)).normalize(); }
-    }
-    const toCam = cam.pos.clone().sub(head).normalize();
-    const role = def.role ?? name.toUpperCase();
-    const human = def.kind === 'human';
-    const m = human ? faceReadability(fwd.toArray(), toCam.toArray(), dist, { focalLength: cam.mm, fstop: cam.fstop, focus: cam.focus, sensor: 'super35' }) : null;
-    actors.push({
-      name, role, kind: def.kind, head, x: ndc.x, y: ndc.y, behind: ndc.z > 1, dist,
-      inFrame: ndc.z <= 1 && Math.abs(ndc.x) <= 1 && Math.abs(ndc.y) <= 1,
-      sizePx: (0.24 / (dist * 2 * tanV)) * 540, speaking: speaker && role === speaker,
-      angle: m ? Math.round(m.angle) : null, facePct: m ? +(m.faceFrac * 100).toFixed(1) : null, blurPct: m ? +(m.blurFrac * 100).toFixed(2) : null,
-      reads: m && speaker && role === speaker && ndc.z <= 1 && Math.abs(ndc.x) <= 1 && Math.abs(ndc.y) <= 1 ? !!m.readable : false, yaw: st.yaw, x3: st.x, z3: st.z,
-      lookAt: typeof st.look?.at === 'string' ? st.look.at.split('.')[0] : null,
-    });
-  }
-  // a head covered by a nearer actor's head or body (a disc 0.22 m wide at its own distance)
-  for (const a of actors) for (const o of actors) {
-    if (o === a || o.dist >= a.dist || !a.inFrame) continue;
-    const ohead = o.head, chest = ohead.clone().add(new THREE.Vector3(0, -0.45, 0));
-    for (const p of [ohead, chest]) {
-      const n = p.clone().project(C);
-      const rad = (0.22 / (p.distanceTo(cam.pos) * Math.tan((vfov * Math.PI) / 360) * 16 / 9)) + (0.12 / (a.dist * Math.tan((vfov * Math.PI) / 360) * 16 / 9));
-      if (Math.hypot(n.x - a.x, (n.y - a.y) / 1.78) < rad) { a.hiddenBy = o.name; break; }
-    }
-  }
-  return { t, cam, actors, speaker };
-}
+// the measuring (camera, heads on screen, faces, cover) is previs-core.js; bound to this set's spec here
+const shotEnv = (s1) => coreEnv(spec, s1);
+const analyse = (s1, row, t, env) => coreAnalyse(spec, s1, row, t, env);
 
 // ------------------------------------------------------------------ drawing ---
 const fmt = (v) => v.toArray().map((x) => x.toFixed(2)).join(', ');
@@ -295,7 +110,7 @@ function sheet(row, s1, res, file, bounds) {
 if (OUT) fs.mkdirSync(OUT, { recursive: true });
 if (argv.includes('--cuts')) {
   // every cut of every edit list (edl.json: PROLOGUE + TITLE + 1A; edl-1B.json ...: the later parts)
-  const CUTDIR = path.join(ROOT, 'episodes/s01e01/final/cut');
+  const CUTDIR = dirs(EP).cut;
   const pairs = [];
   for (const f of fs.readdirSync(CUTDIR).filter((x) => /^edl(-[^.]+)?\.json$/.test(x)).sort()) {
     const e = JSON.parse(fs.readFileSync(path.join(CUTDIR, f), 'utf8'));

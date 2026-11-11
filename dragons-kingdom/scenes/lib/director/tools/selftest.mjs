@@ -4,7 +4,7 @@
 // lookup, keys and easing, the walk profile (smooth start / stop, exact distance), blocking purity,
 // dialogue placement (word times, split takes, takes that run over a cut), the registry's
 // continuity and the shot tables / edit list being up to date (build-shots --check).
-//   node scenes/lib/director/tools/selftest.mjs
+//   node scenes/lib/director/tools/selftest.mjs [--episode s01e01]   (the episode whose tables / edit list are checked)
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -25,10 +25,14 @@ import { solveFraming, suggestFrom } from '../framing.js';
 import { heldList, placeInHands } from '../handprops.js';
 import * as THREE from 'three';
 import { makeNoise, smooth } from '../../sets/terrain.js';
+import { dirs, episodeArg, episodeCuts } from '../episode-paths.js';
+import { measure } from '../previs-core.js';
+import { pathToFileURL } from 'node:url';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '../../../..');
-const FINAL = path.join(ROOT, 'episodes/s01e01/final');
+const { ep: EP } = episodeArg(process.argv.slice(2));
+const FINAL = dirs(EP).final;
 let n = 0;
 const t = (name, fn) => { fn(); n++; console.log(`ok  ${name}`); };
 
@@ -103,7 +107,7 @@ t('cost: estimates scale with frames; measured timings replace the model', () =>
   assert.equal(estimateShot('BIRTHING_CHAMBER', 100, {}, { measured: { draft_s_per_frame: 2 } }).draft_s_per_frame, 2);
 });
 t('shot tables and the edit list are up to date (build-shots --check)', () => {
-  const r = spawnSync(process.execPath, [path.join(HERE, 'build-shots.mjs'), '--check'], { cwd: ROOT, encoding: 'utf8' });
+  const r = spawnSync(process.execPath, [path.join(HERE, 'build-shots.mjs'), '--check', '--episode', EP], { cwd: ROOT, encoding: 'utf8' });
   assert.equal(r.status, 0, r.stdout + r.stderr);
   // the render contract: every 3D shot of the edit has a set scene + an entry with a whole-second start
   const edl = JSON.parse(fs.readFileSync(path.join(FINAL, 'cut/edl.json'), 'utf8'));
@@ -271,6 +275,26 @@ t('previs (Node): a chamber shot previsualised - camera, heads on the screen, a 
   assert.match(r.stdout, /1A-29/);
   assert.match(r.stdout, /cam 1\.25, 1\.75, 2\.80/);
   assert.match(r.stdout, /abby .*HIDDEN behind remi/);
+});
+t('episode paths (engine phase 1): --episode taken out of argv, per-episode folders, cuts fall back', () => {
+  const a = episodeArg(['--set', 'X', '--episode', 't00', '--cuts']);
+  assert.equal(a.ep, 't00'); assert.deepEqual(a.argv, ['--set', 'X', '--cuts']);
+  assert.equal(episodeArg(['--only', 'a']).ep, 's01e01');
+  assert.throws(() => episodeArg(['--episode', '../x']));
+  const d = dirs('s01e01');
+  assert.equal(path.relative(ROOT, d.final), path.join('episodes', 's01e01', 'final'));
+  assert.equal(path.relative(ROOT, d.work('draft')), path.join('output', 'director', 'draft'), 'Episode 1 keeps its dailies folder');
+  assert.ok(fs.existsSync(d.shotlist) && fs.existsSync(d.specs) && fs.existsSync(d.edl('edl-1B')));
+  assert.equal(episodeCuts('s01e01', 'fallback'), 'fallback', 'Episode 1 has no episode.json');
+});
+const E1 = dirs('s01e01');
+const chamberSpec = (await import(pathToFileURL(path.join(E1.specs, 'birthing-chamber.spec.js')).href)).default;
+const chamberRow = JSON.parse(fs.readFileSync(path.join(E1.scenes, 'birthing-chamber.shots.json'), 'utf8')).shots.find((r) => r.job === '1A-29');
+t('previs core (engine phase 1): measure() gives previs.mjs\'s numbers for 1A-29 without the tool', () => {
+  const r = measure(chamberSpec, '1A-29', 0.5 * chamberRow.frames / 24, { row: chamberRow });
+  assert.ok(!r.skip, r.skip);
+  assert.deepEqual(r.cam.pos.toArray().map((v) => +v.toFixed(2)), [1.25, 1.75, 2.8]);
+  assert.equal(r.actors.find((a) => a.name === 'abby')?.hiddenBy, 'remi');
 });
 t('hand props: an object between the posed palms, levelled, offset in the hands\' frame; one-hand and list forms', () => {
   // a mock character facing +x (yaw 90): left hand at z -0.15 (north), right hand at z +0.15 - wrists

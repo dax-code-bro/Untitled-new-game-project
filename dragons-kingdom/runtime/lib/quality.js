@@ -376,13 +376,17 @@ export function tierCost(frame, { finalMs = null, cpuParallel = false } = {}) {
 // ~15 us of CPU per draw call; a desktop CPU next to a 4090 runs JavaScript ~2x faster than one
 // vCPU of the cloud machine (update() times measured here are scaled by 0.5).
 export const RTX4090_ASSUMPTIONS = { tapsPerMs: 3e8, callUs: 15, cpuScale: 0.5, readbackMs: 6 };
+// Daxtyn's card is an RTX 5090 (2026-11-11): ~104.8 TFLOPS fp32 and ~1,640 GTexel/s, about 1.27x a 4090,
+// at the same ~25% WebGL efficiency. Same planning-figure caveat: gpu-check measures the real card.
+export const RTX5090_ASSUMPTIONS = { tapsPerMs: 3.8e8, callUs: 15, cpuScale: 0.5, readbackMs: 6 };
+export const TARGET_GPU = { name: 'RTX 5090', assumptions: RTX5090_ASSUMPTIONS };
 
 /**
  * Estimated milliseconds of one frame at a tier: frame = frameFromStats() of THAT tier's measured
  * counters (draw calls, update() time) scaled to the target size. The GPU and the CPU (draw-call
  * submission + update()) overlap, so a frame takes about the longer of the two plus the readback.
  */
-export function estimateFrameMs(frame, name, a = RTX4090_ASSUMPTIONS) {
+export function estimateFrameMs(frame, name, a = RTX5090_ASSUMPTIONS) {
   const w = frameWork(frame, name);
   const gpuMs = w.gpu / a.tapsPerMs;
   const submitMs = (frame.drawCalls || 0) * a.callUs / 1000;

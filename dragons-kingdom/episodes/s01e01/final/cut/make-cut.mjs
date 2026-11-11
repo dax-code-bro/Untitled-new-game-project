@@ -7,6 +7,8 @@
 //   node episodes/s01e01/final/cut/make-cut.mjs                    # uses output/director/draft/shots
 //   node episodes/s01e01/final/cut/make-cut.mjs --shots DIR --out FILE.mp4 [--clean] [--no-audio]
 //   node episodes/s01e01/final/cut/make-cut.mjs --edl edl-1B --shots DIR        another part's cut
+//   node episodes/s01e01/final/cut/make-cut.mjs --episode s01e02 ...             another episode's cut (default s01e01:
+//        its edit lists, voice takes and cut folder; dailies default to that episode's work folder)
 //
 // Reads  cut/edl.json or cut/<--edl>.json (scenes/lib/director/tools/build-shots.mjs), vo/takes.json, vo/<line>.wav
 // Writes cut/DragonsKingdom_S01E01_draft-cut_<scenes>.mp4 (+ .en.srt)   - git-ignored
@@ -25,12 +27,15 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { ffmpegPath, ffprobePath } from '../../../../render/lib/tools.mjs';
+import { dirs, episodeArg } from '../../../../scenes/lib/director/episode-paths.js';
 
-const HERE = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = path.resolve(HERE, '../../../..');
-const FINAL = path.resolve(HERE, '..');
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..');
+// --episode <id> (engine phase 1): HERE / FINAL are that episode's cut / final folders (default s01e01 = this file's)
+const { ep: EP, argv } = episodeArg(process.argv.slice(2));
+const D = dirs(EP);
+const HERE = D.cut;
+const FINAL = D.final;
 const rel = (f) => path.relative(ROOT, f).split(path.sep).join('/');
-const argv = process.argv.slice(2);
 const opt = (n, d = null) => { const i = argv.indexOf(n); return i >= 0 ? argv[i + 1] : d; };
 const flag = (n) => argv.includes(n);
 const readJson = (f, d = null) => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch { return d; } };
@@ -42,7 +47,7 @@ if (!edl) throw new Error(`cut/${EDL}.json missing: run node scenes/lib/director
 const FPS = edl.fps, W = +(opt('--width', 960)), H = Math.round(W * 9 / 16 / 2) * 2;
 // the dailies: --shots, else $DK_DIRECTOR_WORK/shots (the folder render-shots.mjs --work wrote), else output/director/draft/shots
 const WORKROOT = process.env.DK_DIRECTOR_WORK ? path.resolve(process.env.DK_DIRECTOR_WORK) : null;
-const SHOTS = path.resolve(opt('--shots', WORKROOT ? path.join(WORKROOT, 'shots') : path.join(ROOT, 'output/director/draft/shots')));
+const SHOTS = path.resolve(opt('--shots', WORKROOT ? path.join(WORKROOT, 'shots') : path.join(D.work('draft'), 'shots')));
 // recorded portably: repo-relative inside the repo, '$DK_DIRECTOR_WORK/...' under the work root, else only its last
 // two folders (a session's scratch path means nothing on another machine)
 const shotsDirLabel = (() => {
@@ -52,7 +57,7 @@ const shotsDirLabel = (() => {
   return '<outside the repo>/' + SHOTS.split(path.sep).slice(-2).join('/');
 })();
 const tag = [...new Set(edl.shots.map((s) => s.scene))].join('-');
-const OUT = path.resolve(opt('--out', path.join(HERE, `DragonsKingdom_S01E01_draft-cut_${tag}.mp4`)));
+const OUT = path.resolve(opt('--out', path.join(HERE, `DragonsKingdom_${D.tag}_draft-cut_${tag}.mp4`)));
 const CLEAN = flag('--clean'), NOAUDIO = flag('--no-audio');
 const WORK = fs.mkdtempSync(path.join(os.tmpdir(), 'dk-cut-'));
 const takes = new Map((readJson(path.join(FINAL, 'vo/takes.json'))?.takes || []).map((t) => [t.id, t]));
