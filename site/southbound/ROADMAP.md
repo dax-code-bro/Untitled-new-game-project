@@ -155,6 +155,11 @@ window). A screenshot survey at their settings and on High (street, downtown) pi
 - [x] City pavements are furnished: benches, planters with clipped shrubs, rows of newspaper boxes and
       bike hoops in the strip inside the kerb, on both sides in turn, closer together downtown
       (instanced, near only: four draw calls; you walk round them)
+- [x] Part 2: night streets read as night: the moon and the sky light a little dimmer, the street lamps'
+      pools on the road half as strong again, so the asphalt between lamps goes dark and the lamps
+      matter (it was an even grey, like dusk). The car customs garages were flat-painted boxes: their
+      walls are now painted concrete block and the floor real concrete (the photo-scanned library,
+      tiled at its real size)
 
 : the rest of the instant things, acted out
 

@@ -178,11 +178,20 @@ function buildWorkshop(game, r, name) {
     const g = new THREE.Group();
     g.position.set(cx, y, cz);
     g.rotation.y = Math.atan2(-nx, -nz); // open side (+z local) faces the road
-    const mWall = new THREE.MeshStandardMaterial({ color: 0x8a8378, roughness: 0.9 });
+    // (G14) real surfaces, not flat paint: painted concrete-block walls, a concrete floor (the photo-scanned
+    // library the buildings use, tiled at their real size by the box's UVs below)
+    const S = game.surf, tex = (k, m) => S?.[k]?.[m] || null;
+    const mWall = new THREE.MeshStandardMaterial({ color: 0xe6dfd2, map: tex('concrete', 'color'), normalMap: tex('concrete', 'normal'), normalScale: new THREE.Vector2(0.6, 0.6), roughness: 0.88 });
     const mRoof = new THREE.MeshStandardMaterial({ color: 0x3a3c40, roughness: 0.6, metalness: 0.4 });
-    const mFloor = new THREE.MeshStandardMaterial({ color: 0x55534f, roughness: 0.75 });
+    const mFloor = new THREE.MeshStandardMaterial({ color: 0x9a968e, map: tex('concrete', 'color'), normalMap: tex('concrete', 'normal'), roughness: 0.8 });
+    const TILE = 2.5;
+    const tileUV = (geo, w, h, d) => { // BoxGeometry faces: +x,-x (d x h), +y,-y (w x d), +z,-z (w x h)
+      const uv = geo.attributes.uv, dims = [[d, h], [d, h], [w, d], [w, d], [w, h], [w, h]];
+      for (let i = 0; i < uv.count; i++) { const [a, b] = dims[Math.floor(i / 4)] || [1, 1]; uv.setXY(i, uv.getX(i) * a / TILE, uv.getY(i) * b / TILE); }
+      return geo;
+    };
     const mTrim = new THREE.MeshStandardMaterial({ color: 0xc23a6e, roughness: 0.5 });
-    const box = (w, h, d, x, yy, z, m) => { const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); b.position.set(x, yy, z); b.castShadow = b.receiveShadow = true; b.userData.hitStatic = true; g.add(b); return b; };
+    const box = (w, h, d, x, yy, z, m) => { const b = new THREE.Mesh(m.map ? tileUV(new THREE.BoxGeometry(w, h, d), w, h, d) : new THREE.BoxGeometry(w, h, d), m); b.position.set(x, yy, z); b.castShadow = b.receiveShadow = true; b.userData.hitStatic = true; g.add(b); return b; };
     box(W, 1, D + 3, 0, -0.55, 1.5, mFloor); // floor + apron toward the road
     box(W + t * 2, H, t, 0, H / 2, -D / 2, mWall); // back
     box(t, H, D, -W / 2, H / 2, 0, mWall); box(t, H, D, W / 2, H / 2, 0, mWall); // sides
