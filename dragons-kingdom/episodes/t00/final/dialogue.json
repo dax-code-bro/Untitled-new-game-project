@@ -1,0 +1,219 @@
+{
+  "episode": "T00",
+  "series": "Dragon's Kingdom",
+  "status": "Planning data extracted from the owner's screenplay by the episode engine. No voices recorded, nothing rendered.",
+  "source": "episodes/t00/input/screenplay.fountain",
+  "source_sha256": "d9aa02e05ef056c353fbee2616e543e074c491f3818cac0770152d883c001bd6",
+  "generated_by": "engine/input/fountain.mjs",
+  "title": "Dragon's Kingdom",
+  "rating": "mature",
+  "rules": [
+    "Only text under a character cue is spoken. Action, [[notes]], parentheticals and scene headings are never spoken or subtitled.",
+    "'text' holds only the spoken words; the parenthetical is the performance note (a 'to X' part names the addressee).",
+    "Ids come from final/lines.lock.json (key: scene + speaker + normalised text): an edit elsewhere never renumbers a line.",
+    "Dragons have no human dialogue.",
+    "An em dash at the end of 'text' means the line is cut off (interrupted=true); a leading em dash picks it up ('continues')."
+  ],
+  "fields": {
+    "id": "L001... from final/lines.lock.json",
+    "seq": "running order, 1..N",
+    "scene": "the #scene number# of the heading the line plays in",
+    "origin": "'original' (the owner's screenplay)",
+    "delivery": "parenthetical (if any) and the stage direction before the line (context_source)",
+    "est_seconds / timing_rule": "Episode 1 timing model (episodes/s01e01/tools/extract_dialogue.py)",
+    "subtitle_cues / subtitle_min_seconds": "Episode 1 subtitle model",
+    "source_line": "1-based line of the spoken text in the screenplay",
+    "cue_extension": "the cue's (V.O.) / (O.S.) when present"
+  },
+  "timing_model": {
+    "summary": "Same model as Episode 1: words / 2.6 per s conversational; / 2.1 for narrator and whispered, quiet, low or in-pain lines; +0.25 s (narrator 0.4 s) per internal sentence break; one-word commands 0.6-1.0 s; floor 0.6 s; rounded to 0.1 s."
+  },
+  "totals": {
+    "spoken_lines": 3,
+    "est_spoken_seconds": 3.1,
+    "est_spoken_minutes": 0.05,
+    "by_origin": {
+      "original": {
+        "lines": 3,
+        "words": 8,
+        "est_seconds": 3.1
+      },
+      "addition": {
+        "lines": 0,
+        "words": 0,
+        "est_seconds": 0
+      },
+      "rating_pass": {
+        "lines": 0,
+        "words": 0,
+        "est_seconds": 0
+      }
+    },
+    "original_marker_lines": 0,
+    "creator_approved_lines": 0,
+    "pending_wording_lines": 0,
+    "changed_lines": 0,
+    "command_lines": 0,
+    "canonical_command_lines": 0,
+    "interrupted_lines": 0,
+    "strong_language_lines": 0,
+    "subtitle_cues": 3,
+    "speakers": 2,
+    "by_speaker": {
+      "VENDOR": {
+        "lines": 2,
+        "words": 4,
+        "est_seconds": 1.6,
+        "origins": [
+          "original"
+        ],
+        "scenes": [
+          "0A"
+        ]
+      },
+      "MUSICIAN": {
+        "lines": 1,
+        "words": 4,
+        "est_seconds": 1.5,
+        "origins": [
+          "original"
+        ],
+        "scenes": [
+          "0A"
+        ]
+      }
+    },
+    "by_unit": {}
+  },
+  "scenes": [
+    {
+      "id": "0A",
+      "title": "CLING VILLAGE SQUARE",
+      "slugline": "EXT. CLING VILLAGE SQUARE — MORNING",
+      "source_line": 5,
+      "time_of_day": "MORNING",
+      "lines": 3,
+      "words": 8,
+      "est_seconds": 3.1,
+      "first_line": "L001",
+      "last_line": "L003",
+      "parts": []
+    }
+  ],
+  "lines": [
+    {
+      "id": "L001",
+      "seq": 1,
+      "scene": "0A",
+      "part": null,
+      "origin": "original",
+      "addition": null,
+      "rating_pass": null,
+      "changed_by": null,
+      "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
+      "pending": null,
+      "pending_alternative": null,
+      "speaker": "VENDOR",
+      "addressee": null,
+      "addressee_source": null,
+      "text": "You're early.",
+      "original": false,
+      "delivery": "calling across — The square before the festival. The vendor sets out his crate at the stall; the musician tunes his lute on the fountain rim.",
+      "context_source": "auto: the stage direction just before the line",
+      "performance_note": "calling across",
+      "bracket_raw": "calling across",
+      "rating_content": [],
+      "is_command": false,
+      "command": null,
+      "interrupted": false,
+      "continues": null,
+      "words": 2,
+      "est_seconds": 0.8,
+      "timing_rule": "conversational",
+      "subtitle_cues": [
+        "You're early."
+      ],
+      "subtitle_min_seconds": 1,
+      "beat_after": null,
+      "source_line": 13
+    },
+    {
+      "id": "L002",
+      "seq": 2,
+      "scene": "0A",
+      "part": null,
+      "origin": "original",
+      "addition": null,
+      "rating_pass": null,
+      "changed_by": null,
+      "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
+      "pending": null,
+      "pending_alternative": null,
+      "speaker": "MUSICIAN",
+      "addressee": null,
+      "addressee_source": null,
+      "text": "The crowd won't wait.",
+      "original": false,
+      "delivery": "The square before the festival. The vendor sets out his crate at the stall; the musician tunes his lute on the fountain rim.",
+      "context_source": "auto: the stage direction just before the line",
+      "performance_note": null,
+      "bracket_raw": null,
+      "rating_content": [],
+      "is_command": false,
+      "command": null,
+      "interrupted": false,
+      "continues": null,
+      "words": 4,
+      "est_seconds": 1.5,
+      "timing_rule": "conversational",
+      "subtitle_cues": [
+        "The crowd won't wait."
+      ],
+      "subtitle_min_seconds": 1.3,
+      "beat_after": null,
+      "source_line": 16
+    },
+    {
+      "id": "L003",
+      "seq": 3,
+      "scene": "0A",
+      "part": null,
+      "origin": "original",
+      "addition": null,
+      "rating_pass": null,
+      "changed_by": null,
+      "was_text": null,
+      "creator_approved": null,
+      "was_original": false,
+      "pending": null,
+      "pending_alternative": null,
+      "speaker": "VENDOR",
+      "addressee": null,
+      "addressee_source": null,
+      "text": "Then play.",
+      "original": false,
+      "delivery": "dry — The square before the festival. The vendor sets out his crate at the stall; the musician tunes his lute on the fountain rim.",
+      "context_source": "auto: the stage direction just before the line",
+      "performance_note": "dry",
+      "bracket_raw": "dry",
+      "rating_content": [],
+      "is_command": false,
+      "command": null,
+      "interrupted": false,
+      "continues": null,
+      "words": 2,
+      "est_seconds": 0.8,
+      "timing_rule": "conversational",
+      "subtitle_cues": [
+        "Then play."
+      ],
+      "subtitle_min_seconds": 1,
+      "beat_after": null,
+      "source_line": 20
+    }
+  ]
+}

@@ -1,0 +1,1191 @@
+{
+ "set": "VERDOR_AERIAL",
+ "frame": "VERDOR",
+ "kind": "air-harbour-town",
+ "builder": "scenes/lib/director/sets/verdor-aerial.js",
+ "specs": [
+  "episodes/s01e01/final/scenes/specs/verdor-aerial.spec.js",
+  "episodes/s01e01/final/scenes/specs/verdor-aerial-2.spec.js"
+ ],
+ "generated": "engine/tools/sheet.mjs (do not edit; re-run it)",
+ "ground": {
+  "type": "terrain",
+  "sea": 0,
+  "note": "sea / harbour basin at y 0; quay apron 2.6-2.8; terraces every 7.5 m rising west of x 230"
+ },
+ "bounds": null,
+ "map": {
+  "quayX": 262,
+  "apronY": 2.6,
+  "terrace": {
+   "x0": 230,
+   "slope": 0.3,
+   "step": 7.5
+  },
+  "harbourWall": [
+   [
+    275,
+    0,
+    1440
+   ],
+   [
+    340,
+    0,
+    1482
+   ],
+   [
+    385,
+    0,
+    1552
+   ],
+   [
+    400,
+    0,
+    1630
+   ]
+  ],
+  "quay": {
+   "from": [
+    262,
+    0,
+    1560
+   ],
+   "to": [
+    262,
+    0,
+    1700
+   ],
+   "faces": "east",
+   "top": 2.8
+  },
+  "slipway": {
+   "at": [
+    265,
+    0,
+    1715
+   ],
+   "dir": "east",
+   "len": 26
+  },
+  "santaMaria": {
+   "at": [
+    267,
+    0,
+    1590
+   ],
+   "heading": 0,
+   "mastTop": 28
+  },
+  "town": {
+   "x": [
+    110,
+    230
+   ],
+   "z": [
+    1480,
+    1790
+   ]
+  },
+  "marketStreet": {
+   "x": 197,
+   "z": [
+    1520,
+    1740
+   ],
+   "y": 10.1
+  },
+  "palace": {
+   "ground": [
+    60,
+    58,
+    1430
+   ],
+   "chamberOpening": [
+    84,
+    76,
+    1430
+   ],
+   "faces": "east"
+  },
+  "terraceFarm": [
+   146,
+   25.1,
+   1846
+  ],
+  "schoolField": {
+   "centre": [
+    120,
+    36,
+    1985
+   ],
+   "size": [
+    120,
+    70
+   ]
+  }
+ },
+ "marks": {
+  "grounds": {
+   "at": [
+    4,
+    9,
+    -34
+   ],
+   "alias": [
+    "riding grounds",
+    "field"
+   ]
+  },
+  "scar": {
+   "at": [
+    43,
+    9,
+    -60
+   ]
+  },
+  "headland": {
+   "at": [
+    120,
+    40,
+    -700
+   ]
+  },
+  "coast0": {
+   "at": [
+    261.016,
+    0,
+    0
+   ],
+   "alias": [
+    "coast"
+   ]
+  },
+  "coast600": {
+   "at": [
+    304.921,
+    0,
+    600
+   ]
+  },
+  "coast1500": {
+   "at": [
+    302.6,
+    0,
+    1500
+   ]
+  },
+  "quay": {
+   "at": [
+    258,
+    2.6,
+    1630
+   ],
+   "approx": true,
+   "alias": [
+    "quayside",
+    "harbor",
+    "harbour"
+   ]
+  },
+  "santaMaria": {
+   "at": [
+    267,
+    0,
+    1590
+   ],
+   "alias": [
+    "Santa Maria",
+    "ship"
+   ]
+  },
+  "palace": {
+   "at": [
+    60,
+    58,
+    1430
+   ]
+  },
+  "farm": {
+   "at": [
+    146,
+    25.1,
+    1846
+   ],
+   "approx": true,
+   "alias": [
+    "terrace farm",
+    "terraces"
+   ]
+  },
+  "school": {
+   "at": [
+    120,
+    32.6,
+    1985
+   ],
+   "approx": true,
+   "alias": [
+    "riding school"
+   ]
+  },
+  "harbourMouth": {
+   "at": [
+    400,
+    0,
+    1700
+   ],
+   "alias": [
+    "harbour mouth",
+    "harbor mouth"
+   ]
+  },
+  "crowsNest": {
+   "at": [
+    267,
+    18.3,
+    1591.15
+   ],
+   "src": "verdor-aerial-2 NEST",
+   "alias": [
+    "crow's nest",
+    "masthead"
+   ]
+  },
+  "mainmastTop": {
+   "at": [
+    267,
+    22.66,
+    1591.19
+   ],
+   "src": "verdor-aerial-2 MASTHEAD"
+  }
+ },
+ "objects": {
+  "crowsNest": {
+   "at": [
+    267,
+    18.3,
+    1591.15
+   ],
+   "src": "verdor-aerial-2"
+  }
+ },
+ "homes": {},
+ "areas": {
+  "quay": {
+   "poly": [
+    [
+     253.5,
+     1560
+    ],
+    [
+     262,
+     1560
+    ],
+    [
+     262,
+     1700
+    ],
+    [
+     253.5,
+     1700
+    ]
+   ],
+   "y": 2.8,
+   "slots": 12,
+   "slotAt": [
+    [
+     257.021,
+     2.8,
+     1563.521
+    ],
+    [
+     257.021,
+     2.8,
+     1577.604
+    ],
+    [
+     257.021,
+     2.8,
+     1591.687
+    ],
+    [
+     257.021,
+     2.8,
+     1598.728
+    ],
+    [
+     257.021,
+     2.8,
+     1612.812
+    ],
+    [
+     257.021,
+     2.8,
+     1626.895
+    ],
+    [
+     257.021,
+     2.8,
+     1633.936
+    ],
+    [
+     257.021,
+     2.8,
+     1648.019
+    ],
+    [
+     257.021,
+     2.8,
+     1662.102
+    ],
+    [
+     257.021,
+     2.8,
+     1669.144
+    ],
+    [
+     257.021,
+     2.8,
+     1683.227
+    ],
+    [
+     257.021,
+     2.8,
+     1697.31
+    ]
+   ]
+  }
+ },
+ "paths": {
+  "coast": [
+   [
+    261.016,
+    0,
+    0
+   ],
+   [
+    306.169,
+    0,
+    300
+   ],
+   [
+    304.921,
+    0,
+    600
+   ],
+   [
+    294.393,
+    0,
+    900
+   ],
+   [
+    292.352,
+    0,
+    1200
+   ],
+   [
+    302.6,
+    0,
+    1500
+   ],
+   [
+    326.503,
+    0,
+    1800
+   ],
+   [
+    351.531,
+    0,
+    2100
+   ],
+   [
+    388.025,
+    0,
+    2400
+   ],
+   [
+    420.878,
+    0,
+    2700
+   ],
+   [
+    438.732,
+    0,
+    3000
+   ],
+   [
+    467.721,
+    0,
+    3300
+   ],
+   [
+    464.239,
+    0,
+    3600
+   ]
+  ],
+  "flight-1C": [
+   [
+    295,
+    60,
+    300
+   ],
+   [
+    295,
+    60,
+    1052
+   ],
+   [
+    300,
+    60,
+    1292
+   ]
+  ],
+  "harbourWall": [
+   [
+    275,
+    0,
+    1440
+   ],
+   [
+    340,
+    0,
+    1482
+   ],
+   [
+    385,
+    0,
+    1552
+   ],
+   [
+    400,
+    0,
+    1630
+   ]
+  ],
+  "quay": [
+   [
+    260,
+    2.8,
+    1560
+   ],
+   [
+    260,
+    2.8,
+    1700
+   ]
+  ],
+  "flight-X4": [
+   [
+    300,
+    60,
+    1292
+   ],
+   [
+    330,
+    50,
+    1450
+   ],
+   [
+    360,
+    40,
+    1640
+   ],
+   [
+    420,
+    45,
+    1880
+   ],
+   [
+    560,
+    50,
+    2600
+   ]
+  ]
+ },
+ "vantages": {
+  "X4-01": {
+   "rig": "follow",
+   "from": "X4-01",
+   "spec": "episodes/s01e01/final/scenes/specs/verdor-aerial.spec.js",
+   "pos": [
+    90,
+    175,
+    1060
+   ],
+   "look": [
+    380,
+    0,
+    1480
+   ],
+   "mm": 24,
+   "fstop": 8,
+   "end": {
+    "t": 6.958,
+    "pos": [
+     114.851,
+     175,
+     1149.464
+    ],
+    "look": [
+     375.03,
+     0,
+     1589.345
+    ]
+   }
+  },
+  "X4-02": {
+   "rig": "follow",
+   "from": "X4-02",
+   "spec": "episodes/s01e01/final/scenes/specs/verdor-aerial.spec.js",
+   "pos": [
+    252.19,
+    40.9,
+    1500.408
+   ],
+   "look": [
+    253.19,
+    40.865,
+    1500.408
+   ],
+   "mm": 70,
+   "fstop": 5.6,
+   "end": {
+    "t": 3.958,
+    "pos": [
+     284.807,
+     11.933,
+     1561.791
+    ],
+    "look": [
+     285.806,
+     11.898,
+     1561.791
+    ]
+   },
+   "solved": true
+  },
+  "X4-03": {
+   "rig": "static",
+   "from": "X4-03",
+   "spec": "episodes/s01e01/final/scenes/specs/verdor-aerial.spec.js",
+   "pos": [
+    178,
+    25,
+    1640
+   ],
+   "look": [
+    300,
+    9.5,
+    1580
+   ],
+   "mm": 24,
+   "fstop": 8
+  },
+  "X4-06": {
+   "rig": "static",
+   "from": "X4-06",
+   "spec": "episodes/s01e01/final/scenes/specs/verdor-aerial.spec.js",
+   "pos": [
+    141,
+    26.8,
+    1856
+   ],
+   "look": [
+    189.8,
+    21.6,
+    1714.2
+   ],
+   "mm": 35,
+   "fstop": 5.6
+  },
+  "X4-11": {
+   "rig": "follow",
+   "from": "X4-11",
+   "spec": "episodes/s01e01/final/scenes/specs/verdor-aerial.spec.js",
+   "pos": [
+    120,
+    95,
+    1690
+   ],
+   "look": [
+    461,
+    57,
+    1708
+   ],
+   "mm": 85,
+   "fstop": 8,
+   "end": {
+    "t": 3.458,
+    "pos": [
+     127.905,
+     96.976,
+     1745.333
+    ],
+    "look": [
+     471.869,
+     60.952,
+     1763.333
+    ]
+   }
+  },
+  "X4-14": {
+   "rig": "follow",
+   "from": "X4-14",
+   "spec": "episodes/s01e01/final/scenes/specs/verdor-aerial.spec.js",
+   "pos": [
+    330,
+    95,
+    1520
+   ],
+   "look": [
+    70,
+    70,
+    1430
+   ],
+   "mm": 35,
+   "fstop": 8,
+   "end": {
+    "t": 4.958,
+    "pos": [
+     325.001,
+     92,
+     1480.006
+    ],
+    "look": [
+     70,
+     70,
+     1430
+    ]
+   }
+  },
+  "X4-20": {
+   "rig": "follow",
+   "from": "X4-20",
+   "spec": "episodes/s01e01/final/scenes/specs/verdor-aerial.spec.js",
+   "pos": [
+    45,
+    110,
+    1686
+   ],
+   "look": [
+    357,
+    63.5,
+    2313
+   ],
+   "mm": 160,
+   "fstop": 8,
+   "end": {
+    "t": 4.958,
+    "pos": [
+     72.767,
+     110,
+     1760.375
+    ],
+    "look": [
+     384.767,
+     63.5,
+     2387.375
+    ]
+   }
+  },
+  "X4-13": {
+   "rig": "follow",
+   "from": "X4-13",
+   "spec": "episodes/s01e01/final/scenes/specs/verdor-aerial.spec.js",
+   "pos": [
+    174,
+    86,
+    1948
+   ],
+   "look": [
+    146,
+    25.1,
+    1970
+   ],
+   "mm": 35,
+   "fstop": 8,
+   "end": {
+    "t": 7.958,
+    "pos": [
+     175.99,
+     86,
+     1985.802
+    ],
+    "look": [
+     146,
+     25.1,
+     1979.948
+    ]
+   }
+  },
+  "X4-15": {
+   "rig": "follow",
+   "from": "X4-15",
+   "spec": "episodes/s01e01/final/scenes/specs/verdor-aerial.spec.js",
+   "pos": [
+    128.049,
+    69.27,
+    1399.399
+   ],
+   "look": [
+    61,
+    75.7,
+    1427.5
+   ],
+   "mm": 300,
+   "fstop": 5.6
+  },
+  "X4-08": {
+   "rig": "follow",
+   "from": "X4-08",
+   "spec": "episodes/s01e01/final/scenes/specs/verdor-aerial.spec.js",
+   "pos": [
+    314.856,
+    30.9,
+    1616.865
+   ],
+   "look": [
+    315.784,
+    30.733,
+    1616.533
+   ],
+   "mm": 120,
+   "fstop": 5.6,
+   "end": {
+    "t": 3.458,
+    "pos": [
+     309.915,
+     32.876,
+     1671.21
+    ],
+    "look": [
+     310.843,
+     32.709,
+     1670.878
+    ]
+   },
+   "solved": true
+  },
+  "X4-12": {
+   "rig": "follow",
+   "from": "X4-12",
+   "spec": "episodes/s01e01/final/scenes/specs/verdor-aerial.spec.js",
+   "pos": [
+    451.114,
+    60.97,
+    1774.235
+   ],
+   "look": [
+    451.796,
+    60.81,
+    1773.522
+   ],
+   "mm": 50,
+   "fstop": 4,
+   "end": {
+    "t": 3.958,
+    "pos": [
+     459.928,
+     60.97,
+     1836.952
+    ],
+    "look": [
+     460.611,
+     60.81,
+     1836.239
+    ]
+   },
+   "solved": true
+  },
+  "X4-16": {
+   "rig": "follow",
+   "from": "X4-16",
+   "spec": "episodes/s01e01/final/scenes/specs/verdor-aerial.spec.js",
+   "pos": [
+    227.346,
+    71.27,
+    1715.873
+   ],
+   "look": [
+    227.358,
+    70.975,
+    1714.917
+   ],
+   "mm": 50,
+   "fstop": 4,
+   "end": {
+    "t": 5.958,
+    "pos": [
+     243.9,
+     71.27,
+     1809.758
+    ],
+    "look": [
+     243.912,
+     70.975,
+     1808.802
+    ]
+   },
+   "solved": true
+  },
+  "X4-17": {
+   "rig": "follow",
+   "from": "X4-17",
+   "spec": "episodes/s01e01/final/scenes/specs/verdor-aerial.spec.js",
+   "pos": [
+    267.002,
+    66.77,
+    1805.392
+   ],
+   "look": [
+    267.591,
+    66.688,
+    1804.588
+   ],
+   "mm": 85,
+   "fstop": 4,
+   "end": {
+    "t": 1.958,
+    "pos": [
+     272.443,
+     66.77,
+     1836.249
+    ],
+    "look": [
+     273.032,
+     66.688,
+     1835.445
+    ]
+   },
+   "solved": true
+  },
+  "X4-18": {
+   "rig": "follow",
+   "from": "X4-18",
+   "spec": "episodes/s01e01/final/scenes/specs/verdor-aerial.spec.js",
+   "pos": [
+    43.625,
+    88.37,
+    1866.846
+   ],
+   "look": [
+    44.617,
+    88.277,
+    1866.761
+   ],
+   "mm": 180,
+   "fstop": 5.6,
+   "end": {
+    "t": 7.958,
+    "pos": [
+     65.736,
+     88.37,
+     1992.245
+    ],
+    "look": [
+     66.728,
+     88.277,
+     1992.16
+    ]
+   },
+   "solved": true
+  },
+  "X4-19": {
+   "rig": "follow",
+   "from": "X4-19",
+   "spec": "episodes/s01e01/final/scenes/specs/verdor-aerial.spec.js",
+   "pos": [
+    319.607,
+    66.07,
+    1993.27
+   ],
+   "look": [
+    320,
+    65.948,
+    1992.359
+   ],
+   "mm": 85,
+   "fstop": 4,
+   "end": {
+    "t": 3.458,
+    "pos": [
+     329.216,
+     66.07,
+     2047.763
+    ],
+    "look": [
+     329.609,
+     65.948,
+     2046.852
+    ]
+   },
+   "solved": true
+  },
+  "X4-10": {
+   "rig": "follow",
+   "from": "X4-10",
+   "spec": "episodes/s01e01/final/scenes/specs/verdor-aerial-2.spec.js",
+   "pos": [
+    253.46,
+    18.3,
+    1601.48
+   ],
+   "look": [
+    260,
+    17.7,
+    1584.85
+   ],
+   "mm": 50,
+   "fstop": 5.6,
+   "end": {
+    "t": 6.958,
+    "pos": [
+     253.46,
+     18.797,
+     1650.188
+    ],
+    "look": [
+     260,
+     18.197,
+     1633.558
+    ]
+   }
+  }
+ },
+ "solids": [
+  {
+   "poly": [
+    [
+     263.8,
+     1579
+    ],
+    [
+     270.2,
+     1579
+    ],
+    [
+     270.2,
+     1601
+    ],
+    [
+     263.8,
+     1601
+    ]
+   ],
+   "y0": -2.5,
+   "h": 8,
+   "what": "Santa Maria hull"
+  },
+  {
+   "cyl": [
+    267,
+    1591.19
+   ],
+   "r": 0.5,
+   "y0": 4,
+   "h": 20,
+   "what": "Santa Maria mainmast"
+  },
+  {
+   "poly": [
+    [
+     273.236,
+     1442.73
+    ],
+    [
+     338.236,
+     1484.73
+    ],
+    [
+     341.764,
+     1479.27
+    ],
+    [
+     276.764,
+     1437.27
+    ]
+   ],
+   "y0": -16,
+   "h": 19.4,
+   "what": "breakwater"
+  },
+  {
+   "poly": [
+    [
+     337.266,
+     1483.757
+    ],
+    [
+     382.266,
+     1553.757
+    ],
+    [
+     387.734,
+     1550.243
+    ],
+    [
+     342.734,
+     1480.243
+    ]
+   ],
+   "y0": -16,
+   "h": 19.4,
+   "what": "breakwater"
+  },
+  {
+   "poly": [
+    [
+     381.808,
+     1552.614
+    ],
+    [
+     396.808,
+     1630.614
+    ],
+    [
+     403.192,
+     1629.386
+    ],
+    [
+     388.192,
+     1551.386
+    ]
+   ],
+   "y0": -16,
+   "h": 19.4,
+   "what": "breakwater"
+  },
+  {
+   "box": [
+    [
+     213,
+     1480
+    ],
+    [
+     222,
+     1790
+    ]
+   ],
+   "y0": 2.1,
+   "h": 6,
+   "what": "terrace 0 houses",
+   "approx": true
+  },
+  {
+   "box": [
+    [
+     188,
+     1480
+    ],
+    [
+     197,
+     1790
+    ]
+   ],
+   "y0": 9.6,
+   "h": 6,
+   "what": "terrace 1 houses",
+   "approx": true
+  },
+  {
+   "box": [
+    [
+     163,
+     1480
+    ],
+    [
+     172,
+     1790
+    ]
+   ],
+   "y0": 17.1,
+   "h": 6,
+   "what": "terrace 2 houses",
+   "approx": true
+  },
+  {
+   "box": [
+    [
+     138,
+     1480
+    ],
+    [
+     147,
+     1790
+    ]
+   ],
+   "y0": 24.6,
+   "h": 6,
+   "what": "terrace 3 houses",
+   "approx": true
+  },
+  {
+   "box": [
+    [
+     113,
+     1480
+    ],
+    [
+     122,
+     1790
+    ]
+   ],
+   "y0": 32.1,
+   "h": 6,
+   "what": "terrace 4 houses",
+   "approx": true
+  },
+  {
+   "cyl": [
+    60,
+    1430
+   ],
+   "r": 30,
+   "y0": 58,
+   "h": 22,
+   "what": "palace",
+   "approx": true
+  },
+  {
+   "box": [
+    [
+     232,
+     1570
+    ],
+    [
+     253,
+     1690
+    ]
+   ],
+   "y0": 2.6,
+   "h": 8,
+   "what": "quay warehouses",
+   "approx": true
+  }
+ ],
+ "lines": {},
+ "state": {
+  "shadowAt": "[x, y, z] + shadowExtent"
+ },
+ "continuity": {
+  "1C": {
+   "tod": "morning (continuous from 1B)",
+   "sun": [
+    0.838,
+    0.515,
+    0.178
+   ]
+  }
+ },
+ "cost": {
+  "shots": 18,
+  "measured": 16,
+  "draft_s_per_frame": 9.261,
+  "max_s_per_frame": 18.376,
+  "heavy": false,
+  "workers": 1,
+  "source": "episodes/s01e01/final/cut/timings.json"
+ }
+}

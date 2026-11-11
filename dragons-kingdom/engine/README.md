@@ -2,7 +2,7 @@
 
 The plan is in [DESIGN.md](DESIGN.md), and the build log is in [PROGRESS.md](PROGRESS.md). The aim is a screenplay plus a shot list in, and a staged, rendered, cut and mixed episode out. Everything is free or open source.
 
-## What exists (phase 1 of 7: plumbing and template mining)
+## What exists (phases 1-3 of 7: plumbing, template mining, input and validator, set sheets and casting)
 
 | Piece | What it does |
 |---|---|
@@ -10,6 +10,16 @@ The plan is in [DESIGN.md](DESIGN.md), and the build log is in [PROGRESS.md](PRO
 | `--episode <id>` (default `s01e01`) | Accepted by `build-shots`, `render-shots`, `previs`, `still`, `shot-rows`, `cut-sheet` and `selftest` (all in `scenes/lib/director/tools/`), and by `episodes/s01e01/final/cut/make-cut.mjs`. `build-shots` takes its cuts from `episode.json` when one exists. Episode 1 has no `episode.json`, so it keeps its built-in cuts. |
 | `scenes/lib/director/previs-core.js` | The pure measuring half of `previs.mjs`, using three.js maths only. `measure(spec, shot, t, {row})` returns the camera and every head on screen (in frame, distance, size, face check, occlusion). `previs.mjs` now draws from it, and its output is unchanged. |
 | `engine/tools/mine-specs.mjs` | Measures every hand-written spec of an episode and writes `engine/stager/templates.mined.json`. Per shot it records size class, camera_move, rig, mm, f-stop, camera height, distance, bearing relative to the subject's facing, frame height at the subject and at the aim point, and the head's screen position and size. Bands (n, min, p10, median, p90, max) are given per size class, per template guess, and per size/template pair. |
+| `engine/input/fountain.mjs` | `input/screenplay.fountain` (the subset in `input/SCREENPLAY-FORMAT.md`) → `final/dialogue.json`, `onscreen-text.json` (Episode 1 schemas) and `lines.lock.json` (stable line ids). |
+| `engine/input/shotlist-parse.mjs` | `input/shotlist.txt` → `final/shotlist.json` (the Episode 1 schema) and `final/sets.plan.json` (SET blocks). |
+| `engine/input/export-shotlist.mjs` | shotlist.json → shotlist.txt (the round-trip helper; `--scenes 1C`). |
+| `engine/input/validate.mjs` | Checks the inputs → `final/validation.md`, exit 1 on errors; `--write` also writes the parser outputs. |
+| `engine/input/CHATGPT-SHOTLIST-PROMPT.md` | The prompt the owner pastes into ChatGPT with the screenplay to get a valid shotlist.txt. |
+| `episodes/t00/` | A 3-shot test episode on CLING_SQUARE (`"test": true`). |
+| `engine/tools/sheet.mjs` | Set sheets → `scenes/lib/director/sets/sheets/<SET>.json` (marks + aliases, set objects, homes, areas with slots, paths, every hand-written camera as a vantage, occlusion solids, shot state, cost) for CLING_SQUARE, VERDOR_AERIAL, VERDOR_HARBOR, OUTER_ROCKS, SKY_OFF_VERDOR, BIRTHING_CHAMBER. `--check` for staleness. |
+| `previs-core.js` `{ sheet }` | `measure(..., { sheet })`: marks from the sheet, occlusion rays against its solids (`occludedBy`, `visibleFrac`); `rayBlock()`. |
+| `scenes/lib/humans/cast-list.js` | The cast as pure data: build ids → role, sex, age class (adult/child), variants, mounts; named people and creatures. |
+| `engine/cast/casting.mjs` | Shot list → `final/cast.lock.json`: named roles and variants, riders with mounts, dragons, generic roles → crowd## (hashed, unique per scene, locked), hard rating guard. |
 
 ## Run it
 
@@ -19,6 +29,9 @@ From `dragons-kingdom/`:
 node engine/tools/mine-specs.mjs                         # -> engine/stager/templates.mined.json (+ a band table)
 node scenes/lib/director/tools/build-shots.mjs --check   # Episode 1 tables / EDLs up to date
 node scenes/lib/director/tools/previs.mjs --episode s01e01 --set CLING_SQUARE --cuts
+node engine/input/validate.mjs --episode t00 --write       # parse + validate the test episode
+node engine/tools/sheet.mjs [--set X] [--check]           # set sheets
+node engine/cast/casting.mjs --episode t00                 # -> episodes/t00/final/cast.lock.json
 npm test                                                 # includes test/engine.test.mjs
 ```
 
@@ -28,8 +41,6 @@ A new episode works once it has `episodes/<id>/final/` with the same layout as E
 
 These parts don't exist yet:
 
-- the input parsers and validator (phase 2);
-- set sheets and casting (phase 3);
 - the auto-stager (phases 4 and 5);
 - `make-episode.mjs`, the queue and draft tiers (phase 6);
 - the set generator and `--episode` for `render/` and `pc/` (phase 7).

@@ -1,0 +1,18 @@
+{
+  "about": "SET blocks of the shot list (engine/input/shotlist-parse.mjs) for the set generator (engine phase 7): reuse | variant | generate | unknown.",
+  "source": "episodes/t00/input/shotlist.txt",
+  "sets": [
+    {
+      "id": "CLING_SQUARE",
+      "action": "reuse",
+      "template": null,
+      "size": null,
+      "world": null,
+      "features": [],
+      "tod": null,
+      "dressing": null,
+      "about": null,
+      "source_line": 2
+    }
+  ]
+}

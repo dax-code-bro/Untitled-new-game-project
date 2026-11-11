@@ -1,0 +1,31 @@
+{
+  "episode": "T00",
+  "status": "Planning data. Nothing has been designed or rendered yet.",
+  "source": "episodes/t00/input/screenplay.fountain",
+  "source_sha256": "d9aa02e05ef056c353fbee2616e543e074c491f3818cac0770152d883c001bd6",
+  "generated_by": "engine/input/fountain.mjs",
+  "about": "Text that appears in the picture itself (captions, lettering, credits), separate from dialogue subtitles. Cards are listed in running order.",
+  "suggested_hold_seconds_note": "Suggestions for the animatic only; adjust in the edit.",
+  "never_on_screen": [
+    "Parentheticals such as (quietly)",
+    "Scene headings and #scene numbers#",
+    "[[notes]] other than ONSCREEN",
+    "Action lines"
+  ],
+  "cards": [
+    {
+      "id": "T01",
+      "kind": "caption",
+      "text": "CLING",
+      "optional": false,
+      "scene": "0A",
+      "after_dialogue_line": null,
+      "before_dialogue_line": "L001",
+      "placement": "Where the screenplay puts it.",
+      "suggested_hold_seconds": 2,
+      "screenplay_says": "[[ONSCREEN: CLING]]",
+      "note": null,
+      "source_line": 7
+    }
+  ]
+}
