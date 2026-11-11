@@ -284,6 +284,35 @@
     1292
    ]
   ],
+  "flight-X6": [
+   [
+    560,
+    62,
+    2600
+   ],
+   [
+    700,
+    62,
+    2947
+   ]
+  ],
+  "flight-X6-return": [
+   [
+    800,
+    60,
+    3020
+   ],
+   [
+    700,
+    60,
+    2700
+   ],
+   [
+    650,
+    60,
+    2400
+   ]
+  ],
   "gap-axis": [
    [
     600,
@@ -478,17 +507,30 @@
    "from": "X6-10",
    "spec": "episodes/s01e01/final/scenes/specs/outer-rocks.spec.js",
    "pos": [
-    -1.231,
-    1.92,
-    3.383
+    628.353,
+    7.67,
+    3083.419
    ],
    "look": [
-    -0.902,
-    1.825,
-    2.444
+    628.682,
+    7.575,
+    3082.479
    ],
    "mm": 85,
    "fstop": 2.8,
+   "end": {
+    "t": 1.958,
+    "pos": [
+     650.384,
+     7.67,
+     3121.578
+    ],
+    "look": [
+     650.713,
+     7.575,
+     3120.639
+    ]
+   },
    "solved": true
   },
   "X6-11": {
@@ -543,17 +585,30 @@
    "from": "X6-13",
    "spec": "episodes/s01e01/final/scenes/specs/outer-rocks.spec.js",
    "pos": [
-    4.5,
-    2.82,
-    7.794
+    725.396,
+    74.47,
+    3231.987
    ],
    "look": [
-    3.973,
-    2.681,
-    6.956
+    724.869,
+    74.331,
+    3231.149
    ],
    "mm": 50,
    "fstop": 4,
+   "end": {
+    "t": 2.958,
+    "pos": [
+     750.146,
+     56.72,
+     3268.938
+    ],
+    "look": [
+     749.619,
+     56.581,
+     3268.1
+    ]
+   },
    "solved": true
   },
   "X6-14": {
@@ -2422,7 +2477,14 @@
    "what": "stack G"
   }
  ],
- "lines": {},
+ "lines": {
+  "1C": {
+   "travel": "heading",
+   "camSide": "right",
+   "tol": 25,
+   "note": "flight line 1C-1E: cameras on the flyers' right (inland going south), travel L -> R"
+  }
+ },
  "state": {
   "birds": "{ lift: s } shot-local time the seabirds go up (< -6: already wheeling; none: sitting)",
   "shadowAt": "[x, y, z] + shadowExtent (default the rocks)"

@@ -6,7 +6,7 @@
 import fs from 'node:fs';
 import { intentOf, markPos } from './intent.mjs';
 import { pick } from './select.mjs';
-import { scoreShot, adjust } from './check.mjs';
+import { scoreShot, adjust, insideSolid } from './check.mjs';
 import { shoot, SIDE_X, centroid, frameHAt, project } from './templates/common.mjs';
 import { shotEnv } from '../../scenes/lib/director/previs-core.js';
 import { headingFromYaw } from '../../scenes/lib/director/blocking.js';
@@ -21,9 +21,13 @@ import * as T_insert from './templates/insert.mjs';
 import * as T_crowd from './templates/crowd-reaction.mjs';
 import * as T_pan from './templates/travel-pan.mjs';
 import * as T_card from './templates/card.mjs';
+import { airFacts, isAir, stageAir, AIR_TEMPLATES } from './air.mjs';
 
-export const STAGER_VERSION = 1;
-export const TEMPLATES = Object.fromEntries([T_establish, T_medium, T_two, T_close, T_ots, T_insert, T_crowd, T_pan, T_card].map((m) => [m.name, m]));
+// v2 (phase 5): air templates, the two-shot blocking / size-band fix, the stall built during the shot
+export const STAGER_VERSION = 2;
+// pov on a ground set: the camera at the eye of the shot's person (the air pov template is air.mjs's)
+const T_povGround = { name: 'pov', params: (I, B) => ({ ...T_establish.params(I, B), mm: I.mm || 35, vantage: false }) };
+export const TEMPLATES = Object.fromEntries([T_establish, T_medium, T_two, T_close, T_ots, T_insert, T_crowd, T_pan, T_card, T_povGround].map((m) => [m.name, m]));
 const HERE = new URL('.', import.meta.url);
 export const loadVerbs = () => JSON.parse(fs.readFileSync(new URL('verbs.json', HERE), 'utf8'));
 export const loadPlaces = (set) => JSON.parse(fs.readFileSync(new URL('places.json', HERE), 'utf8'))[set] || {};
@@ -149,10 +153,25 @@ function dressing(I, ctx, blocks) {
   const text = `${I.words} ${I.subjects.map((s) => s.place || '').join(' ')}`;
   for (const r of places.dressing || []) {
     if (!new RegExp(r.when, 'i').test(text)) continue;
-    const st = clone(r.set);
+    const st = clone(r.set || {});
     let ok = true;
     for (const v of Object.values(st)) if (v && typeof v === 'object') for (const [k, x] of Object.entries(v)) if (typeof x === 'string' && x.startsWith('$')) { if (!blocks[x.slice(1)]) ok = false; else v[k] = x.slice(1); }
     if (!ok) continue;
+    if (r.build) {
+      // (phase 5) a thing BUILT during the shot: animate the sheet's declared state 0 -> 1 across the action
+      for (const [obj, parts] of Object.entries(r.build)) {
+        const decl = ctx.sheet?.state?.[obj] || '';
+        if (!parts.every((k) => new RegExp(`\\b${k}\\b`).test(decl))) { ctx.unstaged?.push(`${obj}: built in the shot, but the sheet declares no ${parts.join('/')} state`); continue; }
+        const S = I.seconds, k = (a, b) => [[0, 0], [r2(S * a), 0], [r2(S * b), 1]];
+        const o = { ...(set[obj] || {}) };
+        if (parts.includes('poles')) o.poles = [k(0.36, 0.44), k(0.36, 0.44), k(0.46, 0.54), k(0.5, 0.58)];
+        if (parts.includes('bars')) o.bars = [k(0.56, 0.62), k(0.62, 0.7)];
+        if (parts.includes('cloth')) o.cloth = k(0.72, 0.92);
+        set[obj] = o;
+        fx.built = obj;
+      }
+      continue;
+    }
     Object.assign(set, st);
     if (r.variant) variant = true;
   }
@@ -174,29 +193,62 @@ function dressing(I, ctx, blocks) {
     if (pr.variant) variant = true;
   }
   for (const s of I.subjects) if (s.place && (places.variant?.objects || []).includes(s.place)) variant = true;
-  return { set, fx, variant, props };
+  const built = fx.built; delete fx.built;
+  return { set, fx, variant, props, built };
 }
 
 export function stageShot(row, ctx = {}) {
   const sheet = ctx.sheet, places = ctx.places || {}, verbs = ctx.verbs || loadVerbs();
   const policy = ctx.policy || {};
   const I = intentOf(row, { sheet, places, verbs, cast: ctx.castLock?.shots?.[row.id] || null, lastPerson: ctx.prev?.lastPerson || null });
+  // (phase 5) air: a row on an air set framing flyers / riders / only places goes to the air stager
+  I.lensRaw = row.lens || '';
+  I.air = airFacts(I, ctx.castLock?.shots?.[row.id] || []);
+  I.airSet = /^air/.test(sheet?.kind || '') && isAir(I, sheet);
   const sel = pick(I);
+  if (AIR_TEMPLATES[sel.template] && I.airSet) {
+    const r = stageAir(row, { ...ctx, sheet, places, version: STAGER_VERSION }, I, sel);
+    if (r) return r;
+  }
   const report = { id: row.id, template: sel.template, why: sel.why, score: null, tries: 0, fixes: [], flags: [], unstaged: I.unstaged.map((u) => `${u.who.join('+')}: ${u.text}`) };
   if (sel.flag) report.flags.push(sel.flag);
   if (sel.template === 'card') return { id: row.id, entry: null, cast: {}, variant: false, report, end: ctx.prev?.blocking || {} };
   const sun = sunHeading(sheet, row.scene);
   const { blocks, notes, people } = blockPeople(I, ctx, sun);
   for (const n of notes) report.unstaged.push(n);
+  // (phase 5) a TWO-SHOT frames both people at medium: two talkers placed far apart (their homes, "calls across")
+  // would make it a wide with tiny people, so the free one (not seated, holding no prop) comes to ~1.4 m of the other
+  if (sel.template === 'two-shot') {
+    const two = I.subjects.filter((s) => s.kind === 'person' && blocks[s.actor]);
+    if (two.length === 2) {
+      const [a, b] = two.map((s) => blocks[s.actor]);
+      const gap = Math.hypot(a.at[0] - b.at[0], a.at[1] - b.at[1]);
+      // not across levels (a guard below a watchman's platform): that pair stays where it is
+      if (gap > 3.5 && !(a.y > 0.5 || b.y > 0.5)) {
+        const fixed = (q) => !!(q.posture?.sit || q.y || q.holds);
+        const [mv, st] = fixed(a) && !fixed(b) ? [two[1], two[0]] : [two[0], two[1]];
+        const S = blocks[st.actor], M = blocks[mv.actor];
+        // the nearest free spot round the other one (not inside the fountain basin, a stall, a house)
+        const h0 = headingTo(S.at, M.at);
+        const free = (q) => [[0, 0], [0.35, 0], [-0.35, 0], [0, 0.35], [0, -0.35]].every(([dx, dz]) => !insideSolid(ctx.sheet, [q[0] + dx, (ctx.sheet?.ground?.y ?? 0) + 0.3, q[1] + dz]));
+        const h = [0, 40, -40, 80, -80, 120, -120, 180].map((k) => norm360(h0 + k)).find((k) => { const dd = dirOf(k); return free([S.at[0] + dd[0] * 1.4, S.at[1] + dd[1] * 1.4]); }) ?? h0;
+        const d = dirOf(h);
+        M.at = [r2(S.at[0] + d[0] * 1.4), r2(S.at[1] + d[1] * 1.4)];
+        M.face = r2(norm360(h + 180));
+        delete M.acts; delete M.legs;
+        report.fixes.push(`two-shot: ${mv.actor} brought to 1.4 m of ${st.actor} (was ${gap.toFixed(1)} m apart)`);
+      }
+    }
+  }
   // talk: looks, listener nods, cues
   const times = lineTimes(row.id, I.lines, I.seconds);
   const speakers = [...new Set(I.lines.map((l) => l.actor))].filter((a) => blocks[a]);
   if (speakers.length === 2) { const L = talkLooks(speakers[0], speakers[1]); for (const a of speakers) Object.assign(blocks[a], L[a]); }
   for (const a of speakers) { const ls = listenerActs(row.id, times, a); if (ls.length) (blocks[a].acts ||= []).push(...ls); }
   for (const p of people) { const b = blocks[p.actor]; if (!b.look && p.place && !speakers.includes(p.actor)) { const m = markPos(p.place, sheet, places); if (m && Math.hypot(m[0] - b.at[0], m[2] - b.at[1]) > 0.4) { b.look = [r2(m[0]), r2(Math.max(0.3, m[1])), r2(m[2])]; b.lookAmount = 0.6; } } }
-  const dress = dressing(I, ctx, blocks);
+  const dress = dressing(I, { ...ctx, unstaged: report.unstaged }, blocks);
   // POV (ground v1): the camera at the POV person's eye; that person hidden
-  const povWho = sel.flag === 'W_POV_V1' ? people[0] : null;
+  const povWho = sel.template === 'pov' ? people[0] : null;
   if (povWho) { blocks[povWho.actor].acts = [[0, 'hide']]; }
   for (const b of Object.values(blocks)) if (b.acts) b.acts.sort((x, y) => x[0] - y[0] || (x[1] < y[1] ? -1 : 1));
   // ---- the spec entry (camera filled in below)
@@ -374,9 +426,10 @@ export function stageRows(rows, ctx = {}) {
   let variant = false;
   const prevByScene = {};
   for (const row of rows) {
-    const prev = prevByScene[row.scene] || { blocking: {}, lastPerson: null };
-    const r = stageShot(row, { ...ctx, prev });
-    prevByScene[row.scene] = { blocking: r.end, lastPerson: r.lastPerson };
+    const prev = prevByScene[row.scene] || { blocking: {}, lastPerson: null, clock: 0 };
+    const r = stageShot(row, { ...ctx, prev, clock: prev.clock || 0 });
+    // the scene's formation clock runs on through every shot (phase 5): seconds of the rows before this one
+    prevByScene[row.scene] = { blocking: r.end, lastPerson: r.lastPerson, flyers: r.flyers || prev.flyers, clock: (prev.clock || 0) + (row.frames_at_24fps || 96) / 24 };
     reports.push(r.report);
     if (!r.entry) continue;
     shots[row.id] = r.entry;

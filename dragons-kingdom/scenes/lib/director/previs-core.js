@@ -78,12 +78,14 @@ export function shotEnv(spec, s1, sheet = null) {
       const def = spec.cast?.[an], b = cast[an];
       // a RIDER (cast def.ride): seated on its mount - the seat from spec.previs.marks['<mount>Seat'] or
       // spec.previs.seatH[mount] above the mount's root (default 0.18 x its length); head 0.75 m above the seat
-      if (def?.ride && b && cast[def.ride]) {
-        const mdef = spec.cast?.[def.ride], ms = actorState(cast[def.ride], t, env);
-        const L = cast[def.ride].length ?? mdef?.length ?? CREATURE_LEN[mdef?.id] ?? 2;
+      // (phase 5) `ride` is a mount name or { on: mount, lean } (the stage's form; OUTER_ROCKS / SKY_OFF_VERDOR use it)
+      const mount = typeof def?.ride === 'object' && def.ride ? def.ride.on : def?.ride;
+      if (mount && b && cast[mount]) {
+        const mdef = spec.cast?.[mount], ms = actorState(cast[mount], t, env);
+        const L = cast[mount].length ?? mdef?.length ?? CREATURE_LEN[mdef?.id] ?? 2;
         const fwd = new THREE.Vector3(Math.sin(ms.yaw), 0, Math.cos(ms.yaw));
-        const sm = spec.previs?.marks?.[`${def.ride}Seat`];
-        const seat = sm ? V(sm) : new THREE.Vector3(ms.x, ms.y + (spec.previs?.seatH?.[def.ride] ?? L * 0.18), ms.z).addScaledVector(fwd, L * 0.1);
+        const sm = spec.previs?.marks?.[`${mount}Seat`];
+        const seat = sm ? V(sm) : new THREE.Vector3(ms.x, ms.y + (spec.previs?.seatH?.[mount] ?? L * 0.18), ms.z).addScaledVector(fwd, L * 0.1);
         const dy = part === 'head' || part === 'eye' || part === 'eyes' ? 0.75 : part === 'chest' ? 0.4 : part.startsWith('hand') ? 0.25 : 0.1;
         return seat.add(new THREE.Vector3(0, dy, 0));
       }
@@ -159,6 +161,18 @@ export function cameraAt(spec, s1, t, u, env) {
   const fp = typeof fv === 'number' ? null : res(fv);
   const focus = (typeof fv === 'number' ? fv : fp ? fp.distanceTo(pos) : look.distanceTo(pos)) + (c.focusOffset ?? 0);
   return { pos, look, mm: usedMm, asked: mm, fstop, focus, worst };
+}
+
+/** (phase 5) the LONG-LENS HORIZON RULE: a long lens looking down on flyers keeps the horizon out of the frame, i.e. its
+ *  depression (degrees below level) >= vfov / 2 + 2.5. cam: { pos, look, mm } (arrays or Vector3s).
+ *  -> { ok, depression, need, vfov } (ok is true for lenses under `minMm`, where the rule does not apply). */
+export function horizonRule(cam, { minMm = 100 } = {}) {
+  const a = Array.isArray(cam.pos) ? cam.pos : cam.pos.toArray(), b = Array.isArray(cam.look) ? cam.look : cam.look.toArray();
+  const d = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
+  const depression = -Math.atan2(d[1], Math.hypot(d[0], d[2])) * 180 / Math.PI;
+  const vfov = 2 * Math.atan((24.89 * 9 / 16) / 2 / cam.mm) * 180 / Math.PI;
+  const need = vfov / 2 + 2.5;
+  return { ok: cam.mm < minMm || depression >= need - 1e-6, depression: +depression.toFixed(2), need: +need.toFixed(2), vfov: +vfov.toFixed(2) };
 }
 
 export function analyse(spec, s1, row, t, env) {

@@ -282,3 +282,27 @@ test('engine phase 4: t00 is staged (auto/touch/spec files current), build-shots
   const m = mergeSpecs({ set: 'X', shots: { a: { cam: { mm: 35, fstop: 8 }, cast: { v: { at: [0, 0] } } }, b: { cam: { mm: 50 } } } }, { a: { cam: { mm: 50 }, cast: { v: null } }, b: { lock: true, cam: { mm: 85 } } });
   assert.deepEqual(m.shots, { a: { cam: { mm: 50, fstop: 8 }, cast: {} }, b: { cam: { mm: 85 } } });
 });
+
+test('engine phase 5: flight.js helpers, the horizon rule, the line side, the two-shot fix and the stall build', async () => {
+  const F = await import('../scenes/lib/director/staging/flight.js');
+  assert.equal(F.CHAR_HZ, 0.625, 'CHAR_HZ is locked by the sound spots');
+  const p = F.pair([0, 60, 0], 180, 2);
+  assert.deepEqual(p.charcoal.root[0][1], [30, 58, 16]);                       // 30 m to Leaf's left (east going south), 16 m ahead
+  const C = F.formationClock([[0, 60, 0], [0, 60, 100]], { v: 10 });
+  assert.deepEqual(C.at(5).p, [0, 60, 50]); assert.equal(C.at(5).heading, 180);
+  const { horizonRule } = await import('../scenes/lib/director/previs-core.js');
+  assert.equal(horizonRule({ pos: [0, 100, 0], look: [0, 99, 100], mm: 160 }).ok, false);
+  assert.equal(horizonRule({ pos: [0, 100, 0], look: [0, 90, 100], mm: 160 }).ok, true);
+  const { lineSide } = await import('../engine/stager/check.mjs');
+  const line = { travel: 'heading', camSide: 'right', tol: 25 };
+  assert.equal(lineSide(line, [0, 0, 0], 180, [-50, 0, 0]).ok, true);           // heading south, camera west = its right
+  assert.equal(lineSide(line, [0, 0, 0], 180, [50, 0, 0]).ok, false);
+  assert.equal(lineSide(line, [0, 0, 0], 180, [50, 0, 0], true).ok, true);       // "reverse" declared
+  const rep = JSON.parse(fs.readFileSync(path.join(ROOT, 'episodes/t00/final/stage-report.json'), 'utf8')).shots.find((s) => s.id === '0A-02');
+  assert.ok(rep.fixes.some((f) => f.startsWith('two-shot:')), 'the two talkers are brought together');
+  assert.ok(!rep.flags.some((f) => f.startsWith('W_SIZE')));
+  const a = await import('../engine/stager/accept.mjs');
+  const r = await a.restageCling();
+  const x504 = r.staged.spec.shots['X5-04'].set.stall;
+  assert.ok(Array.isArray(x504.poles) && Array.isArray(x504.cloth), 'X5-04: the stall is built during the shot');
+});

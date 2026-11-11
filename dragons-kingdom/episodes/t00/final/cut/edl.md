@@ -11,5 +11,5 @@ Render cost (ESTIMATES unless a shot says MEASURED; see the cost column): draft 
 | # | shot | scene | set | in | out | frames | trans | lines (rec time of the words) | staging | draft s/f | 4K CPU s/f |
 |---:|---|---|---|---|---|---:|---|---|---|---:|---:|
 | 1 | 0A-01 | 0A | CLING_SQUARE | 00:00:00:00 | 00:00:04:00 | 96 | cut |  | AUTO establish-wide 35 mm STATIC: The square before the festival. The vendor sets out his crate; the musician sits on the fountain rim. | 3.72 | 49.6 |
-| 2 | 0A-02 | 0A | CLING_SQUARE | 00:00:04:00 | 00:00:08:12 | 108 | cut | L001 VENDOR @4.30; L002 MUSICIAN @5.25; L003 VENDOR @6.90 | AUTO two-shot 35 mm STATIC: The vendor calls across to the musician, who answers without looking up from his lute. | 3.72 | 49.6 |
+| 2 | 0A-02 | 0A | CLING_SQUARE | 00:00:04:00 | 00:00:08:12 | 108 | cut | L001 VENDOR @4.30; L002 MUSICIAN @5.25; L003 VENDOR @6.90 | AUTO two-shot 50 mm STATIC: The vendor calls across to the musician, who answers without looking up from his lute. | 3.72 | 49.6 |
 | 3 | 0A-03 | 0A | CLING_SQUARE | 00:00:08:12 | 00:00:11:12 | 72 | cut |  | AUTO insert 100 mm STATIC: The musician's fingers find the first chord on the lute. | 3.36 | 44.8 |

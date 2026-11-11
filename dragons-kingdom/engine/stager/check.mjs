@@ -6,8 +6,21 @@
 //   adjust(P0, evalP, opts) -> { best, tries, fixes }: at most 12 tries, keeping the best: distance x/÷ 1.2, rotate
 //     `from` +-20/40/60, raise 0.5 m, step the lens 35 <-> 50 <-> 85 (unless locked), leave a vantage, fallback.
 import fs from 'node:fs';
-import { measure, rayBlock } from '../../scenes/lib/director/previs-core.js';
+import { measure, rayBlock, horizonRule } from '../../scenes/lib/director/previs-core.js';
 import { project, frameHAt } from './templates/common.mjs';
+import { headingFromYaw } from '../../scenes/lib/director/blocking.js';
+import { headingTo, norm360 } from '../../scenes/lib/director/staging/ground.js';
+
+/** (phase 5) a camera on the WRONG side of a sheet's screen-direction line: line { travel: 'heading', camSide, tol }
+ *  is the flyer's own heading (camera right of travel: relative bearing 0..180). -> { ok, rel } */
+export function lineSide(line, flyerPos, flyerHeading, camPos, reverse = false) {
+  if (!line || flyerHeading == null) return { ok: true, rel: null };
+  const rel = norm360(headingTo(flyerPos, camPos) - flyerHeading), tol = line.tol ?? 25;
+  const wrong = line.camSide === 'left' ? rel > tol && rel < 180 - tol : rel > 180 + tol && rel < 360 - tol;
+  return { ok: !wrong || reverse, rel: Math.round(rel) };
+}
+/** (phase 5) a person's height as a fraction of the frame height at them (the size-band floor of a medium / two-shot) */
+export const personFrac = (headY, groundY, fh) => Math.min(1.74, headY - groundY + 0.12) / Math.max(fh, 1e-3);
 
 const MINED = JSON.parse(fs.readFileSync(new URL('./templates.mined.json', import.meta.url), 'utf8'));
 /** frame height (m) at the subject: [lo, hi] per size class (mined p10 / p90, widened x1.3) */
@@ -16,7 +29,7 @@ BAND.POV = [0, 1e9];
 const SIDE_OK = { L: (x) => x < 0.05, R: (x) => x > -0.05, LC: (x) => x < 0.3, RC: (x) => x > -0.3, C: (x) => Math.abs(x) < 0.55, move: () => true, any: () => true };
 export const sideOk = (side, x) => (SIDE_OK[side] || SIDE_OK.any)(x);
 
-function insideSolid(sheet, p) {
+export function insideSolid(sheet, p) {
   for (const s of sheet?.solids || []) {
     const y0 = s.y0 ?? 0;
     if (p[1] < y0 || p[1] > y0 + s.h) continue;
@@ -56,8 +69,21 @@ export function scoreShot(spec, id, I, B, sheet) {
   const inside = insideSolid(sheet, camP);
   if (inside) { pen *= 0.3; flags.push(`camera inside ${inside}`); }
   if (camP[1] < B.groundY + 0.15) { pen *= 0.3; flags.push('camera below the ground'); }
-  const out = outside(sheet, camP);
+  const out = B.air ? 0 : outside(sheet, camP);
   if (out > 6) { pen *= 0.5; flags.push(`camera ${Math.round(out)} m outside the set's areas`); }
+  // (phase 5) the long-lens horizon rule and the screen-direction line (air shots)
+  if (B.air) {
+    const hz = horizonRule(r0.cam);
+    if (!hz.ok) { pen *= 0.5; flags.push(`W_HORIZON depression ${hz.depression} < ${hz.need} deg (${r0.cam.mm} mm)`); }
+    const fa = B.flyer && r0.actors.find((q) => q.name === B.flyer);
+    if (fa && B.line) {
+      const ls = lineSide(B.line, fa.head.toArray(), norm360(headingFromYaw(fa.yaw)), camP, B.reverse);
+      if (!ls.ok) { pen *= 0.35; flags.push(`W_LINE camera ${ls.rel} deg off the flyer's heading: wrong side of the line`); }
+    }
+  }
+  // (phase 5) a medium / two-shot whose people fill under ~25 % of the frame height is a wide: it fails
+  const tight = (I.size === 'MS' || I.size === 'CU' || I.move.kind === 'two-shot') && !B.air;
+  let small = 0, worstFrac = 1;
   for (const S of B.subjects) {
     const ts = S.checkAt != null ? [S.checkAt / secs] : times;
     for (const u of ts) {
@@ -78,12 +104,15 @@ export function scoreShot(spec, id, I, B, sheet) {
       }
       const fh = frameHAt(Math.max(dist, 0.01), cam.mm);
       const band = BAND[I.size] || [0, 1e9];
-      const size = S.sizeFree || (fh >= band[0] && fh <= band[1]);
+      let size = S.sizeFree || (fh >= band[0] && fh <= band[1]);
+      if (tight && S.actor && !S.hands && Math.abs(u - 0.5) < 1e-9) { const a = r.actors.find((q) => q.name === S.actor); const pf = a ? personFrac(a.head.y, B.groundY, fh) : 1; if (pf < 0.25) { size = false; small++; worstFrac = Math.min(worstFrac, pf); } }
       const side = inFrame && sideOk(S.side, x);
       const s = (inFrame ? 0.4 : 0) + (side ? 0.25 : 0) + (visible ? 0.2 : 0) + (size ? 0.15 : 0);
       checks.push({ name: S.name, t: +t.toFixed(2), x: +x.toFixed(2), y: +y.toFixed(2), inFrame, side, visible, size, fh: +fh.toFixed(2), s: +s.toFixed(2), speaking, reads });
     }
   }
+  // graded, so the adjust loop can climb toward the band (a person at 18 % scores 0.52, at 23 % 0.85)
+  if (small) { pen *= Math.max(0.4, worstFrac / 0.25) ** 2; flags.push(`W_SIZE ${small} person(s) under 25 % of the frame height in a ${I.move.kind === 'two-shot' ? 'two-shot' : I.size} (smallest ${Math.round(worstFrac * 100)} %)`); }
   if (B.facesPolicy === 'avoid' && checks.some((c) => c.speaking && c.reads)) flags.push('FACE: a speaking face reads (faces policy avoid)');
   const score = checks.length ? (checks.reduce((a, c) => a + c.s, 0) / checks.length) * pen : 0.5 * pen;
   return { score: +score.toFixed(3), checks, flags, cam: cam0 };
@@ -102,7 +131,7 @@ export function mutations(P, I) {
   return m;
 }
 /** greedy: try each mutation of the current best (<= maxTries evaluations), keep improvements */
-export function adjust(P0, evalP, I, { maxTries = 12, good = 0.97, fallback = null } = {}) {
+export function adjust(P0, evalP, I, { maxTries = 12, good = 0.97, fallback = null, muts = mutations } = {}) {
   let best = { P: P0, ...evalP(P0) };
   const fixes = [];
   let tries = 1;
@@ -111,7 +140,7 @@ export function adjust(P0, evalP, I, { maxTries = 12, good = 0.97, fallback = nu
   while (improved && tries < maxTries && best.score < good) {
     improved = false;
     let round = null;
-    for (const [what, P] of mutations(best.P, I)) {
+    for (const [what, P] of muts(best.P, I)) {
       if (tries >= maxTries) break;
       tries++;
       const r = evalP(P);

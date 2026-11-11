@@ -37,6 +37,7 @@
     },
     "dressing": [
       { "when": "\\b(stall|vendor|cloth|leg|counter)\\b", "set": { "stall": { "poles": 1, "bars": 1, "cloth": 1 } } },
+      { "when": "\\b(builds?|building|puts? up|sets? up)\\b[^.]*\\bstall\\b", "build": { "stall": ["poles", "bars", "cloth"] }, "about": "phase 5: the stall goes up DURING the shot when the sheet declares stall state (poles [k0..k3], bars [front, back], cloth k)" },
       { "when": "\\b(door|doorway|house|parcel|table)\\b", "variant": true, "set": { "door": 1, "room": { "lamp": 4 } } },
       { "when": "\\bbanners?\\b", "variant": true, "set": { "banner": { "unroll": [[0, 0], [0.3, 0.03], [2.2, 1, "smooth"]], "lift": [[0, 0], [1.6, 0.05], [3.3, 1, "smooth"]] } } },
       { "when": "\\bladder\\b", "set": { "ladder": { "a": "$villager1", "b": "$villager2" } } }
@@ -45,5 +46,40 @@
       "lute": { "role": "MUSICIAN", "variant": true, "holds": { "object": "lute", "hands": "both", "offset": [0, 0, 0.02], "rot": 180 }, "lap": 0.34 },
       "pipe": { "role": "MUSICIAN", "variant": true, "holds": { "object": "pipe", "hands": "R", "offset": [0, 0.01, 0] }, "hand": true, "fx": "smoke-wisp" }
     }
+  },
+  "VERDOR_AERIAL": {
+    "about": "phase 5 air (engine/stager/air.mjs): aliases and flight rules; positions are sheet marks and paths only",
+    "aliases": { "harbor": "quay", "harbour": "quay", "harbor wall": "harbourMouth", "town": "quay", "opening": "palace", "mast": "mainmastTop", "coast": "coast1500", "outer rocks": "harbourMouth" },
+    "flight": { "path": "flight-X4", "v": 16, "rules": [
+      { "when": "drops? lower|along the harbou?r wall", "who": "leaf", "dy": -25 },
+      { "when": "climbs? back up", "who": "leaf", "dy": 12 },
+      { "when": "stays high", "who": "charcoal", "alt": 60 },
+      { "when": "passes close beside|past the mast", "who": "leaf", "anchor": "mainmastTop", "alt": 24 },
+      { "when": "working dragon|quay dragon", "who": "workingdragon", "perch": "quay" },
+      { "when": "young dragon|riding school|young riders", "who": "oneyoungdragon", "perch": "school" }
+    ] }
+  },
+  "SKY_OFF_VERDOR": {
+    "about": "phase 5 air",
+    "flight": { "path": "flight-X6", "v": 16, "rules": [
+      { "when": "turn back|back along the coast|whole island", "path": "flight-X6-return" },
+      { "when": "drops away", "who": "leaf", "dy": -16, "v": 19 },
+      { "when": "goes after", "who": "charcoal", "dy": -6 }
+    ] }
+  },
+  "OUTER_ROCKS": {
+    "about": "phase 5 air",
+    "aliases": { "outer rocks": "gap", "rocks": "gap", "mist bank": "topA", "mist": "topA", "water ring": "lowTop", "seabirds": "topB", "spray": "gap", "shadow": "lowTop", "stacks": "gap" },
+    "flight": { "path": "gap-axis", "v": 16, "rules": [
+      { "when": "stand the outer rocks", "path": "gap-axis", "anchor": "start" },
+      { "when": "skimming|low and fast|low over the water", "who": "leaf", "path": "gap-axis", "anchor": "start", "how": "skim", "alt": 4 },
+      { "when": "threads the gap|through the gap|tucked down", "who": "leaf", "path": "gap-axis", "anchor": "gap" },
+      { "when": "spray climbs|low in the saddle", "who": "charcoal", "path": "gap-axis", "anchor": "start", "alt": 8 },
+      { "when": "bursts out of the gap|lands on|settles", "who": "leaf", "perch": "lowTop" },
+      { "when": "over the top of the stacks", "who": "charcoal", "path": "over-stacks", "anchor": "mid" },
+      { "when": "far side|comes down the slope", "who": "charcoal", "path": "over-stacks", "anchor": "end", "how": "glide" },
+      { "when": "arrives a moment later|checks above", "who": "charcoal", "hover": "lowTop", "alt": 24 },
+      { "when": "say it so he can hear", "who": "charcoal", "hover": "lowTop", "alt": 3 }
+    ] }
   }
 }
