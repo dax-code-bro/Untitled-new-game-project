@@ -1,0 +1,52 @@
+{
+ "episode": "t00",
+ "version": 1,
+ "source": "engine/cast/casting.mjs",
+ "roles": {
+  "MUSICIAN": {
+   "builds": [
+    "musician"
+   ],
+   "kind": "human"
+  },
+  "VENDOR": {
+   "builds": [
+    "vendor"
+   ],
+   "kind": "human"
+  }
+ },
+ "shots": {
+  "0A-01": [
+   {
+    "name": "Vendor",
+    "role": "VENDOR",
+    "kind": "human",
+    "build": "vendor"
+   },
+   {
+    "name": "Musician",
+    "role": "MUSICIAN",
+    "kind": "human",
+    "build": "musician"
+   }
+  ],
+  "0A-02": [
+   {
+    "name": "Vendor",
+    "role": "VENDOR",
+    "kind": "human",
+    "build": "vendor"
+   },
+   {
+    "name": "Musician",
+    "role": "MUSICIAN",
+    "kind": "human",
+    "build": "musician"
+   }
+  ],
+  "0A-03": []
+ },
+ "errors": [],
+ "warnings": []
+}

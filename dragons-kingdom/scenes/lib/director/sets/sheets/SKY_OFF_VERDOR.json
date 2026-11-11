@@ -1,0 +1,762 @@
+{
+ "set": "SKY_OFF_VERDOR",
+ "frame": "VERDOR",
+ "kind": "air-coast",
+ "builder": "scenes/lib/director/sets/sky-off-verdor.js",
+ "specs": [
+  "episodes/s01e01/final/scenes/specs/sky-off-verdor.spec.js"
+ ],
+ "generated": "engine/tools/sheet.mjs (do not edit; re-run it)",
+ "ground": {
+  "type": "terrain",
+  "sea": 0,
+  "note": "sea at y 0 east of the coast (x > coastX(z)); cliffs 9-60 m and hills inland"
+ },
+ "bounds": null,
+ "marks": {
+  "grounds": {
+   "at": [
+    4,
+    9,
+    -34
+   ],
+   "alias": [
+    "riding grounds",
+    "field"
+   ]
+  },
+  "scar": {
+   "at": [
+    43,
+    9,
+    -60
+   ]
+  },
+  "headland": {
+   "at": [
+    120,
+    40,
+    -700
+   ]
+  },
+  "coast0": {
+   "at": [
+    261.016,
+    0,
+    0
+   ],
+   "alias": [
+    "coast"
+   ]
+  },
+  "coast600": {
+   "at": [
+    304.921,
+    0,
+    600
+   ]
+  },
+  "coast1500": {
+   "at": [
+    302.6,
+    0,
+    1500
+   ]
+  }
+ },
+ "objects": {},
+ "homes": {},
+ "areas": {},
+ "paths": {
+  "coast": [
+   [
+    261.016,
+    0,
+    0
+   ],
+   [
+    306.169,
+    0,
+    300
+   ],
+   [
+    304.921,
+    0,
+    600
+   ],
+   [
+    294.393,
+    0,
+    900
+   ],
+   [
+    292.352,
+    0,
+    1200
+   ],
+   [
+    302.6,
+    0,
+    1500
+   ],
+   [
+    326.503,
+    0,
+    1800
+   ],
+   [
+    351.531,
+    0,
+    2100
+   ],
+   [
+    388.025,
+    0,
+    2400
+   ],
+   [
+    420.878,
+    0,
+    2700
+   ],
+   [
+    438.732,
+    0,
+    3000
+   ],
+   [
+    467.721,
+    0,
+    3300
+   ],
+   [
+    464.239,
+    0,
+    3600
+   ]
+  ],
+  "flight-1C": [
+   [
+    295,
+    60,
+    300
+   ],
+   [
+    295,
+    60,
+    1052
+   ],
+   [
+    300,
+    60,
+    1292
+   ]
+  ]
+ },
+ "vantages": {
+  "1C-07": {
+   "rig": "follow",
+   "from": "1C-07",
+   "spec": "episodes/s01e01/final/scenes/specs/sky-off-verdor.spec.js",
+   "pos": [
+    142.258,
+    43.57,
+    -23.485
+   ],
+   "look": [
+    143.095,
+    43.412,
+    -24.01
+   ],
+   "mm": 50,
+   "fstop": 4,
+   "end": {
+    "t": 2.458,
+    "pos": [
+     161.925,
+     46.52,
+     10.579
+    ],
+    "look": [
+     162.761,
+     46.362,
+     10.053
+    ]
+   },
+   "solved": true
+  },
+  "1C-08": {
+   "rig": "follow",
+   "from": "1C-08",
+   "spec": "episodes/s01e01/final/scenes/specs/sky-off-verdor.spec.js",
+   "pos": [
+    200.308,
+    46.97,
+    60.846
+   ],
+   "look": [
+    131.35,
+    39.4,
+    -37.394
+   ],
+   "mm": 35,
+   "fstop": 5.6,
+   "end": {
+    "t": 4.958,
+    "pos": [
+     227.441,
+     50.937,
+     135.395
+    ],
+    "look": [
+     168.538,
+     59.233,
+     27.017
+    ]
+   }
+  },
+  "1C-09": {
+   "rig": "follow",
+   "from": "1C-09",
+   "spec": "episodes/s01e01/final/scenes/specs/sky-off-verdor.spec.js",
+   "pos": [
+    258.358,
+    48.52,
+    123.631
+   ],
+   "look": [
+    258.918,
+    48.461,
+    122.805
+   ],
+   "mm": 85,
+   "fstop": 2.8,
+   "end": {
+    "t": 3.958,
+    "pos": [
+     280.019,
+     50.499,
+     183.145
+    ],
+    "look": [
+     280.579,
+     50.44,
+     182.319
+    ]
+   },
+   "solved": true
+  },
+  "1C-10": {
+   "rig": "drone",
+   "from": "1C-10",
+   "spec": "episodes/s01e01/final/scenes/specs/sky-off-verdor.spec.js",
+   "pos": [
+    -350,
+    160,
+    60
+   ],
+   "look": [
+    232,
+    31,
+    251
+   ],
+   "mm": 150,
+   "fstop": 8,
+   "end": {
+    "t": 5.958,
+    "pos": [
+     -330.139,
+     161.986,
+     99.722
+    ],
+    "look": [
+     299.528,
+     46.889,
+     318.528
+    ]
+   }
+  },
+  "1C-11": {
+   "rig": "follow",
+   "from": "1C-11",
+   "spec": "episodes/s01e01/final/scenes/specs/sky-off-verdor.spec.js",
+   "pos": [
+    205,
+    100,
+    400
+   ],
+   "look": [
+    525,
+    60,
+    414
+   ],
+   "mm": 160,
+   "fstop": 8,
+   "end": {
+    "t": 4.958,
+    "pos": [
+     205,
+     100,
+     479.333
+    ],
+    "look": [
+     525,
+     60,
+     493.333
+    ]
+   }
+  },
+  "1C-12": {
+   "rig": "drone",
+   "from": "1C-12",
+   "spec": "episodes/s01e01/final/scenes/specs/sky-off-verdor.spec.js",
+   "pos": [
+    482,
+    480,
+    476
+   ],
+   "look": [
+    494,
+    0,
+    476
+   ],
+   "mm": 35,
+   "fstop": 8,
+   "end": {
+    "t": 3.958,
+    "pos": [
+     482,
+     480,
+     539.333
+    ],
+    "look": [
+     494,
+     0,
+     539.333
+    ]
+   }
+  },
+  "1C-13": {
+   "rig": "follow",
+   "from": "1C-13",
+   "spec": "episodes/s01e01/final/scenes/specs/sky-off-verdor.spec.js",
+   "pos": [
+    120,
+    122,
+    544
+   ],
+   "look": [
+    525,
+    68.5,
+    554
+   ],
+   "mm": 135,
+   "fstop": 8,
+   "end": {
+    "t": 5.958,
+    "pos": [
+     120,
+     122,
+     639.333
+    ],
+    "look": [
+     520.035,
+     69.493,
+     649.333
+    ]
+   }
+  },
+  "1C-14": {
+   "rig": "follow",
+   "from": "1C-14",
+   "spec": "episodes/s01e01/final/scenes/specs/sky-off-verdor.spec.js",
+   "pos": [
+    547.58,
+    66.47,
+    665.803
+   ],
+   "look": [
+    546.813,
+    66.389,
+    665.166
+   ],
+   "mm": 50,
+   "fstop": 4,
+   "end": {
+    "t": 4.958,
+    "pos": [
+     547.58,
+     66.47,
+     745.136
+    ],
+    "look": [
+     546.813,
+     66.389,
+     744.499
+    ]
+   },
+   "solved": true
+  },
+  "1C-15": {
+   "rig": "follow",
+   "from": "1C-15",
+   "spec": "episodes/s01e01/final/scenes/specs/sky-off-verdor.spec.js",
+   "pos": [
+    -120,
+    135,
+    676
+   ],
+   "look": [
+    520,
+    61,
+    722
+   ],
+   "mm": 180,
+   "fstop": 8,
+   "end": {
+    "t": 8.958,
+    "pos": [
+     -100.093,
+     135,
+     819.333
+    ],
+    "look": [
+     549.861,
+     61,
+     865.333
+    ]
+   }
+  },
+  "1C-16": {
+   "rig": "follow",
+   "from": "1C-16",
+   "spec": "episodes/s01e01/final/scenes/specs/sky-off-verdor.spec.js",
+   "pos": [
+    503.827,
+    64.09,
+    861.752
+   ],
+   "look": [
+    504.64,
+    63.925,
+    861.195
+   ],
+   "mm": 100,
+   "fstop": 5.6,
+   "end": {
+    "t": 2.958,
+    "pos": [
+     503.827,
+     64.09,
+     909.086
+    ],
+    "look": [
+     504.64,
+     63.925,
+     908.528
+    ]
+   },
+   "solved": true
+  },
+  "1C-17": {
+   "rig": "follow",
+   "from": "1C-17",
+   "spec": "episodes/s01e01/final/scenes/specs/sky-off-verdor.spec.js",
+   "pos": [
+    501.845,
+    64.04,
+    916.285
+   ],
+   "look": [
+    502.439,
+    63.927,
+    915.488
+   ],
+   "mm": 85,
+   "fstop": 4,
+   "end": {
+    "t": 2.958,
+    "pos": [
+     501.845,
+     64.04,
+     963.619
+    ],
+    "look": [
+     502.439,
+     63.927,
+     962.822
+    ]
+   },
+   "solved": true
+  },
+  "1C-18": {
+   "rig": "follow",
+   "from": "1C-18",
+   "spec": "episodes/s01e01/final/scenes/specs/sky-off-verdor.spec.js",
+   "pos": [
+    529.266,
+    64.27,
+    977.415
+   ],
+   "look": [
+    530.03,
+    64.108,
+    976.79
+   ],
+   "mm": 50,
+   "fstop": 4,
+   "end": {
+    "t": 2.958,
+    "pos": [
+     529.266,
+     64.27,
+     1024.748
+    ],
+    "look": [
+     530.03,
+     64.108,
+     1024.124
+    ]
+   },
+   "solved": true
+  },
+  "1C-19": {
+   "rig": "drone",
+   "from": "1C-19",
+   "spec": "episodes/s01e01/final/scenes/specs/sky-off-verdor.spec.js",
+   "pos": [
+    -250,
+    155,
+    854
+   ],
+   "look": [
+    520,
+    62,
+    1014
+   ],
+   "mm": 160,
+   "fstop": 8,
+   "end": {
+    "t": 7.958,
+    "pos": [
+     -235.078,
+     155.995,
+     981.333
+    ],
+    "look": [
+     534.922,
+     62,
+     1141.333
+    ]
+   }
+  },
+  "X6-04": {
+   "rig": "follow",
+   "from": "X6-04",
+   "spec": "episodes/s01e01/final/scenes/specs/sky-off-verdor.spec.js",
+   "pos": [
+    556.098,
+    65.37,
+    2607.619
+   ],
+   "look": [
+    556.663,
+    65.218,
+    2606.808
+   ],
+   "mm": 50,
+   "fstop": 4,
+   "end": {
+    "t": 1.958,
+    "pos": [
+     567.835,
+     65.37,
+     2636.671
+    ],
+    "look": [
+     568.4,
+     65.218,
+     2635.859
+    ]
+   },
+   "solved": true
+  },
+  "X6-05": {
+   "rig": "follow",
+   "from": "X6-05",
+   "spec": "episodes/s01e01/final/scenes/specs/sky-off-verdor.spec.js",
+   "pos": [
+    354.184,
+    86.37,
+    2703.411
+   ],
+   "look": [
+    355.137,
+    86.277,
+    2703.122
+   ],
+   "mm": 180,
+   "fstop": 5.6,
+   "end": {
+    "t": 11.958,
+    "pos": [
+     425.859,
+     86.37,
+     2880.813
+    ],
+    "look": [
+     426.812,
+     86.277,
+     2880.524
+    ]
+   },
+   "solved": true
+  },
+  "X6-06": {
+   "rig": "follow",
+   "from": "X6-06",
+   "spec": "episodes/s01e01/final/scenes/specs/sky-off-verdor.spec.js",
+   "pos": [
+    528.239,
+    76.9,
+    2839.129
+   ],
+   "look": [
+    529.201,
+    76.781,
+    2838.882
+   ],
+   "mm": 120,
+   "fstop": 8,
+   "end": {
+    "t": 2.958,
+    "pos": [
+     558.025,
+     61.122,
+     2886.796
+    ],
+    "look": [
+     558.987,
+     61.003,
+     2886.549
+    ]
+   },
+   "solved": true
+  },
+  "X6-07": {
+   "rig": "follow",
+   "from": "X6-07",
+   "spec": "episodes/s01e01/final/scenes/specs/sky-off-verdor.spec.js",
+   "pos": [
+    691.987,
+    64.27,
+    2863.873
+   ],
+   "look": [
+    692.501,
+    64.129,
+    2863.027
+   ],
+   "mm": 50,
+   "fstop": 4,
+   "end": {
+    "t": 3.958,
+    "pos": [
+     715.712,
+     64.27,
+     2922.595
+    ],
+    "look": [
+     716.227,
+     64.129,
+     2921.749
+    ]
+   },
+   "solved": true
+  },
+  "X6-19": {
+   "rig": "follow",
+   "from": "X6-19",
+   "spec": "episodes/s01e01/final/scenes/specs/sky-off-verdor.spec.js",
+   "pos": [
+    1191.065,
+    169,
+    3464.966
+   ],
+   "look": [
+    805.392,
+    59,
+    3005.34
+   ],
+   "mm": 160,
+   "fstop": 8,
+   "end": {
+    "t": 4.958,
+    "pos": [
+     1153.877,
+     169,
+     3400.556
+    ],
+    "look": [
+     768.205,
+     59,
+     2940.929
+    ]
+   }
+  },
+  "X6-20": {
+   "rig": "follow",
+   "from": "X6-20",
+   "spec": "episodes/s01e01/final/scenes/specs/sky-off-verdor.spec.js",
+   "pos": [
+    1279.003,
+    229,
+    3783.26
+   ],
+   "look": [
+    779.003,
+    84,
+    2917.235
+   ],
+   "mm": 135,
+   "fstop": 8,
+   "end": {
+    "t": 7.958,
+    "pos": [
+     1246.047,
+     229,
+     3660.266
+    ],
+    "look": [
+     746.047,
+     84,
+     2794.24
+    ]
+   }
+  }
+ },
+ "solids": [],
+ "lines": {},
+ "state": {
+  "shadowAt": "[x, y, z] + shadowExtent (the sun's shadow box follows the action)"
+ },
+ "continuity": {
+  "1C": {
+   "tod": "morning (continuous from 1B)",
+   "sun": [
+    0.838,
+    0.515,
+    0.178
+   ]
+  }
+ },
+ "cost": {
+  "shots": 73,
+  "measured": 19,
+  "draft_s_per_frame": 5.098,
+  "max_s_per_frame": 7.147,
+  "heavy": false,
+  "workers": 1,
+  "source": "episodes/s01e01/final/cut/timings.json"
+ }
+}

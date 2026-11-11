@@ -11,6 +11,10 @@
 //
 // Approximations: standard body heights (standing head 1.62 m ...), creatures from their length, marks
 // from spec.previs.marks / spec.homes / the cast; a `mount`ed camera is not previsualised.
+// With opts.sheet (a set sheet, engine phase 3: scenes/lib/director/sets/sheets/<SET>.json) marks the spec does
+// not give come from the sheet, and every head in frame is ray-tested against the sheet's `solids` (box /
+// cyl / poly prisms): actor.occludedBy (the solid's `what`) and actor.visibleFrac (head, chest, body). Without
+// a sheet nothing changes (previs.mjs output is byte-identical).
 import * as THREE from 'three';
 import { actorState, actorVisible } from './blocking.js';
 import { keyed, isKeyList } from './timeline.js';
@@ -33,7 +37,7 @@ export const mergeShot = (def = {}, s = {}) => {
   return out;
 };
 
-export function shotEnv(spec, s1) {
+export function shotEnv(spec, s1, sheet = null) {
   const missing = new Set();
   const cast = s1.cast || {};
   const env = {
@@ -59,6 +63,8 @@ export function shotEnv(spec, s1) {
       const b = cast[n];
       if (b?.at) return Array.isArray(b.at) ? (b.at.length === 3 ? b.at : [b.at[0], spec.previs?.ground ?? 0, b.at[1]]) : env.mark(b.at);
       if (spec.homes?.[n]) return spec.homes[n];
+      const sm = sheet?.marks?.[n] ?? sheet?.homes?.[n];
+      if (sm) return Array.isArray(sm) ? sm : sm.at;
       missing.add(n);
       return null;
     },
@@ -205,17 +211,85 @@ export function analyse(spec, s1, row, t, env) {
   return { t, cam, actors, speaker };
 }
 
+// ---- occlusion against set-sheet solids (engine phase 3) -----------------------------------------------------
+const xyz = (p) => (Array.isArray(p) ? p : [p.x, p.y, p.z]);
+/** [t0, t1] of the segment a -> b (2D, x/z) inside a convex polygon (either winding), or null. */
+function clipConvex(poly, a, b) {
+  let t0 = 0, t1 = 1, area = 0;
+  for (let i = 0; i < poly.length; i++) { const p = poly[i], q = poly[(i + 1) % poly.length]; area += p[0] * q[1] - q[0] * p[1]; }
+  const sgn = area >= 0 ? 1 : -1, dx = b[0] - a[0], dz = b[2] - a[2];
+  for (let i = 0; i < poly.length; i++) {
+    const p = poly[i], q = poly[(i + 1) % poly.length];
+    // outward normal of edge p -> q
+    const nx = sgn * (q[1] - p[1]), nz = -sgn * (q[0] - p[0]);
+    const num = nx * (a[0] - p[0]) + nz * (a[2] - p[1]), den = nx * dx + nz * dz;
+    if (Math.abs(den) < 1e-12) { if (num > 0) return null; continue; }
+    const t = -num / den;
+    if (den < 0) t0 = Math.max(t0, t); else t1 = Math.min(t1, t);
+    if (t0 > t1) return null;
+  }
+  return [t0, t1];
+}
+function clipCircle(c, r, a, b) {
+  const dx = b[0] - a[0], dz = b[2] - a[2], fx = a[0] - c[0], fz = a[2] - c[1];
+  const A = dx * dx + dz * dz, B = 2 * (fx * dx + fz * dz), C = fx * fx + fz * fz - r * r;
+  if (A < 1e-12) return C <= 0 ? [0, 1] : null;
+  const D = B * B - 4 * A * C;
+  if (D < 0) return null;
+  const s = Math.sqrt(D), t0 = Math.max(0, (-B - s) / (2 * A)), t1 = Math.min(1, (-B + s) / (2 * A));
+  return t0 <= t1 ? [t0, t1] : null;
+}
+/** The 2D footprint interval of a solid along a -> b. Solids: { box: [[x0, z0], [x1, z1]] | cyl: [x, z], r |
+ *  poly: [[x, z], ...] (convex), y0 (default 0), h (height above y0), what }. */
+function footprint(s, a, b) {
+  if (s.box) { const [[x0, z0], [x1, z1]] = s.box; return clipConvex([[x0, z0], [x1, z0], [x1, z1], [x0, z1]], a, b); }
+  if (s.cyl) return clipCircle(s.cyl, s.r, a, b);
+  if (s.poly) return clipConvex(s.poly, a, b);
+  return null;
+}
+/** The first solid the segment from -> to passes through (ignoring the last `margin` metres at the target):
+ *  { what, index, t, at } or null. */
+export function rayBlock(solids, from, to, { margin = 0.3 } = {}) {
+  const a = xyz(from), b = xyz(to);
+  const L = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]) || 1, tMax = Math.max(0, 1 - margin / L);
+  let best = null;
+  (solids || []).forEach((s, index) => {
+    const f = footprint(s, a, b);
+    if (!f) return;
+    const y0 = s.y0 ?? 0, y1 = y0 + s.h, dy = b[1] - a[1];
+    let lo = f[0], hi = Math.min(f[1], tMax);
+    if (Math.abs(dy) < 1e-12) { if (a[1] < y0 || a[1] > y1) return; }
+    else { const ta = (y0 - a[1]) / dy, tb = (y1 - a[1]) / dy; lo = Math.max(lo, Math.min(ta, tb)); hi = Math.min(hi, Math.max(ta, tb)); }
+    if (hi - lo <= 1e-9 || lo >= tMax) return;
+    if (!best || lo < best.t) best = { what: s.what ?? `solid ${index}`, index, t: lo, at: [0, 1, 2].map((k) => a[k] + (b[k] - a[k]) * lo) };
+  });
+  return best;
+}
+/** Ray-test every in-frame actor of an analyse() result against sheet solids: sets occludedBy / visibleFrac. */
+export function occlude(r, sheet, env) {
+  if (r.skip || !sheet?.solids?.length) return r;
+  for (const a of r.actors) {
+    const pts = [a.head, env.point(`${a.name}.chest`, r.t), env.point(`${a.name}.hips`, r.t)].filter(Boolean);
+    const hits = pts.map((p) => rayBlock(sheet.solids, r.cam.pos, p));
+    a.visibleFrac = +(hits.filter((h) => !h).length / pts.length).toFixed(2);
+    a.occludedBy = hits[0] ? hits[0].what : null;
+    if (!a.occludedBy && a.visibleFrac === 0) a.occludedBy = hits.find(Boolean)?.what ?? null;
+  }
+  return r;
+}
+
 /** The merged spec of one shot (defaults + its own entry; cast merged per actor, null removes). */
 export const shotSpec = (spec, id) => mergeShot(spec.defaults, spec.shots?.[id] || {});
 
 /** Measure shot `shot` (an id of spec.shots, or an already merged shot spec) at t seconds into it.
  *  opts.row: its shot-table row ({ frames, dialogue }); without one, frames come from opts.frames
- *  (default 96) and nobody speaks. Returns analyse()'s { t, cam, actors, speaker } or { t, skip }. */
+ *  (default 96) and nobody speaks. opts.sheet: a set sheet (marks fallback + occlusion rays). Returns analyse()'s { t, cam, actors, speaker } or { t, skip }. */
 export function measure(spec, shot, t, opts = {}) {
   const s1 = typeof shot === 'string' ? shotSpec(spec, shot) : shot;
   const row = opts.row || { job: typeof shot === 'string' ? shot : null, frames: opts.frames ?? 96, dialogue: [] };
-  const env = opts.env || shotEnv(spec, s1);
+  const env = opts.env || shotEnv(spec, s1, opts.sheet || null);
   const r = analyse(spec, s1, row, t, env);
+  if (opts.sheet) occlude(r, opts.sheet, env);
   r.missing = [...env.missing];
   return r;
 }

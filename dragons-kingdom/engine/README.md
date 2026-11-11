@@ -2,7 +2,7 @@
 
 The plan is in [DESIGN.md](DESIGN.md), and the build log is in [PROGRESS.md](PROGRESS.md). The aim is a screenplay plus a shot list in, and a staged, rendered, cut and mixed episode out. Everything is free or open source.
 
-## What exists (phases 1-2 of 7: plumbing, template mining, input and validator)
+## What exists (phases 1-3 of 7: plumbing, template mining, input and validator, set sheets and casting)
 
 | Piece | What it does |
 |---|---|
@@ -16,6 +16,10 @@ The plan is in [DESIGN.md](DESIGN.md), and the build log is in [PROGRESS.md](PRO
 | `engine/input/validate.mjs` | Checks the inputs → `final/validation.md`, exit 1 on errors; `--write` also writes the parser outputs. |
 | `engine/input/CHATGPT-SHOTLIST-PROMPT.md` | The prompt the owner pastes into ChatGPT with the screenplay to get a valid shotlist.txt. |
 | `episodes/t00/` | A 3-shot test episode on CLING_SQUARE (`"test": true`). |
+| `engine/tools/sheet.mjs` | Set sheets → `scenes/lib/director/sets/sheets/<SET>.json` (marks + aliases, set objects, homes, areas with slots, paths, every hand-written camera as a vantage, occlusion solids, shot state, cost) for CLING_SQUARE, VERDOR_AERIAL, VERDOR_HARBOR, OUTER_ROCKS, SKY_OFF_VERDOR, BIRTHING_CHAMBER. `--check` for staleness. |
+| `previs-core.js` `{ sheet }` | `measure(..., { sheet })`: marks from the sheet, occlusion rays against its solids (`occludedBy`, `visibleFrac`); `rayBlock()`. |
+| `scenes/lib/humans/cast-list.js` | The cast as pure data: build ids → role, sex, age class (adult/child), variants, mounts; named people and creatures. |
+| `engine/cast/casting.mjs` | Shot list → `final/cast.lock.json`: named roles and variants, riders with mounts, dragons, generic roles → crowd## (hashed, unique per scene, locked), hard rating guard. |
 
 ## Run it
 
@@ -26,6 +30,8 @@ node engine/tools/mine-specs.mjs                         # -> engine/stager/temp
 node scenes/lib/director/tools/build-shots.mjs --check   # Episode 1 tables / EDLs up to date
 node scenes/lib/director/tools/previs.mjs --episode s01e01 --set CLING_SQUARE --cuts
 node engine/input/validate.mjs --episode t00 --write       # parse + validate the test episode
+node engine/tools/sheet.mjs [--set X] [--check]           # set sheets
+node engine/cast/casting.mjs --episode t00                 # -> episodes/t00/final/cast.lock.json
 npm test                                                 # includes test/engine.test.mjs
 ```
 
@@ -35,7 +41,6 @@ A new episode works once it has `episodes/<id>/final/` with the same layout as E
 
 These parts don't exist yet:
 
-- set sheets and casting (phase 3);
 - the auto-stager (phases 4 and 5);
 - `make-episode.mjs`, the queue and draft tiers (phase 6);
 - the set generator and `--episode` for `render/` and `pc/` (phase 7).

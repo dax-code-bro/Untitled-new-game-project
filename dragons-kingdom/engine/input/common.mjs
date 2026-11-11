@@ -9,6 +9,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { ROOT, dirs } from '../../scenes/lib/director/episode-paths.js';
+import { BUILDS, NAMED, isChildBuild } from '../../scenes/lib/humans/cast-list.js';
 
 export { ROOT, dirs };
 export const EM = '—';
@@ -181,33 +182,16 @@ export const STRONG_RE = /\b(fuck\w*|shit\w*|bastard\w*|bloody|damned)\b/i;
 
 // ---- who is who ------------------------------------------------------------------------------------------------
 let CAST_CACHE = null;
-/** Characters the engine knows: CHARACTERS.md (+ adult/child), humans CAST ids, creatures and generic roles. */
+/** Characters the engine knows: the named people (CHARACTERS.md, adult or child), the humans builds, creatures and
+ *  generic roles - all from scenes/lib/humans/cast-list.js (phase 3; phase 2 parsed CHARACTERS.md and humans/index.js
+ *  as text). */
 export function castInfo() {
   if (CAST_CACHE) return CAST_CACHE;
-  const named = [];                                        // {name, aliases[], child}
-  const md = fs.readFileSync(path.join(ROOT, 'CHARACTERS.md'), 'utf8');
-  for (const row of md.split('\n')) {
-    const m = row.match(/^\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|/);
-    if (!m || /^(Character|-+)$/.test(m[1])) continue;
-    const name = m[1], child = /child/i.test(m[2]);
-    const aliases = new Set([name.replace(/\s*\(.*\)/, '')]);
-    for (const p of name.matchAll(/\(([^)]+)\)/g)) aliases.add(p[1]);
-    for (const a of [...aliases]) {
-      const b = a.replace(/^The\s+/i, '');
-      aliases.add(b);
-      const t = b.match(/^(?:Queen|King|Prince|Princess)\s+(\w+)(?:\s+(?:IV|of\s+\w+))?$/);
-      if (t && !/^of$/i.test(t[1])) aliases.add(t[1]);
-      aliases.add(b.replace(/\s+of\s+\w+$/, ''));
-    }
-    named.push({ name, aliases: [...aliases].filter((a) => a && !/^(King|Queen)$/i.test(a)), child });
-  }
-  const src = fs.readFileSync(path.join(ROOT, 'scenes/lib/humans/index.js'), 'utf8');
-  const block = src.slice(src.indexOf('export const CAST = {'), src.indexOf('};', src.indexOf('export const CAST = {')));
-  const builds = [...block.matchAll(/(?:^|[\s,{])([a-z][a-z0-9_]*):\s*['"]/g)].map((m) => m[1]);
-  for (let i = 1; i <= 18; i++) builds.push(`crowd${String(i).padStart(2, '0')}`);
+  const named = NAMED.map((n) => ({ name: n.name, aliases: [...n.aliases], child: n.child }));
+  const builds = Object.keys(BUILDS);
   const roleOf = (id) => id.replace(/_(ride|injured|sling|hurt)/g, '').replace(/\d+$/, '').replace(/_/g, ' ').replace(/^scout$/, 'scout rider').replace(/^fall$/, 'queen fall');
   const roles = [...new Set(builds.map(roleOf))];
-  const childBuilds = builds.filter((b) => /^(abby|child)/.test(b));
+  const childBuilds = builds.filter(isChildBuild);
   const creatures = ['leaf', 'charcoal', 'starlight', 'scout', 'hatchling', 'working dragon', 'small dragon', 'young dragon', 'dragon', 'dragons'];
   const generic = ['narrator', 'man', 'woman', 'men', 'women', 'people', 'crowd', 'townspeople', 'villagers?', 'farmer', 'adults?', 'partner', 'old woman', 'old man', 'neighbou?r', 'master', "ship's master",
     'lookout', 'crew', 'instructor', 'riders?', 'servants?', 'keepers?', 'ground keepers?', 'guards?', 'sailors?', 'fishing crew', 'young riders?', 'young attendant', 'children', 'kids?', 'messenger', 'royal messenger', 'parent'];
