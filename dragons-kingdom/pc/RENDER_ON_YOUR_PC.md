@@ -10,9 +10,10 @@ want to allow this app to make changes to your device?", click **No**, every tim
 guide needs a **Yes**). The setup uses its own copies of the tools, in your own folders. You can stop at any time and carry on later without
 losing finished work.
 
-Your PC as you described it (`pc/TARGET.md`): Windows, an NVIDIA GeForce RTX 4090 and about 2 TB
+Your PC as you described it (`pc/TARGET.md`): Windows, an NVIDIA GeForce RTX 5090 and about 2 TB
 free. That is plenty: the episode needs up to about 100 GB (the tools, assets and caches about 8 GB,
-the rest is the video while it renders), and the 4090 has 24 GB of video memory.
+the rest is the video while it renders), and the 5090 has 32 GB of video memory. A 5090 needs a
+current NVIDIA driver (570 series or newer): update it in the NVIDIA app before the first GPU check.
 
 ---
 
@@ -96,7 +97,7 @@ The setup runs it for you. To run it again later, double-click **GPU-Check.cmd**
    `DIFFERENT`;
 4. prints how many **seconds one 4K frame takes** and an **estimate for the whole episode**.
 
-**Good result:** a line like `OK  win-d3d11  GPU  ANGLE (NVIDIA, NVIDIA GeForce RTX 4090 ...)`, then
+**Good result:** a line like `OK  win-d3d11  GPU  ANGLE (NVIDIA, NVIDIA GeForce RTX 5090 ...)`, then
 `PICTURE CHECK: SAME PICTURE`, the seconds per frame and the estimate.
 
 **Every time, please drag the picture into the chat with Claude:** the GPU check saves

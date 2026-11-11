@@ -1,4 +1,4 @@
-# runtime/ - quality tiers for the RTX 4090 (track: gpu-tier / "ultra")
+# runtime/ - quality tiers for the render PC GPU (RTX 5090 since 2026-11-11; was planned for a 4090) (track: gpu-tier / "ultra")
 
 Owner of this file: the quality-tier track. Successor: read this first, then `runtime/lib/quality.js`
 and the README section "Quality tiers for the render PC (RTX 4090)".

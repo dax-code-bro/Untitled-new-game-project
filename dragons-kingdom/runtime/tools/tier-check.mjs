@@ -8,7 +8,7 @@
 //
 // Per tier it reports: render time of the frame (this machine), the work counters of the frame
 // (scene passes incl. shadow maps, full-screen passes, draw calls, triangles, update() calls) and
-// the cost model's estimate for an RTX 4090 at native 4K; against final: the structure of the
+// the cost model's estimate for the target GPU (TARGET_GPU, an RTX 5090) at native 4K; against final: the structure of the
 // picture (192x108 thumbnail SSIM / PSNR - colour, exposure, objects, mist shapes, black blocks),
 // the PSNR of 1:1 crops (--crops, in pixels of the rendered size), extra pure black / white pixels
 // (NaN / infinity in the float pipeline) and the NaN / Inf counts of every float buffer. Writes
@@ -22,7 +22,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { TIER_NAMES, TIER_PRESETS, KNOB_DOCS, frameWork, estimateFrameMs, RTX4090_ASSUMPTIONS, presetOfTier } from '../lib/quality.js';
+import { TIER_NAMES, TIER_PRESETS, KNOB_DOCS, frameWork, estimateFrameMs, RTX4090_ASSUMPTIONS, TARGET_GPU, presetOfTier } from '../lib/quality.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const imp = (rel) => import(pathToFileURL(path.join(ROOT, rel)).href);
@@ -193,7 +193,7 @@ async function main() {
     m.work = w; m.png = path.relative(ROOT, png);
     m.estimate4090 = estimateFrameMs(fr, tier);
     const e = m.estimate4090;
-    console.log(`   RTX 4090 ESTIMATE at native 4K (planning assumptions, runtime/lib/quality.js): ~${(e.ms / 1000).toFixed(2)} s/frame (GPU ${(e.gpuMs / 1000).toFixed(2)} s, draw calls ${(e.submitMs / 1000).toFixed(2)} s, update() ${(e.updateMs / 1000).toFixed(2)} s)`);
+    console.log(`   ${TARGET_GPU.name} ESTIMATE at native 4K (planning assumptions, runtime/lib/quality.js): ~${(e.ms / 1000).toFixed(2)} s/frame (GPU ${(e.gpuMs / 1000).toFixed(2)} s, draw calls ${(e.submitMs / 1000).toFixed(2)} s, update() ${(e.updateMs / 1000).toFixed(2)} s)`);
     if (run.label !== 'final') {
       const cmp = await compareTiers(res[0], m, { crops });
       m.compare = cmp;
