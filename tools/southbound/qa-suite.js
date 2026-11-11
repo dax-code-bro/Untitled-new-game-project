@@ -980,17 +980,28 @@ async (opts) => {
     SB.teleport(560, 1000, 0); SB.step(3, 1 / 30);
     ok(c.mesh.visible && c.shadows.visible, 'downtown: the crowd is drawn');
     const dayN = c.drawn();
-    ok(c.uniforms.uDens.value > 0.9 && dayN > 150 && dayN < c.count, 'a busy afternoon: ' + dayN + ' of ' + c.count + ' walkers round the camera given to the card (dens ' + c.uniforms.uDens.value.toFixed(2) + ')');
+    ok(c.uniforms.uDens.value > 0.9 && dayN > 40 && dayN < c.count * 0.5, 'a busy afternoon: ' + dayN + ' of ' + c.count + ' walkers (the ones in view) given to the card (dens ' + c.uniforms.uDens.value.toFixed(2) + ')');
     { let off = 0; for (let i = 0; i < c.count; i += 7) { const w = c.where(i), bx = 260 + Math.floor((w.x - 260) / 96) * 96 + 48, bz = 760 + Math.floor((w.z - 760) / 96) * 96 + 48, e = Math.max(Math.abs(w.x - bx), Math.abs(w.z - bz)); if (e < 37.2 || e > 38.5) off++; } ok(off === 0, 'every walker is on a pavement, between the kerb and the shopfronts (' + off + ' off)'); }
     const progs = (SB.renderer.info.programs || []).map((q) => q.cacheKey || '');
     ok(progs.some((k) => /sb-crowd/.test(k)) && progs.some((k) => /sb-shopsigns/.test(k)), 'the crowd and sign shaders compiled');
     SB.setHour(3.2); SB.step(1, 1 / 30);
-    ok(c.uniforms.uDens.value < 0.15 && c.drawn() < dayN * 0.25, 'nearly nobody out at 3 am (' + c.drawn() + ' walkers, dens ' + c.uniforms.uDens.value.toFixed(2) + ')');
+    ok(c.uniforms.uDens.value < 0.15 && c.drawn() < dayN * 0.4, 'nearly nobody out at 3 am (' + c.drawn() + ' walkers, dens ' + c.uniforms.uDens.value.toFixed(2) + ')');
     SB.setWeather('rain'); SB.setHour(14); SB.step(30, 1 / 30);
     const rainy = c.uniforms.uDens.value; SB.setWeather('clear'); SB.step(1, 1 / 30);
     ok(rainy < 0.85, 'the rain sends most indoors (' + rainy.toFixed(2) + ')');
     SB.teleport(-1100, -300, 0); SB.step(1, 1 / 30);
     ok(!c.mesh.visible, 'not drawn away from the city');
+    // (part 4) a lighter Low: no 3D grass rings deep in the city (none can grow there), back out in the fields;
+    // the small facade pieces don't cast shadows on Low, the big ones do through copies the picture never sees
+    const grass = G.scene.getObjectByName('grass');
+    if (grass) {
+      SB.teleport(560, 1000, 0); SB.step(2, 1 / 30); const inCity = grass.visible;
+      SB.teleport(14, 713, 0); SB.step(2, 1 / 30); const inField = grass.visible;
+      ok(!inCity && inField, 'grass rings: off downtown (' + inCity + '), on in the fields (' + inField + ')');
+    } else ok(true, '(no 3D grass on this preset)');
+    const fp = G.scene.getObjectByName('facade-paint'), fsh = G.scene.getObjectByName('facade-shadow-paint');
+    ok(fp && !fp.castShadow && fsh && fsh.castShadow && fsh.count > 50 && fsh.count < fp.count * 0.5 && fsh.material.colorWrite === false,
+      'facade shadows on Low: ' + (fsh ? fsh.count : 0) + ' big pieces of ' + (fp ? fp.count : 0) + ' cast them, unseen');
     const sg = G.scene.getObjectByName('facade-signs'), m = new SB.debug.THREE.Matrix4();
     let bad = 0, low = 0;
     if (sg) for (let i = 0; i < sg.count; i++) { sg.getMatrixAt(i, m); const e = m.elements; if (!e.every(Number.isFinite)) bad++; else if (e[13] < 0) low++; }

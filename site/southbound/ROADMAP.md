@@ -173,6 +173,18 @@ window). A screenshot survey at their settings and on High (street, downtown) pi
       city. The real people (who you can talk to, rob, run over) stay the ones nearest you. And every shop bay's sign
       band carries its shop's name (32 made-up local businesses, each its own colours and lettering;
       an empty unit now and then), lit at night; one draw call for the whole city
+- [x] Part 4: a lighter Low. The owner's recorded play (3,000 samples) showed ~43 FPS in the city with the
+      game's own code only ~13 ms of each ~23 ms frame, 3 million triangles a frame, and a 60% resolution
+      that hadn't helped: the built-in graphics were choking on geometry, not pixels. A triangle profile
+      by object found three things drawn for nothing, all removed without changing the picture:
+      the 3D grass rings were drawn (and masked away) all through the city, where none can grow (~640k
+      triangles: now off when the camera is well inside it); the thousands of small facade pieces (sills,
+      cornices, piers, trim) were drawn a second time for shadows all over the map on Low/Phone, where the
+      coarse shadow map can't show them (~570k: now only the big ones, porch roofs, awnings, parapets,
+      cast, through copies that write nothing to the picture); and the crowd now hands the card only the
+      walkers in view (~330k → ~120k). Downtown 4.6M → 3.35M triangles a frame (-28%), the river and the
+      fields 2.6M → 2.1M (-18%), the same draw calls. Headroom the resolution controller can spend on a
+      sharper picture
 
 ## Phase 1.68 — A2 (parts 2 and 3): the rest of the instant things, acted out
 

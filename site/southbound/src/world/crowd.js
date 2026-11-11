@@ -194,23 +194,34 @@ if (vCrowdF < 0.002) transformed = vec3(cwPos.x, -400.0, cwPos.z);`);
   scene.add(mesh, shadows);
 
   const x0 = CITY.x0 - 260, x1 = CITY.x0 + CITY.nx * CITY.pitch + 260, z0 = CITY.z0 - 260, z1 = CITY.z0 + CITY.nz * CITY.pitch + 260;
-  const packAt = new THREE.Vector3(1e9, 0, 1e9), REACH = FAR[1] + blockHalf * 1.42 + 30;
-  let packDens = -1, packT = 0, drawn = 0;
-  const pack = (p, dens) => {
+  const packAt = new THREE.Vector3(1e9, 0, 1e9), REACH = FAR[1] + blockHalf * 1.42 + 30, look = new THREE.Vector3();
+  let packDens = -1, packWhen = 0, packYaw = 0, drawn = 0;
+  // (G14 part 4) only the walkers who can be seen: in the fade-in range, and inside the view (widened by
+  // 35 degrees each side, for turning the camera between packs, four times a second)
+  const pack = (camera, dens) => {
+    const p = camera.position, t = worldUniforms.uTime.value;
+    camera.getWorldDirection(look); const fl = Math.hypot(look.x, look.z) || 1, fx = look.x / fl, fz = look.z / fl;
+    const half = Math.atan(Math.tan((camera.fov * Math.PI) / 360) * (camera.aspect || 1.8)) + 0.61, cosH = Math.cos(Math.min(Math.PI, half));
     let m = 0;
     for (const b of blocks) {
       if (Math.hypot(b.x - p.x, b.z - p.z) > REACH) continue;
       for (let i = b.a; i < b.a + b.n; i++) {
         if (ALL.aWalk[0][i * 4 + 3] > dens + 0.06) break; // (in order: the rest are indoors)
+        // (where(i), without making an object: it runs for a couple of thousand walkers)
+        const h = blk[i * 4 + 2], P = h * 8, d0 = (((t * walk[i * 4] + walk[i * 4 + 1]) % P) + P) % P, s = blk[i * 4 + 3] > 0 ? d0 : P - d0;
+        const side = Math.floor(s / (2 * h)), u = s - side * 2 * h - h;
+        const qx = side === 0 ? u : side === 1 ? h : side === 2 ? -u : -h, qz = side === 0 ? -h : side === 1 ? u : side === 2 ? h : -u;
+        const dx = blk[i * 4] + qx - p.x, dz = blk[i * 4 + 1] + qz - p.z, d = Math.hypot(dx, dz);
+        if (d < NEAR[0] - 6 || d > FAR[1] + 6 || (d > 14 && (dx * fx + dz * fz) / d < cosH)) continue;
         for (const k in ALL) { const [a, n] = ALL[k]; for (let j = 0; j < n; j++) inst[k].array[m * n + j] = a[i * n + j]; }
         m++;
       }
     }
     for (const k in inst) { const a = inst[k]; a.clearUpdateRanges(); a.addUpdateRange(0, Math.max(1, m) * a.itemSize); a.needsUpdate = true; }
     geo.instanceCount = sgeo.instanceCount = drawn = m;
-    packAt.copy(p); packDens = dens; packT = 0;
+    packAt.copy(p); packDens = dens; packWhen = performance.now(); packYaw = Math.atan2(fx, fz);
   };
-  return {
+  const api = {
     mesh, shadows, count, uniforms: U, drawn: () => drawn,
     where(i, t = worldUniforms.uTime.value) {
       const h = blk[i * 4 + 2], P = h * 8, d = (((t * walk[i * 4] + walk[i * 4 + 1]) % P) + P) % P, s = blk[i * 4 + 3] > 0 ? d : P - d; // (sign: which way)
@@ -229,8 +240,9 @@ if (vCrowdF < 0.002) transformed = vec3(cwPos.x, -400.0, cwPos.z);`);
       const day = hr < 5 ? 0.08 : hr < 7.5 ? 0.08 + (hr - 5) / 2.5 * 0.92 : hr < 18.5 ? 1 : hr < 23 ? 1 - (hr - 18.5) / 4.5 * 0.8 : 0.2 - (hr - 23) * 0.12;
       U.uDens.value = Math.max(0, day) * (1 - Math.min(1, rain) * 0.6);
       U.uShade.value = 0.34 * (1 - night * 0.6);
-      packT += 1 / 60;
-      if (Math.hypot(p.x - packAt.x, p.z - packAt.z) > 24 || Math.abs(U.uDens.value - packDens) > 0.04 || packT > 3) pack(p, U.uDens.value);
+      camera.getWorldDirection(look); const yaw = Math.atan2(look.x, look.z), turn = Math.abs(((yaw - packYaw + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
+      if (Math.hypot(p.x - packAt.x, p.z - packAt.z) > 8 || turn > 0.4 || Math.abs(U.uDens.value - packDens) > 0.04 || performance.now() - packWhen > 250) pack(camera, U.uDens.value);
     },
   };
+  return api;
 }

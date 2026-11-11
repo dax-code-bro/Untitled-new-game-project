@@ -60,6 +60,7 @@ export function createGroundCover(hm, quality, scene, surf, density = 1) {
     grass, flowers, cardTex: cards?.tex || null,
     hideGrass() { cards?.setVisible(false); },
     update(cam, sunDir, sunCol, weather) {
+      cards?.cull(cam);
       coverUniforms.uCam.value.copy(cam);
       worldUniforms.uGrassCam.value.copy(cam);
       coverUniforms.uSunDirG.value.copy(sunDir);

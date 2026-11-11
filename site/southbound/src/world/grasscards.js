@@ -339,8 +339,13 @@ export function createGrassCards(hm, quality, scene, surf) {
   scene.add(group);
   const Rmax = P[P.length - 1][0];
   worldUniforms.uGrassR.value = Rmax;
+  // (G14) deep inside the city no tuft can grow (the mask leaves the whole city out), but the card
+  // would still shade every one of them (~640k triangles on Low): the rings are switched off there
+  let enabled = true;
+  const B = worldUniforms.uCityB.value, M = Rmax + 4;
   return {
     group, tex,
-    setVisible(on) { group.visible = on; worldUniforms.uGrassR.value = on ? Rmax : 0; },
+    setVisible(on) { enabled = on; group.visible = on; worldUniforms.uGrassR.value = on ? Rmax : 0; },
+    cull(cam) { group.visible = enabled && !(cam.x > B.x + M && cam.x < B.z - M && cam.z > B.y + M && cam.z < B.w - M); },
   };
 }

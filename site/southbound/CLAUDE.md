@@ -186,6 +186,11 @@ the fewest additions next. Be honest in reports about what is and isn't done.
   the module from `src/`) instead of a 10-minute full game load in SwiftShader. An InstancedBufferGeometry's
   `instanceCount` must be the number of instances (not the length of a vec4 array): asking for more than the
   buffers hold makes WebGL drop the whole draw, silently.
+  The owner's recorded live samples (`$SBLIVE_OUT/live.jsonl`: fps, cpuMs, draws, tris, scale) say where
+  their time goes: in the city ~43 FPS with cpuMs ~13 of ~23 ms and ~3M triangles, so geometry on the
+  built-in graphics matters too. Triangle profile by object: scratchpad `probe-tris.mjs` (renderer.info +
+  per-group estimates; downtown/river/field). three's shadow pass tests the MAIN camera's layers, so a
+  shadow-only caster is a copy with `colorWrite:false, depthWrite:false` (facades.js `facade-shadow-*`).
 - Commit one batch at a time: if the next batch's edits are already in the tree, commit only the
   finished batch's files (and an `index.js` without the next batch's `add(...)` line), with the
   `game.js` that was built and QA'd for it.

@@ -425,17 +425,34 @@ export function createFacades(B, { scene, quality, surf, roofOf, roofs, hm, grap
     }
   };
   const statics = {};
+  // (G14) on Low and Phone (a coarse shadow map) the thousands of small pieces (sills, cornices, piers,
+  // trim) stop casting shadows: the card was drawing every one of them a second time, all over the map
+  // (~570k triangles), for shadows a few texels wide. The big ones (porch roofs, awnings, parapets) still
+  // do, through copies that write nothing to the picture (no colour, no depth): only the shadow pass,
+  // which draws with its own depth material, sees them.
+  const lowShadow = shadows && quality.shadows < 2, proxies = {};
+  const unseen = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false });
   for (const k in S) {
     const L = S[k], n = L.c.length;
     if (!n) continue;
     const mesh = new THREE.InstancedMesh(box, MATS[k], n);
     write(mesh, L, 0, n);
-    mesh.castShadow = shadows; mesh.receiveShadow = true;
+    mesh.castShadow = shadows && !lowShadow; mesh.receiveShadow = true;
     mesh.userData.noHit = true;
     mesh.computeBoundingSphere();
     mesh.name = 'facade-' + k;
     scene.add(mesh);
     statics[k] = mesh;
+    if (!lowShadow) continue;
+    const big = [];
+    for (let i = 0; i < n; i++) { const d = [L.f[i * 9 + 5], L.f[i * 9 + 6], L.f[i * 9 + 7]].sort((a, b) => b - a); if (d[1] >= 0.9) big.push(i); }
+    if (!big.length) continue;
+    const px = new THREE.InstancedMesh(box, unseen, big.length);
+    big.forEach((i, j) => write(px, L, i, 1, j));
+    px.castShadow = true; px.receiveShadow = false; px.userData.noHit = true;
+    px.computeBoundingSphere(); px.name = 'facade-shadow-' + k;
+    scene.add(px);
+    proxies[k] = { mesh: px, src: big, owner: big.map((i) => L.o[i]) };
   }
 
   // (G14) the shop signs: one draw call; each picks its own sign out of the atlas, and they light up at night
@@ -609,7 +626,7 @@ vMapUv.y = 1.0 - vMapUv.y; vEmissiveMapUv = vMapUv;`);
   }
 
   return {
-    statics, near, exportPieces,
+    statics, near, exportPieces, proxies,
     count: () => Object.values(statics).reduce((a, m) => a + m.count, 0),
     update(cam, dt = 1 / 60) {
       if (!nearR) return;
@@ -628,6 +645,11 @@ vMapUv.y = 1.0 - vMapUv.y; vEmissiveMapUv = vMapUv;`);
         statics[k].instanceMatrix.needsUpdate = true;
       }
       if (r && signs && r.sign && r.sign[1]) writeSigns(r.sign[0], r.sign[1], on);
+      for (const k in proxies) {
+        const P = proxies[k]; let hit = false;
+        P.owner.forEach((o, j) => { if (o !== bi) return; hit = true; if (on) write(P.mesh, S[k], P.src[j], 1, j); else P.mesh.setMatrixAt(j, m4.makeScale(0, 0, 0)); });
+        if (hit) P.mesh.instanceMatrix.needsUpdate = true;
+      }
       last.set(1e9, 0, 1e9);
     },
   };
