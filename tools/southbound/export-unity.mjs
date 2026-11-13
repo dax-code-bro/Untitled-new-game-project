@@ -1,6 +1,6 @@
 // Exports Southbound's art and data into the Unity project (southbound-unity/).
 //
-//   node tools/southbound/export-unity.mjs [textures] [models] [catalog] [world]
+//   node tools/southbound/export-unity.mjs [textures] [models] [catalog] [world] [cars] [parked]
 //
 // With no arguments it runs every step.
 //
@@ -18,6 +18,13 @@
 //           ground splat, water, roads, buildings, roofs, trees and the 3D facade
 //           pieces (cornices, shopfronts, porches, window sills...)
 //           (southbound-unity/Data/World/).
+// cars      every catalogue car's body spec, handling and paint (Data/Vehicles/cars.json: the C# car
+//           builder rebuilds the bodies from these, the web game's own SDF + surface nets), the exact
+//           wheel meshes for each spoke style (wheels.json), and the numbers the C# port is tested
+//           against (Tools/CoreTests/fixtures/cars-parity.json: SDF samples, mesh counts, drive runs).
+//           Runs carbuilder.js in a tiny headless page (no game load: seconds).
+// parked    runs the web game headless and lists the cars parked along Calvera's streets and in the
+//           driveways (Data/World/calvera-parked.json).
 import fs from 'node:fs';
 import path from 'node:path';
 import http from 'node:http';
@@ -281,7 +288,182 @@ async function exportWorld() {
   console.log(`world: ${data.world.n}^2 heights ${data.world.hMin.toFixed(1)}..${data.world.hMax.toFixed(1)} m, ${data.roads.length} roads, ${data.buildings.length} buildings, ${data.roofs.length} roofs, ${data.veg.length} plants`);
 }
 
+// ---------------------------------------------------------------- cars
+// a static server for the game folder that can patch a module's source on the way out
+function gameServer(patch = {}) {
+  const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.wasm': 'application/wasm' };
+  const server = http.createServer((req, res) => {
+    const url = decodeURIComponent(req.url.split('?')[0]);
+    if (patch[url]) { res.writeHead(200, { 'Content-Type': patch[url].type || 'text/javascript' }); return res.end(patch[url].body()); }
+    const p = path.join(game, url.replace(/\/$/, '/index.html'));
+    if (!p.startsWith(game) || !fs.existsSync(p)) { res.writeHead(404); return res.end(); }
+    res.writeHead(200, { 'Content-Type': types[path.extname(p)] || 'application/octet-stream' });
+    fs.createReadStream(p).pipe(res);
+  });
+  return new Promise((r) => server.listen(0, () => r(server)));
+}
+
+async function exportCars() {
+  const { chromium } = require('playwright');
+  const builderSrc = fs.readFileSync(path.join(game, 'src/assets/carbuilder.js'), 'utf8');
+  const server = await gameServer({
+    // bodySDF and the wheel builder aren't exported by the game; the export page needs them
+    '/src/assets/carbuilder.js': { body: () => builderSrc + '\nexport { bodySDF, wheelGeometryRaw, P as SPECS_ALL };\n' },
+    '/__cars.html': { type: 'text/html', body: () => `<!doctype html><meta charset="utf-8"><script type="importmap">{"imports":{"three":"/vendor/three/build/three.module.js","three/addons/":"/vendor/three/addons/"}}</script><script type="module">
+import * as THREE from 'three';
+import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
+import { LAND, PAINTS as SHOP_PAINTS } from '/src/assets/catalog.js';
+import { VEHICLES } from '/src/assets/library.js';
+import { bodySDF, wheelGeometryRaw, surfaceNets, specOf, hasSpec, FIXED_PAINT, SECOND_PAINT, SPECS_ALL } from '/src/assets/carbuilder.js';
+import { cabinLayout } from '/src/assets/cabin.js';
+window.__run = () => {
+  const clean = (o) => JSON.parse(JSON.stringify(o));
+  // every procedural car the game can put on the road: the catalogue plus the base bodies traffic uses
+  const ids = [...new Set([...LAND.map((c) => c.id), ...Object.keys(VEHICLES)])].filter((id) => hasSpec(id));
+  const land = new Map(LAND.map((c) => [c.id, c]));
+  const cars = ids.map((id) => {
+    const s = specOf(id), v = VEHICLES[id] || {}, c = land.get(id) || { id, cls: 'Traffic', name: v.name || id, price: 0, base: id, restricted: true };
+    const L = cabinLayout(s);
+    return { id, cls: c.cls, name: c.name, price: c.price, base: c.base, restricted: !!c.restricted, catalog: land.has(id),
+      stats: { len: v.len ?? s.L, accel: v.accel ?? 9, top: v.top ?? 50, grip: v.grip ?? 7.5, weight: v.weight ?? 0 },
+      paint: FIXED_PAINT[id] || s.paint || null, paint2: SECOND_PAINT[id] || s.paint2 || null,
+      spec: clean(s), cabin: L ? { seat: L.seats[0], wheel: { x: L.wheel.x, y: L.wheel.y, z: L.wheel.z, tau: L.wheel.tau, R: L.wheel.R } } : null };
+  });
+  // the random paint mix on the roads (carbuilder.js PAINTS: r, g, b, metal, weight) and the paint shop
+  const roadPaints = [[0.80,0.80,0.78,0.0,22],[0.012,0.012,0.014,0.3,18],[0.12,0.125,0.13,0.6,15],[0.42,0.43,0.45,1.0,13],[0.012,0.035,0.11,0.7,8],[0.32,0.012,0.012,0.4,8],[0.36,0.28,0.19,0.6,3],[0.03,0.08,0.045,0.6,2],[0.06,0.1,0.16,0.8,4],[0.5,0.18,0.02,0.3,2],[0.2,0.2,0.19,0.0,5]];
+  // ---- wheels: the exact geometry for each spoke style at a reference size (Unity scales it per car:
+  // radius on the wheel's y/z, tread width on x), indexed, quantized (mm / 1/127), a small palette
+  const RW = 0.35, TW = 0.24, styles = [0, 5, 6, 10, 14];
+  const b64 = (buf) => { const u8 = new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength); let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); };
+  const wheels = styles.map((spokes) => ({ spokes, levels: [0, 1, 2].map((level) => {
+    let g = wheelGeometryRaw({ Rw: RW, tw: TW, spokes }, level);
+    g = mergeVertices(g, 1e-5);
+    const P = g.attributes.position, N = g.attributes.normal, C = g.attributes.color, M = g.attributes.aRM;
+    const pal = [], key = new Map(), pi = new Uint8Array(P.count), pos = new Int16Array(P.count * 3), nrm = new Int8Array(P.count * 3);
+    for (let i = 0; i < P.count; i++) {
+      const e = [C.getX(i), C.getY(i), C.getZ(i), M.getX(i), M.getY(i)].map((v) => Math.round(v * 1000) / 1000), k = e.join(',');
+      if (!key.has(k)) { key.set(k, pal.length); pal.push(e); }
+      pi[i] = key.get(k);
+      pos[i * 3] = Math.round(P.getX(i) * 10000); pos[i * 3 + 1] = Math.round(P.getY(i) * 10000); pos[i * 3 + 2] = Math.round(P.getZ(i) * 10000);
+      const nl = Math.hypot(N.getX(i), N.getY(i), N.getZ(i)) || 1;
+      nrm[i * 3] = Math.round(N.getX(i) / nl * 127); nrm[i * 3 + 1] = Math.round(N.getY(i) / nl * 127); nrm[i * 3 + 2] = Math.round(N.getZ(i) / nl * 127);
+    }
+    const idx = g.index.array, ix = P.count < 65536 ? new Uint16Array(idx) : new Uint32Array(idx);
+    return { level, verts: P.count, tris: idx.length / 3, posScale: 1e-4, palette: pal, pos: b64(pos), nrm: b64(nrm), pal: b64(pi), idx: b64(ix), idx32: !(ix instanceof Uint16Array) };
+  }) }));
+  // ---- parity fixture: a few bodies covering every shape feature
+  const pickBy = (f) => cars.find((c) => f(c.spec))?.id;
+  const sample = [...new Set(['sedan', 'firetruck', 'police', 'truck', 'delivery',
+    pickBy((s) => s.flare && s.rack && s.spare), pickBy((s) => s.bullbar), pickBy((s) => s.scoop), pickBy((s) => s.bulge && s.waist),
+    pickBy((s) => s.bus), pickBy((s) => s.steps), pickBy((s) => s.chrome), pickBy((s) => s.tow)].filter(Boolean))];
+  let seed = 12345; const rnd = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+  const shapes = sample.map((id) => {
+    const s = specOf(id), f = bodySDF(s), top = Math.max(s.roof, s.box ? s.box[2] : 0) + 0.25;
+    const min = [-s.W / 2 - 0.3, 0.0, -s.L / 2 - 0.1], max = [s.W / 2 + 0.3, top, s.L / 2 + 0.1];
+    const pts = [];
+    for (let i = 0; i < 400; i++) { const x = min[0] + rnd() * (max[0] - min[0]), y = min[1] + rnd() * (max[1] - min[1]), z = min[2] + rnd() * (max[2] - min[2]); pts.push([x, y, z, f(x, y, z)]); }
+    const h = s.L / 40, g = surfaceNets(f, min, max, h);
+    const P = g.attributes.position.array; let sx = 0, sy = 0, sz = 0; for (let i = 0; i < P.length; i += 3) { sx += P[i]; sy += P[i + 1]; sz += P[i + 2]; }
+    g.computeBoundingBox();
+    return { id, h, min, max, verts: P.length / 3, tris: g.index.count / 3, sum: [sx, sy, sz], bbox: [g.boundingBox.min.toArray(), g.boundingBox.max.toArray()], samples: pts };
+  });
+  // ---- drive model: the web game's driving equations (entities/vehicle.js physics), run straight
+  // off the page so the C# port can be checked against them number for number
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const step = (st, t, inp, dt) => {
+    const fx = Math.sin(st.heading), fz = Math.cos(st.heading), sx = Math.cos(st.heading), sz = -Math.sin(st.heading);
+    let vF = st.vx * fx + st.vz * fz, vR = st.vx * sx + st.vz * sz;
+    const thr = inp.throttle, brk = inp.brake;
+    if (thr > 0) {
+      if (vF < -0.5) vF += 18 * thr * dt;
+      else { const boost = inp.nitro ? 1.8 : 1; vF += t.accel * boost * thr * Math.max(0, 1 - vF / (t.top * (boost > 1 ? 1.15 : 1))) * dt * (vF < 8 ? 1.25 : 1); }
+    }
+    if (brk > 0) { if (vF > 0.5) vF -= 22 * (t.brakeK || 1) * brk * dt; else vF = Math.max(vF - 6 * brk * dt, -9); }
+    if (inp.handbrake) vF -= Math.sign(vF) * 6 * dt;
+    vF -= Math.sign(vF) * Math.min(Math.abs(vF), (0.9 + Math.abs(vF) * Math.abs(vF) * 0.0012) * dt * (thr > 0 ? 0.3 : 1));
+    const maxSteer = 0.62 / (1 + Math.abs(vF) * 0.055);
+    st.steer = lerp(st.steer, inp.steer * maxSteer, Math.min(1, dt * 7));
+    const yaw = (vF / (t.wf - t.wr)) * Math.tan(st.steer);
+    st.heading += yaw * dt * (inp.handbrake ? 1.35 : 1);
+    vR *= Math.exp(-(inp.handbrake ? 1.4 : t.grip) * dt);
+    const nfx = Math.sin(st.heading), nfz = Math.cos(st.heading), nsx = Math.cos(st.heading), nsz = -Math.sin(st.heading);
+    st.vx = nfx * vF + nsx * vR; st.vz = nfz * vF + nsz * vR; st.x += st.vx * dt; st.z += st.vz * dt; st.vF = vF; st.vR = vR; st.yaw = yaw;
+  };
+  const SCEN = {
+    launch: { secs: 12, at: (t) => ({ throttle: 1, brake: 0, steer: 0, handbrake: false, nitro: false }) },
+    nitro: { secs: 6, at: (t) => ({ throttle: 1, brake: 0, steer: 0, handbrake: false, nitro: true }) },
+    turn: { secs: 4, v0: 20, at: (t) => ({ throttle: 0.4, brake: 0, steer: 1, handbrake: false, nitro: false }) },
+    brake: { secs: 4, v0: 30, at: (t) => ({ throttle: 0, brake: 1, steer: 0, handbrake: false, nitro: false }) },
+    reverse: { secs: 5, at: (t) => ({ throttle: 0, brake: 1, steer: -0.5, handbrake: false, nitro: false }) },
+    handbrake: { secs: 3, v0: 22, at: (t) => ({ throttle: 0, brake: 0, steer: t < 0.5 ? 0 : -1, handbrake: t > 0.4, nitro: false }) },
+    coast: { secs: 8, v0: 25, at: (t) => ({ throttle: 0, brake: 0, steer: 0.3, handbrake: false, nitro: false }) },
+  };
+  const driveCars = [...new Set(['sedan', 'sedan-sports', 'firetruck', ...cars.filter((c) => c.catalog).filter((_, i) => i % 9 === 0).map((c) => c.id)])];
+  const drives = driveCars.map((id) => {
+    const c = cars.find((q) => q.id === id), s = c.spec;
+    const t = { accel: c.stats.accel, top: c.stats.top, grip: c.stats.grip, brakeK: 1, wf: s.axF, wr: s.axR };
+    const runs = {};
+    for (const [name, sc] of Object.entries(SCEN)) {
+      const st = { x: 0, z: 0, vx: 0, vz: sc.v0 || 0, heading: 0, steer: 0, vF: 0, vR: 0, yaw: 0 }, dt = 1 / 60, out = [];
+      for (let i = 1; i <= sc.secs * 60; i++) { step(st, t, sc.at((i - 1) * dt), dt); if (i % 30 === 0) out.push([+(i * dt).toFixed(3), st.vF, st.vR, st.heading, st.x, st.z, st.steer]); }
+      runs[name] = out;
+    }
+    return { id, t, runs };
+  });
+  return { cars, roadPaints, shopPaints: SHOP_PAINTS, wheels, wheelRef: { Rw: RW, tw: TW }, parity: { shapes, drives } };
+};
+window.__ready = true;
+</script>` },
+  });
+  const browser = await chromium.launch();
+  const page = await (await browser.newContext()).newPage();
+  const errs = []; page.on('pageerror', (e) => errs.push(e.message)); page.on('console', (m) => { if (m.type() === 'error') errs.push(m.text()); });
+  await page.goto(`http://127.0.0.1:${server.address().port}/__cars.html`);
+  await page.waitForFunction(() => window.__ready, null, { timeout: 120000 }).catch(() => { throw new Error('cars page: ' + errs.join(' | ')); });
+  const data = await page.evaluate(() => window.__run());
+  await browser.close(); server.close();
+  const out = path.join(unity, 'Data/Vehicles'), fx = path.join(unity, 'Tools/CoreTests/fixtures');
+  mkdir(out); mkdir(fx);
+  fs.writeFileSync(path.join(out, 'cars.json'), JSON.stringify({ cars: data.cars, roadPaints: data.roadPaints, shopPaints: data.shopPaints }));
+  fs.writeFileSync(path.join(out, 'wheels.json'), JSON.stringify({ ref: data.wheelRef, styles: data.wheels }));
+  fs.writeFileSync(path.join(fx, 'cars-parity.json'), JSON.stringify(data.parity));
+  const kb = (f) => (fs.statSync(f).size / 1024).toFixed(0) + ' KB';
+  console.log(`cars: ${data.cars.length} bodies (${kb(path.join(out, 'cars.json'))}), wheels ${data.wheels.length} styles x 3 levels (${kb(path.join(out, 'wheels.json'))}), parity: ${data.parity.shapes.length} shapes, ${data.parity.drives.length} drive sets`);
+}
+
+// ---------------------------------------------------------------- parked cars
+async function exportParked() {
+  const { chromium } = require('playwright');
+  const server = await gameServer();
+  const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
+  const page = await (await browser.newContext({ viewport: { width: 640, height: 360 } })).newPage();
+  await page.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
+  await page.addInitScript(() => {
+    window.SB_SKIP_INTRO = true;
+    try { localStorage.setItem('southbound.settings.v1', JSON.stringify({ platform: 'pc', preset: 'high', dynamicRes: false, timeScale: 0 })); } catch (e) { /* private mode */ }
+  });
+  await page.goto(`http://127.0.0.1:${server.address().port}/index.html`);
+  await page.click('#play');
+  console.log('parked: generating Calvera in headless Chromium (a few minutes)...');
+  await page.waitForFunction(() => window.SB && window.SB.game && window.SB.game.city, null, { timeout: 900000, polling: 1000 });
+  const data = await page.evaluate(() => {
+    const G = window.SB.game, r2 = (v) => Math.round(v * 100) / 100;
+    const seen = new Set(), list = [];
+    const add = (v, where) => { if (!v || seen.has(v) || v.isBoat || v.isAir || !v.pos) return; seen.add(v); list.push({ type: v.type, x: r2(v.pos.x), y: r2(v.pos.y), z: r2(v.pos.z), heading: Math.round(v.heading * 1000) / 1000, where }); };
+    for (const v of G.parked || []) add(v, v.userData?.driveway ? 'driveway' : 'street');
+    const P = G.career?.p, start = G.S?.lastVehicle;
+    return { parked: list, player: start ? { type: start.type, x: r2(start.pos.x), z: r2(start.pos.z), heading: start.heading } : null, spawn: { x: G.player.pos.x, z: G.player.pos.z, heading: G.player.heading } };
+  });
+  await browser.close(); server.close();
+  const out = path.join(unity, 'Data/World');
+  mkdir(out);
+  fs.writeFileSync(path.join(out, 'calvera-parked.json'), JSON.stringify(data));
+  console.log(`parked: ${data.parked.length} cars (${[...new Set(data.parked.map((p) => p.type))].length} types)`);
+}
+
 if (want('textures')) await exportTextures();
 if (want('models')) await exportModels();
 if (want('catalog')) await exportCatalog();
 if (want('world')) await exportWorld();
+if (want('cars')) await exportCars();
+if (want('parked')) await exportParked();
