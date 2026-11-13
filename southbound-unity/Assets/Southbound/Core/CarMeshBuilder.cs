@@ -113,6 +113,8 @@ namespace Southbound.Core
             var (min, max) = Bounds(s);
             var m = SurfaceNets.Build(sdf, min, max, h);
             var P = m.Positions; var N = m.Normals; var I = m.Indices;
+            // shading normals: the field's own, smoothed across gentle bends (zones still use the field's)
+            var S = SmoothNormals(N, I, P.Length / 3);
             var outP = new List<float>(P.Length); var outN = new List<float>(N.Length); var outUv = new List<float>(P.Length);
             var outI = new int[I.Length];
             var remap = new Dictionary<long, int>();
@@ -137,7 +139,7 @@ namespace Southbound.Core
                     {
                         ni = outP.Count / 3; remap[key] = ni;
                         outP.Add(-P[vi * 3]); outP.Add(P[vi * 3 + 1]); outP.Add(P[vi * 3 + 2]);
-                        outN.Add(-N[vi * 3]); outN.Add(N[vi * 3 + 1]); outN.Add(N[vi * 3 + 2]);
+                        outN.Add(-S[vi * 3]); outN.Add(S[vi * 3 + 1]); outN.Add(S[vi * 3 + 2]);
                         outUv.Add(u); outUv.Add(v);
                     }
                     outI[t + k] = ni;
@@ -145,6 +147,59 @@ namespace Southbound.Core
             }
             data.Positions = outP.ToArray(); data.Normals = outN.ToArray(); data.Uvs = outUv.ToArray(); data.Indices = outI;
             return data;
+        }
+
+        /// <summary>
+        /// The body's profiles are tables joined by straight segments, so the field has faint creases
+        /// every few centimetres; on glossy paint and glass they show as bands in the reflections (the
+        /// browser has them too, under its flake and dirt layers). Averaging each normal with its
+        /// neighbours' a few times, only across bends gentler than ~37 degrees, smooths the shading and
+        /// keeps real edges. Positions don't move.
+        /// </summary>
+        public static float[] SmoothNormals(float[] normals, int[] indices, int vertexCount, int iterations = 3, double minCos = 0.8)
+        {
+            var start = new int[vertexCount + 1];
+            for (int t = 0; t < indices.Length; t++) start[indices[t] + 1] += 2;
+            for (int v = 0; v < vertexCount; v++) start[v + 1] += start[v];
+            var fill = (int[])start.Clone();
+            var nb = new int[start[vertexCount]];
+            for (int t = 0; t < indices.Length; t += 3)
+                for (int k = 0; k < 3; k++)
+                {
+                    int a = indices[t + k], b = indices[t + (k + 1) % 3];
+                    nb[fill[a]++] = b; nb[fill[b]++] = a;
+                }
+            var cur = (float[])normals.Clone();
+            var next = new float[cur.Length];
+            for (int it = 0; it < iterations; it++)
+            {
+                for (int v = 0; v < vertexCount; v++)
+                {
+                    double x = cur[v * 3], y = cur[v * 3 + 1], z = cur[v * 3 + 2], sx = x, sy = y, sz = z;
+                    for (int e = start[v]; e < start[v + 1]; e++)
+                    {
+                        int w = nb[e];
+                        double nx = cur[w * 3], ny = cur[w * 3 + 1], nz = cur[w * 3 + 2];
+                        if (x * nx + y * ny + z * nz < minCos) continue;
+                        sx += nx; sy += ny; sz += nz; // (each shared edge counts twice: closer neighbours weigh more)
+                    }
+                    double l = Math.Sqrt(sx * sx + sy * sy + sz * sz); if (l == 0) l = 1;
+                    next[v * 3] = (float)(sx / l); next[v * 3 + 1] = (float)(sy / l); next[v * 3 + 2] = (float)(sz / l);
+                }
+                var tmp = cur; cur = next; next = tmp;
+            }
+            // never turn a normal more than ~30 degrees from the field's (thin, sharp bits would drift)
+            for (int v = 0; v < vertexCount; v++)
+            {
+                double ox = normals[v * 3], oy = normals[v * 3 + 1], oz = normals[v * 3 + 2];
+                for (int k = 0; k < 4 && ox * cur[v * 3] + oy * cur[v * 3 + 1] + oz * cur[v * 3 + 2] < 0.866; k++)
+                {
+                    double x = ox + cur[v * 3], y = oy + cur[v * 3 + 1], z = oz + cur[v * 3 + 2], l = Math.Sqrt(x * x + y * y + z * z);
+                    if (l < 1e-9) { x = ox; y = oy; z = oz; l = 1; }
+                    cur[v * 3] = (float)(x / l); cur[v * 3 + 1] = (float)(y / l); cur[v * 3 + 2] = (float)(z / l);
+                }
+            }
+            return cur;
         }
 
         /// <summary>A wheel in Unity coordinates (mirrored: the rim faces -x, the driver's side). Put it on the

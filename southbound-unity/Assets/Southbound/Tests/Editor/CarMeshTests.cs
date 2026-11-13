@@ -103,6 +103,43 @@ namespace Southbound.Tests
         }
 
         [Test]
+        public void Shading_normals_are_smoothed_but_stay_true_to_the_shape()
+        {
+            var s = Cat["police"].Spec;
+            var (min, max) = CarMeshBuilder.Bounds(s);
+            var raw = SurfaceNets.Build(CarShape.Body(s), min, max, CarMeshBuilder.CellSize(s, 0));
+            var sm = CarMeshBuilder.SmoothNormals(raw.Normals, raw.Indices, raw.VertexCount);
+            double Roughness(float[] n)
+            {
+                // mean angle between the normals at the ends of each edge
+                double sum = 0; int cnt = 0;
+                for (int t = 0; t < raw.Indices.Length; t += 3)
+                    for (int k = 0; k < 3; k++)
+                    {
+                        int a = raw.Indices[t + k] * 3, b = raw.Indices[t + (k + 1) % 3] * 3;
+                        double d = n[a] * n[b] + n[a + 1] * n[b + 1] + n[a + 2] * n[b + 2];
+                        if (d < 0.8) continue; // (real edges are left alone)
+                        sum += Math.Acos(Math.Min(1, d)); cnt++;
+                    }
+                return sum / cnt;
+            }
+            double before = Roughness(raw.Normals), after = Roughness(sm);
+            TestContext.WriteLine($"mean bend between neighbouring normals: {before * 180 / Math.PI:0.00} -> {after * 180 / Math.PI:0.00} degrees");
+            Assert.That(after, Is.LessThan(before * 0.85), "smoother shading (most of the bend is the real curvature, which stays)");
+            double worst = 0;
+            for (int v = 0; v < raw.VertexCount; v++)
+            {
+                double d = raw.Normals[v * 3] * sm[v * 3] + raw.Normals[v * 3 + 1] * sm[v * 3 + 1] + raw.Normals[v * 3 + 2] * sm[v * 3 + 2];
+                worst = Math.Max(worst, Math.Acos(Math.Min(1, d)));
+                Assert.That(Math.Sqrt(sm[v * 3] * sm[v * 3] + sm[v * 3 + 1] * sm[v * 3 + 1] + sm[v * 3 + 2] * sm[v * 3 + 2]), Is.EqualTo(1).Within(1e-4));
+            }
+            Assert.That(worst * 180 / Math.PI, Is.LessThan(40), "no normal turns far from the field's");
+            // the mesh itself is untouched: same vertices as the browser's
+            var body = CarMeshBuilder.Body(s, 0);
+            Assert.That(body.TriangleCount, Is.EqualTo(raw.TriangleCount));
+        }
+
+        [Test]
         public void The_near_level_is_finer_than_the_browsers_and_quick_to_build()
         {
             var s = Cat["sedan"].Spec;
