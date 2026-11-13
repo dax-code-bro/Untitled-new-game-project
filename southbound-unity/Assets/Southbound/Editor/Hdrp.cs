@@ -92,6 +92,19 @@ namespace Southbound.EditorTools
             }
         }
 
+        /// <summary>A lamp (car headlight, brake light) in lumens, no shadows.</summary>
+        public static void SetupLamp(Light light, float lumens)
+        {
+            light.shadows = LightShadows.None;
+            var hdType = FindType("UnityEngine.Rendering.HighDefinition.HDAdditionalLightData");
+            if (hdType == null || !Installed) { light.intensity = light.type == LightType.Spot ? 3f : 1.5f; return; }
+            var hd = light.GetComponent(hdType) ?? light.gameObject.AddComponent(hdType);
+            if (!SetMember(light, "lightUnit", "Lumen")) SetMember(hd, "lightUnit", "Lumen"); // (older HDRP keeps the unit on its own component)
+            light.intensity = lumens;
+            var set = hdType.GetMethods().FirstOrDefault(m => m.Name == "SetIntensity" && m.GetParameters().Length == 1);
+            try { set?.Invoke(hd, new object[] { lumens }); } catch { /* newer HDRP: Light.intensity already set */ }
+        }
+
         /// <summary>
         /// A global Volume for the scene: physically based sky, automatic exposure, volumetric
         /// fog, ACES, contact shadows, SSAO and a long shadow distance.

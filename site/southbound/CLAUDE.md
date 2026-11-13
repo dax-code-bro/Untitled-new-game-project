@@ -191,6 +191,17 @@ the fewest additions next. Be honest in reports about what is and isn't done.
   built-in graphics matters too. Triangle profile by object: scratchpad `probe-tris.mjs` (renderer.info +
   per-group estimates; downtown/river/field). three's shadow pass tests the MAIN camera's layers, so a
   shadow-only caster is a copy with `colorWrite:false, depthWrite:false` (facades.js `facade-shadow-*`).
+- Unity (`southbound-unity/`, its own README): Core is engine-free C# tested by
+  `dotnet test southbound-unity/Tools/CoreTests --filter "Category!=Online"`; every Unity script is
+  compile-checked by `dotnet build southbound-unity/Tools/UnityCheck -warnaserror` (Unity 2021 reference
+  assemblies: no HDRP types, so HDRP is reached by reflection in `Editor/Hdrp.cs`; Unity 6-only APIs go
+  behind `#if UNITY_6000_0_OR_NEWER`, e.g. Rigidbody.linearVelocity). Data comes from the web game:
+  `node tools/southbound/export-unity.mjs [world] [cars] [parked] ...`. Cars: the browser's body builder is
+  ported exactly (CarShape/SurfaceNets, parity fixture `Tools/CoreTests/fixtures/cars-parity.json`; keep it
+  exact: float32 tables, JsMath.Round, stable sorts, bool feature flags count as 1). Unity car space =
+  web car space with x mirrored (driver's side -x), triangles re-wound; web heading h = Unity yaw -h
+  degrees; the model's Steer + is left. Car zones are per triangle into a 16x4 palette (CarZones/
+  CarPalette) handed over by MaterialPropertyBlock (CarBody). No editor here: say so in reports.
 - Commit one batch at a time: if the next batch's edits are already in the tree, commit only the
   finished batch's files (and an `index.js` without the next batch's `add(...)` line), with the
   `game.js` that was built and QA'd for it.

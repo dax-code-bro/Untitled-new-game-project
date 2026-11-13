@@ -83,6 +83,17 @@ screenshot every few minutes reach Claude (`api/sb-watch.js`, `tools/southbound/
 notes show up in the game. Needs a private Vercel Blob store connected to the project to keep reports
 longer than the function log's hour.
 
+**Unity carryover (`southbound-unity/`, ROADMAP Phase 1.12).** The owner: "do the Unity cars and driving
+next, actually do everything in Unity, even the shaders". Order: U1 cars and driving (**done**: all 101
+bodies built the browser's way and matched vertex for vertex, the body shader's zones on HDRP Lit, the web
+game's driving equations on a sprung Rigidbody, get in/out, chase camera, lights, siren, horn, parked cars),
+then U1b car interiors behind see-through glass, doors, damage, traffic; U2 people (pedestrians, police,
+gang on NavMesh, wounds); U3 interiors, shops, missions, jobs, phone, UI Toolkit HUD, HDRP water; U4 the
+web game's shaders in HDRP (car paint flakes/gaps/dirt/rain, interior-mapped windows, wet roads and
+puddles, terrain blending, grass, the far crowd). Nothing in Unity is run in this container (no editor
+licence): the C# tests (`dotnet test southbound-unity/Tools/CoreTests`) and the compile check against
+Unity's assemblies are what verify it.
+
 ## The owner's list after watching them play (2026-11-09) — do in this order
 
 1. ~~**R1 Reactions that fit the situation.**~~ (first pass shipped, Phase 1.60; keep extending the matrix) People robbed the owner while they were in a speeding car.

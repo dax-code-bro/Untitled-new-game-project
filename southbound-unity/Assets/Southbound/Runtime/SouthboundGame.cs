@@ -18,6 +18,7 @@ namespace Southbound
         public Light sun;
         public PlayerController player;
         public Gunplay gunplay;
+        public Driving driving;
 
         public Profile Profile { get; private set; }
         public Needs Needs => Profile.Needs;
@@ -83,9 +84,10 @@ namespace Southbound
             Profile.Hour += gh;
             if (Profile.Hour >= 24) { Profile.Hour -= 24; Profile.Day++; }
             Profile.PlaySeconds += dt;
-            bool running = player != null && player.Speed > 5;
+            bool onFoot = player != null && player.enabled; // (in a car the body is sitting)
+            bool running = onFoot && player.Speed > 5;
             Needs.Drain(gh, running, Health <= 0);
-            Health -= Needs.Tick(dt, player != null && player.Sprinting, player != null ? player.Speed : 0, Health);
+            Health -= Needs.Tick(dt, onFoot && player.Sprinting, onFoot ? player.Speed : 0, Health);
             if (!Needs.NoRegen && Health < Needs.MaxHealth) Health = System.Math.Min(Needs.MaxHealth, Health + dt * 1.5);
             if (sun != null)
             {
@@ -112,6 +114,19 @@ namespace Southbound
                 hud += $"\n{w.Name}  ·  {w.Caliber}" + (w.Melee ? "" : $"  ·  {gunplay.Clip}/{gunplay.Reserve}") + (gunplay.Reloading ? "  (reloading)" : "");
             }
             GUI.Label(new Rect(18, Screen.height - 86, 900, 80), hud, s);
+            if (driving != null)
+            {
+                var car = driving.Car;
+                if (car != null)
+                {
+                    var big = new GUIStyle(s) { fontSize = 30, alignment = TextAnchor.LowerRight };
+                    string extra = (car.Controls.Nitro ? "  NOS" : "") + (car.Controls.Handbrake ? "  HANDBRAKE" : "");
+                    GUI.Label(new Rect(Screen.width - 420, Screen.height - 96, 400, 40), $"{car.SpeedMph:0} mph", big);
+                    GUI.Label(new Rect(Screen.width - 420, Screen.height - 56, 400, 30), car.displayName + extra, new GUIStyle(s) { alignment = TextAnchor.LowerRight });
+                }
+                if (driving.Prompt != null)
+                    GUI.Label(new Rect(Screen.width / 2f - 300, Screen.height - 140, 600, 30), driving.Prompt, new GUIStyle(s) { alignment = TextAnchor.MiddleCenter });
+            }
             if (gunplay != null && gunplay.Aiming)
             {
                 var c = new Vector2(Screen.width / 2f, Screen.height / 2f);

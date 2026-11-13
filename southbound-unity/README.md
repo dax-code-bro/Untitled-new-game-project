@@ -21,6 +21,8 @@ Unity Personal is free, and there are no royalties.
 | **Needs** | Energy, food, body weight and stamina, same rates as the web game | `Core/Needs.cs` |
 | **Your save** | Money, guns, fitted attachments, ammo, properties, garage, missions, needs, position. In the web game: **Pause > Export save**. Here: **Southbound > Import web save** | `Core/WebSave.cs` |
 | **Rebuilds** | The burnt-house rebuild schedule (clear, slab, frame, sheath, roof, siding) | `Core/Rebuild.cs` |
+| **Cars** | All 101 bodies (the 93 catalogue models, the service vehicles, the traffic bodies), rebuilt from the web game's own body specs by the same method (distance field + surface nets, ported line for line: a test checks the mesh matches the browser's vertex for vertex), at four levels of detail with a near level finer than the browser's. Glass, lamps, grille, plates, chrome, sirens, taxi signs, two-tones, vinyl and fabric roofs and rust as in the web game's body shader. The web game's wheels (5 rim styles). 23 cars parked where the web game parks them, John's rusty pickup by the spawn | `Data/Vehicles/`, `Core/CarShape.cs`, `CarZones.cs`, `CarMeshBuilder.cs`, **Southbound > Cars** |
+| **Driving** | The web game's driving equations (acceleration, top speed, braking and reverse, steering that tightens at speed, grip, handbrake drifts, nitrous; a test checks them step for step against the browser) on a Rigidbody riding on four raycast springs. Get in and out at the driver's door, chase camera, headlights at night, brake lights, siren, horn and an engine note made in code | `Core/DriveModel.cs`, `Runtime/CarController.cs`, `Driving.cs`, `CarBody.cs` |
 
 There is also a **penetration range** next to the spawn: walls of every material
 with targets behind them (the one behind the drywall wears a level III plate).
@@ -48,7 +50,8 @@ with targets behind them (the one behind the drywall wears a level III plate).
       the window lists their pages. On each one press **Download** (2K, free), then
       use **Southbound > Materials > Import downloaded zip**.
    5. **Fix animation import**.
-   6. **Build Calvera scene**: takes a minute or two.
+   6. **Build Calvera scene**: takes a few minutes (the first time it also builds the
+      cars it parks; **Southbound > Cars > Build every car** builds all 101).
    7. **Import web save** (optional).
 5. Press **Play**.
 
@@ -56,17 +59,24 @@ with targets behind them (the one behind the drywall wears a level III plate).
 left mouse shoot · R reload · 1-9 or mouse wheel switch weapon · H holster ·
 Esc pause / save. A gamepad works once the Input System is installed.
 
+**In a car** (F at the driver's door to get in or out): W throttle · S brake, then
+reverse · A/D steer · Space handbrake · Shift nitrous · H horn · L headlights ·
+B siren (police cars). F beside a car on its roof pushes it back on its wheels.
+
 ## How it's organised
 
 ```
 Assets/Southbound/
   Core/      game rules in plain C#, no Unity dependency (also built and tested by dotnet)
   Runtime/   MonoBehaviours: SouthboundGame, PlayerController, ThirdPersonCamera,
-             Retargeter, Gunplay, BulletHoles, SurfaceTag, Health, SbInput
-  Editor/    setup window, HDRP materials, texture downloader, Calvera builder, trees
+             Retargeter, Gunplay, BulletHoles, SurfaceTag, Health, SbInput,
+             CarController, CarBody, Driving
+  Editor/    setup window, HDRP materials, texture downloader, Calvera builder, trees,
+             CarFactory (car prefabs, the car browser)
   Tests/     NUnit tests (Window > General > Test Runner > EditMode)
   Art/       Surfaces (29 CC0 sets), Models (glTF), Generated (decals, packed masks)
-Data/World/  Calvera exported from the web game
+Data/World/  Calvera exported from the web game (and where its cars are parked)
+Data/Vehicles/ every car body's spec, handling and paint; the web game's wheels
 Tools/       CoreTests (dotnet test), UnityCheck (compile check against Unity's DLLs)
 ```
 
@@ -82,6 +92,7 @@ The data comes from the web game's own code, so the web game stays the source of
 node tools/southbound/export-unity.mjs            # everything
 node tools/southbound/export-unity.mjs world      # Calvera only (runs the game headless)
 node tools/southbound/export-unity.mjs textures models catalog
+node tools/southbound/export-unity.mjs cars parked   # car specs, wheels, parity fixture; parked cars
 dotnet test southbound-unity/Tools/CoreTests --filter "Category!=Online"
 ```
 
@@ -91,13 +102,17 @@ ambientCG and Poly Haven set to prove the downloader still works.
 
 ## Next to carry over
 
-1. **Vehicles**: the procedural car builder (93 cars, cabins, doors) into Unity
-   meshes, driving with WheelColliders, and Rico riding along.
+1. **Car interiors and glass**: the cabins (seats, dashboard, steering wheel and
+   dials from cabin.js) behind see-through glass; today the glass is the web game's
+   tinted shell and John is hidden in the seat. Doors that open, Rico riding along,
+   damage, fuel, traffic.
 2. **People**: pedestrians, police and the gang on a NavMesh (AI Navigation is installed),
    with the wound model and armour.
 3. **Interiors**: shops, houses and the hideout, with HDRP decals for the holes.
 4. **Missions, jobs, shops and the phone** on top of the save, which already carries over.
 5. **HUD** in UI Toolkit, and HDRP's water system for the Gulf and Lake Arden.
+6. **The web game's shaders** in HDRP: car paint flakes, panel gaps, dirt and rain
+   beads; interior-mapped windows; wet roads and puddles; terrain blending; grass.
 
 ## Troubleshooting
 

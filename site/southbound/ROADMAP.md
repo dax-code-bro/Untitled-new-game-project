@@ -1375,7 +1375,25 @@ rain and storm, interiors, first person and in cars. Highlights:
 - [x] John: controller, third-person camera, animation retargeting, gunplay with wall
       penetration and bullet holes; a penetration range by the spawn
 - [x] Web game: Pause > Export save (imports into Unity)
-- [ ] Vehicles, people and police AI, interiors, missions and jobs, HUD, HDRP water
+- [x] U1 cars and driving (the owner: "do the Unity cars and driving next, actually do everything in
+      Unity, even the shaders"):
+  - [x] `export-unity.mjs cars parked`: all 101 bodies (spec, handling, paint, driver's seat), the web
+        game's wheels (5 rim styles x 3 levels), a parity fixture from the browser, the parked cars
+  - [x] The body builder ported to C# (CarShape + SurfaceNets): the same field and the same mesh as
+        the browser, vertex for vertex (tested); four levels, the near one ~3 cm (browser: ~4.5)
+  - [x] The body shader's zones per triangle into a palette on HDRP Lit (CarZones/CarPalette):
+        glass, headlight reflector/LED/projector, grille, plates, tail lights, siren, taxi sign,
+        chrome, black trim, two-tone, vinyl/fabric roofs, rust and faded paint; lights by emission
+  - [x] Driving: the web game's equations (tested step for step) on a Rigidbody with four raycast
+        springs; get in/out (F), chase camera, headlights at night (L), brake lights, siren (B),
+        horn (H), an engine note made in code, push an overturned car back over
+  - [x] Car prefabs (Southbound > Cars), a car browser, 23 parked cars in the Calvera scene with
+        John's rusty pickup by the spawn; roads have collision now
+  - [ ] Not yet: car interiors behind see-through glass (John is hidden in the seat), doors that
+        open, damage, fuel, traffic AI. Panel gaps, paint flakes, dirt and rain beads wait for the
+        HDRP car shader (U4). Not run inside the Unity editor here (no licence in this container):
+        checked by the C# tests and the compile check against Unity's assemblies
+- [ ] People and police AI, interiors, missions and jobs, HUD, HDRP water, the web game's shaders
 
 ## Phase 3 — Content catalogs (targets)
 

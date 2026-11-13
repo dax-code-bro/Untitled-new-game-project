@@ -1,7 +1,8 @@
 // Builds Calvera in Unity from the web game's own data (Data/World/): the 4 km
 // terrain with its ground cover, the sea, lakes and rivers, every road, every
-// building and gable roof, all 47 000 trees and bushes, a sun and sky, and
-// John with a camera, a gun and a shooting range to try the wall penetration.
+// building and gable roof, all 47 000 trees and bushes, a sun and sky, the
+// cars parked around town (John's rusty pickup by the spawn), and John with a
+// camera, a gun and a shooting range to try the wall penetration.
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -53,6 +54,8 @@ namespace Southbound.EditorTools
                 var sun = BuildLighting();
                 var john = BuildPlayer(world, sun);
                 BuildRange(john.transform.position, john.transform.forward);
+                EditorUtility.DisplayProgressBar("Southbound", "Parked cars", 0.94f);
+                CarFactory.PlaceParked(dataDir);
 
                 EditorSceneManager.SaveScene(scene, ScenePath);
                 AddToBuildSettings(ScenePath);
@@ -251,7 +254,8 @@ namespace Southbound.EditorTools
                 m.RecalculateNormals();
                 FixUp(m);
                 m.RecalculateTangents(); m.RecalculateBounds();
-                MeshObject("Roads " + group.Key, SaveMesh(m, "Roads_" + group.Key), new[] { Surfaces.Get(group.Key) }, root, false);
+                var roadGo = MeshObject("Roads " + group.Key, SaveMesh(m, "Roads_" + group.Key), new[] { Surfaces.Get(group.Key) }, root, false);
+                roadGo.AddComponent<MeshCollider>().sharedMesh = m; // cars ride on the asphalt, not the ground 6 cm under it
             }
         }
 
@@ -441,8 +445,11 @@ namespace Southbound.EditorTools
             gun.cam = cam; gun.cameraRig = tpc; gun.player = pc; gun.holes = holes;
             gun.audioSource = john.AddComponent<AudioSource>();
 
+            var drive = john.AddComponent<Driving>();
+            drive.cameraRig = tpc;
+
             var game = new GameObject("Southbound").AddComponent<SouthboundGame>();
-            game.sun = sun; game.player = pc; game.gunplay = gun;
+            game.sun = sun; game.player = pc; game.gunplay = gun; game.driving = drive;
             return john;
         }
 

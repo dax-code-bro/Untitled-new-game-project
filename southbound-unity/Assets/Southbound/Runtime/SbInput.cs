@@ -32,6 +32,9 @@ namespace Southbound
             }
         }
 
+        /// <summary>Steering, -1 left .. 1 right (the move stick / A and D).</summary>
+        public static float Steer => Move.x;
+
         /// <summary>Camera look in degrees this frame.</summary>
         public static Vector2 Look
         {
@@ -60,6 +63,15 @@ namespace Southbound
         public static bool CrouchDown => Pressed(UnityEngine.InputSystem.Key.C) || (Gamepad.current?.rightStickButton.wasPressedThisFrame ?? false);
         public static float Scroll => (Mouse.current?.scroll.ReadValue().y ?? 0) / 120f + ((Gamepad.current?.rightShoulder.wasPressedThisFrame ?? false) ? 1 : 0) - ((Gamepad.current?.leftShoulder.wasPressedThisFrame ?? false) ? 1 : 0);
         public static bool PauseDown => Pressed(UnityEngine.InputSystem.Key.Escape) || (Gamepad.current?.startButton.wasPressedThisFrame ?? false);
+        // driving (the web game's keys: W/S, A/D, Space handbrake, Shift nitrous, F in/out, H horn)
+        public static bool InteractDown => Pressed(UnityEngine.InputSystem.Key.F) || Pressed(UnityEngine.InputSystem.Key.Enter) || (Gamepad.current?.buttonNorth.wasPressedThisFrame ?? false);
+        public static float Throttle => Mathf.Clamp01(Mathf.Max(Move.y, Gamepad.current?.rightTrigger.ReadValue() ?? 0));
+        public static float Brake => Mathf.Clamp01(Mathf.Max(-Move.y, Gamepad.current?.leftTrigger.ReadValue() ?? 0));
+        public static bool Handbrake => Held(UnityEngine.InputSystem.Key.Space) || (Gamepad.current?.buttonSouth.isPressed ?? false) || (Gamepad.current?.rightShoulder.isPressed ?? false);
+        public static bool Nitro => Held(UnityEngine.InputSystem.Key.LeftShift) || (Gamepad.current?.leftStickButton.isPressed ?? false);
+        public static bool Horn => Held(UnityEngine.InputSystem.Key.H) || (Gamepad.current?.rightStickButton.isPressed ?? false);
+        public static bool LightsDown => Pressed(UnityEngine.InputSystem.Key.L) || (Gamepad.current?.dpad.up.wasPressedThisFrame ?? false);
+        public static bool SirenDown => Pressed(UnityEngine.InputSystem.Key.B) || (Gamepad.current?.dpad.down.wasPressedThisFrame ?? false);
         public static int NumberDown
         {
             get
@@ -79,6 +91,14 @@ namespace Southbound
         public static bool CrouchDown => Input.GetKeyDown(KeyCode.C);
         public static float Scroll => Input.mouseScrollDelta.y;
         public static bool PauseDown => Input.GetKeyDown(KeyCode.Escape);
+        public static bool InteractDown => Input.GetKeyDown(KeyCode.F) || Input.GetKeyDown(KeyCode.Return);
+        public static float Throttle => Mathf.Clamp01(Move.y);
+        public static float Brake => Mathf.Clamp01(-Move.y);
+        public static bool Handbrake => Input.GetKey(KeyCode.Space);
+        public static bool Nitro => Input.GetKey(KeyCode.LeftShift);
+        public static bool Horn => Input.GetKey(KeyCode.H);
+        public static bool LightsDown => Input.GetKeyDown(KeyCode.L);
+        public static bool SirenDown => Input.GetKeyDown(KeyCode.B);
         public static int NumberDown
         {
             get
