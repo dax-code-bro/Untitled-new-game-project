@@ -56,6 +56,8 @@ namespace Southbound.EditorTools
                 DecalBuilder.Build(world);
                 EditorUtility.DisplayProgressBar("Southbound", "Trees", 0.7f);
                 Vegetation.Plant(world, terrain);
+                EditorUtility.DisplayProgressBar("Southbound", "Grass", 0.8f);
+                GrassBuilder.Build(world, terrain, LoadSplat(world.N));
                 EditorUtility.DisplayProgressBar("Southbound", "Sun, sky and John", 0.9f);
                 var sun = BuildLighting();
                 var john = BuildPlayer(world, sun);
