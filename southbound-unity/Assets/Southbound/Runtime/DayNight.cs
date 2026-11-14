@@ -25,6 +25,8 @@ namespace Southbound
         public static float Night { get; private set; }
         public static float SunElevation { get; private set; } = 45f;
         public static float MoonIllumination { get; private set; }
+        /// <summary>The game's clock (0..24), for things that keep hours: lights in windows, shop signs.</summary>
+        public static double Hour { get; private set; } = 14;
 
         void LateUpdate()
         {
@@ -34,7 +36,7 @@ namespace Southbound
             var (el, az) = NightSky.Sun(hour, doy);
             var (phase, lit) = NightSky.Moon(day + hour / 24.0);
             var (mel, maz) = NightSky.MoonPosition(hour, doy, phase);
-            SunElevation = (float)el; MoonIllumination = (float)lit;
+            SunElevation = (float)el; MoonIllumination = (float)lit; Hour = hour;
             Night = (float)NightSky.Night(el);
             if (sun != null)
             {

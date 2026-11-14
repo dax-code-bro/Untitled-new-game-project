@@ -18,7 +18,7 @@ namespace Southbound.Core
     public sealed class CalveraWorld
     {
         public sealed class Road { public string Kind; public double Width; public List<(double x, double z)> Points = new List<(double, double)>(); }
-        public sealed class Building { public double X, Z, W, D, H, Y; public int Style; public int Color; }
+        public sealed class Building { public double X, Z, W, D, H, Y; public int Style; public int Color; public int Street = 15; /* walls that face a street: bit k = wall k (+z, -z, +x, -x) */ }
         public sealed class Roof { public double X, Z, W, D, H, Y, Rot; public int Color; }
         public sealed class Plant { public string Kind; public double X, Y, Z, Rot, Scale; }
 
@@ -50,7 +50,7 @@ namespace Southbound.Core
                 w.Roads.Add(road);
             }
             foreach (Dictionary<string, object> b in j.Arr("buildings"))
-                w.Buildings.Add(new Building { X = b.Num("x"), Z = b.Num("z"), W = b.Num("w"), D = b.Num("d"), H = b.Num("h"), Y = b.Num("y"), Style = (int)b.Num("style"), Color = (int)b.Num("color") });
+                w.Buildings.Add(new Building { X = b.Num("x"), Z = b.Num("z"), W = b.Num("w"), D = b.Num("d"), H = b.Num("h"), Y = b.Num("y"), Style = (int)b.Num("style"), Color = (int)b.Num("color"), Street = (int)b.Num("street", 15) });
             foreach (Dictionary<string, object> b in j.Arr("roofs") ?? new List<object>())
                 w.Roofs.Add(new Roof { X = b.Num("x"), Z = b.Num("z"), W = b.Num("w"), D = b.Num("d"), H = b.Num("h"), Y = b.Num("y"), Rot = b.Num("rot"), Color = (int)b.Num("color") });
             foreach (List<object> p in j.Arr("veg") ?? new List<object>())

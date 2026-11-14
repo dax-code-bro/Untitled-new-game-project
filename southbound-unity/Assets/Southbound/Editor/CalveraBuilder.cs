@@ -50,6 +50,8 @@ namespace Southbound.EditorTools
                 BuildBuildings(world);
                 EditorUtility.DisplayProgressBar("Southbound", "Cornices, shopfronts, porches, window sills", 0.62f);
                 FacadeBuilder.Build(dataDir, MeshDir);
+                EditorUtility.DisplayProgressBar("Southbound", "Windows: glass, frames and the rooms behind them", 0.64f);
+                WindowBuilder.Build(world);
                 EditorUtility.DisplayProgressBar("Southbound", "Street and wall wear (decals)", 0.66f);
                 DecalBuilder.Build(world);
                 EditorUtility.DisplayProgressBar("Southbound", "Trees", 0.7f);

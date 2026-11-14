@@ -334,7 +334,7 @@ async function exportWorld() {
       world: { half: hm.half, size: hm.half * 2, n: hm.n, cell: hm.cell, hMin: lo, hMax: hi, waterMin: wlo, waterMax: whi, seaLevel: 0 },
       heights: b64(new Uint8Array(h16.buffer)), water: b64(new Uint8Array(w16.buffer)), splat: b64(hm.splat),
       roads: G.graph.edges.map((e) => ({ kind: e.kind, width: e.width, pts: e.pts.map((p) => (Array.isArray(p) ? [r2(p[0]), r2(p[1])] : [r2(p.x), r2(p.z)])) })),
-      buildings: C.buildings.map((b) => ({ x: r2(b.x), z: r2(b.z), w: r2(b.w), d: r2(b.d), h: r2(b.h), y: r2(b.y), style: b.style, color: b.color, surf: b.surf || null })),
+      buildings: C.buildings.map((b) => ({ x: r2(b.x), z: r2(b.z), w: r2(b.w), d: r2(b.d), h: r2(b.h), y: r2(b.y), style: b.style, color: b.color, surf: b.surf || null, street: b.street ?? 15 })),
       roofs: (C.roofs || []).map((r) => ({ x: r2(r.x), z: r2(r.z), w: r2(r.w), d: r2(r.d), h: r2(r.h), y: r2(r.y), rot: r2(r.rot || 0), color: r.color })),
       veg,
       facades: G.city.facades && G.city.facades.exportPieces ? G.city.facades.exportPieces() : null,
