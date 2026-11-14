@@ -1420,6 +1420,7 @@ rain and storm, interiors, first person and in cars. Highlights:
 - [x] N6 weather: the web game's model ported (Core/Weather: states, a step at a time, soak/dry/puddle timing,
       lightning), clouds/fog/sun by weather, wet streets (darker, glossier materials), 1 400 puddle decals that fill,
       rain streaks, lightning with thunder made in code; F8 cycles it
+- [x] N7 150 box-projected reflection probes down the town's street canyons (Southbound > Look > Bake reflections)
 - [ ] People and police AI, interiors, missions and jobs, HUD, the rest of the web game's shaders
 
 ## Phase 3 — Content catalogs (targets)

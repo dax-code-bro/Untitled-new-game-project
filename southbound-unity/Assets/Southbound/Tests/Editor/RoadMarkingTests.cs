@@ -90,3 +90,27 @@ namespace Southbound.Tests
         }
     }
 }
+
+namespace Southbound.Tests
+{
+    public class ReflectionSpotTests
+    {
+        [Test]
+        public void Reflection_probes_fill_the_town_streets()
+        {
+            var w = CalveraWorld.Load(CalveraWorld.DefaultFolder(TestFiles.ProjectRoot));
+            var spots = ReflectionSpots.Place(w);
+            TestContext.WriteLine($"{spots.Count} reflection probes ({spots.Count(s => s.Junction)} over junctions)");
+            Assert.That(spots.Count, Is.InRange(40, 1200));
+            foreach (var s in spots)
+            {
+                Assert.That(s.Y - w.HeightAt(s.X, s.Z), Is.EqualTo(2.5).Within(1e-6), "about eye height");
+                // no two probes on top of each other (except a junction's neighbours along the road)
+                Assert.That(spots.Count(o => (o.X - s.X) * (o.X - s.X) + (o.Z - s.Z) * (o.Z - s.Z) < 10 * 10), Is.LessThanOrEqualTo(2));
+            }
+            // and none out in the country
+            var far = spots.Where(s => !w.Buildings.Any(b => Math.Abs(b.X - s.X) < 60 + b.W / 2 && Math.Abs(b.Z - s.Z) < 60 + b.D / 2)).ToList();
+            Assert.That(far, Is.Empty);
+        }
+    }
+}

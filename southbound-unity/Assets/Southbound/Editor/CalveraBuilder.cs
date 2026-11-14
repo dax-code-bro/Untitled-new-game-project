@@ -58,6 +58,7 @@ namespace Southbound.EditorTools
                 StreetBuilder.Build(dataDir);
                 EditorUtility.DisplayProgressBar("Southbound", "Weather: puddles, wet streets, rain", 0.69f);
                 WeatherBuilder.Build(world);
+                ReflectionProbeBuilder.Build(world);
                 EditorUtility.DisplayProgressBar("Southbound", "Trees", 0.7f);
                 Vegetation.Plant(world, terrain);
                 EditorUtility.DisplayProgressBar("Southbound", "Grass", 0.8f);
