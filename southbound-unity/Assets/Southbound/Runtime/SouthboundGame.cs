@@ -19,6 +19,8 @@ namespace Southbound
         public PlayerController player;
         public Gunplay gunplay;
         public Driving driving;
+        [Tooltip("Sun and moon by the hour (DayNight). Without one, the plain sun swing below is used.")]
+        public DayNight dayNight;
 
         public Profile Profile { get; private set; }
         public Needs Needs => Profile.Needs;
@@ -89,7 +91,7 @@ namespace Southbound
             Needs.Drain(gh, running, Health <= 0);
             Health -= Needs.Tick(dt, onFoot && player.Sprinting, onFoot ? player.Speed : 0, Health);
             if (!Needs.NoRegen && Health < Needs.MaxHealth) Health = System.Math.Min(Needs.MaxHealth, Health + dt * 1.5);
-            if (sun != null)
+            if (sun != null && dayNight == null)
             {
                 // sunrise ~6:00, noon overhead-ish, sunset ~18:00; slight tilt so shadows aren't straight north-south
                 float a = (float)((Profile.Hour - 6) / 12.0 * 180.0);

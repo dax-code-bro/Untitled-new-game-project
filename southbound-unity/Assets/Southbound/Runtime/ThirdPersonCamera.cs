@@ -32,7 +32,8 @@ namespace Southbound
 
         void LateUpdate()
         {
-            if (target == null || Time.timeScale == 0) return;
+            if (target == null || (Time.timeScale == 0 && !PhotoMode.Active)) return;
+            float dt = Time.timeScale == 0 ? Time.unscaledDeltaTime : Time.deltaTime;
             var look = SbInput.Look * sensitivity;
             yaw += look.x;
             pitch = Mathf.Clamp(pitch - look.y, minPitch, maxPitch);
@@ -45,24 +46,25 @@ namespace Southbound
             // pull in when something is between John and the camera
             if (Physics.SphereCast(pivot, 0.2f, rot * Vector3.back, out var hit, want, collideWith, QueryTriggerInteraction.Ignore) && !hit.transform.IsChildOf(target))
                 want = Mathf.Max(0.3f, hit.distance - 0.05f);
-            dist = Mathf.Lerp(dist, want, 1 - Mathf.Exp(-(want < dist ? 30f : 8f) * Time.deltaTime));
+            dist = Mathf.Lerp(dist, want, 1 - Mathf.Exp(-(want < dist ? 30f : 8f) * dt));
             transform.SetPositionAndRotation(pivot + rot * Vector3.back * dist, rot);
             if (cam != null)
             {
-                curFov = Mathf.Lerp(curFov, aiming ? aimFov : fov, 1 - Mathf.Exp(-10f * Time.deltaTime));
+                curFov = Mathf.Lerp(curFov, aiming ? aimFov : fov, 1 - Mathf.Exp(-10f * dt));
                 cam.fieldOfView = curFov;
             }
         }
 
         void Chase()
         {
+            float dt = Time.timeScale == 0 ? Time.unscaledDeltaTime : Time.deltaTime;
             var car = vehicle.transform;
             float speed = Mathf.Abs(vehicle.ForwardSpeed);
             // swing in behind the car (behind the way it's going when it reverses)
             if (Time.time - lastLook > 1.2f && speed > 2f)
             {
                 float carYaw = car.eulerAngles.y + (vehicle.ForwardSpeed < -1 ? 180 : 0);
-                float k = 1 - Mathf.Exp(-Mathf.Clamp(speed * 0.12f, 0.8f, 3.5f) * Time.deltaTime);
+                float k = 1 - Mathf.Exp(-Mathf.Clamp(speed * 0.12f, 0.8f, 3.5f) * dt);
                 yaw = Mathf.LerpAngle(yaw, carYaw, k);
                 pitch = Mathf.Lerp(pitch, 9f, k);
             }
@@ -71,11 +73,11 @@ namespace Southbound
             Vector3 pivot = car.position + Vector3.up * (vehicle.roof + 0.45f);
             if (Physics.SphereCast(pivot, 0.25f, rot * Vector3.back, out var hit, want, collideWith, QueryTriggerInteraction.Ignore) && !hit.transform.IsChildOf(car))
                 want = Mathf.Max(1f, hit.distance - 0.05f);
-            dist = Mathf.Lerp(dist, want, 1 - Mathf.Exp(-(want < dist ? 25f : 4f) * Time.deltaTime));
+            dist = Mathf.Lerp(dist, want, 1 - Mathf.Exp(-(want < dist ? 25f : 4f) * dt));
             transform.SetPositionAndRotation(pivot + rot * Vector3.back * dist, rot);
             if (cam != null)
             {
-                curFov = Mathf.Lerp(curFov, fov + Mathf.Clamp(speed - 15f, 0, 30) * 0.25f, 1 - Mathf.Exp(-3f * Time.deltaTime));
+                curFov = Mathf.Lerp(curFov, fov + Mathf.Clamp(speed - 15f, 0, 30) * 0.25f, 1 - Mathf.Exp(-3f * dt));
                 cam.fieldOfView = curFov;
             }
         }

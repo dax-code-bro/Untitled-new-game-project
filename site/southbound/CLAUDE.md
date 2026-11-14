@@ -69,7 +69,9 @@ the fewest additions next. Be honest in reports about what is and isn't done.
   `untitled-new-game-project.vercel.app`, so the live site can be fetched/tested from here directly.
   Comment to the owner on what they were doing now and then, and fix what looks wrong. An hourly
   scheduled task (`trig_01XFqbdkJQU8S8NtwN8Zbobt`, "Southbound: watch the owner play", fires into this
-  session at :54) does the check; delete it if the owner asks to stop.
+  session at :54) does the check. **It is DISABLED (2026-11-14, the owner: "only do hourly checks when I say
+  I'm playing, stop when I say I'm not")**: enable it (`update_trigger` enabled=true) only when the owner says
+  they're playing, and disable it again when they say they've stopped.
 - **The live feed** (watch along while the owner plays): with watching on, the game posts an update
   every 2 s and a 480 px picture every 5 s to `api/sb-live.js` (kept in the warm function's memory: all
   requests land on one instance, tested 20/20). Run `node tools/southbound/live.mjs auto` under Monitor

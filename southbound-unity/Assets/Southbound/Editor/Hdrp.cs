@@ -92,6 +92,18 @@ namespace Southbound.EditorTools
             }
         }
 
+        /// <summary>A directional light drawn in HDRP's physically based sky as a disc (sun or moon).</summary>
+        public static void SetupCelestialBody(Light light, float angularDiameterDegrees, float flareSize, Texture surface)
+        {
+            var hdType = FindType("UnityEngine.Rendering.HighDefinition.HDAdditionalLightData");
+            if (hdType == null) return;
+            var hd = light.GetComponent(hdType) ?? light.gameObject.AddComponent(hdType);
+            SetMember(hd, "interactsWithSky", true);
+            SetMember(hd, "angularDiameter", angularDiameterDegrees);
+            SetMember(hd, "flareSize", flareSize);
+            if (surface != null) SetMember(hd, "surfaceTexture", surface);
+        }
+
         /// <summary>A lamp (car headlight, brake light) in lumens, no shadows.</summary>
         public static void SetupLamp(Light light, float lumens)
         {
@@ -138,24 +150,73 @@ namespace Southbound.EditorTools
             return go;
         }
 
-        static void Override(ScriptableObject profile, string typeName, params (string field, object value)[] values)
+        /// <summary>Adds a Volume override (by HDRP type name) to a profile and sets its parameters: a public
+        /// VolumeParameter field gets its value and override switched on; a plain public property (like
+        /// VolumetricClouds.cloudPreset) is set directly. Returns the component, or null when this HDRP has no such type.</summary>
+        public static ScriptableObject Override(ScriptableObject profile, string typeName, params (string field, object value)[] values)
         {
             var t = FindType(typeName);
-            if (t == null) { Debug.LogWarning($"Southbound: {typeName} not found in this HDRP version, skipped."); return; }
-            var add = profile.GetType().GetMethod("Add", new[] { typeof(Type), typeof(bool) });
-            var comp = add?.Invoke(profile, new object[] { t, false }) as ScriptableObject;
-            if (comp == null) return;
-            comp.hideFlags = HideFlags.HideInInspector | HideFlags.HideInHierarchy;
-            AssetDatabase.AddObjectToAsset(comp, profile);
+            if (t == null) { Debug.LogWarning($"Southbound: {typeName} not found in this HDRP version, skipped."); return null; }
+            ScriptableObject comp = null;
+            // reuse the profile's existing component of this type
+            if (profile.GetType().GetField("components")?.GetValue(profile) is System.Collections.IList list)
+                foreach (var c in list) if (c != null && c.GetType() == t) comp = (ScriptableObject)c;
+            if (comp == null)
+            {
+                var add = profile.GetType().GetMethod("Add", new[] { typeof(Type), typeof(bool) });
+                comp = add?.Invoke(profile, new object[] { t, false }) as ScriptableObject;
+                if (comp == null) return null;
+                comp.hideFlags = HideFlags.HideInInspector | HideFlags.HideInHierarchy;
+                if (AssetDatabase.Contains(profile)) AssetDatabase.AddObjectToAsset(comp, profile);
+            }
+            SetMember(comp, "active", true);
             foreach (var (field, value) in values)
             {
                 var f = t.GetField(field, BindingFlags.Public | BindingFlags.Instance);
                 var param = f?.GetValue(comp);
-                if (param == null) { Debug.LogWarning($"Southbound: {t.Name}.{field} not found, skipped."); continue; }
-                SetMember(param, "value", value);
-                SetMember(param, "overrideState", true);
+                if (param != null)
+                {
+                    SetMember(param, "value", value);
+                    SetMember(param, "overrideState", true);
+                    continue;
+                }
+                var prop = t.GetProperty(field, BindingFlags.Public | BindingFlags.Instance);
+                if (prop != null && prop.CanWrite) { SetMember(comp, field, value); continue; }
+                Debug.LogWarning($"Southbound: {t.Name}.{field} not found, skipped.");
             }
             EditorUtility.SetDirty(comp);
+            return comp;
+        }
+
+        /// <summary>The HDRP asset in use (Graphics settings or the current quality level), or null.</summary>
+        public static Object PipelineAsset()
+        {
+            var rp = QualitySettings.renderPipeline ?? UnityEngine.Rendering.GraphicsSettings.defaultRenderPipeline;
+            return rp != null && rp.GetType().Name.Contains("HDRenderPipelineAsset") ? rp : null;
+        }
+
+        /// <summary>Turns HDRP asset features on through its serialized settings (m_RenderPipelineSettings.*);
+        /// unknown names are skipped with a note, so this works across HDRP versions.</summary>
+        public static int SetPipelineFeatures(Object asset, params (string path, object value)[] settings)
+        {
+            if (asset == null) return 0;
+            var so = new SerializedObject(asset);
+            int done = 0;
+            foreach (var (path, value) in settings)
+            {
+                var p = so.FindProperty("m_RenderPipelineSettings." + path);
+                if (p == null) { Debug.Log($"Southbound: HDRP asset has no {path} here, skipped."); continue; }
+                switch (value)
+                {
+                    case bool b when p.propertyType == SerializedPropertyType.Boolean: p.boolValue = b; done++; break;
+                    case int i when p.propertyType == SerializedPropertyType.Integer || p.propertyType == SerializedPropertyType.Enum: p.intValue = i; done++; break;
+                    case float f when p.propertyType == SerializedPropertyType.Float: p.floatValue = f; done++; break;
+                    default: Debug.Log($"Southbound: HDRP asset {path} is a {p.propertyType}, not set."); break;
+                }
+            }
+            so.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(asset);
+            return done;
         }
 
         /// <summary>Make an imported material asset editable copy if needed.</summary>

@@ -72,6 +72,7 @@ namespace Southbound
         public static bool Horn => Held(UnityEngine.InputSystem.Key.H) || (Gamepad.current?.rightStickButton.isPressed ?? false);
         public static bool LightsDown => Pressed(UnityEngine.InputSystem.Key.L) || (Gamepad.current?.dpad.up.wasPressedThisFrame ?? false);
         public static bool SirenDown => Pressed(UnityEngine.InputSystem.Key.B) || (Gamepad.current?.dpad.down.wasPressedThisFrame ?? false);
+        public static bool PhotoDown => Pressed(UnityEngine.InputSystem.Key.F10) || (Gamepad.current?.selectButton.wasPressedThisFrame ?? false);
         public static int NumberDown
         {
             get
@@ -99,6 +100,7 @@ namespace Southbound
         public static bool Horn => Input.GetKey(KeyCode.H);
         public static bool LightsDown => Input.GetKeyDown(KeyCode.L);
         public static bool SirenDown => Input.GetKeyDown(KeyCode.B);
+        public static bool PhotoDown => Input.GetKeyDown(KeyCode.F10);
         public static int NumberDown
         {
             get

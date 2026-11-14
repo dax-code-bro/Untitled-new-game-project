@@ -377,12 +377,28 @@ namespace Southbound.EditorTools
         {
             var go = new GameObject("Sun");
             var sun = go.AddComponent<Light>();
-            Hdrp.SetupSun(sun, 100000f);
+            Hdrp.SetupSun(sun, 120000f);
+            Hdrp.SetupCelestialBody(sun, 0.53f, 2f, null);
             go.transform.rotation = Quaternion.Euler(50, -30, 0);
-            Hdrp.CreateSkyAndFogVolume($"{Paths.Scenes}/Calvera_Sky.asset");
-            if (!Hdrp.Installed)
+            // the moon: a second, faint, cool directional light; DayNight hands it the shadows at night
+            var moonGo = new GameObject("Moon");
+            var moon = moonGo.AddComponent<Light>();
+            Hdrp.SetupSun(moon, 0.35f);
+            moon.colorTemperature = 7000f;
+            moon.shadows = LightShadows.None;
+            Hdrp.SetupCelestialBody(moon, 0.52f, 0.5f, null);
+            var dn = new GameObject("Day and night").AddComponent<DayNight>();
+            dn.sun = sun; dn.moon = moon;
+            if (Hdrp.Installed)
+            {
+                PhotoLook.Features();
+                PhotoLook.CreateVolume();
+            }
+            else
             {
                 sun.intensity = 1.2f;
+                moon.intensity = 0.02f;
+                dn.sunLux = 1.2f; dn.moonLux = 0.05f;
                 RenderSettings.ambientMode = AmbientMode.Trilight;
             }
             return sun;
@@ -450,6 +466,8 @@ namespace Southbound.EditorTools
 
             var game = new GameObject("Southbound").AddComponent<SouthboundGame>();
             game.sun = sun; game.player = pc; game.gunplay = gun; game.driving = drive;
+            game.dayNight = Object.FindFirstObjectByType<DayNight>();
+            game.gameObject.AddComponent<PhotoMode>();
             return john;
         }
 
