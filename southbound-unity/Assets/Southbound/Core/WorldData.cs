@@ -129,6 +129,6 @@ namespace Southbound.Core
         /// <summary>Penetration surface for a building style (matches the web game's collision boxes).</summary>
         public static string SurfFor(int style) => style switch { 0 => "masonry", 1 => "masonry", 2 => "brick", 3 => "metal", 4 => "frame", 5 => "block", _ => "masonry" };
 
-        public static string RoadSurface(string kind) => kind == "dirt" || kind == "track" ? "Gravel004" : kind == "highway" ? "asphalt_02" : "Asphalt012";
+        public static string RoadSurface(string kind) => kind == "dirt" || kind == "track" ? "Gravel004" : kind == "highway" ? "Asphalt031" : "Asphalt026A"; // patched town streets, smoother highway
     }
 }

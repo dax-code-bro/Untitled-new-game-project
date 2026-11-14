@@ -85,6 +85,10 @@ namespace Southbound.EditorTools
             ["Cobblestone01"] = 3f, ["square_concrete_pavers"] = 1.5f, ["red_brick"] = 2f, ["weathered_plank_siding"] = 1.2f, ["RoofingTiles013A"] = 2f,
             ["Gravel004"] = 2.5f, ["Dirt01"] = 2f, ["brown_mud"] = 2f, ["forest_leaves_02"] = 2f, ["cliff_side"] = 6f, ["Asphalt012"] = 0.6f,
             ["CorrugatedSteel005"] = 1.5f, ["RustyCorrugatedMetalPanel01"] = 1.5f, ["StuccoWall01"] = 0.8f, ["WoodFloor007"] = 0.4f,
+            ["Bricks059"] = 2f, ["Bricks085"] = 2f, ["Bricks090"] = 2f, ["Bricks097"] = 2.2f, ["Bricks066"] = 2.5f, ["WoodSiding009"] = 1.2f,
+            ["WoodSiding011"] = 1.4f, ["RoofingTiles001"] = 1.5f, ["RoofingTiles008"] = 4f, ["RoofingTiles014A"] = 1.5f, ["Plaster003"] = 0.6f,
+            ["PaintedPlaster014"] = 0.5f, ["Concrete045"] = 1f, ["Asphalt026A"] = 0.5f, ["Asphalt031"] = 0.4f, ["ManholeCover011"] = 0.8f,
+            ["Ground054"] = 1.5f, ["Bark007"] = 2f,
         };
 
         /// <summary>Create or update the material for one set. UVs are in metres; tiling is 1 / tile size.</summary>

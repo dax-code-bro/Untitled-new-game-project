@@ -48,6 +48,8 @@ namespace Southbound.EditorTools
                 BuildBuildings(world);
                 EditorUtility.DisplayProgressBar("Southbound", "Cornices, shopfronts, porches, window sills", 0.62f);
                 FacadeBuilder.Build(dataDir, MeshDir);
+                EditorUtility.DisplayProgressBar("Southbound", "Street and wall wear (decals)", 0.66f);
+                DecalBuilder.Build(world);
                 EditorUtility.DisplayProgressBar("Southbound", "Trees", 0.7f);
                 Vegetation.Plant(world, terrain);
                 EditorUtility.DisplayProgressBar("Southbound", "Sun, sky and John", 0.9f);
@@ -142,8 +144,26 @@ namespace Southbound.EditorTools
             t.treeCrossFadeLength = 20;
             t.treeMaximumFullLODCount = 400;
             t.detailObjectDistance = 120;
+            // HDRP terrain with height-based blending: grass grows into the gaps between stones, sand settles in hollows
+            var tm = TerrainMaterial();
+            if (tm != null) t.materialTemplate = tm;
             go.AddComponent<SurfaceTag>().surface = "stone";
             return t;
+        }
+
+        static Material TerrainMaterial()
+        {
+            var sh = Shader.Find("HDRP/TerrainLit");
+            if (sh == null) return null;
+            string path = $"{Paths.Materials}/CalveraTerrain.mat";
+            var m = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (m == null) { m = new Material(sh) { name = "Calvera terrain" }; AssetDatabase.CreateAsset(m, path); }
+            m.SetFloat("_EnableHeightBlend", 1f);
+            m.SetFloat("_HeightTransition", 0.25f);
+            m.SetFloat("_EnableInstancedPerPixelNormal", 1f);
+            Hdrp.ResetKeywords(m);
+            EditorUtility.SetDirty(m);
+            return m;
         }
 
         static Color32[] LoadSplat(int n)
