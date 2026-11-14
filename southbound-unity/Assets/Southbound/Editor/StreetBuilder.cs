@@ -64,7 +64,7 @@ namespace Southbound.EditorTools
                     for (int k = 0; k < (grouped ? o.Mats.Length : 1); k++)
                     {
                         var sm = d.Mats[o.Mats[k]];
-                        var (mat, usesPalette, flipV) = MaterialFor(d, sm, tint, tex, palette, mats, StreetData.SurfaceFor(o, sm));
+                        var (mat, usesPalette, flipV) = MaterialFor(d, sm, tint, tex, palette, mats, StreetData.SurfaceFor(o, sm), Glows(o));
                         if (mat == null) continue;
                         if (!ch.Draw.TryGetValue(mat, out var bk)) ch.Draw[mat] = bk = new StreetData.Baked();
                         int v0 = bk.Vertices;
@@ -167,7 +167,7 @@ namespace Southbound.EditorTools
                 for (int k = 0; k < (grouped ? o.Mats.Length : 1); k++)
                 {
                     var sm = d.Mats[o.Mats[k]];
-                    var (mat, usesPalette, flipV) = MaterialFor(d, sm, (1, 1, 1), tex, palette, mats, StreetData.SurfaceFor(o, sm));
+                    var (mat, usesPalette, flipV) = MaterialFor(d, sm, (1, 1, 1), tex, palette, mats, StreetData.SurfaceFor(o, sm), Glows(o));
                     if (mat == null) continue;
                     var bk = new StreetData.Baked();
                     StreetData.Bake(shape, ident, grouped ? k : -1, (1, 1, 1), flipV, bk);
@@ -230,6 +230,7 @@ namespace Southbound.EditorTools
             }
             var sl = root.gameObject.AddComponent<StreetLights>();
             sl.glass = mats.Values.Where(m => m.name.StartsWith("Street lamp")).ToArray();
+            sl.signs = mats.Values.Where(m => m.name.StartsWith("Street lit sign")).ToArray();
             Debug.Log($"Southbound: the street: {placed} pieces in {meshes} squares, {d.Wires.Sum(w => w.Pos.Length / 6)} wire spans, {lamps.Count} lamps.");
         }
 
@@ -242,7 +243,10 @@ namespace Southbound.EditorTools
 
         // ------------------------------------------------------------------ materials
         /// <summary>The material a web material becomes, whether its colour goes through the palette, and whether v flips.</summary>
-        static (Material mat, bool palette, bool flipV) MaterialFor(StreetData d, StreetData.Mat sm, (float r, float g, float b) tint, Dictionary<int, Texture2D> tex, Texture2D palette, Dictionary<string, Material> cache, string forced)
+        /// <summary>Signs the web game lights after dark: shop names over the bays, storefront signs, billboards.</summary>
+        static bool Glows(StreetData.Obj o) => o.Name == "facade-signs" || o.Tag == "storefronts.js:sign" || o.Tag == "billboards.js:mesh";
+
+        static (Material mat, bool palette, bool flipV) MaterialFor(StreetData d, StreetData.Mat sm, (float r, float g, float b) tint, Dictionary<int, Texture2D> tex, Texture2D palette, Dictionary<string, Material> cache, string forced, bool glow = false)
         {
             float Q(float x) => Mathf.Round(x * 16) / 16;
             string lit = $"{Q(sm.Rough)}_{Q(sm.Metal)}_{(sm.DoubleSided ? 1 : 0)}_{(sm.Basic ? 1 : 0)}";
@@ -301,10 +305,18 @@ namespace Southbound.EditorTools
             {
                 // a canvas texture (a sign, a billboard, a street name, litter): as it is, tinted per instance
                 var tc = new Color(Q(sm.Color[0] * tint.r), Q(sm.Color[1] * tint.g), Q(sm.Color[2] * tint.b));
-                string k = $"tex_{sm.Map}_{tc.r}_{tc.g}_{tc.b}_{lit}_{(sm.Transparent ? 1 : 0)}";
+                string k = $"tex_{sm.Map}_{tc.r}_{tc.g}_{tc.b}_{lit}_{(sm.Transparent ? 1 : 0)}_{(glow ? 1 : 0)}";
                 if (!cache.TryGetValue(k, out var m))
                 {
-                    m = sm.Basic ? Unlit($"Street sign {cache.Count}") : Plain($"Street sign {cache.Count}", Color.white, 1 - sm.Rough, sm.Metal);
+                    m = sm.Basic ? Unlit($"Street sign {cache.Count}") : Plain(glow ? $"Street lit sign {cache.Count}" : $"Street sign {cache.Count}", Color.white, 1 - sm.Rough, sm.Metal);
+                    if (glow && Hdrp.IsHdrpShader(m))
+                    {
+                        // lit from inside at night (StreetLights turns it up): the sign's own picture glows
+                        m.SetTexture("_EmissiveColorMap", tx);
+                        m.SetColor("_EmissiveColorLDR", Color.white);
+                        m.SetFloat("_UseEmissiveIntensity", 1); m.SetFloat("_EmissiveIntensityUnit", 0);
+                        m.SetFloat("_EmissiveIntensity", 0); m.SetColor("_EmissiveColor", Color.black);
+                    }
                     if (Hdrp.IsHdrpShader(m) || m.shader.name.StartsWith("HDRP/"))
                     {
                         m.SetTexture(sm.Basic ? "_UnlitColorMap" : "_BaseColorMap", tx);

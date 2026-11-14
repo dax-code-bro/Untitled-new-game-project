@@ -42,7 +42,7 @@ namespace Southbound
         object volumeProfile;
 
         static readonly int IdBase = Shader.PropertyToID("_BaseColor"), IdSmooth = Shader.PropertyToID("_Smoothness"),
-            IdRMin = Shader.PropertyToID("_SmoothnessRemapMin"), IdRMax = Shader.PropertyToID("_SmoothnessRemapMax"), IdMask = Shader.PropertyToID("_MaskMap");
+            IdRMin = Shader.PropertyToID("_SmoothnessRemapMin"), IdRMax = Shader.PropertyToID("_SmoothnessRemapMax"), IdMask = Shader.PropertyToID("_MaskMap"), IdEmissiveMap = Shader.PropertyToID("_EmissiveColorMap");
 
         void Start()
         {
@@ -161,6 +161,8 @@ namespace Southbound
                         if (m == null || m.shader == null || m.shader.name != "HDRP/Lit") continue;
                         // glass is wet already, and lamp glass belongs to StreetLights (whichever Start runs first)
                         if (m.name.IndexOf("glass", StringComparison.OrdinalIgnoreCase) >= 0 || m.name.IndexOf("lamp", StringComparison.OrdinalIgnoreCase) >= 0) continue;
+                        // anything that glows (lit signs, windows) is driven by its own component
+                        if (m.HasProperty(IdEmissiveMap) && m.GetTexture(IdEmissiveMap) != null) continue;
                         if (!wet.TryGetValue(m, out var e))
                         {
                             var copy = new Material(m) { name = m.name + " (wet)" };
