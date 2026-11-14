@@ -212,14 +212,17 @@ namespace Southbound.EditorTools
         static Mesh SaveMesh(CarMeshData d, string path, string name)
         {
             var m = new Mesh { name = name, indexFormat = d.VertexCount > 65000 ? IndexFormat.UInt32 : IndexFormat.UInt16 };
-            var v = new Vector3[d.VertexCount]; var n = new Vector3[d.VertexCount]; var uv = new Vector2[d.VertexCount];
+            var v = new Vector3[d.VertexCount]; var n = new Vector3[d.VertexCount]; var uv = new Vector2[d.VertexCount]; var uv1 = new Vector2[d.VertexCount];
             for (int i = 0; i < v.Length; i++)
             {
                 v[i] = new Vector3(d.Positions[i * 3], d.Positions[i * 3 + 1], d.Positions[i * 3 + 2]);
                 n[i] = new Vector3(d.Normals[i * 3], d.Normals[i * 3 + 1], d.Normals[i * 3 + 2]);
                 uv[i] = new Vector2(d.Uvs[i * 2], d.Uvs[i * 2 + 1]);
+                // metres across the body (box projection) for the paint's flake detail map
+                var (fu, fv) = CarPalette.FlakeUv(v[i].x, v[i].y, v[i].z, n[i].x, n[i].y, n[i].z);
+                uv1[i] = new Vector2(fu, fv);
             }
-            m.vertices = v; m.normals = n; m.uv = uv;
+            m.vertices = v; m.normals = n; m.uv = uv; m.uv2 = uv1;
             m.SetTriangles(d.Indices, 0, true);
             m.UploadMeshData(false);
             AssetDatabase.DeleteAsset(path);
@@ -259,7 +262,7 @@ namespace Southbound.EditorTools
         public static Material PaletteMaterial()
         {
             var m = AssetDatabase.LoadAssetAtPath<Material>(MaterialPath);
-            if (m != null) return m;
+            if (m != null) { Flakes(m); return m; }
             Paths.Ensure(Paths.Materials);
             Paths.Ensure(MeshDir);
             var look = new CarLook();
@@ -304,7 +307,43 @@ namespace Southbound.EditorTools
                 m.SetTexture("_EmissionMap", te); m.SetColor("_EmissionColor", Color.white); m.EnableKeyword("_EMISSION");
             }
             AssetDatabase.CreateAsset(m, MaterialPath);
+            Flakes(m);
             return m;
+        }
+
+        const string FlakePath = Paths.Generated + "/CarPaint_Flakes.png";
+
+        /// <summary>Metallic flake and orange peel in the paint: HDRP's detail map (Core CarPalette.FlakeDetail) on the
+        /// second UV set (metres across the body), masked to the paint by the palette mask's blue channel. Safe to run again.</summary>
+        static void Flakes(Material m)
+        {
+            if (!Hdrp.IsHdrpShader(m)) return;
+            if (!File.Exists(Paths.Abs(FlakePath)))
+            {
+                Paths.Ensure(Paths.Generated);
+                const int size = 512;
+                var f = CarPalette.FlakeDetail(size, 1987);
+                var px = new Color32[size * size];
+                for (int i = 0; i < px.Length; i++)
+                    px[i] = new Color32((byte)(f[i * 4] * 255 + 0.5f), (byte)(f[i * 4 + 1] * 255 + 0.5f), (byte)(f[i * 4 + 2] * 255 + 0.5f), (byte)(f[i * 4 + 3] * 255 + 0.5f));
+                Surfaces.Write(px, size, size, Paths.Abs(FlakePath));
+                AssetDatabase.ImportAsset(FlakePath);
+                if (AssetImporter.GetAtPath(FlakePath) is TextureImporter imp)
+                {
+                    imp.sRGBTexture = false; imp.wrapMode = TextureWrapMode.Repeat; imp.mipmapEnabled = true;
+                    imp.textureCompression = TextureImporterCompression.Uncompressed;   // block compression would smear 2-texel flakes
+                    imp.SaveAndReimport();
+                }
+            }
+            m.SetTexture("_DetailMap", AssetDatabase.LoadAssetAtPath<Texture2D>(FlakePath));
+            m.SetTextureScale("_DetailMap", new Vector2(14f, 14f));   // a 7 cm tile: flakes about half a millimetre
+            m.SetFloat("_UVDetail", 1);                                // the second UV set
+            m.SetVector("_UVDetailsMappingMask", new Vector4(0, 1, 0, 0));
+            m.SetFloat("_DetailAlbedoScale", 0.35f);
+            m.SetFloat("_DetailNormalScale", 1.1f);
+            m.SetFloat("_DetailSmoothnessScale", 0.4f);
+            Hdrp.ResetKeywords(m);
+            EditorUtility.SetDirty(m);
         }
 
         // ------------------------------------------------------------------ the parked cars of Calvera

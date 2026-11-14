@@ -180,6 +180,41 @@ namespace Southbound.Tests
         }
 
         [Test]
+        public void Metallic_paint_has_flakes()
+        {
+            // the detail mask (mask blue) is on the paint, stronger for metallic paint, never on glass or chrome
+            var car = Cat["police"];
+            float[] b = new float[CarPalette.Texels * 4], mk = new float[b.Length], co = new float[b.Length];
+            var solid = CarLook.For(car, Wheels); solid.Metal = 0;
+            CarPalette.Fill(solid, b, mk, co);
+            float solidFlake = mk[CarZones.Paint * 4 + 2];
+            var metallic = CarLook.For(car, Wheels); metallic.Metal = 1;
+            CarPalette.Fill(metallic, b, mk, co);
+            Assert.That(mk[CarZones.Paint * 4 + 2], Is.GreaterThan(solidFlake * 3), "metallic paint sparkles, solid paint barely");
+            Assert.That(solidFlake, Is.GreaterThan(0), "a hint of orange peel on solid paint");
+            Assert.That(mk[CarZones.Glass * 4 + 2], Is.EqualTo(0)); Assert.That(mk[CarZones.Chrome * 4 + 2], Is.EqualTo(0));
+            var rusty = CarLook.For(car, Wheels); rusty.Metal = 1; rusty.Rust = 1;
+            CarPalette.Fill(rusty, b, mk, co);
+            Assert.That(mk[CarZones.Paint * 4 + 2], Is.LessThan(0.15), "oxidised paint has lost its sparkle");
+
+            // the detail map: neutral on average (it must not shift the paint's colour or smoothness), flakes tilted every which way
+            var d = CarPalette.FlakeDetail(256, 7);
+            double[] mean = new double[4]; int tilted = 0;
+            for (int i = 0; i < d.Length; i += 4)
+            {
+                for (int c = 0; c < 4; c++) mean[c] += d[i + c] / (d.Length / 4);
+                if (Math.Abs(d[i + 1] - 0.5) > 0.15 || Math.Abs(d[i + 3] - 0.5) > 0.15) tilted++;
+            }
+            Assert.That(mean[1], Is.EqualTo(0.5).Within(0.02)); Assert.That(mean[3], Is.EqualTo(0.5).Within(0.02));
+            Assert.That(mean[0], Is.EqualTo(0.5).Within(0.04));
+            Assert.That(tilted, Is.InRange(256 * 256 / 20, 256 * 256 / 2), "flakes, not a uniform tilt");
+            // the box projection: metres across the face the normal points out of
+            Assert.That(CarPalette.FlakeUv(1, 2, 3, 0.9f, 0.1f, 0.1f), Is.EqualTo((3f, 2f)), "side: z along, y up");
+            Assert.That(CarPalette.FlakeUv(1, 2, 3, 0.1f, 0.9f, 0.2f), Is.EqualTo((1f, 3f)), "roof and bonnet");
+            Assert.That(CarPalette.FlakeUv(1, 2, 3, 0.1f, 0.2f, -0.9f), Is.EqualTo((1f, 2f)), "nose and tail");
+        }
+
+        [Test]
         public void Wheels_decode_from_the_browser_export()
         {
             Assert.That(Wheels.Styles.Select(s => s.Spokes), Is.EquivalentTo(new[] { 0, 5, 6, 10, 14 }));

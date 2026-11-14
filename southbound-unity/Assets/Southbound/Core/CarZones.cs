@@ -206,14 +206,56 @@ namespace Southbound.Core
         /// <summary>Texture coordinate of a slot's texel centre.</summary>
         public static (float u, float v) Uv(int slot) => ((slot % Width + 0.5f) / Width, (slot / Width + 0.5f) / Height);
 
+        /// <summary>The second texture coordinate (for the flake detail map): metres across whichever face of the
+        /// body the normal points out of (a box projection, so flakes stay the same size everywhere).</summary>
+        public static (float u, float v) FlakeUv(float x, float y, float z, float nx, float ny, float nz)
+        {
+            float ax = Math.Abs(nx), ay = Math.Abs(ny), az = Math.Abs(nz);
+            if (ax >= ay && ax >= az) return (z, y);
+            if (ay >= az) return (x, z);
+            return (x, y);
+        }
+
+        /// <summary>Metallic flake as an HDRP detail map (linear RGBA, tileable; 0.5 = no change): R lightens or
+        /// darkens the colour, G and A tilt the normal (G = y, A = x), B nudges smoothness. Each flake is a tiny
+        /// mirror at its own angle, so it catches the light on its own: the sparkle of metallic paint.</summary>
+        public static float[] FlakeDetail(int size, int seed, int cellsAcross = 96)
+        {
+            var px = new float[size * size * 4];
+            for (int i = 0; i < px.Length; i++) px[i] = 0.5f;
+            var rnd = new Mulberry32((uint)seed);
+            double cell = size / (double)cellsAcross;
+            for (int cj = 0; cj < cellsAcross; cj++)
+                for (int ci = 0; ci < cellsAcross; ci++)
+                {
+                    // a flake somewhere in its cell, a random size and tilt
+                    double fx = (ci + 0.15 + 0.7 * rnd.Next()) * cell, fy = (cj + 0.15 + 0.7 * rnd.Next()) * cell;
+                    double rad = cell * (0.22 + 0.25 * rnd.Next());
+                    double tx = (rnd.Next() - 0.5) * 1.3, ty = (rnd.Next() - 0.5) * 1.3, bright = (rnd.Next() - 0.4) * 0.35, smooth = 0.5 + rnd.Next() * 0.2;
+                    int x0 = (int)Math.Floor(fx - rad), x1 = (int)Math.Ceiling(fx + rad), y0 = (int)Math.Floor(fy - rad), y1 = (int)Math.Ceiling(fy + rad);
+                    for (int y = y0; y <= y1; y++)
+                        for (int x = x0; x <= x1; x++)
+                        {
+                            double dx = x + 0.5 - fx, dy = y + 0.5 - fy;
+                            if (dx * dx + dy * dy > rad * rad) continue;
+                            int wx = ((x % size) + size) % size, wy = ((y % size) + size) % size, o = (wy * size + wx) * 4;   // wraps: tileable
+                            px[o] = (float)Math.Max(0, Math.Min(1, 0.5 + bright));
+                            px[o + 1] = (float)Math.Max(0, Math.Min(1, 0.5 + ty * 0.5));
+                            px[o + 2] = (float)smooth;
+                            px[o + 3] = (float)Math.Max(0, Math.Min(1, 0.5 + tx * 0.5));
+                        }
+                }
+            return px;
+        }
+
         /// <summary>Fills base colour (linear rgb, a = 1), mask (HDRP: r metal, g occlusion, b detail, a smoothness) and coat mask (r) for every slot.</summary>
         public static void Fill(CarLook k, float[] baseColor, float[] mask, float[] coat)
         {
-            void Set(int slot, double r, double g, double b, double rough, double metal, double cm)
+            void Set(int slot, double r, double g, double b, double rough, double metal, double cm, double detail = 0)
             {
                 int i = slot * 4;
                 baseColor[i] = (float)r; baseColor[i + 1] = (float)g; baseColor[i + 2] = (float)b; baseColor[i + 3] = 1;
-                mask[i] = (float)metal; mask[i + 1] = 1; mask[i + 2] = 0; mask[i + 3] = (float)(1 - rough);
+                mask[i] = (float)metal; mask[i + 1] = 1; mask[i + 2] = (float)detail; mask[i + 3] = (float)(1 - rough);
                 coat[i] = coat[i + 1] = coat[i + 2] = (float)cm; coat[i + 3] = 1;
             }
             for (int s = 0; s < Texels; s++) Set(s, 0.5, 0.5, 0.5, 0.5, 0, 0);
@@ -221,11 +263,14 @@ namespace Southbound.Core
             double pr = 0.3 + (0.36 - 0.3) * m, pm = m * 0.6, pc = 1.0;
             if (rust > 0) { pc *= 1 - rust * 0.85; pr += (0.72 - pr) * rust * 0.8; pm *= 1 - rust * 0.7; }
             double[] P = { k.Paint[0], k.Paint[1], k.Paint[2] }, P2 = { k.Paint2[0], k.Paint2[1], k.Paint2[2] };
-            Set(CarZones.Paint, P[0], P[1], P[2], pr, pm, pc);
-            Set(CarZones.Paint2, P2[0], P2[1], P2[2], pr, pm, pc);
+            // metallic flake in the paint (the detail map): strong in metallic paint, a faint orange peel in solid
+            // colours, mostly gone where the paint has oxidised
+            double fl = (0.2 + 0.8 * m) * (1 - rust * 0.9);
+            Set(CarZones.Paint, P[0], P[1], P[2], pr, pm, pc, fl);
+            Set(CarZones.Paint2, P2[0], P2[1], P2[2], pr, pm, pc, fl);
             double fade = rust * 0.55;
-            Set(CarZones.PaintFaded, P[0] + (P[0] * 0.75 + 0.1 - P[0]) * fade, P[1] + (P[1] * 0.75 + 0.1 - P[1]) * fade, P[2] + (P[2] * 0.75 + 0.1 - P[2]) * fade, pr, pm, pc);
-            Set(CarZones.Paint2Faded, P2[0] + (P2[0] * 0.75 + 0.1 - P2[0]) * fade, P2[1] + (P2[1] * 0.75 + 0.1 - P2[1]) * fade, P2[2] + (P2[2] * 0.75 + 0.1 - P2[2]) * fade, pr, pm, pc);
+            Set(CarZones.PaintFaded, P[0] + (P[0] * 0.75 + 0.1 - P[0]) * fade, P[1] + (P[1] * 0.75 + 0.1 - P[1]) * fade, P[2] + (P[2] * 0.75 + 0.1 - P[2]) * fade, pr, pm, pc, fl * 0.7);
+            Set(CarZones.Paint2Faded, P2[0] + (P2[0] * 0.75 + 0.1 - P2[0]) * fade, P2[1] + (P2[1] * 0.75 + 0.1 - P2[1]) * fade, P2[2] + (P2[2] * 0.75 + 0.1 - P2[2]) * fade, pr, pm, pc, fl * 0.7);
             bool fabric = k.RoofMode > 1;
             double rc = fabric ? 0.925 : 1; // woven cloth averages a little darker
             Set(CarZones.RoofTop, k.RoofC[0] * rc, k.RoofC[1] * rc, k.RoofC[2] * rc, fabric ? 0.92 : 0.55, 0, fabric ? 0 : 0.3);
