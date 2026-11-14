@@ -204,6 +204,17 @@ the fewest additions next. Be honest in reports about what is and isn't done.
   web car space with x mirrored (driver's side -x), triangles re-wound; web heading h = Unity yaw -h
   degrees; the model's Steer + is left. Car zones are per triangle into a 16x4 palette (CarZones/
   CarPalette) handed over by MaterialPropertyBlock (CarBody). No editor here: say so in reports.
+  Photoreal pass (N1-N4): Editor builders run from CalveraBuilder.Build in order terrain, water, roads,
+  RoadMarkingBuilder, buildings, FacadeBuilder, WindowBuilder, DecalBuilder, trees, GrassBuilder. Core holds
+  everything testable: RoadNetwork.Junctions (shared by decals and road paint), RoadMarkings (paint follows the
+  ribbon's own triangles; its diagonal runs from the -side at k to the +side at k+1), BuildingWindows (the web
+  facade shader's window grid; the test checks every house/brick pane against the exported sills, keep it at
+  100%), the ray-traced room atlas (keep RayBox allocation-free: it was 55 s, now 5 s), GroundCover (tufts +
+  planting). `Building.Street` (walls facing a street, bit k = wall +z,-z,+x,-x) comes from the export.
+  To look at a Core output without Unity, build a throwaway console app in the scratchpad that compiles
+  `Assets/Southbound/Core/**/*.cs` and writes a PPM (road paint from above, room atlases, tufts): it caught a
+  missing half of the crosswalks and over-bright shops. Unity 2022.2+ only APIs (DetailPrototype.alignToGround,
+  TerrainData.SetDetailScatterMode) go behind `#if UNITY_2022_2_OR_NEWER` (the check uses 2021.3 assemblies).
 - Commit one batch at a time: if the next batch's edits are already in the tree, commit only the
   finished batch's files (and an `index.js` without the next batch's `add(...)` line), with the
   `game.js` that was built and QA'd for it.

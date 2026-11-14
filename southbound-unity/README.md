@@ -11,7 +11,7 @@ Unity Personal is free, and there are no royalties.
 
 | | Carried over | How |
 |---|---|---|
-| **Calvera** | The whole 4 km map: terrain (1025² heights, within a few millimetres of the web game's), ground cover, the Gulf, lakes and rivers, 146 roads, 407 buildings, 74 gable roofs, 47 345 trees and bushes where the web game puts them | `Data/World/`, built into a scene by **Southbound > Build Calvera scene** |
+| **Calvera** | The whole 4 km map: terrain (1025² heights, within a few millimetres of the web game's), ground cover, the Gulf, lakes and rivers, 158 roads, 507 buildings, 156 gable roofs, 47 837 trees and bushes where the web game puts them | `Data/World/`, built into a scene by **Southbound > Build Calvera scene** |
 | **Architecture** | Every cornice, parapet, shopfront pier, awning, porch, front door, roof trim, rooftop unit and window sill from the web game, merged into static meshes | `Data/World/calvera-facades.json`, built with the scene |
 | **Surfaces** | 50 photo-scanned CC0 sets as HDRP Lit materials with mask maps and parallax, plus terrain layers: the web game's 29 and 21 more for Calvera's buildings and streets (painted lap siding and stucco, four bricks, stone, concrete, shingle / clay / terracotta roofs, patched asphalt, manhole covers). Every building gets its own wall, painted in the web game's colour. Bundled at 512 px; the setup downloads the **2K / 4K / 8K originals** (45 sets automatically, 5 by hand) | `Assets/Southbound/Art/Surfaces/`, `Southbound > Materials` |
 | **Models** | John and the townspeople (MakeHuman), the 24-clip animation library, every gun, vehicles, animals, props and trees | `Assets/Southbound/Art/Models/` (glTFast imports them) |
@@ -23,6 +23,13 @@ Unity Personal is free, and there are no royalties.
 | **Rebuilds** | The burnt-house rebuild schedule (clear, slab, frame, sheath, roof, siding) | `Core/Rebuild.cs` |
 | **Cars** | All 101 bodies (the 93 catalogue models, the service vehicles, the traffic bodies), rebuilt from the web game's own body specs by the same method (distance field + surface nets, ported line for line: a test checks the mesh matches the browser's vertex for vertex), at four levels of detail with a near level finer than the browser's. Glass, lamps, grille, plates, chrome, sirens, taxi signs, two-tones, vinyl and fabric roofs and rust as in the web game's body shader. The web game's wheels (5 rim styles). 23 cars parked where the web game parks them, John's rusty pickup by the spawn | `Data/Vehicles/`, `Core/CarShape.cs`, `CarZones.cs`, `CarMeshBuilder.cs`, **Southbound > Cars** |
 | **Driving** | The web game's driving equations (acceleration, top speed, braking and reverse, steering that tightens at speed, grip, handbrake drifts, nitrous; a test checks them step for step against the browser) on a Rigidbody riding on four raycast springs. Get in and out at the driver's door, chase camera, headlights at night, brake lights, siren, horn and an engine note made in code | `Core/DriveModel.cs`, `Runtime/CarController.cs`, `Driving.cs`, `CarBody.cs` |
+| **The photoreal look** | HDRP switched on for it (volumetric clouds and fog, screen-space reflections and GI, decals, water, lens flares) and one Volume: a physically based sky tuned for humid Gulf air, real volumetric cumulus with their shadows, kilometres of haze with light shafts, eye-like auto exposure, contact and micro shadows, ACES with a light filmic grade. The sun and moon move with the game clock for Calvera's latitude, a starfield and Milky Way at night, moon phases. **F10** is photo mode: time stops and HDRP's path tracer takes over (DirectX 12 and an RTX card) | `Editor/PhotoLook.cs` (**Southbound > Look > Make it photoreal**), `Runtime/DayNight.cs`, `PhotoMode.cs`, `Core/NightSky.cs` |
+| **Water** | HDRP's water system: the Gulf as an endless ocean surface, Lake Arden, the pond and every lake at its own level with their shores, rivers as sloped meshes | `Core/WaterBodies.cs`, `Editor/WaterLook.cs` |
+| **Wear and tear** | 3 300 HDRP decals: oil in the lanes, crack networks, skid marks at the junctions, manhole covers (photo-scanned), grime creeping up the foot of every wall | `Core/Decals.cs`, `Editor/DecalBuilder.cs` |
+| **Road paint** | The web game's markings as real geometry 1.5 cm above the asphalt: double and dashed yellow centre lines, white edge and parking lines with stall ticks, a zebra crosswalk and a stop bar on every approach to a junction. Worn paint (the asphalt shows through, oil and skids land on top) | `Core/RoadMarkings.cs`, `Editor/RoadMarkingBuilder.cs` |
+| **Windows** | 13 500 windows and 2 100 shopfront bays exactly where the web game draws them (a test checks every one against the web game's sills): smooth dark glass that takes HDRP's reflections, a frame and glazing bars, and behind each one of 64 rooms or 32 shops ray-traced into an atlas (living rooms, bedrooms, kitchens, studies; grocery, clothing, café, pharmacy, salon, office). By day the rooms are dark behind the reflections; at night some of them are lit, and the evening ones go dark late at night | `Core/BuildingWindows.cs`, `Editor/WindowBuilder.cs`, `Runtime/NightWindows.cs` |
+| **Car paint** | Clear coat over metallic flake: a detail map of tiny tilted mirrors the same half-millimetre size on every panel, strong in metallic paint, a hint of orange peel in solid colours, gone where the paint has oxidised | `Core/CarZones.cs` (FlakeDetail), `Editor/CarFactory.cs` |
+| **Grass** | Real 3D tufts of thin, leaning strands (the web game's shape) as instanced terrain detail: meadow green, tall dry straw and short verges along the roads, planted from the web game's ground cover, never on roads, buildings, water or rock | `Core/GroundCover.cs`, `Editor/GrassBuilder.cs` |
 
 There is also a **penetration range** next to the spawn: walls of every material
 with targets behind them (the one behind the drywall wears a level III plate).
@@ -110,9 +117,11 @@ ambientCG and Poly Haven set to prove the downloader still works.
    with the wound model and armour.
 3. **Interiors**: shops, houses and the hideout, with HDRP decals for the holes.
 4. **Missions, jobs, shops and the phone** on top of the save, which already carries over.
-5. **HUD** in UI Toolkit, and HDRP's water system for the Gulf and Lake Arden.
-6. **The web game's shaders** in HDRP: car paint flakes, panel gaps, dirt and rain
-   beads; interior-mapped windows; wet roads and puddles; terrain blending; grass.
+5. **HUD** in UI Toolkit.
+6. **The rest of the web game's shaders** in HDRP: panel gaps, dirt and rain beads on
+   the cars; wet roads and puddles; the far crowd.
+7. **The rest of the street**: front yards, utility poles and wires, street lights,
+   signs, litter and clutter.
 
 ## Troubleshooting
 

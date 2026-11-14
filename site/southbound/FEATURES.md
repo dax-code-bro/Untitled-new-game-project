@@ -93,6 +93,11 @@ web game's shaders in HDRP (car paint flakes/gaps/dirt/rain, interior-mapped win
 puddles, terrain blending, grass, the far crowd). Nothing in Unity is run in this container (no editor
 licence): the C# tests (`dotnet test southbound-unity/Tools/CoreTests`) and the compile check against
 Unity's assemblies are what verify it.
+Overnight 2026-11-14 (the owner: "import everything into Unity, as photoreal as possible"): N1 the
+photoreal look (sky, clouds, fog, exposure, SSR/SSGI, day/night, path-traced photo mode on F10), N2 HDRP
+water, N3 50 photo-scanned surfaces + 3 300 wear decals, N4 road paint, real windows with lit rooms on
+every building, metallic flake in the car paint, 3D grass. Next: N5 the rest of the street (yards, poles
+and wires, street lights, signs, clutter), then U1b/U2/U3.
 
 ## The owner's list after watching them play (2026-11-09) — do in this order
 

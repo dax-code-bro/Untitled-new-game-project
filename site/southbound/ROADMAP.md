@@ -1393,7 +1393,25 @@ rain and storm, interiors, first person and in cars. Highlights:
         open, damage, fuel, traffic AI. Panel gaps, paint flakes, dirt and rain beads wait for the
         HDRP car shader (U4). Not run inside the Unity editor here (no licence in this container):
         checked by the C# tests and the compile check against Unity's assemblies
-- [ ] People and police AI, interiors, missions and jobs, HUD, HDRP water, the web game's shaders
+- [x] N1-N4, overnight (the owner: "import everything into Unity to make everything look as photoreal as
+      possible"; original shaders and CC0 textures, nothing copied):
+  - [x] N1 the look: HDRP features, one Volume (physically based sky for humid Gulf air, volumetric
+        clouds with shadows, volumetric haze, auto exposure, SSR + SSGI + AO, contact/micro shadows, ACES
+        grade), sun and moon on the game clock at latitude 29.7, stars and Milky Way, F10 path-traced
+        photo mode
+  - [x] N2 water: HDRP WaterSurface ocean, every lake at its own level, sloped rivers
+  - [x] N3 surfaces and wear: 21 more photo-scanned CC0 sets (50), every building its own painted wall
+        and roof, new asphalt per road kind, height-blended terrain, 3 300 decals (oil, cracks, skids,
+        manholes, wall grime)
+  - [x] N4 road paint as geometry (crosswalks, stop bars, parking ticks); real windows on every
+        building (15 600 panes on the web game's grid, checked sill for sill) with 96 ray-traced rooms
+        and shops lit at night; metallic flake in the car paint; real 3D grass tufts on the terrain
+  - [x] The world re-exported with each wall's street-facing bit (and the web game's terrain fixes)
+  - Nothing here has been run inside the Unity editor (none in this container): the C# tests (90)
+        and the compile check against Unity's assemblies verify it; HDRP is reached by reflection and
+        anything an HDRP version lacks is skipped with a note in the console
+- [ ] N5 the rest of the street (yards, poles and wires, street lights, signs, clutter)
+- [ ] People and police AI, interiors, missions and jobs, HUD, the rest of the web game's shaders
 
 ## Phase 3 — Content catalogs (targets)
 
