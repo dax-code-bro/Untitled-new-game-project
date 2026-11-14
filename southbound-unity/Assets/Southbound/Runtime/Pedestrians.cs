@@ -24,6 +24,8 @@ namespace Southbound
 
         sealed class Walker { public GameObject go; public Retargeter rt; public int path; public float s, dir, speed; public bool talking; public float y; }
         readonly List<Walker> walkers = new List<Walker>();
+        /// <summary>Where the townspeople are this frame (for traffic to stop for them).</summary>
+        public static readonly List<Vector3> Positions = new List<Vector3>();
         float[] cum;   // cumulative distance at each point
 
         void Start()
@@ -85,6 +87,8 @@ namespace Southbound
             if (cum == null) return;
             var cam = Camera.main != null ? Camera.main.transform.position : transform.position;
             int active = Mathf.RoundToInt(count * (1 - 0.65f * DayNight.Night));
+            Positions.Clear();
+            foreach (var w0 in walkers) if (w0.go.activeSelf) Positions.Add(w0.go.transform.position);
             for (int n = 0; n < walkers.Count; n++)
             {
                 var w = walkers[n];

@@ -1422,6 +1422,7 @@ rain and storm, interiors, first person and in cars. Highlights:
       rain streaks, lightning with thunder made in code; F8 cycles it
 - [x] N7 150 box-projected reflection probes down the town's street canyons (Southbound > Look > Bake reflections)
 - [x] N8 ambient townspeople: 40 MakeHuman people walking 30 km of town pavements round the player (no AI yet)
+- [x] N9 ambient traffic: 26 catalogue cars on 316 linked right-hand lanes, following, braking for you and for pedestrians, lights
 - [ ] People and police AI, interiors, missions and jobs, HUD, the rest of the web game's shaders
 
 ## Phase 3 — Content catalogs (targets)

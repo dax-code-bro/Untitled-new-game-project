@@ -175,3 +175,40 @@ namespace Southbound.Tests
         }
     }
 }
+
+namespace Southbound.Tests
+{
+    public class LaneTests
+    {
+        [Test]
+        public void Traffic_keeps_right_and_carries_on_through_junctions()
+        {
+            var w = CalveraWorld.Load(CalveraWorld.DefaultFolder(TestFiles.ProjectRoot));
+            var lanes = Lanes.Build(w);
+            int linked = lanes.Count(l => l.Next.Count > 0);
+            TestContext.WriteLine($"{lanes.Count} lanes, {linked} carry on somewhere, {lanes.Sum(l => l.Length) / 1000:F1} km");
+            Assert.That(lanes.Count, Is.GreaterThan(w.Roads.Count));
+            Assert.That(linked, Is.GreaterThan(lanes.Count / 2));
+            foreach (var l in lanes)
+            {
+                var r = w.Roads[l.Road];
+                // on the right of the direction of travel: the cross product of heading and (lane - centre) is negative
+                var (x, z, dx, dz) = Lanes.At(l, l.Length / 2);
+                double best = double.MaxValue, cx = 0, cz = 0;
+                for (int k = 1; k < r.Points.Count; k++)
+                {
+                    var (ax, az) = r.Points[k - 1]; var (bx, bz) = r.Points[k];
+                    double vx = bx - ax, vz = bz - az, l2 = vx * vx + vz * vz; if (l2 < 1e-9) continue;
+                    double t = Math.Max(0, Math.Min(1, ((x - ax) * vx + (z - az) * vz) / l2));
+                    double px = ax + vx * t, pz = az + vz * t, d = (x - px) * (x - px) + (z - pz) * (z - pz);
+                    if (d < best) { best = d; cx = px; cz = pz; }
+                }
+                double ox = x - cx, oz = z - cz;
+                // right of heading (dx, dz) is (-dz, dx)
+                Assert.That(ox * -dz + oz * dx, Is.GreaterThan(0), "keeps right");
+                Assert.That(Math.Sqrt(best), Is.LessThan(r.Width / 2), "on the carriageway");
+                foreach (int n in l.Next) Assert.That(!(lanes[n].Road == l.Road && lanes[n].Forward != l.Forward), "no U-turns");
+            }
+        }
+    }
+}

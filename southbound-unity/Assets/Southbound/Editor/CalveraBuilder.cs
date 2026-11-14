@@ -70,6 +70,8 @@ namespace Southbound.EditorTools
                 BuildRange(john.transform.position, john.transform.forward);
                 EditorUtility.DisplayProgressBar("Southbound", "Parked cars", 0.94f);
                 CarFactory.PlaceParked(dataDir);
+                EditorUtility.DisplayProgressBar("Southbound", "Traffic", 0.96f);
+                TrafficBuilder.Build(world);
 
                 EditorSceneManager.SaveScene(scene, ScenePath);
                 AddToBuildSettings(ScenePath);
