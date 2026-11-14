@@ -1,6 +1,6 @@
 // Exports Southbound's art and data into the Unity project (southbound-unity/).
 //
-//   node tools/southbound/export-unity.mjs [textures] [mirror] [models] [catalog] [world] [cars] [parked]
+//   node tools/southbound/export-unity.mjs [textures] [mirror] [models] [catalog] [world] [cars] [parked] [street]
 //
 // With no arguments it runs every step.
 //
@@ -27,12 +27,16 @@
 //           Runs carbuilder.js in a tiny headless page (no game load: seconds).
 // parked    runs the web game headless and lists the cars parked along Calvera's streets and in the
 //           driveways (Data/World/calvera-parked.json).
+// street    everything else on the streets (sidewalks, kerbs, lights, poles and wires, palms, yards, fences,
+//           storefronts, signs, billboards, clutter): geometry, materials, textures and every instance
+//           (Data/World/calvera-street.json + street-tex/; see unity-street.mjs).
 import fs from 'node:fs';
 import path from 'node:path';
 import http from 'node:http';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 import sharp from 'sharp';
+import { exportStreet } from './unity-street.mjs';
 
 const require = createRequire(import.meta.url);
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -535,3 +539,4 @@ if (want('catalog')) await exportCatalog();
 if (want('world')) await exportWorld();
 if (want('cars')) await exportCars();
 if (want('parked')) await exportParked();
+if (want('street')) await exportStreet({ repo, game, unity });

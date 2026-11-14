@@ -215,6 +215,11 @@ the fewest additions next. Be honest in reports about what is and isn't done.
   `Assets/Southbound/Core/**/*.cs` and writes a PPM (road paint from above, room atlases, tufts): it caught a
   missing half of the crosswalks and over-bright shops. Unity 2022.2+ only APIs (DetailPrototype.alignToGround,
   TerrainData.SetDetailScatterMode) go behind `#if UNITY_2022_2_OR_NEWER` (the check uses 2021.3 assemblies).
+  The street step (`tools/southbound/unity-street.mjs`) exports by tag `file:variable` from an instrumented
+  bundle it builds itself (an esbuild onLoad plugin wraps `new THREE.Mesh/InstancedMesh/Line...` in
+  src/world/*.js and names surface textures as they load); its MODULES/SKIP lists say what goes. A new world
+  module needs adding there; a surface the web game draws in its own shader needs a line in
+  StreetData.SurfaceFor. Unity front faces: `Vector3.Cross(b - a, c - a)` points out of them.
 - Commit one batch at a time: if the next batch's edits are already in the tree, commit only the
   finished batch's files (and an `index.js` without the next batch's `add(...)` line), with the
   `game.js` that was built and QA'd for it.

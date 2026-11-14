@@ -96,8 +96,8 @@ Unity's assemblies are what verify it.
 Overnight 2026-11-14 (the owner: "import everything into Unity, as photoreal as possible"): N1 the
 photoreal look (sky, clouds, fog, exposure, SSR/SSGI, day/night, path-traced photo mode on F10), N2 HDRP
 water, N3 50 photo-scanned surfaces + 3 300 wear decals, N4 road paint, real windows with lit rooms on
-every building, metallic flake in the car paint, 3D grass. Next: N5 the rest of the street (yards, poles
-and wires, street lights, signs, clutter), then U1b/U2/U3.
+every building, metallic flake in the car paint, 3D grass; N5 the rest of the street (26 400 pieces: sidewalks,
+lights that come on at dusk, poles and wires, palms, yards, signs, clutter). Next: U1b/U2/U3.
 
 ## The owner's list after watching them play (2026-11-09) — do in this order
 

@@ -54,6 +54,8 @@ namespace Southbound.EditorTools
                 WindowBuilder.Build(world);
                 EditorUtility.DisplayProgressBar("Southbound", "Street and wall wear (decals)", 0.66f);
                 DecalBuilder.Build(world);
+                EditorUtility.DisplayProgressBar("Southbound", "The street: sidewalks, lights, poles, yards, signs", 0.68f);
+                StreetBuilder.Build(dataDir);
                 EditorUtility.DisplayProgressBar("Southbound", "Trees", 0.7f);
                 Vegetation.Plant(world, terrain);
                 EditorUtility.DisplayProgressBar("Southbound", "Grass", 0.8f);

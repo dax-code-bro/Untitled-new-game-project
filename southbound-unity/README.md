@@ -29,6 +29,7 @@ Unity Personal is free, and there are no royalties.
 | **Road paint** | The web game's markings as real geometry 1.5 cm above the asphalt: double and dashed yellow centre lines, white edge and parking lines with stall ticks, a zebra crosswalk and a stop bar on every approach to a junction. Worn paint (the asphalt shows through, oil and skids land on top) | `Core/RoadMarkings.cs`, `Editor/RoadMarkingBuilder.cs` |
 | **Windows** | 13 500 windows and 2 100 shopfront bays exactly where the web game draws them (a test checks every one against the web game's sills): smooth dark glass that takes HDRP's reflections, a frame and glazing bars, and behind each one of 64 rooms or 32 shops ray-traced into an atlas (living rooms, bedrooms, kitchens, studies; grocery, clothing, café, pharmacy, salon, office). By day the rooms are dark behind the reflections; at night some of them are lit, and the evening ones go dark late at night | `Core/BuildingWindows.cs`, `Editor/WindowBuilder.cs`, `Runtime/NightWindows.cs` |
 | **Car paint** | Clear coat over metallic flake: a detail map of tiny tilted mirrors the same half-millimetre size on every panel, strong in metallic paint, a hint of orange peel in solid colours, gone where the paint has oxidised | `Core/CarZones.cs` (FlakeDetail), `Editor/CarFactory.cs` |
+| **The street** | Everything else on Calvera's streets, carried over from the running web game: sidewalks (concrete pavers), kerbs, intersections, bridges, 505 street lights and 203 porch lanterns (real HDRP lights that come on at dusk), 199 utility poles with their wires and service drops, 196 palms and 981 palmetto clumps, front yards (walks, driveways, picket fences, mailboxes, bins, AC units, porch chairs, hoops), chain-link fences, gutters, rooftop units, storefronts, 1 600 shop signs, billboards, wayfinding and street-name signs, benches, hydrants, drains and litter: 26 400 pieces | `Data/World/calvera-street.json`, `Core/StreetData.cs`, `Editor/StreetBuilder.cs`, `Runtime/StreetLights.cs` |
 | **Grass** | Real 3D tufts of thin, leaning strands (the web game's shape) as instanced terrain detail: meadow green, tall dry straw and short verges along the roads, planted from the web game's ground cover, never on roads, buildings, water or rock | `Core/GroundCover.cs`, `Editor/GrassBuilder.cs` |
 
 There is also a **penetration range** next to the spawn: walls of every material
@@ -100,6 +101,7 @@ node tools/southbound/export-unity.mjs            # everything
 node tools/southbound/export-unity.mjs world      # Calvera only (runs the game headless)
 node tools/southbound/export-unity.mjs textures mirror models catalog
 node tools/southbound/export-unity.mjs cars parked   # car specs, wheels, parity fixture; parked cars
+node tools/southbound/export-unity.mjs street   # sidewalks, lights, poles, palms, yards, signs, clutter
 dotnet test southbound-unity/Tools/CoreTests --filter "Category!=Online"
 ```
 
@@ -120,8 +122,8 @@ ambientCG and Poly Haven set to prove the downloader still works.
 5. **HUD** in UI Toolkit.
 6. **The rest of the web game's shaders** in HDRP: panel gaps, dirt and rain beads on
    the cars; wet roads and puddles; the far crowd.
-7. **The rest of the street**: front yards, utility poles and wires, street lights,
-   signs, litter and clutter.
+7. **Street props as real models**: the street pieces are the web game's own simple
+   shapes; photo-scanned or modelled hydrants, mailboxes, benches and poles would be next.
 
 ## Troubleshooting
 

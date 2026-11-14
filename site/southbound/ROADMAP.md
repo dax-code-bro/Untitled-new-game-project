@@ -1410,7 +1410,13 @@ rain and storm, interiors, first person and in cars. Highlights:
   - Nothing here has been run inside the Unity editor (none in this container): the C# tests (90)
         and the compile check against Unity's assemblies verify it; HDRP is reached by reflection and
         anything an HDRP version lacks is skipped with a note in the console
-- [ ] N5 the rest of the street (yards, poles and wires, street lights, signs, clutter)
+- [x] N5 the rest of the street: `export-unity.mjs street` runs the web game from an instrumented copy of the
+      bundle (every world mesh tagged by module and variable; the shipped game.js untouched), sweeps the camera
+      over every road so near-camera instancing hands over all its instances, and carries 26 400 pieces:
+      sidewalks, kerbs, intersections, bridges, street lights and porch lanterns (real lights at dusk), utility
+      poles and wires, palms, yards, chain-link, gutters, rooftop units, storefronts, shop and street signs,
+      billboards, benches, hydrants, drains, litter. Baked per 256 m square (heavy repeated pieces as shared
+      meshes with an LOD cull), colliders on the solid ones
 - [ ] People and police AI, interiors, missions and jobs, HUD, the rest of the web game's shaders
 
 ## Phase 3 — Content catalogs (targets)
