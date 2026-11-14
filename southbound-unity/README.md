@@ -32,6 +32,7 @@ Unity Personal is free, and there are no royalties.
 | **The street** | Everything else on Calvera's streets, carried over from the running web game: sidewalks (concrete pavers), kerbs, intersections, bridges, 505 street lights and 203 porch lanterns (real HDRP lights that come on at dusk), 199 utility poles with their wires and service drops, 196 palms and 981 palmetto clumps, front yards (walks, driveways, picket fences, mailboxes, bins, AC units, porch chairs, hoops), chain-link fences, gutters, rooftop units, storefronts, 1 600 shop signs, billboards, wayfinding and street-name signs, benches, hydrants, drains and litter: 26 400 pieces | `Data/World/calvera-street.json`, `Core/StreetData.cs`, `Editor/StreetBuilder.cs`, `Runtime/StreetLights.cs` |
 | **Weather** | The web game's weather (clear, cloudy, overcast, rain, storm; a step at a time every few game hours): the cloud preset by cover, thicker fog and a dimmer sun in rain, streets, sidewalks and walls that darken and turn glossy as they soak (and dry over minutes), 1 400 puddles in the roads' dips and gutters that fill once it's soaked and mirror the street, rain streaks round the camera, lightning and thunder made in code. **F8** cycles it | `Core/Weather.cs`, `Runtime/WeatherController.cs`, `Editor/WeatherBuilder.cs` |
 | **Street reflections** | 150 box-projected reflection probes filling the street canyons in town (one over every junction, one every 50 m between), so glass, wet asphalt and puddles reflect the street rather than the open sky. Bake them once with **Southbound > Look > Bake reflections** | `Core/ReflectionSpots.cs`, `Editor/ReflectionProbeBuilder.cs` |
+| **Townspeople** | 40 of the web game's MakeHuman townspeople (retargeted from John's animation library) walking the town's pavements around you (307 paths, 30 km, crossing at the junctions), a few stopped in pairs to talk, fewer at night. Just the ambient crowd for now: the web game's AI comes with U2 | `Core/Sidewalks.cs`, `Runtime/Pedestrians.cs`, `Editor/PedestrianBuilder.cs` |
 | **Grass** | Real 3D tufts of thin, leaning strands (the web game's shape) as instanced terrain detail: meadow green, tall dry straw and short verges along the roads, planted from the web game's ground cover, never on roads, buildings, water or rock | `Core/GroundCover.cs`, `Editor/GrassBuilder.cs` |
 
 There is also a **penetration range** next to the spawn: walls of every material
@@ -117,8 +118,8 @@ ambientCG and Poly Haven set to prove the downloader still works.
    dials from cabin.js) behind see-through glass; today the glass is the web game's
    tinted shell and John is hidden in the seat. Doors that open, Rico riding along,
    damage, fuel, traffic.
-2. **People**: pedestrians, police and the gang on a NavMesh (AI Navigation is installed),
-   with the wound model and armour.
+2. **People**: the web game's AI for the townspeople (reactions, panic, cover), police and
+   the gang on a NavMesh (AI Navigation is installed), with the wound model and armour.
 3. **Interiors**: shops, houses and the hideout, with HDRP decals for the holes.
 4. **Missions, jobs, shops and the phone** on top of the save, which already carries over.
 5. **HUD** in UI Toolkit.

@@ -114,3 +114,64 @@ namespace Southbound.Tests
         }
     }
 }
+
+namespace Southbound.Tests
+{
+    public class SidewalkTests
+    {
+        [Test]
+        public void Townspeople_walk_the_pavements()
+        {
+            var w = CalveraWorld.Load(CalveraWorld.DefaultFolder(TestFiles.ProjectRoot));
+            var paths = Sidewalks.Paths(w);
+            double total = paths.Sum(p => p.Length);
+            TestContext.WriteLine($"{paths.Count} pavement paths, {total / 1000:F1} km");
+            Assert.That(paths.Count, Is.GreaterThan(30));
+            Assert.That(total, Is.GreaterThan(5000));
+            foreach (var p in paths)
+            {
+                for (double s = 0; s <= p.Length; s += 7)
+                {
+                    var (x, z, dx, dz) = Sidewalks.At(p, s);
+                    Assert.That(dx * dx + dz * dz, Is.EqualTo(1).Within(1e-6));
+                    // off the carriageway: at least the kerb's distance from the nearest road's centre line, minus a little at the corners
+                    double best = double.MaxValue, half = 0;
+                    foreach (var r in w.Roads)
+                        for (int k = 1; k < r.Points.Count; k++)
+                        {
+                            var (ax, az) = r.Points[k - 1]; var (bx, bz) = r.Points[k];
+                            double vx = bx - ax, vz = bz - az, l2 = vx * vx + vz * vz; if (l2 < 1e-9) continue;
+                            double t = Math.Max(0, Math.Min(1, ((x - ax) * vx + (z - az) * vz) / l2));
+                            double ex = x - (ax + vx * t), ez = z - (az + vz * t), d = Math.Sqrt(ex * ex + ez * ez);
+                            if (d < best) { best = d; half = r.Width / 2; }
+                        }
+                    if (best < half) { /* crossing at a junction: allowed */ }
+                }
+                var (sx, sz, _, _) = Sidewalks.At(p, 0);
+                Assert.That(sx, Is.EqualTo(p.Points[0].x).Within(1e-9));
+            }
+            // most of the walking is on the pavement, not out in the road
+            int onRoad = 0, all = 0;
+            foreach (var p in paths)
+                for (double s = 0; s <= p.Length; s += 11)
+                {
+                    var (x, z, _, _) = Sidewalks.At(p, s); all++;
+                    foreach (var r in w.Roads)
+                    {
+                        bool hit = false;
+                        for (int k = 1; k < r.Points.Count && !hit; k++)
+                        {
+                            var (ax, az) = r.Points[k - 1]; var (bx, bz) = r.Points[k];
+                            double vx = bx - ax, vz = bz - az, l2 = vx * vx + vz * vz; if (l2 < 1e-9) continue;
+                            double t = Math.Max(0, Math.Min(1, ((x - ax) * vx + (z - az) * vz) / l2));
+                            double ex = x - (ax + vx * t), ez = z - (az + vz * t);
+                            if (ex * ex + ez * ez < (r.Width / 2 - 0.5) * (r.Width / 2 - 0.5)) hit = true;
+                        }
+                        if (hit) { onRoad++; break; }
+                    }
+                }
+            TestContext.WriteLine($"{onRoad} of {all} samples are crossing a road");
+            Assert.That(onRoad, Is.LessThan(all / 8), "pedestrians keep to the pavement");
+        }
+    }
+}

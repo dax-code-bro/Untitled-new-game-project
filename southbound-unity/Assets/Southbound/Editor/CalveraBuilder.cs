@@ -66,6 +66,7 @@ namespace Southbound.EditorTools
                 EditorUtility.DisplayProgressBar("Southbound", "Sun, sky and John", 0.9f);
                 var sun = BuildLighting();
                 var john = BuildPlayer(world, sun);
+                PedestrianBuilder.Build(world);
                 BuildRange(john.transform.position, john.transform.forward);
                 EditorUtility.DisplayProgressBar("Southbound", "Parked cars", 0.94f);
                 CarFactory.PlaceParked(dataDir);
