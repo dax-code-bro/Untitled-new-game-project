@@ -1423,6 +1423,7 @@ rain and storm, interiors, first person and in cars. Highlights:
 - [x] N7 150 box-projected reflection probes down the town's street canyons (Southbound > Look > Bake reflections)
 - [x] N8 ambient townspeople: 40 MakeHuman people walking 30 km of town pavements round the player (no AI yet)
 - [x] N9 ambient traffic: 26 catalogue cars on 316 linked right-hand lanes, following, braking for you and for pedestrians, lights
+- [x] N10 see-through car glass with the web game's cabins behind it (exported per body) and the shell lined inside; shop signs and billboards lit at night
 - [ ] People and police AI, interiors, missions and jobs, HUD, the rest of the web game's shaders
 
 ## Phase 3 — Content catalogs (targets)

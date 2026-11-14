@@ -386,7 +386,7 @@ import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import { LAND, PAINTS as SHOP_PAINTS } from '/src/assets/catalog.js';
 import { VEHICLES } from '/src/assets/library.js';
 import { bodySDF, wheelGeometryRaw, surfaceNets, specOf, hasSpec, FIXED_PAINT, SECOND_PAINT, SPECS_ALL } from '/src/assets/carbuilder.js';
-import { cabinLayout } from '/src/assets/cabin.js';
+import { cabinLayout, buildInterior, wheelGeometryCab } from '/src/assets/cabin.js';
 window.__run = () => {
   const clean = (o) => JSON.parse(JSON.stringify(o));
   // every procedural car the game can put on the road: the catalogue plus the base bodies traffic uses
@@ -481,7 +481,34 @@ window.__run = () => {
     }
     return { id, t, runs };
   });
-  return { cars, roadPaints, shopPaints: SHOP_PAINTS, wheels, wheelRef: { Rw: RW, tw: TW }, parity: { shapes, drives } };
+  // ---- cabins: each body's interior (cabin.js buildInterior: dash, dials, console, seats, bench, belts, visors,
+  // mirror), indexed and quantized to the millimetre with a small palette (colour, roughness, metalness), and
+  // the steering wheel in its own frame (placed per car by cabin.wheel)
+  const pack = (g, scale) => {
+    g = mergeVertices(g, 1e-5);
+    const P = g.attributes.position, N = g.attributes.normal, C = g.attributes.color, M = g.attributes.aRM;
+    const pal = [], key = new Map(), pi = new Uint8Array(P.count), pos = new Int16Array(P.count * 3), nrm = new Int8Array(P.count * 3);
+    for (let i = 0; i < P.count; i++) {
+      const e = [C ? C.getX(i) : 0.1, C ? C.getY(i) : 0.1, C ? C.getZ(i) : 0.1, M ? M.getX(i) : 0.8, M ? M.getY(i) : 0].map((v) => Math.round(v * 1000) / 1000), k = e.join(',');
+      if (!key.has(k)) { key.set(k, pal.length); pal.push(e); }
+      pi[i] = Math.min(255, key.get(k));
+      pos[i * 3] = Math.round(P.getX(i) / scale); pos[i * 3 + 1] = Math.round(P.getY(i) / scale); pos[i * 3 + 2] = Math.round(P.getZ(i) / scale);
+      const nl = N ? Math.hypot(N.getX(i), N.getY(i), N.getZ(i)) || 1 : 1;
+      if (N) { nrm[i * 3] = Math.round(N.getX(i) / nl * 127); nrm[i * 3 + 1] = Math.round(N.getY(i) / nl * 127); nrm[i * 3 + 2] = Math.round(N.getZ(i) / nl * 127); }
+    }
+    const idx = g.index.array, ix = P.count < 65536 ? new Uint16Array(idx) : new Uint32Array(idx);
+    return { verts: P.count, tris: idx.length / 3, posScale: scale, palette: pal, pos: b64(pos), nrm: b64(nrm), pal: b64(pi), idx: b64(ix), idx32: !(ix instanceof Uint16Array) };
+  };
+  const cabins = {};
+  for (const c of cars) {
+    const g = buildInterior(specOf(c.id));
+    if (!g) continue;
+    if (!g.attributes.normal) g.computeVertexNormals();
+    cabins[c.id] = pack(g, 1e-3);
+  }
+  const wg = wheelGeometryCab(); if (!wg.attributes.normal) wg.computeVertexNormals();
+  const steering = pack(wg, 1e-4);
+  return { cars, roadPaints, shopPaints: SHOP_PAINTS, wheels, wheelRef: { Rw: RW, tw: TW }, parity: { shapes, drives }, cabins, steering };
 };
 window.__ready = true;
 </script>` },
@@ -497,9 +524,11 @@ window.__ready = true;
   mkdir(out); mkdir(fx);
   fs.writeFileSync(path.join(out, 'cars.json'), JSON.stringify({ cars: data.cars, roadPaints: data.roadPaints, shopPaints: data.shopPaints }));
   fs.writeFileSync(path.join(out, 'wheels.json'), JSON.stringify({ ref: data.wheelRef, styles: data.wheels }));
+  fs.writeFileSync(path.join(out, 'cabins.json'), JSON.stringify({ steering: data.steering, cars: data.cabins }));
   fs.writeFileSync(path.join(fx, 'cars-parity.json'), JSON.stringify(data.parity));
   const kb = (f) => (fs.statSync(f).size / 1024).toFixed(0) + ' KB';
   console.log(`cars: ${data.cars.length} bodies (${kb(path.join(out, 'cars.json'))}), wheels ${data.wheels.length} styles x 3 levels (${kb(path.join(out, 'wheels.json'))}), parity: ${data.parity.shapes.length} shapes, ${data.parity.drives.length} drive sets`);
+  console.log(`cars: ${Object.keys(data.cabins).length} cabins (${kb(path.join(out, 'cabins.json'))})`);
 }
 
 // ---------------------------------------------------------------- parked cars

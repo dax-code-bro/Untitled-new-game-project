@@ -180,6 +180,29 @@ namespace Southbound.Tests
         }
 
         [Test]
+        public void Every_car_has_its_cabin()
+        {
+            var cab = CabinSet.Load(CabinSet.DefaultFile(TestFiles.ProjectRoot));
+            if (cab.Cars.Count == 0) Assert.Ignore("no cabins.json (export-unity.mjs cars)");
+            TestContext.WriteLine($"{cab.Cars.Count} cabins, steering wheel {cab.Steering.Vertices} vertices");
+            Assert.That(cab.Steering.Vertices, Is.GreaterThan(100));
+            foreach (var id in new[] { "sedan", "police", "pickup_02", "van_01" })
+            {
+                var car = Cat[id]; var c = cab.Cars[id]; var s = car.Spec;
+                Assert.That(c.Indices.Length / 3, Is.EqualTo(c.Triangles));
+                Assert.That(c.Indices.All(i => i >= 0 && i < c.Positions.Length / 3));
+                Assert.That(c.Part.All(p => p < c.Palette.Length));
+                // inside the body: within its width, under its roof, above its floor
+                for (int i = 0; i < c.Positions.Length; i += 3)
+                {
+                    Assert.That(Math.Abs(c.Positions[i]), Is.LessThan(s.W / 2 + 0.05), id + " cabin within the body's width");
+                    Assert.That(c.Positions[i + 1], Is.InRange(s.Ride - 0.05, s.Roof + 0.05), id + " between floor and roof");
+                    Assert.That(Math.Abs(c.Positions[i + 2]), Is.LessThan(s.L / 2), id + " within its length");
+                }
+            }
+        }
+
+        [Test]
         public void Metallic_paint_has_flakes()
         {
             // the detail mask (mask blue) is on the paint, stronger for metallic paint, never on glass or chrome

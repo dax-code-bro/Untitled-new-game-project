@@ -45,6 +45,34 @@ namespace Southbound.Core
         /// <summary>The rim style a car's spoke count picks (the nearest exported one).</summary>
         public WheelStyle Style(int spokes) => Styles.FirstOrDefault(s => s.Spokes == spokes) ?? Styles.OrderBy(s => Math.Abs(s.Spokes - spokes)).FirstOrDefault();
 
+        /// <summary>A mesh in the export's packed form (positions in posScale steps as int16, normals as int8/127, a
+        /// palette index per vertex, 16- or 32-bit indices): the wheels and the car cabins.</summary>
+        public static WheelLevel Decode(Dictionary<string, object> lv)
+        {
+            double ps = lv.Num("posScale", 1e-4);
+            var pos = Convert.FromBase64String(lv.Text("pos"));
+            var nrm = Convert.FromBase64String(lv.Text("nrm"));
+            var pal = Convert.FromBase64String(lv.Text("pal"));
+            var idxB = Convert.FromBase64String(lv.Text("idx"));
+            int n = pos.Length / 6;
+            var w = new WheelLevel
+            {
+                Level = (int)lv.Num("level"), Vertices = (int)lv.Num("verts"), Triangles = (int)lv.Num("tris"),
+                Palette = lv.Arr("palette").Select(p => ((List<object>)p).Select(o => (double)o).ToArray()).ToArray(),
+                Positions = new float[n * 3], Normals = new float[n * 3], Part = pal,
+            };
+            for (int i = 0; i < n * 3; i++)
+            {
+                w.Positions[i] = (float)(BitConverter.ToInt16(pos, i * 2) * ps);
+                w.Normals[i] = (sbyte)nrm[i] / 127f;
+            }
+            bool i32 = lv.Flag("idx32");
+            int ni = idxB.Length / (i32 ? 4 : 2);
+            w.Indices = new int[ni];
+            for (int i = 0; i < ni; i++) w.Indices[i] = i32 ? BitConverter.ToInt32(idxB, i * 4) : BitConverter.ToUInt16(idxB, i * 2);
+            return w;
+        }
+
         public static WheelSet Parse(string json)
         {
             var root = MiniJson.Parse(json) as Dictionary<string, object>;
@@ -54,33 +82,28 @@ namespace Southbound.Core
             foreach (Dictionary<string, object> st in root.Arr("styles"))
             {
                 var levels = new List<WheelLevel>();
-                foreach (Dictionary<string, object> lv in st.Arr("levels"))
-                {
-                    double ps = lv.Num("posScale", 1e-4);
-                    var pos = Convert.FromBase64String(lv.Text("pos"));
-                    var nrm = Convert.FromBase64String(lv.Text("nrm"));
-                    var pal = Convert.FromBase64String(lv.Text("pal"));
-                    var idxB = Convert.FromBase64String(lv.Text("idx"));
-                    int n = pos.Length / 6;
-                    var w = new WheelLevel
-                    {
-                        Level = (int)lv.Num("level"), Vertices = (int)lv.Num("verts"), Triangles = (int)lv.Num("tris"),
-                        Palette = lv.Arr("palette").Select(p => ((List<object>)p).Select(o => (double)o).ToArray()).ToArray(),
-                        Positions = new float[n * 3], Normals = new float[n * 3], Part = pal,
-                    };
-                    for (int i = 0; i < n * 3; i++)
-                    {
-                        w.Positions[i] = (float)(BitConverter.ToInt16(pos, i * 2) * ps);
-                        w.Normals[i] = (sbyte)nrm[i] / 127f;
-                    }
-                    bool i32 = lv.Flag("idx32");
-                    int ni = idxB.Length / (i32 ? 4 : 2);
-                    w.Indices = new int[ni];
-                    for (int i = 0; i < ni; i++) w.Indices[i] = i32 ? BitConverter.ToInt32(idxB, i * 4) : BitConverter.ToUInt16(idxB, i * 2);
-                    levels.Add(w);
-                }
+                foreach (Dictionary<string, object> lv in st.Arr("levels")) levels.Add(Decode(lv));
                 set.Styles.Add(new WheelStyle { Spokes = (int)st.Num("spokes"), Levels = levels.ToArray() });
             }
+            return set;
+        }
+    }
+
+    /// <summary>The web game's car cabins (cabin.js buildInterior: dash and dials, console, seats, bench, belts, visors,
+    /// mirror), one per body in car space, and the steering wheel in its own frame (placed by each car's cabin.wheel).</summary>
+    public sealed class CabinSet
+    {
+        public WheelLevel Steering;
+        public readonly Dictionary<string, WheelLevel> Cars = new Dictionary<string, WheelLevel>();
+        public static string DefaultFile(string projectRoot) => Path.Combine(projectRoot, "Data", "Vehicles", "cabins.json");
+        public static CabinSet Load(string file)
+        {
+            var set = new CabinSet();
+            if (!File.Exists(file)) return set;
+            var root = MiniJson.Parse(File.ReadAllText(file)) as Dictionary<string, object>;
+            if (root.Obj("steering") is Dictionary<string, object> st) set.Steering = WheelSet.Decode(st);
+            if (root.Obj("cars") is Dictionary<string, object> cars)
+                foreach (var kv in cars) if (kv.Value is Dictionary<string, object> c) set.Cars[kv.Key] = WheelSet.Decode(c);
             return set;
         }
     }

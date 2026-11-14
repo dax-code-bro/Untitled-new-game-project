@@ -428,9 +428,10 @@ namespace Southbound.EditorTools
         }
 
         /// <summary>The 64 x 64 palette every plain colour is read from (Core/StreetData.PaletteColour).</summary>
-        static Texture2D Palette()
+        public static Texture2D Palette()
         {
             string path = $"{Dir}/Street_Palette.png";
+            Paths.Ensure(Dir);
             if (!File.Exists(Paths.Abs(path)))
             {
                 int s = StreetData.PaletteSize;

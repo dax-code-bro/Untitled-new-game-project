@@ -98,7 +98,8 @@ photoreal look (sky, clouds, fog, exposure, SSR/SSGI, day/night, path-traced pho
 water, N3 50 photo-scanned surfaces + 3 300 wear decals, N4 road paint, real windows with lit rooms on
 every building, metallic flake in the car paint, 3D grass; N5 the rest of the street (26 400 pieces: sidewalks,
 lights that come on at dusk, poles and wires, palms, yards, signs, clutter); N6 weather (wet streets, puddles,
-rain, lightning, F8). Next: U1b/U2/U3.
+rain, lightning, F8); street reflection probes, townspeople on the pavements, traffic, see-through car glass with
+cabins. Next: drivers in the seats, then U2/U3.
 
 ## The owner's list after watching them play (2026-11-09) — do in this order
 

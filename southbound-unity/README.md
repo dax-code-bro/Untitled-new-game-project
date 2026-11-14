@@ -33,6 +33,7 @@ Unity Personal is free, and there are no royalties.
 | **Weather** | The web game's weather (clear, cloudy, overcast, rain, storm; a step at a time every few game hours): the cloud preset by cover, thicker fog and a dimmer sun in rain, streets, sidewalks and walls that darken and turn glossy as they soak (and dry over minutes), 1 400 puddles in the roads' dips and gutters that fill once it's soaked and mirror the street, rain streaks round the camera, lightning and thunder made in code. **F8** cycles it | `Core/Weather.cs`, `Runtime/WeatherController.cs`, `Editor/WeatherBuilder.cs` |
 | **Street reflections** | 150 box-projected reflection probes filling the street canyons in town (one over every junction, one every 50 m between), so glass, wet asphalt and puddles reflect the street rather than the open sky. Bake them once with **Southbound > Look > Bake reflections** | `Core/ReflectionSpots.cs`, `Editor/ReflectionProbeBuilder.cs` |
 | **Townspeople** | 40 of the web game's MakeHuman townspeople (retargeted from John's animation library) walking the town's pavements around you (307 paths, 30 km, crossing at the junctions), a few stopped in pairs to talk, fewer at night. Just the ambient crowd for now: the web game's AI comes with U2 | `Core/Sidewalks.cs`, `Runtime/Pedestrians.cs`, `Editor/PedestrianBuilder.cs` |
+| **Car glass and cabins** | Up close, every car's windows are real see-through glass with the web game's cabin behind them (cabin.js, exported per body: dashboard and dials, centre stack, console, steering wheel, seats with headrests, rear bench, belts, visors, mirror) and the inside of the shell lined like the web game shades it (headliner, door cards, carpet). Far off, the glass stays the tinted shell | `Data/Vehicles/cabins.json`, `Core/CarMeshBuilder.cs` (CabinSet), `Editor/CarFactory.cs` |
 | **Traffic** | 26 cars from a dozen everyday catalogue models driving 316 right-hand lanes (49 km) linked through the junctions, at each road's speed, keeping their distance, braking for you, for parked cars and for townspeople crossing, wheels turning, brake lights, headlights after dark. Kinematic, so your car bumps off them | `Core/Lanes.cs`, `Runtime/Traffic.cs`, `Editor/TrafficBuilder.cs` |
 | **Grass** | Real 3D tufts of thin, leaning strands (the web game's shape) as instanced terrain detail: meadow green, tall dry straw and short verges along the roads, planted from the web game's ground cover, never on roads, buildings, water or rock | `Core/GroundCover.cs`, `Editor/GrassBuilder.cs` |
 
@@ -115,10 +116,9 @@ ambientCG and Poly Haven set to prove the downloader still works.
 
 ## Next to carry over
 
-1. **Car interiors and glass**: the cabins (seats, dashboard, steering wheel and
-   dials from cabin.js) behind see-through glass; today the glass is the web game's
-   tinted shell and John is hidden in the seat. Doors that open, Rico riding along,
-   damage, fuel; traffic that obeys signals and the web game's driver AI.
+1. **Cars**: John and the traffic's drivers seated at the wheel (the cabins are there now),
+   doors that open, Rico riding along, damage, fuel; traffic that obeys signals and the
+   web game's driver AI.
 2. **People**: the web game's AI for the townspeople (reactions, panic, cover), police and
    the gang on a NavMesh (AI Navigation is installed), with the wound model and armour.
 3. **Interiors**: shops, houses and the hideout, with HDRP decals for the holes.

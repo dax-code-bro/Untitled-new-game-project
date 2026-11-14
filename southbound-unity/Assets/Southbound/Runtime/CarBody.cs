@@ -108,9 +108,10 @@ namespace Southbound
                 foreach (var r in renderers)
                 {
                     if (r == null) continue;
-                    r.GetPropertyBlock(mpb);
+                    // the palette goes to the body's own material only (index 0): the see-through glass and the cabin keep theirs
+                    r.GetPropertyBlock(mpb, 0);
                     mpb.SetTexture(IdBase, baseTex); mpb.SetTexture(IdMask, maskTex); mpb.SetTexture(IdCoat, coatTex); mpb.SetTexture(IdEmit, emitTex);
-                    r.SetPropertyBlock(mpb);
+                    r.SetPropertyBlock(mpb, 0);
                 }
             if (headlights != null) foreach (var l in headlights) if (l != null) l.enabled = lights.Head > 0.5;
             if (brakeLights != null)

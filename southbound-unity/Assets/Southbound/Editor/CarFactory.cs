@@ -90,11 +90,42 @@ namespace Southbound.EditorTools
             // body: four levels
             var body = new GameObject("Body").transform;
             body.SetParent(root.transform, false);
+            CarMeshData coarse = null;
             for (int lod = 0; lod < CarMeshBuilder.Levels; lod++)
             {
-                var mesh = SaveMesh(CarMeshBuilder.Body(s, lod), $"{dir}/{car.Id}_body{lod}.asset", $"{car.Id} body {lod}");
+                bool glass = lod < 2 && Cabins.Cars.ContainsKey(car.Id);   // up close: see-through glass with the cabin behind it
+                var data = CarMeshBuilder.Body(s, lod);
+                if (lod == 2) coarse = data;
+                var mesh = SaveMesh(data, $"{dir}/{car.Id}_body{lod}.asset", $"{car.Id} body {lod}", glass);
                 var r = Part($"Body LOD{lod}", mesh, mat, body, lod < 3);
+                if (mesh.subMeshCount > 1) r.sharedMaterials = new[] { mat, GlassMaterial() };
                 palette.Add(r); lodRenderers[lod].Add(r);
+            }
+
+            // the cabin behind the glass: dash and dials, console, seats, bench, belts, visors, mirror, steering wheel
+            if (Cabins.Cars.TryGetValue(car.Id, out var cabin))
+            {
+                var cabinMesh = CabinMesh(cabin, $"{dir}/{car.Id}_cabin.asset", $"{car.Id} cabin");
+                var cr = Part("Cabin", cabinMesh, CabinMaterial(false), body, false);
+                cr.sharedMaterials = new[] { CabinMaterial(false), CabinMaterial(true) };
+                lodRenderers[0].Add(cr); lodRenderers[1].Add(cr);
+                // the inside of the shell, seen through the glass: headliner, door cards, carpet
+                if (coarse != null)
+                {
+                    var lr = Part("Interior lining", LiningMesh(coarse, s, $"{dir}/{car.Id}_lining.asset", $"{car.Id} lining"), CabinMaterial(false), body, false);
+                    lodRenderers[0].Add(lr); lodRenderers[1].Add(lr);
+                }
+                if (car.SteeringWheel != null && Cabins.Steering != null)
+                {
+                    var w = car.SteeringWheel;
+                    var pivot = new GameObject("Steering wheel").transform;
+                    pivot.SetParent(body, false);
+                    pivot.localPosition = new Vector3((float)-w[0], (float)w[1], (float)w[2]);
+                    pivot.localRotation = Quaternion.Euler((float)(w[3] * 180 / System.Math.PI), 0, 0);
+                    var sr = Part("Steering wheel rim", SteeringMesh(), CabinMaterial(false), pivot, false);
+                    sr.sharedMaterials = new[] { CabinMaterial(false), CabinMaterial(true) };
+                    lodRenderers[0].Add(sr); lodRenderers[1].Add(sr);
+                }
             }
 
             // wheels: shared meshes per rim style, scaled to the car's tyre size
@@ -209,7 +240,7 @@ namespace Southbound.EditorTools
         }
 
         // ------------------------------------------------------------------ meshes
-        static Mesh SaveMesh(CarMeshData d, string path, string name)
+        static Mesh SaveMesh(CarMeshData d, string path, string name, bool splitGlass = false)
         {
             var m = new Mesh { name = name, indexFormat = d.VertexCount > 65000 ? IndexFormat.UInt32 : IndexFormat.UInt16 };
             var v = new Vector3[d.VertexCount]; var n = new Vector3[d.VertexCount]; var uv = new Vector2[d.VertexCount]; var uv1 = new Vector2[d.VertexCount];
@@ -223,7 +254,22 @@ namespace Southbound.EditorTools
                 uv1[i] = new Vector2(fu, fv);
             }
             m.vertices = v; m.normals = n; m.uv = uv; m.uv2 = uv1;
-            m.SetTriangles(d.Indices, 0, true);
+            if (splitGlass)
+            {
+                // the glass zones to a second sub-mesh, drawn see-through
+                var body = new List<int>(); var glass = new List<int>();
+                for (int t = 0; t < d.Indices.Length; t += 3)
+                {
+                    int a = d.Indices[t];
+                    int slot = (int)(d.Uvs[a * 2 + 1] * CarPalette.Height) * CarPalette.Width + (int)(d.Uvs[a * 2] * CarPalette.Width);
+                    var dst = slot == CarZones.Glass || slot == CarZones.GlassLow ? glass : body;
+                    dst.Add(d.Indices[t]); dst.Add(d.Indices[t + 1]); dst.Add(d.Indices[t + 2]);
+                }
+                m.subMeshCount = glass.Count > 0 ? 2 : 1;
+                m.SetTriangles(body, 0, true);
+                if (glass.Count > 0) m.SetTriangles(glass, 1, true);
+            }
+            else m.SetTriangles(d.Indices, 0, true);
             m.UploadMeshData(false);
             AssetDatabase.DeleteAsset(path);
             AssetDatabase.CreateAsset(m, path);
@@ -254,6 +300,138 @@ namespace Southbound.EditorTools
             AssetDatabase.DeleteAsset(WheelDir);
             foreach (var st in Wheels.Styles) WheelMeshes(st.Spokes);
             Debug.Log("Southbound: wheel meshes rebuilt (prefabs keep pointing at them).");
+        }
+
+        // ------------------------------------------------------------------ glass and cabins
+        static CabinSet cabins;
+        public static CabinSet Cabins => cabins ??= CabinSet.Load(CabinSet.DefaultFile(Paths.ProjectRoot));
+
+        /// <summary>Car glass you can see through: a faint green-grey tint, a mirror finish, both sides.</summary>
+        public static Material GlassMaterial()
+        {
+            string path = $"{Paths.Materials}/CarGlass.mat";
+            var m = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (m != null) return m;
+            Paths.Ensure(Paths.Materials);
+            m = Hdrp.Lit(); m.name = "Car glass";
+            if (Hdrp.IsHdrpShader(m))
+            {
+                m.SetColor("_BaseColor", new Color(0.16f, 0.19f, 0.19f, 0.32f));
+                m.SetFloat("_Smoothness", 0.97f); m.SetFloat("_Metallic", 0f);
+                m.SetFloat("_SurfaceType", 1); m.SetFloat("_BlendMode", 0);
+                m.SetFloat("_EnableBlendModePreserveSpecularLighting", 1);
+                m.SetFloat("_DoubleSidedEnable", 1);
+                Hdrp.ResetKeywords(m);
+            }
+            AssetDatabase.CreateAsset(m, path);
+            return m;
+        }
+
+        /// <summary>Cabin trim: plastics, fabric and leather by colour (the street palette), or the bright metal bits.</summary>
+        static Material CabinMaterial(bool metal)
+        {
+            string path = $"{Paths.Materials}/CarCabin{(metal ? "Metal" : "")}.mat";
+            var m = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (m != null) return m;
+            Paths.Ensure(Paths.Materials);
+            m = Hdrp.Lit(); m.name = metal ? "Car cabin metal" : "Car cabin";
+            var pal = StreetBuilder.Palette();
+            if (Hdrp.IsHdrpShader(m))
+            {
+                m.SetTexture("_BaseColorMap", pal);
+                m.SetFloat("_Smoothness", metal ? 0.7f : 0.22f); m.SetFloat("_Metallic", metal ? 1f : 0f);
+                Hdrp.ResetKeywords(m);
+            }
+            else m.mainTexture = pal;
+            AssetDatabase.CreateAsset(m, path);
+            return m;
+        }
+
+        /// <summary>A packed web mesh (car space) as a Unity mesh: x mirrored, re-wound, colour by palette, metal parts apart.</summary>
+        static Mesh PackedMesh(WheelLevel w, string name)
+        {
+            int n = w.Positions.Length / 3;
+            var v = new Vector3[n]; var nm = new Vector3[n]; var uv = new Vector2[n];
+            for (int i = 0; i < n; i++)
+            {
+                v[i] = new Vector3(-w.Positions[i * 3], w.Positions[i * 3 + 1], w.Positions[i * 3 + 2]);
+                nm[i] = new Vector3(-w.Normals[i * 3], w.Normals[i * 3 + 1], w.Normals[i * 3 + 2]);
+                var e = w.Palette[w.Part[i]];
+                var (pu, pv) = StreetData.PaletteUv((float)e[0], (float)e[1], (float)e[2]);
+                uv[i] = new Vector2(pu, pv);
+            }
+            var plain = new List<int>(); var shiny = new List<int>();
+            for (int t = 0; t + 2 < w.Indices.Length; t += 3)
+            {
+                var e = w.Palette[w.Part[w.Indices[t]]];
+                var dst = e.Length > 4 && e[4] > 0.5 ? shiny : plain;
+                dst.Add(w.Indices[t]); dst.Add(w.Indices[t + 2]); dst.Add(w.Indices[t + 1]);   // re-wound for the mirror
+            }
+            var m = new Mesh { name = name, indexFormat = n > 65000 ? IndexFormat.UInt32 : IndexFormat.UInt16 };
+            m.vertices = v; m.normals = nm; m.uv = uv;
+            m.subMeshCount = 2;
+            m.SetTriangles(plain, 0, true); m.SetTriangles(shiny, 1, true);
+            return m;
+        }
+
+        /// <summary>The body shell turned inside out and set 2.5 cm in (the coarse level is plenty from inside), coloured as
+        /// the web game shades the inside of the shell: a light headliner, dark door cards with an armrest band, carpet.</summary>
+        static Mesh LiningMesh(CarMeshData d, CarSpec s, string path, string name)
+        {
+            var v = new List<Vector3>(); var n = new List<Vector3>(); var uv = new List<Vector2>(); var tri = new List<int>();
+            var map = new Dictionary<int, int>();
+            float belt = (float)s.Belt, ride = (float)s.Ride;
+            Vector2 Band(float y)
+            {
+                (float r, float g, float b) c = y > belt + 0.3f ? (0.30f, 0.29f, 0.27f) : y < ride + 0.14f ? (0.022f, 0.022f, 0.022f) : Mathf.Abs(y - (belt - 0.17f)) < 0.03f ? (0.085f, 0.082f, 0.078f) : (0.04f, 0.04f, 0.04f);
+                var (u, vv) = StreetData.PaletteUv(c.r, c.g, c.b);
+                return new Vector2(u, vv);
+            }
+            int V(int i)
+            {
+                if (map.TryGetValue(i, out int o)) return o;
+                o = v.Count;
+                var p = new Vector3(d.Positions[i * 3], d.Positions[i * 3 + 1], d.Positions[i * 3 + 2]);
+                var nn = new Vector3(d.Normals[i * 3], d.Normals[i * 3 + 1], d.Normals[i * 3 + 2]);
+                v.Add(p - nn * 0.025f); n.Add(-nn); uv.Add(Band(p.y));
+                map[i] = o;
+                return o;
+            }
+            for (int t = 0; t + 2 < d.Indices.Length; t += 3)
+            {
+                int a = d.Indices[t];
+                int slot = (int)(d.Uvs[a * 2 + 1] * CarPalette.Height) * CarPalette.Width + (int)(d.Uvs[a * 2] * CarPalette.Width);
+                if (slot == CarZones.Glass || slot == CarZones.GlassLow) continue;   // the windows stay open
+                // only the shell round the cabin: from the floor to the roof
+                if (d.Positions[a * 3 + 1] < ride + 0.05f) continue;
+                tri.Add(V(a)); tri.Add(V(d.Indices[t + 2])); tri.Add(V(d.Indices[t + 1]));   // facing in
+            }
+            var m = new Mesh { name = name, indexFormat = v.Count > 65000 ? IndexFormat.UInt32 : IndexFormat.UInt16 };
+            m.SetVertices(v); m.SetNormals(n); m.SetUVs(0, uv); m.SetTriangles(tri, 0, true);
+            AssetDatabase.DeleteAsset(path);
+            AssetDatabase.CreateAsset(m, path);
+            return m;
+        }
+
+        static Mesh CabinMesh(WheelLevel w, string path, string name)
+        {
+            var m = PackedMesh(w, name);
+            AssetDatabase.DeleteAsset(path);
+            AssetDatabase.CreateAsset(m, path);
+            return m;
+        }
+
+        static Mesh steering;
+        static Mesh SteeringMesh()
+        {
+            string path = $"{MeshDir}/SteeringWheel.asset";
+            if (steering != null) return steering;
+            steering = AssetDatabase.LoadAssetAtPath<Mesh>(path);
+            if (steering != null) return steering;
+            Paths.Ensure(MeshDir);
+            steering = PackedMesh(Cabins.Steering, "Steering wheel");
+            AssetDatabase.CreateAsset(steering, path);
+            return steering;
         }
 
         // ------------------------------------------------------------------ the shared material
