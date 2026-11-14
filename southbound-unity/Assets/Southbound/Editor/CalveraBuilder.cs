@@ -44,6 +44,8 @@ namespace Southbound.EditorTools
                 BuildWater(world);
                 EditorUtility.DisplayProgressBar("Southbound", "Roads", 0.45f);
                 BuildRoads(world);
+                EditorUtility.DisplayProgressBar("Southbound", "Road paint", 0.5f);
+                RoadMarkingBuilder.Build(world);
                 EditorUtility.DisplayProgressBar("Southbound", "Buildings", 0.55f);
                 BuildBuildings(world);
                 EditorUtility.DisplayProgressBar("Southbound", "Cornices, shopfronts, porches, window sills", 0.62f);

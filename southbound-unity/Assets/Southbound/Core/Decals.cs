@@ -135,28 +135,7 @@ namespace Southbound.Core
             var spots = new List<DecalSpot>();
             var rnd = new Mulberry32((uint)seed);
             // junctions: road points that come within 6 m of another road's points
-            var grid = new Dictionary<(int, int), List<(int road, double x, double z)>>();
-            for (int ri = 0; ri < w.Roads.Count; ri++)
-                foreach (var p in w.Roads[ri].Points)
-                {
-                    var key = ((int)Math.Floor(p.x / 8), (int)Math.Floor(p.z / 8));
-                    if (!grid.TryGetValue(key, out var l)) grid[key] = l = new List<(int, double, double)>();
-                    l.Add((ri, p.x, p.z));
-                }
-            var junctions = new List<(double x, double z)>();
-            foreach (var cell in grid)
-                foreach (var a in cell.Value)
-                {
-                    bool near = false;
-                    for (int dx = -1; dx <= 1 && !near; dx++)
-                        for (int dz = -1; dz <= 1 && !near; dz++)
-                            if (grid.TryGetValue((cell.Key.Item1 + dx, cell.Key.Item2 + dz), out var l2))
-                                foreach (var b in l2) if (b.road != a.road && (a.x - b.x) * (a.x - b.x) + (a.z - b.z) * (a.z - b.z) < 36) { near = true; break; }
-                    if (!near) continue;
-                    bool dup = false;
-                    foreach (var j in junctions) if ((j.x - a.x) * (j.x - a.x) + (j.z - a.z) * (j.z - a.z) < 400) { dup = true; break; }
-                    if (!dup) junctions.Add((a.x, a.z));
-                }
+            var junctions = RoadNetwork.Junctions(w);
             foreach (var (jx, jz) in junctions)
             {
                 spots.Add(new DecalSpot { Kind = DecalKind.Manhole, X = jx + (rnd.Next() - 0.5) * 3, Z = jz + (rnd.Next() - 0.5) * 3, Heading = rnd.Next() * Math.PI, Width = 1.2, Length = 1.2 });
