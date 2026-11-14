@@ -1,0 +1,20 @@
+{
+  "name": "ManholeCover011",
+  "source": "ambientcg",
+  "tileMeters": 1.2,
+  "size": 512,
+  "maps": [
+    "ao",
+    "color",
+    "height",
+    "metal",
+    "normal",
+    "rough"
+  ],
+  "files": {
+    "BaseColor": "ManholeCover011_BaseColor.jpg",
+    "Normal": "ManholeCover011_Normal.png",
+    "Mask": "ManholeCover011_Mask.png",
+    "Height": "ManholeCover011_Height.png"
+  }
+}

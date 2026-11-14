@@ -1,0 +1,17 @@
+{
+  "name": "WoodSiding011",
+  "source": "ambientcg",
+  "tileMeters": 2.4,
+  "size": 512,
+  "maps": [
+    "color",
+    "height",
+    "normal"
+  ],
+  "files": {
+    "BaseColor": "WoodSiding011_BaseColor.jpg",
+    "Normal": "WoodSiding011_Normal.png",
+    "Mask": "WoodSiding011_Mask.png",
+    "Height": "WoodSiding011_Height.png"
+  }
+}

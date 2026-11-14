@@ -1,0 +1,19 @@
+{
+  "name": "Concrete047A",
+  "source": "ambientcg",
+  "tileMeters": 2.5,
+  "size": 512,
+  "maps": [
+    "ao",
+    "color",
+    "height",
+    "normal",
+    "rough"
+  ],
+  "files": {
+    "BaseColor": "Concrete047A_BaseColor.jpg",
+    "Normal": "Concrete047A_Normal.png",
+    "Mask": "Concrete047A_Mask.png",
+    "Height": "Concrete047A_Height.png"
+  }
+}

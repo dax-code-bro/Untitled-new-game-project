@@ -1,0 +1,18 @@
+{
+  "name": "PaintedPlaster017",
+  "source": "ambientcg",
+  "tileMeters": 3,
+  "size": 512,
+  "maps": [
+    "color",
+    "height",
+    "normal",
+    "rough"
+  ],
+  "files": {
+    "BaseColor": "PaintedPlaster017_BaseColor.jpg",
+    "Normal": "PaintedPlaster017_Normal.png",
+    "Mask": "PaintedPlaster017_Mask.png",
+    "Height": "PaintedPlaster017_Height.png"
+  }
+}

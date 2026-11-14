@@ -1,0 +1,19 @@
+{
+  "name": "Bricks066",
+  "source": "ambientcg",
+  "tileMeters": 2.6,
+  "size": 512,
+  "maps": [
+    "ao",
+    "color",
+    "height",
+    "normal",
+    "rough"
+  ],
+  "files": {
+    "BaseColor": "Bricks066_BaseColor.jpg",
+    "Normal": "Bricks066_Normal.png",
+    "Mask": "Bricks066_Mask.png",
+    "Height": "Bricks066_Height.png"
+  }
+}

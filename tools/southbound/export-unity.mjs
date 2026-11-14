@@ -1,6 +1,6 @@
 // Exports Southbound's art and data into the Unity project (southbound-unity/).
 //
-//   node tools/southbound/export-unity.mjs [textures] [models] [catalog] [world] [cars] [parked]
+//   node tools/southbound/export-unity.mjs [textures] [mirror] [models] [catalog] [world] [cars] [parked]
 //
 // With no arguments it runs every step.
 //
@@ -9,6 +9,8 @@
 //           B detail mask, A smoothness = 1 - roughness, the HDRP Lit layout),
 //           Height (PNG), Emission (JPG), TerrainMask (the mask with height in B,
 //           for HDRP terrain layers), plus surface.json (tile size in metres).
+// mirror    more photo-scanned CC0 sets (siding, stucco, bricks, roofs, asphalt, manholes...) from the CC0
+//           mirror the web game's textures came from, bundled at 512 px like the rest (MIRROR_SETS).
 // models    assets/{people,anims,veg,open}/**.glb -> Assets/Southbound/Art/Models/
 //           Meshopt is decoded and WebP textures become PNG/JPG, so glTFast
 //           imports them with no extra packages.
@@ -98,10 +100,29 @@ async function exportTextures() {
   const index = [];
   let bytes = 0;
   for (const [name, maps] of [...sets].sort()) {
+    const r = await convertSet(name, maps, outRoot, { tileMeters: SIZES[name] || 3, source: SOURCE(name), terrain: TERRAIN.has(name) });
+    bytes += r.bytes; index.push(r.meta);
+  }
+  fs.writeFileSync(path.join(outRoot, 'surfaces.json'), JSON.stringify(index, null, 2) + '\n');
+  console.log(`textures: ${index.length} sets, ${(bytes / 1048576).toFixed(1)} MB`);
+}
+
+// one CC0 set (KTX2 files or buffers per map) -> the Unity layout; `size` resamples (the bundled sets are 512 px)
+async function convertSet(name, maps, outRoot, { tileMeters = 3, source = 'ambientcg', terrain = false, size = 0 } = {}) {
+  let bytes = 0;
+  {
     const dir = path.join(outRoot, name);
     mkdir(dir);
     const img = {};
-    for (const [k, f] of Object.entries(maps)) img[k] = await decodeKTX2(f);
+    for (const [k, f] of Object.entries(maps)) {
+      let d = await decodeKTX2(f);
+      if (size && (d.width !== size || d.height !== size)) {
+        const buf = await sharp(Buffer.from(d.data.buffer, d.data.byteOffset, d.data.byteLength), { raw: { width: d.width, height: d.height, channels: 4 } })
+          .resize(size, size, { kernel: 'lanczos3' }).ensureAlpha().raw().toBuffer();
+        d = { width: size, height: size, data: new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength) };
+      }
+      img[k] = d;
+    }
     const { width, height } = img.color;
     const raw = (d, ch = 4) => sharp(Buffer.from(d.buffer, d.byteOffset, d.byteLength), { raw: { width, height, channels: ch } });
     const same = (k) => img[k] && img[k].width === width && img[k].height === height;
@@ -121,20 +142,66 @@ async function exportTextures() {
     }
     await write(`${name}_Mask.png`, raw(mask).png({ compressionLevel: 9 }));
     // HDRP terrain layers read height from the mask's blue channel (height-based blending)
-    if (same('height') && TERRAIN.has(name)) {
+    if (same('height') && terrain) {
       const H = img.height.data, tmask = Uint8Array.from(mask);
       for (let i = 0; i < n; i++) tmask[i * 4 + 2] = H[i * 4];
       await write(`${name}_TerrainMask.png`, raw(tmask).png({ compressionLevel: 9 }));
     }
     if (same('height')) await write(`${name}_Height.png`, raw(img.height.data).extractChannel(0).png({ compressionLevel: 9 }));
     if (same('emit')) await write(`${name}_Emission.jpg`, raw(img.emit.data).removeAlpha().jpeg({ quality: 90 }));
-    const meta = { name, source: SOURCE(name), tileMeters: SIZES[name] || 3, size: width, maps: Object.keys(maps).sort(), files };
+    const meta = { name, source, tileMeters, size: width, maps: Object.keys(maps).sort(), files };
     fs.writeFileSync(path.join(dir, 'surface.json'), JSON.stringify(meta, null, 2) + '\n');
-    index.push(meta);
     console.log(`  ${name.padEnd(30)} ${width}x${height} ${Object.keys(maps).join(',')}`);
+    return { meta, bytes };
   }
-  fs.writeFileSync(path.join(outRoot, 'surfaces.json'), JSON.stringify(index, null, 2) + '\n');
-  console.log(`textures: ${index.length} sets, ${(bytes / 1048576).toFixed(1)} MB`);
+}
+
+// ---------------------------------------------------------------- more CC0 sets from the mirror
+// Photo-scanned ambientCG / Poly Haven sets the web game doesn't stream, picked for Calvera's buildings,
+// roofs and streets (houses in painted lap siding and stucco, brick blocks, clay and shingle roofs,
+// patched asphalt, manhole covers), fetched from the CC0 mirror the web game's textures came from
+// (github.com/Papyszoo/CC0-Public-Domain-Textures, CC0) and bundled at 512 px like the rest; the Unity
+// editor downloads the 2K-8K originals from ambientCG / Poly Haven themselves.
+export const MIRROR_SETS = {
+  WoodSiding009: 2.4, WoodSiding011: 2.4, Plaster001: 3.0, Plaster003: 2.6, PaintedPlaster014: 3.0, PaintedPlaster017: 3.0,
+  Bricks059: 2.2, Bricks085: 2.2, Bricks090: 2.2, Bricks097: 2.2, Bricks066: 2.6, Concrete045: 2.5, Concrete047A: 2.5,
+  RoofingTiles001: 2.6, RoofingTiles008: 2.4, RoofingTiles014A: 2.6, Asphalt026A: 4.0, Asphalt031: 4.0, ManholeCover011: 1.2,
+  Ground054: 3.0, Bark007: 2.0,
+};
+const MIRROR_URL = 'https://github.com/Papyszoo/CC0-Public-Domain-Textures';
+const MAP_OF = (file) => {
+  const f = file.replace(/\.ktx2$/, '');
+  if (/preview|NormalDX|_dx$/i.test(f)) return null;
+  for (const [k, re] of [['color', /(Color|albedo|diff)$/i], ['normal', /(NormalGL|nor_gl|normal)$/i], ['rough', /(Roughness|rough)$/i],
+    ['height', /(Displacement|disp|height)$/i], ['ao', /(AmbientOcclusion|_ao)$/i], ['metal', /(Metalness|metal)$/i], ['emit', /(Emission|emit)$/i]]) if (re.test(f)) return k;
+  return null;
+};
+async function exportMirror() {
+  const { execFileSync } = await import('node:child_process');
+  const cache = process.env.SB_CC0_MIRROR || path.join(process.env.HOME || '.', '.cache/sb-cc0-mirror');
+  if (!fs.existsSync(path.join(cache, '.git'))) {
+    mkdir(path.dirname(cache));
+    execFileSync('git', ['clone', '-q', '--filter=blob:none', '--no-checkout', '--depth', '1', MIRROR_URL, cache], { stdio: 'inherit' });
+  }
+  const git = (...a) => execFileSync('git', ['-C', cache, ...a], { maxBuffer: 1 << 28 });
+  const outRoot = path.join(art, 'Surfaces');
+  const indexFile = path.join(outRoot, 'surfaces.json');
+  const index = fs.existsSync(indexFile) ? JSON.parse(fs.readFileSync(indexFile, 'utf8')) : [];
+  let bytes = 0;
+  for (const [name, tileMeters] of Object.entries(MIRROR_SETS)) {
+    const source = /^[A-Z]/.test(name) ? 'ambientcg' : 'polyhaven';
+    const dir = `packs/${source}-textures/textures/${name}`;
+    const files = git('ls-tree', '-r', '--name-only', 'HEAD', dir).toString().split('\n').filter((f) => f.endsWith('.ktx2'));
+    const maps = {};
+    for (const f of files) { const k = MAP_OF(path.basename(f)); if (k && !maps[k]) maps[k] = new Uint8Array(git('show', `HEAD:${f}`)); }
+    if (!maps.color || !maps.normal) { console.log(`  ${name}: missing colour/normal in the mirror, skipped`); continue; }
+    const r = await convertSet(name, maps, outRoot, { tileMeters, source, size: 512 });
+    bytes += r.bytes;
+    const at = index.findIndex((m) => m.name === name);
+    if (at >= 0) index[at] = r.meta; else index.push(r.meta);
+  }
+  fs.writeFileSync(indexFile, JSON.stringify(index, null, 2) + '\n');
+  console.log(`mirror: ${Object.keys(MIRROR_SETS).length} sets, ${(bytes / 1048576).toFixed(1)} MB`);
 }
 
 // ---------------------------------------------------------------- models
@@ -462,6 +529,7 @@ async function exportParked() {
 }
 
 if (want('textures')) await exportTextures();
+if (want('mirror')) await exportMirror();
 if (want('models')) await exportModels();
 if (want('catalog')) await exportCatalog();
 if (want('world')) await exportWorld();

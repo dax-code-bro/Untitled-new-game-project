@@ -43,7 +43,7 @@ namespace Southbound.Tests
                 TestContext.Progress.WriteLine($"{set.Name,-30} {set.Source,-10} {(r.Ok ? "OK " + string.Join(",", r.Files.Keys) : "FAILED " + r.Error + " | " + string.Join(" ", r.Log))}");
                 if (r.Ok) ok++;
             }
-            Assert.AreEqual(24, auto.Length);
+            Assert.AreEqual(45, auto.Length);
             Assert.AreEqual(auto.Length, ok);
         }
     }

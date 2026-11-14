@@ -1,4 +1,4 @@
-// Southbound's surface library: 29 photo-scanned CC0 PBR sets from ambientCG,
+// Southbound's surface library: 50 photo-scanned CC0 PBR sets from ambientCG,
 // Poly Haven and cgbookcase. The project ships 512 px copies (what the web game
 // streams); on a desktop the editor downloads the originals at 2K, 4K or 8K
 // straight from the three sites, which is where the detail comes from.
@@ -62,6 +62,16 @@ namespace Southbound.Core
             A("CorrugatedSteel005", 2.2, "steel"), C("RustyCorrugatedMetalPanel01", 2.2, "rusty"), H("brown_mud", 3.0, "mud"),
             H("forest_leaves_02", 2.6, "leaves"), C("Dirt01", 2.2, "dirt"), A("Gravel004", 1.6, "gravel"), H("cliff_side", 7.0, "cliff"),
             A("WoodFloor007", 2.0, "woodfloor"), C("BathroomTiles02", 1.5, "tiles"), A("Ground068", 3.0, "ground"),
+            // Calvera's buildings, roofs and streets in Unity (bundled from the CC0 mirror by export-unity.mjs mirror):
+            // painted lap siding and stucco that take each house's paint colour, brick blocks, stone, concrete,
+            // shingle / clay barrel / terracotta roofs, patched street asphalt, highway asphalt, manhole covers
+            A("WoodSiding009", 2.4, "siding-painted"), A("WoodSiding011", 2.4, "siding-old"), A("Plaster001", 3.0, "stucco-white"),
+            A("Plaster003", 2.6, "stucco-rough"), A("PaintedPlaster014", 3.0, "plaster-peeling"), A("PaintedPlaster017", 3.0, "plaster-painted"),
+            A("Bricks059", 2.2, "brick-orange"), A("Bricks085", 2.2, "brick-deep"), A("Bricks090", 2.2, "brick-house"), A("Bricks097", 2.2, "brick-old"),
+            A("Bricks066", 2.6, "stone-blocks"), A("Concrete045", 2.5, "concrete-ribbed"), A("Concrete047A", 2.5, "concrete-weathered"),
+            A("RoofingTiles001", 2.6, "roof-shingles"), A("RoofingTiles008", 2.4, "roof-clay"), A("RoofingTiles014A", 2.6, "roof-terracotta"),
+            A("Asphalt026A", 4.0, "asphalt-patched"), A("Asphalt031", 4.0, "asphalt-highway"), A("ManholeCover011", 1.2, "manhole"),
+            A("Ground054", 3.0, "dirt-dry"), A("Bark007", 2.0, "bark"),
         };
 
         public static MaterialSet Get(string nameOrUse) => Sets.FirstOrDefault(s => s.Name == nameOrUse || s.Use == nameOrUse);

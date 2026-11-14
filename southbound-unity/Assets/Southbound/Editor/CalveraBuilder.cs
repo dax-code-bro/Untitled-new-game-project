@@ -306,34 +306,62 @@ namespace Southbound.EditorTools
             var root = new GameObject("Buildings").transform;
             var colliders = new GameObject("Building colliders").transform;
             colliders.SetParent(root, false);
-            foreach (var style in w.Buildings.GroupBy(b => b.Style))
+            // each building its own cladding (BuildingLook): a photo-scanned wall, painted in the web game's colour
+            var groups = new Dictionary<string, (MeshBuilder mb, Cladding c)>();
+            for (int bi = 0; bi < w.Buildings.Count; bi++)
             {
-                var mb = new MeshBuilder(2);
-                foreach (var b in style)
-                {
-                    float y0 = (float)b.Y - 2, y1 = (float)(b.Y + b.H);
-                    var c = U(b.X, 0, b.Z);
-                    mb.Box(new Vector3(c.x, (y0 + y1) / 2, c.z), new Vector3((float)b.W, y1 - y0, (float)b.D), wallsSub: 0, topSub: 1);
-                    var col = new GameObject("building").AddComponent<BoxCollider>();
-                    col.transform.SetParent(colliders, false);
-                    col.transform.position = new Vector3(c.x, (y0 + y1) / 2, c.z);
-                    col.size = new Vector3((float)b.W, y1 - y0, (float)b.D);
-                    col.gameObject.AddComponent<SurfaceTag>().surface = CalveraWorld.SurfFor(b.Style);
-                    col.gameObject.isStatic = true;
-                }
-                var mesh = mb.ToMesh("Buildings style " + style.Key);
-                var mats = new[] { Surfaces.Get(CalveraWorld.FacadeFor(style.Key)), Surfaces.Get(style.Key == 4 ? "RoofingTiles013A" : "Gravel004") };
-                MeshObject($"Buildings ({CalveraWorld.FacadeFor(style.Key)})", SaveMesh(mesh, "Buildings_" + style.Key), mats, root);
+                var b = w.Buildings[bi];
+                var look = BuildingLook.For(b.Style, b.Color, bi);
+                string key = look.Key + "|" + look.Top;
+                if (!groups.TryGetValue(key, out var g)) groups[key] = g = (new MeshBuilder(2), look);
+                float y0 = (float)b.Y - 2, y1 = (float)(b.Y + b.H);
+                var c = U(b.X, 0, b.Z);
+                g.mb.Box(new Vector3(c.x, (y0 + y1) / 2, c.z), new Vector3((float)b.W, y1 - y0, (float)b.D), wallsSub: 0, topSub: 1);
+                var col = new GameObject("building").AddComponent<BoxCollider>();
+                col.transform.SetParent(colliders, false);
+                col.transform.position = new Vector3(c.x, (y0 + y1) / 2, c.z);
+                col.size = new Vector3((float)b.W, y1 - y0, (float)b.D);
+                col.gameObject.AddComponent<SurfaceTag>().surface = CalveraWorld.SurfFor(b.Style);
+                col.gameObject.isStatic = true;
+            }
+            int n = 0;
+            foreach (var (mb, look) in groups.Values)
+            {
+                string name = $"Buildings {look.Key}";
+                var mesh = mb.ToMesh(name);
+                MeshObject(name, SaveMesh(mesh, "Buildings_" + (n++)), new[] { WallMaterial(look), Surfaces.Get(look.Top) }, root);
             }
             // gable roofs: ridge along X, or along Z when turned a quarter
-            var rb = new MeshBuilder(2);
-            foreach (var r in w.Roofs)
+            // shingles, clay barrel tiles or terracotta, roof by roof
+            var roofGroups = new Dictionary<string, MeshBuilder>();
+            for (int ri = 0; ri < w.Roofs.Count; ri++)
             {
+                var r = w.Roofs[ri];
+                string set = BuildingLook.Roof(ri);
+                if (!roofGroups.TryGetValue(set, out var rb)) roofGroups[set] = rb = new MeshBuilder(2);
                 bool alongZ = Mathf.Abs(Mathf.Sin((float)r.Rot)) > 0.5f;
                 rb.Gable(U(r.X, r.Y, r.Z), (float)r.W, (float)r.D, (float)r.H, alongZ, slopeSub: 0, gableSub: 1);
             }
-            if (w.Roofs.Count > 0)
-                MeshObject("Roofs", SaveMesh(rb.ToMesh("Roofs"), "Roofs"), new[] { Surfaces.Get("RoofingTiles013A"), Surfaces.Get("weathered_plank_siding") }, root);
+            foreach (var kv in roofGroups)
+                MeshObject("Roofs " + kv.Key, SaveMesh(kv.Value.ToMesh("Roofs " + kv.Key), "Roofs_" + kv.Key), new[] { Surfaces.Get(kv.Key), Surfaces.Get("WoodSiding009") }, root);
+        }
+
+        /// <summary>A wall material: the set's own, or a tinted copy of it (saved once per colour) for painted walls.</summary>
+        static Material WallMaterial(Cladding look)
+        {
+            var baseMat = Surfaces.Get(look.Wall);
+            if (baseMat == null || (look.R > 0.99 && look.G > 0.99 && look.B > 0.99)) return baseMat;
+            string dir = $"{Paths.Materials}/Variants";
+            Paths.Ensure(dir);
+            string path = $"{dir}/{look.Key}.mat";
+            var m = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (m == null) { m = new Material(baseMat) { name = look.Key }; AssetDatabase.CreateAsset(m, path); }
+            else m.CopyPropertiesFromMaterial(baseMat);
+            // the tint is linear; material colours are authored gamma-encoded
+            var tint = new Color((float)look.R, (float)look.G, (float)look.B).gamma;
+            if (Hdrp.IsHdrpShader(m)) m.SetColor("_BaseColor", tint); else m.color = tint;
+            EditorUtility.SetDirty(m);
+            return m;
         }
 
         /// <summary>Boxes and roofs with UVs in metres (materials tile by 1 / real tile size).</summary>

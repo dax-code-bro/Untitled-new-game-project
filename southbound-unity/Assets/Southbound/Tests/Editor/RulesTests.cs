@@ -288,9 +288,12 @@ namespace Southbound.Tests
     public class MaterialLibraryTests
     {
         [Test]
-        public void TwentyNineSetsWithTheirSources()
+        public void FiftySetsWithTheirSources()
         {
-            Assert.AreEqual(29, MaterialLibrary.Sets.Length);
+            Assert.AreEqual(50, MaterialLibrary.Sets.Length);
+            Assert.AreEqual(MaterialLibrary.Sets.Length, MaterialLibrary.Sets.Select(x => x.Name).Distinct().Count(), "no set twice");
+            Assert.AreEqual(MaterialLibrary.Sets.Length, MaterialLibrary.Sets.Select(x => x.Use).Distinct().Count(), "one use per set");
+            Assert.AreEqual(TextureSource.AmbientCG, MaterialLibrary.Get("roof-clay").Source);
             Assert.AreEqual(TextureSource.CgBookcase, MaterialLibrary.Get("Cobblestone01").Source);
             Assert.AreEqual(TextureSource.PolyHaven, MaterialLibrary.Get("asphalt").Source);
             Assert.AreEqual(TextureSource.AmbientCG, MaterialLibrary.Get("road").Source);

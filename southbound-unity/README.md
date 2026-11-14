@@ -13,7 +13,7 @@ Unity Personal is free, and there are no royalties.
 |---|---|---|
 | **Calvera** | The whole 4 km map: terrain (1025² heights, within a few millimetres of the web game's), ground cover, the Gulf, lakes and rivers, 146 roads, 407 buildings, 74 gable roofs, 47 345 trees and bushes where the web game puts them | `Data/World/`, built into a scene by **Southbound > Build Calvera scene** |
 | **Architecture** | Every cornice, parapet, shopfront pier, awning, porch, front door, roof trim, rooftop unit and window sill from the web game, merged into static meshes | `Data/World/calvera-facades.json`, built with the scene |
-| **Surfaces** | All 29 photo-scanned CC0 sets as HDRP Lit materials with mask maps and parallax, plus terrain layers. Bundled at 512 px; the setup downloads the **2K / 4K / 8K originals** (24 sets automatically, 5 by hand) | `Assets/Southbound/Art/Surfaces/`, `Southbound > Materials` |
+| **Surfaces** | 50 photo-scanned CC0 sets as HDRP Lit materials with mask maps and parallax, plus terrain layers: the web game's 29 and 21 more for Calvera's buildings and streets (painted lap siding and stucco, four bricks, stone, concrete, shingle / clay / terracotta roofs, patched asphalt, manhole covers). Every building gets its own wall, painted in the web game's colour. Bundled at 512 px; the setup downloads the **2K / 4K / 8K originals** (45 sets automatically, 5 by hand) | `Assets/Southbound/Art/Surfaces/`, `Southbound > Materials` |
 | **Models** | John and the townspeople (MakeHuman), the 24-clip animation library, every gun, vehicles, animals, props and trees | `Assets/Southbound/Art/Models/` (glTFast imports them) |
 | **Arsenal** | All 234 weapons and 195 attachments, generated the same way as the web game. A test checks every name, stat and price matches | `Assets/Southbound/Core/Weapons.cs` |
 | **Ballistics** | Penetration by material (drywall, studs every 16", doors, sheet metal, stucco, wood, brick, block, glass), energy lost through walls, entry and exit holes, hit zones, NIJ-style armour, ammo types, falloff | `Core/Ballistics.cs`, `Runtime/Gunplay.cs` |
@@ -91,7 +91,7 @@ The data comes from the web game's own code, so the web game stays the source of
 ```
 node tools/southbound/export-unity.mjs            # everything
 node tools/southbound/export-unity.mjs world      # Calvera only (runs the game headless)
-node tools/southbound/export-unity.mjs textures models catalog
+node tools/southbound/export-unity.mjs textures mirror models catalog
 node tools/southbound/export-unity.mjs cars parked   # car specs, wheels, parity fixture; parked cars
 dotnet test southbound-unity/Tools/CoreTests --filter "Category!=Online"
 ```
