@@ -1417,6 +1417,9 @@ rain and storm, interiors, first person and in cars. Highlights:
       poles and wires, palms, yards, chain-link, gutters, rooftop units, storefronts, shop and street signs,
       billboards, benches, hydrants, drains, litter. Baked per 256 m square (heavy repeated pieces as shared
       meshes with an LOD cull), colliders on the solid ones
+- [x] N6 weather: the web game's model ported (Core/Weather: states, a step at a time, soak/dry/puddle timing,
+      lightning), clouds/fog/sun by weather, wet streets (darker, glossier materials), 1 400 puddle decals that fill,
+      rain streaks, lightning with thunder made in code; F8 cycles it
 - [ ] People and police AI, interiors, missions and jobs, HUD, the rest of the web game's shaders
 
 ## Phase 3 — Content catalogs (targets)

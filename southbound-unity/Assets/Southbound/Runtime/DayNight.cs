@@ -44,7 +44,7 @@ namespace Southbound
                 // fade out just below the horizon (the sky keeps glowing a while: twilight)
                 float k = Mathf.Clamp01(((float)el + 3f) / 3f);
                 sun.enabled = k > 0;
-                sun.intensity = sunLux * k;
+                sun.intensity = sunLux * k * WeatherController.SunScale;   // cloud and rain dim the sun
                 sun.shadows = el > 0.5 ? LightShadows.Soft : LightShadows.None;
             }
             if (moon != null)
@@ -52,7 +52,7 @@ namespace Southbound
                 Aim(moon, mel, maz);
                 float k = Mathf.Clamp01(((float)mel + 2f) / 4f) * (float)lit;
                 moon.enabled = k > 0.01f;
-                moon.intensity = moonLux * k;
+                moon.intensity = moonLux * k * WeatherController.SunScale;
                 // one shadow-casting directional light at a time: the moon only once the sun is down
                 moon.shadows = el < -2 && mel > 2 ? LightShadows.Soft : LightShadows.None;
             }
