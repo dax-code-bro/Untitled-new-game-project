@@ -159,36 +159,66 @@ namespace Southbound.EditorTools
         {
             var root = new GameObject("Water").transform;
             var mat = WaterMaterial();
-            // the Gulf: a big plane at sea level out past the map edge
-            var sea = new Mesh { name = "Sea" };
-            float S = 12000;
-            sea.vertices = new[] { new Vector3(-S, 0, -S), new Vector3(S, 0, -S), new Vector3(S, 0, S), new Vector3(-S, 0, S) };
-            sea.uv = new[] { new Vector2(0, 0), new Vector2(S / 4, 0), new Vector2(S / 4, S / 4), new Vector2(0, S / 4) };
-            sea.triangles = new[] { 0, 2, 1, 0, 3, 2 };
-            sea.RecalculateNormals(); sea.RecalculateBounds();
-            MeshObject("Sea", SaveMesh(sea, "Sea"), new[] { mat }, root, false).transform.position = new Vector3(0, (float)w.SeaLevel - 0.05f, 0);
-            // lakes and rivers above sea level, cell by cell at their own water level
-            var v = new List<Vector3>(); var tri = new List<int>();
-            int n = w.N;
-            for (int j = 0; j < n - 1; j++)
-                for (int i = 0; i < n - 1; i++)
+            var waterType = Hdrp.FindType("UnityEngine.Rendering.HighDefinition.WaterSurface");
+            // the Gulf: HDRP's ocean (waves, foam, caustics, under water) out to the horizon, or a plane without it
+            if (waterType != null)
+            {
+                var sea = new GameObject("Gulf of Calvera (HDRP ocean)");
+                sea.transform.SetParent(root, false);
+                sea.transform.position = new Vector3(0, (float)w.SeaLevel, 0);
+                WaterLook.Ocean(sea.AddComponent(waterType));
+            }
+            else
+            {
+                var sea = new Mesh { name = "Sea" };
+                float S = 12000;
+                sea.vertices = new[] { new Vector3(-S, 0, -S), new Vector3(S, 0, -S), new Vector3(S, 0, S), new Vector3(-S, 0, S) };
+                sea.uv = new[] { new Vector2(0, 0), new Vector2(S / 4, 0), new Vector2(S / 4, S / 4), new Vector2(0, S / 4) };
+                sea.triangles = new[] { 0, 2, 1, 0, 3, 2 };
+                sea.RecalculateNormals(); sea.RecalculateBounds();
+                MeshObject("Sea", SaveMesh(sea, "Sea"), new[] { mat }, root, false).transform.position = new Vector3(0, (float)w.SeaLevel - 0.05f, 0);
+            }
+            // inland: each level lake its own HDRP water surface (Lake Arden, the pond); the rivers a sloped mesh
+            int lakeNo = 0;
+            foreach (var body in WaterBodies.Split(w))
+            {
+                var v = new List<Vector3>(); var tri = new List<int>();
+                int n = w.N;
+                foreach (var (i, j) in body.Cells)
                 {
-                    float a = w.Water[j * n + i], b = w.Water[j * n + i + 1], c = w.Water[(j + 1) * n + i + 1], d = w.Water[(j + 1) * n + i];
-                    if (float.IsNaN(a) || float.IsNaN(b) || float.IsNaN(c) || float.IsNaN(d)) continue;
-                    if (Mathf.Max(a, b, c, d) < w.SeaLevel + 0.3f) continue; // that's the sea
                     int o = v.Count;
                     double x0 = -w.Half + i * w.Cell, z0 = -w.Half + j * w.Cell;
-                    v.Add(U(x0, a, z0)); v.Add(U(x0 + w.Cell, b, z0)); v.Add(U(x0 + w.Cell, c, z0 + w.Cell)); v.Add(U(x0, d, z0 + w.Cell));
+                    if (body.Lake)
+                    {
+                        // flat at 0 (the surface sits at the lake's level), half a cell wider so it meets the shore
+                        double e = w.Cell * 0.5;
+                        v.Add(U(x0 - e, 0, z0 - e)); v.Add(U(x0 + w.Cell + e, 0, z0 - e)); v.Add(U(x0 + w.Cell + e, 0, z0 + w.Cell + e)); v.Add(U(x0 - e, 0, z0 + w.Cell + e));
+                    }
+                    else
+                    {
+                        float a = w.Water[j * n + i], b = w.Water[j * n + i + 1], c = w.Water[(j + 1) * n + i + 1], d = w.Water[(j + 1) * n + i];
+                        v.Add(U(x0, a, z0)); v.Add(U(x0 + w.Cell, b, z0)); v.Add(U(x0 + w.Cell, c, z0 + w.Cell)); v.Add(U(x0, d, z0 + w.Cell));
+                    }
                     // X is mirrored, so the winding flips to keep the faces up
                     tri.AddRange(new[] { o, o + 1, o + 2, o, o + 2, o + 3 });
                 }
-            if (v.Count > 0)
-            {
-                var m = new Mesh { name = "Lakes and rivers", indexFormat = IndexFormat.UInt32 };
+                string name = body.Lake ? (lakeNo++ == 0 ? "Lake Arden" : $"Lake {lakeNo}") : "Rivers";
+                var m = new Mesh { name = name, indexFormat = IndexFormat.UInt32 };
                 m.SetVertices(v); m.SetTriangles(tri, 0);
                 m.SetUVs(0, v.Select(p => new Vector2(p.x / 4, p.z / 4)).ToList());
                 m.RecalculateNormals(); m.RecalculateBounds();
-                MeshObject("Lakes and rivers", SaveMesh(m, "Lakes"), new[] { mat }, root, false);
+                var go = MeshObject(name, SaveMesh(m, name.Replace(' ', '_')), new[] { mat }, root, false);
+                if (body.Lake)
+                {
+                    go.transform.position = new Vector3(0, body.Level, 0);
+                    if (waterType != null)
+                    {
+                        // HDRP draws the water on this mesh itself; the plain renderer stays hidden
+                        var r = go.GetComponent<MeshRenderer>();
+                        r.enabled = false;
+                        WaterLook.Lake(go.AddComponent(waterType), r);
+                    }
+                }
             }
         }
 
