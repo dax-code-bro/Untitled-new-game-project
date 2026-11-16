@@ -15,6 +15,7 @@ if ! command -v ollama >/dev/null; then
   curl -fsSL https://ollama.com/install.sh | sh
 fi
 ollama pull llama3.2:1b
+ollama pull moondream   # lets Pip describe what the camera sees
 
 echo "== 3/5  Python packages =="
 # --system-site-packages lets the venv see the camera library apt installed

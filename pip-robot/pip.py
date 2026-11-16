@@ -11,7 +11,7 @@ Pip - a little desk robot for the Raspberry Pi 5 + AI Camera.
 Run:  .venv/bin/python pip.py          (full robot)
       .venv/bin/python pip.py --type   (type instead of talking - good for testing)
 """
-import json, os, queue, subprocess, sys, threading, time
+import base64, json, os, queue, subprocess, sys, threading, time
 
 import requests
 
@@ -27,6 +27,8 @@ You see through a little camera and talk through a tiny speaker.
 You are playful, warm, a bit silly, and love learning about your human.
 ALWAYS answer in one or two short sentences. Never use emojis or lists.
 If you learn your human's name or something they like, remember it."""
+EYES_MODEL = "moondream"     # small vision model that can describe a photo
+LOOK_WORDS = ("see", "look", "what is this", "what's this", "holding", "wearing", "describe")
 GREET_AFTER_SECONDS = 30      # say hi if a person shows up after being gone this long
 # ----------------------------------------------------------
 
@@ -68,6 +70,11 @@ class Eyes:
             print("[eyes] AI camera running")
         except Exception as e:
             print(f"[eyes] camera not available ({e}) - Pip will be blind for now")
+
+    def snapshot(self, path="/tmp/pip_eye.jpg"):
+        """Take a real photo with the same camera."""
+        self.cam.capture_file(path)
+        return path
 
     def _label(self, idx):
         idx = int(idx)
@@ -162,6 +169,27 @@ def think(history, eyes):
         return "Bzzt. My brain is still waking up. Is Ollama running?"
 
 
+def look(eyes):
+    """Take a photo and have the vision model describe it in words."""
+    if not eyes or not eyes.ok:
+        return None
+    try:
+        with open(eyes.snapshot(), "rb") as f:
+            img = base64.b64encode(f.read()).decode()
+        print("[eyes] looking closely...")
+        r = requests.post("http://localhost:11434/api/chat", timeout=180, json={
+            "model": EYES_MODEL, "stream": False, "keep_alive": "60m",
+            "messages": [{"role": "user", "images": [img],
+                          "content": "Describe this photo in two short sentences."}],
+        })
+        desc = r.json()["message"]["content"].strip()
+        print("[eyes] saw:", desc)
+        return desc
+    except Exception as e:
+        print("[eyes] couldn't look:", e)
+        return None
+
+
 # ================= MAIN =================
 def main():
     history = load_memory()
@@ -177,6 +205,10 @@ def main():
             if not text:
                 continue
             print("You said:", text)
+            if any(w in text.lower() for w in LOOK_WORDS):
+                desc = look(eyes)
+                if desc:
+                    text += f"\n(You just looked through your camera and saw: {desc})"
             history.append({"role": "user", "content": text})
         reply = think(history, eyes)
         history.append({"role": "assistant", "content": reply})
