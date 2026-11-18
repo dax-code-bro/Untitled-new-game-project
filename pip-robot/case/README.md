@@ -29,7 +29,8 @@ change sizes in `pip001_tower.scad` (open it in OpenSCAD).
 | `head.stl` | 1 | Prints top-down |
 | `door_misr.stl`, `door_middle.stl`, `door_pip.stl` | 1 each | Print flat |
 | `pi_crib.stl` | 1 | Holds the Pi 5 with M2.5 screws |
-| `pin.stl` | 28 | Lines up the sections (4 per joint, 4 for the head) |
+| `pin.stl` | 8 | Long pins: join two sections through each floor plate |
+| `pin_short.stl` | 12 | Short pins: base, roof and head |
 
 **Suggested slicer settings:** PLA or PETG, 0.2 mm layers, 3 walls, 15% infill. The big parts
 are slow (roughly a day each), and the whole tower takes roughly 2.5–3 kg of filament. Check

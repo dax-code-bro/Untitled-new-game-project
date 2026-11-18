@@ -9,7 +9,7 @@
 //
 // Export one part at a time:  openscad -D 'part="misr"' -o misr.stl pip001_tower.scad
 // part = "assembly" | "misr" | "middle" | "pip" | "plate_base" | "plate_floor" | "plate_floor_pi"
-//        | "plate_roof" | "head" | "door_misr" | "door_middle" | "door_pip" | "pi_crib" | "pin"
+//        | "plate_roof" | "head" | "door_misr" | "door_middle" | "door_pip" | "pi_crib" | "pin" | "pin_short"
 
 part = "assembly";
 $fn = 64;
@@ -219,7 +219,8 @@ module pip() {
     }
 }
 
-module pin() { cylinder(d = 4.8, h = 2 * PIN_DEPTH + PLATE - 2); }
+module pin() { cylinder(d = 4.8, h = 2 * PIN_DEPTH + PLATE - 2); }          // joins two sections through a floor plate
+module pin_short() { cylinder(d = 4.8, h = PIN_DEPTH + PLATE - 1); }    // base, roof and head joints
 
 module assembly() {
     color("dimgray") plate_base();
@@ -256,3 +257,4 @@ else if (part == "door_middle") rotate([-90, 0, 0]) door(H_MID);
 else if (part == "door_pip") rotate([-90, 0, 0]) door(H_PIP);
 else if (part == "pi_crib") pi_crib();
 else if (part == "pin") pin();
+else if (part == "pin_short") pin_short();
