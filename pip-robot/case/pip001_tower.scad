@@ -1,45 +1,61 @@
 // PIP001 tower case - modular, printable on a Creality K2 Plus (350 x 350 x 350 mm bed)
 //
 // Stack (bottom to top):
-//   base plate -> MISR section (3 fans each side) -> floor plate -> middle section
-//   -> floor plate (Pi crib sits on it) -> PIP section -> roof plate (top fan) -> head
+//   base plate (caster-wheel pads) -> MISR section (3 fans each side) -> floor plate
+//   -> middle section -> floor plate (Pi crib sits on it) -> PIP section (front display)
+//   -> roof plate (top fan) -> head (camera + speaker grille)
 //
-// Every section is an open-backed tube. A removable back door (held by 10x3 mm magnets)
-// covers each one. Sections and plates line up with printed pins in the corner columns.
+// The whole back is ONE door, held on by 10 x 3 mm magnets. It's too tall for the bed, so it
+// prints as 3 panels that lock together with half-lap joints (glue them). Cords leave through
+// notches in the door's edges, so they can be slipped in without unplugging anything.
 //
-// Export one part at a time:  openscad -D 'part="misr"' -o misr.stl pip001_tower.scad
+// Export one part:  openscad -D 'part="misr"' -o misr.stl pip001_tower.scad
 // part = "assembly" | "misr" | "middle" | "pip" | "plate_base" | "plate_floor" | "plate_floor_pi"
-//        | "plate_roof" | "head" | "door_misr" | "door_middle" | "door_pip" | "pi_crib" | "pin" | "pin_short"
+//        | "plate_roof" | "head" | "door_1" | "door_2" | "door_3" | "pi_crib" | "display_clip"
+//        | "pin" | "pin_short"
 
 part = "assembly";
 $fn = 64;
 
 // ---------- main sizes (mm) ----------
-W = 300;            // outside width and depth (fits the 350 mm bed with room for a brim)
-WALL = 4;           // wall thickness
-COL = 14;           // corner column size (strength + pin holes + magnets)
-PLATE = 4;          // floor / roof plate thickness
-H_MISR = 280;       // bottom section: MISR001, most of the fans
-H_MID = 200;        // middle section: extra stuff
-H_PIP = 160;        // top section: PIP001 (Raspberry Pi)
-PIN_D = 5.2;        // pin hole
+W = 300;            // outside width and depth
+WALL = 4;
+COL = 14;           // corner columns (strength, pins, magnets)
+PLATE = 4;          // floor / roof plates
+BASE_T = 6;         // base plate is thicker (it carries the wheels)
+H_MISR = 280;       // bottom: MISR001, most of the fans
+H_MID = 200;        // middle: extra stuff
+H_PIP = 160;        // top: PIP001 (Raspberry Pi) + display
+PIN_D = 5.2;
 PIN_DEPTH = 12;
 MAG_D = 10.4;       // 10 x 3 mm round magnets
 MAG_T = 3.2;
-DOOR_T = 4;
+DOOR_T = 6;
+LAP = 20;           // half-lap joint between door panels
+
+// heights in the stack
+Z_MISR = BASE_T;
+Z_MID = Z_MISR + H_MISR + PLATE;
+Z_PIP = Z_MID + H_MID + PLATE;
+Z_ROOF = Z_PIP + H_PIP;
+H_TOWER = Z_ROOF + PLATE;               // = door height
+DOOR_SPLITS = [0, 225, 445, H_TOWER];   // 3 panels, each fits on the bed
 
 // head
-HEAD_W = 150; HEAD_D = 130; HEAD_H = 120; HEAD_FRONT = 12;   // gap from the tower's front edge
-HEAD_COL = 10;
+HEAD_W = 150; HEAD_D = 130; HEAD_H = 120; HEAD_FRONT = 12; HEAD_COL = 10;
 
 // fans
 FAN80_HOLE = 76;  FAN80_SCREW = 71.5;
 FAN120_HOLE = 116; FAN120_SCREW = 105;
 FAN_SCREW_D = 4.4;
 
+// display: a common cheap 7" HDMI LCD (1024x600). MEASURE YOURS and change these numbers.
+DISP_MOD = [165, 100];    // whole screen module
+DISP_VIEW = [155, 88];    // visible picture area (the window)
+DISP_Z = H_PIP / 2 + 5;   // centre height inside the PIP section
+
 // ---------- helpers ----------
 module fan_cut(hole, screw, depth) {
-    // cut through a wall lying in the XZ plane (cut along Y)
     rotate([90, 0, 0]) {
         cylinder(d = hole, h = depth, center = true);
         for (sx = [-1, 1], sz = [-1, 1])
@@ -52,7 +68,8 @@ module corner_positions(w = W, d = W, c = COL) {
         translate([p[0], p[1], 0]) children();
 }
 
-// open-backed tube with corner columns, pin holes and door magnets
+function mag_z(h) = [25, h - 25];   // magnet heights inside one section
+
 module section(h) {
     difference() {
         union() {
@@ -63,13 +80,11 @@ module section(h) {
             }
             corner_positions() translate([-COL / 2, -COL / 2, 0]) cube([COL, COL, h]);
         }
-        // pin holes top and bottom
         corner_positions() {
             translate([0, 0, -1]) cylinder(d = PIN_D, h = PIN_DEPTH + 1);
             translate([0, 0, h - PIN_DEPTH]) cylinder(d = PIN_D, h = PIN_DEPTH + 1);
         }
-        // magnet pockets in the back faces of the two back columns
-        for (x = [COL / 2, W - COL / 2], z = [25, h - 25])
+        for (x = [COL / 2, W - COL / 2], z = mag_z(h))
             translate([x, W - MAG_T, z]) rotate([-90, 0, 0]) cylinder(d = MAG_D, h = MAG_T + 1);
     }
 }
@@ -80,20 +95,28 @@ module vent_grid(w, d, hole = 8, gap = 14) {
 
 module plate_holes() { corner_positions() cylinder(d = PIN_D, h = 50, center = true); }
 
+// cord holes between floors: one in each back corner
+module floor_cord_holes() {
+    translate([COL + 12, W - 60, -1]) cube([60, 32, 20]);
+    translate([W - COL - 72, W - 60, -1]) cube([60, 32, 20]);
+}
+
+// caster wheel pads: slots fit square mounting plates with hole spacing from about 24 to 45 mm
+CASTER_IN = 50;
 module plate_base() {
     difference() {
-        cube([W, W, PLATE]);
-        plate_holes();
-        // big intake vent for the MISR fans
-        intersection() {
-            translate([40, 40, 0]) cube([W - 80, W - 80, 50], center = false);
-            translate([40, 40, 0]) vent_grid(W - 80, W - 80, 10, 16);
+        union() {
+            cube([W, W, BASE_T]);
+            corner_positions(W, W, 2 * CASTER_IN) translate([-30, -30, -6]) cube([60, 60, 6]);
         }
-    }
-    // feet
-    corner_positions(W, W, 40) translate([0, 0, -6]) difference() {
-        cylinder(d = 26, h = 6);
-        translate([0, 0, -1]) cylinder(d = PIN_D, h = 10);
+        corner_positions() translate([0, 0, -20]) cylinder(d = PIN_D, h = 50);
+        intersection() {   // intake vents
+            translate([90, 40, -10]) cube([W - 180, W - 80, 30]);
+            translate([90, 40, 0]) vent_grid(W - 180, W - 80, 10, 16);
+        }
+        corner_positions(W, W, 2 * CASTER_IN) for (a = [45, 135, 225, 315]) rotate([0, 0, a])
+            hull() { translate([17, 0, -20]) cylinder(d = 5.5, h = 40); translate([32, 0, -20]) cylinder(d = 5.5, h = 40); }
+        translate([W / 2 - 35, W - 70, -20]) cube([70, 40, 40]);   // motor / wheel wires
     }
 }
 
@@ -101,14 +124,11 @@ module plate_floor(pi = false) {
     difference() {
         cube([W, W, PLATE]);
         plate_holes();
-        // air flows up through the tower
         intersection() {
             translate([30, 30, -1]) cube([W - 60, W - 110, 10]);
             translate([30, 30, 0]) vent_grid(W - 60, W - 110);
         }
-        // cable pass-through (back right)
-        translate([W - 110, W - 60, -1]) cube([70, 32, 10]);
-        // Pi crib screw holes (crib sits in the back-left corner)
+        floor_cord_holes();
         if (pi) for (p = crib_screws()) translate([p[0], p[1], 0]) cylinder(d = 3.4, h = 50, center = true);
     }
 }
@@ -117,11 +137,8 @@ module plate_roof() {
     difference() {
         cube([W, W, PLATE]);
         plate_holes();
-        // head cable hole (under the head)
-        translate([W / 2 - 25, HEAD_FRONT + HEAD_D / 2 - 15, -1]) cube([50, 30, 10]);
-        // head pin holes
+        translate([W / 2 - 25, HEAD_FRONT + HEAD_D / 2 - 15, -1]) cube([50, 30, 10]);   // head cables
         translate([(W - HEAD_W) / 2, HEAD_FRONT, 0]) corner_positions(HEAD_W, HEAD_D, HEAD_COL) cylinder(d = PIN_D, h = 50, center = true);
-        // top exhaust fan (120 mm) behind the head
         translate([W / 2, 222, 0]) rotate([-90, 0, 0]) fan_cut(FAN120_HOLE, FAN120_SCREW, 50);
     }
 }
@@ -134,42 +151,72 @@ module head() {
                 translate([WALL, WALL, -1]) cube([HEAD_W - 2 * WALL, HEAD_D - 2 * WALL, HEAD_H - WALL + 1]);
             }
             corner_positions(HEAD_W, HEAD_D, HEAD_COL) translate([-HEAD_COL / 2, -HEAD_COL / 2, 0]) cube([HEAD_COL, HEAD_COL, HEAD_H - WALL]);
-            // camera mounting pad inside the front wall
-            translate([HEAD_W / 2 - 18, WALL, HEAD_H - 48]) cube([36, 3, 30]);
+            translate([HEAD_W / 2 - 18, WALL, HEAD_H - 48]) cube([36, 3, 30]);   // camera pad
         }
         corner_positions(HEAD_W, HEAD_D, HEAD_COL) translate([0, 0, -1]) cylinder(d = PIN_D, h = PIN_DEPTH + 1);
-        // camera "eye": lens hole + M2 holes (21 x 12.5 mm pattern - check against your AI Camera)
+        // camera eye: lens hole + M2 holes (21 x 12.5 mm - check against your AI Camera)
         translate([HEAD_W / 2, 0, HEAD_H - 33]) {
             rotate([-90, 0, 0]) cylinder(d = 16, h = 30, center = true);
             for (sx = [-1, 1], sz = [-1, 1])
                 translate([sx * 10.5, 0, sz * 6.25 - 3]) rotate([-90, 0, 0]) cylinder(d = 2.2, h = 30, center = true);
         }
-        // speaker grille below the camera
-        for (cx = [0 : 9], cz = [0 : 4]) translate([HEAD_W / 2 - 40.5 + cx * 9, 0, 18 + cz * 9]) rotate([-90, 0, 0]) cylinder(d = 5, h = 30, center = true, $fn = 16);
-        // a few vents on the sides
-        for (i = [0 : 3]) translate([-1, 30 + i * 18, 40]) cube([HEAD_W + 2, 6, 40]);
+        for (cx = [0 : 9], cz = [0 : 4])   // speaker grille
+            translate([HEAD_W / 2 - 40.5 + cx * 9, 0, 18 + cz * 9]) rotate([-90, 0, 0]) cylinder(d = 5, h = 30, center = true, $fn = 16);
+        translate([HEAD_W / 2, HEAD_D, 25]) rotate([90, 0, 0]) cylinder(d = 22, h = 30, center = true);   // cables out the back
     }
 }
 
-module door(h, power_button = false) {
+// ---------- the one back door ----------
+CORD_NOTCHES = [   // [height from bottom, width] on BOTH side edges (kept clear of the magnets)
+    [70, 10], [130, 16], [190, 24], [300, 10], [360, 16], [500, 10], [560, 24], [600, 16]
+];
+MAG_ZS = concat([for (z = mag_z(H_MISR)) Z_MISR + z], [for (z = mag_z(H_MID)) Z_MID + z], [for (z = mag_z(H_PIP)) Z_PIP + z]);
+
+module door_full() {
     difference() {
-        cube([W, DOOR_T, h]);
-        for (x = [COL / 2, W - COL / 2], z = [25, h - 25])
-            translate([x, -0.01, z]) rotate([-90, 0, 0]) cylinder(d = MAG_D, h = MAG_T);
-        // finger notch to pull it off
-        translate([W / 2, DOOR_T + 2, h - 30]) rotate([90, 0, 0]) cylinder(d = 30, h = 3);
-        // vents
-        for (i = [0 : floor((h - 80) / 12)]) translate([60, -1, 40 + i * 12]) cube([W - 120, DOOR_T + 2, 5]);
-        if (power_button) {
-            translate([W - 45, -1, h - 50]) rotate([-90, 0, 0]) cylinder(d = 16.2, h = 20);   // 16 mm push button
-            translate([45, -1, 30]) rotate([-90, 0, 0]) cylinder(d = 40, h = 20);              // power cables in
+        cube([W, DOOR_T, H_TOWER]);
+        for (x = [COL / 2, W - COL / 2], zz = MAG_ZS)
+            translate([x, -0.01, zz]) rotate([-90, 0, 0]) cylinder(d = MAG_D, h = MAG_T);
+        // cord notches: open to the edge, so a cord slides in sideways
+        for (n = CORD_NOTCHES, side = [0, 1])
+            translate([side == 0 ? -1 : W - 31, -1, n[0] - n[1] / 2]) cube([32, DOOR_T + 2, n[1]]);
+        translate([W / 2 - 50, -1, -1]) cube([100, DOOR_T + 2, 30]);                // power strip / wall plug
+        translate([W - 60, -1, 80]) rotate([-90, 0, 0]) cylinder(d = 16.2, h = 20);  // 16 mm power button
+        for (z = [H_TOWER * 0.3, H_TOWER * 0.62])                                    // finger pulls
+            translate([W / 2, DOOR_T + 1, z]) rotate([90, 0, 0]) cylinder(d = 34, h = 3.5);
+        for (zz = [Z_MISR + 40 : 14 : Z_MISR + H_MISR - 40])                         // exhaust vents
+            translate([60, -1, zz]) cube([W - 120, DOOR_T + 2, 5]);
+    }
+}
+
+// Joints: panels 1 and 3 give the OUTER half of each overlap, panel 2 gives the INNER half.
+// That way every panel's tabs are on one face, so each prints flat with no overhangs.
+module door_panel(k) {
+    a = DOOR_SPLITS[k]; b = DOOR_SPLITS[k + 1];
+    outer = [-1, DOOR_T / 2, 0]; inner = [-1, -1, 0];
+    intersection() {
+        door_full();
+        union() {
+            if (k == 0) {
+                translate([-1, -1, -1]) cube([W + 2, DOOR_T + 2, b + 1]);
+                translate(outer + [0, 0, b]) cube([W + 2, DOOR_T / 2 + 1, LAP]);
+            }
+            if (k == 1) {
+                translate(inner + [0, 0, a]) cube([W + 2, DOOR_T / 2 + 1, LAP]);
+                translate([-1, -1, a + LAP]) cube([W + 2, DOOR_T + 2, b - a - LAP]);
+                translate(inner + [0, 0, b]) cube([W + 2, DOOR_T / 2 + 1, LAP]);
+            }
+            if (k == 2) {
+                translate(outer + [0, 0, a]) cube([W + 2, DOOR_T / 2 + 1, LAP]);
+                translate([-1, -1, a + LAP]) cube([W + 2, DOOR_T + 2, b - a - LAP + 1]);
+            }
         }
     }
 }
 
-// Raspberry Pi 5 "crib": base plate, 4 M2.5 standoffs, corner walls so it can't slide off
+// ---------- Raspberry Pi crib ----------
 PI_L = 85; PI_W = 56; CRIB_GAP = 3; CRIB_WALL = 3; CRIB_H = 14;
-CRIB_X = COL + 10; CRIB_Y = W - COL - 10 - (PI_W + 2 * CRIB_GAP + 2 * CRIB_WALL);   // back-left corner
+CRIB_X = COL + 10; CRIB_Y = W - COL - 10 - (PI_W + 2 * CRIB_GAP + 2 * CRIB_WALL) - 45;  // back-left, clear of the cord hole
 function crib_size() = [PI_L + 2 * CRIB_GAP + 2 * CRIB_WALL, PI_W + 2 * CRIB_GAP + 2 * CRIB_WALL];
 function crib_screws() = [[CRIB_X + 6, CRIB_Y + 6], [CRIB_X + crib_size()[0] - 6, CRIB_Y + crib_size()[1] - 6]];
 
@@ -178,83 +225,85 @@ module pi_crib() {
     difference() {
         union() {
             cube([s[0], s[1], 3]);
-            // corner walls only, so every port stays reachable
             for (cx = [0, 1], cy = [0, 1]) translate([cx * (s[0] - 20), cy * (s[1] - CRIB_WALL), 0]) cube([20, CRIB_WALL, CRIB_H]);
             for (cx = [0, 1], cy = [0, 1]) translate([cx * (s[0] - CRIB_WALL), cy * (s[1] - 16), 0]) cube([CRIB_WALL, 16, CRIB_H]);
-            // standoffs at the Pi 5 hole pattern (58 x 49 mm, 3.5 mm in from the edge)
             for (p = [[3.5, 3.5], [61.5, 3.5], [3.5, 52.5], [61.5, 52.5]])
                 translate([CRIB_WALL + CRIB_GAP + p[0], CRIB_WALL + CRIB_GAP + p[1], 0]) cylinder(d = 6, h = 8);
         }
         for (p = [[3.5, 3.5], [61.5, 3.5], [3.5, 52.5], [61.5, 52.5]])
             translate([CRIB_WALL + CRIB_GAP + p[0], CRIB_WALL + CRIB_GAP + p[1], -1]) cylinder(d = 2.4, h = 20);
-        // screw-down holes + airflow under the Pi
         for (p = crib_screws()) translate([p[0] - CRIB_X, p[1] - CRIB_Y, -1]) cylinder(d = 3.4, h = 10);
         translate([22, 18, -1]) cube([s[0] - 44, s[1] - 36, 10]);
     }
 }
 
+// ---------- sections ----------
 module misr() {
     difference() {
         section(H_MISR);
-        // 3 x 80 mm fans on the left and right sides
         for (x = [WALL / 2, W - WALL / 2], y = [62, 150, 238])
             translate([x, y, H_MISR / 2]) rotate([0, 0, 90]) fan_cut(FAN80_HOLE, FAN80_SCREW, WALL + 4);
-        // front intake slots
-        for (i = [0 : 10]) translate([60 + i * 18, -1, 40]) cube([8, WALL + 2, H_MISR - 80]);
     }
 }
 
-module middle() {
-    difference() {
-        section(H_MID);
-        for (i = [0 : 10]) translate([60 + i * 18, -1, 40]) cube([8, WALL + 2, H_MID - 80]);
-    }
-}
+module middle() { section(H_MID); }
 
+// display window in the front, with two angled ledges inside (no supports needed) that clips screw onto
 module pip() {
+    L = DISP_MOD[0] + 8;
     difference() {
-        section(H_PIP);
-        // status light slots on the front (for an LED strip behind them)
-        for (i = [0 : 10]) translate([60 + i * 18, -1, 50]) cube([8, WALL + 2, 60]);
+        union() {
+            section(H_PIP);
+            for (dz = [-1, 1]) hull() {
+                translate([W / 2 - L / 2, WALL, DISP_Z + dz * (DISP_MOD[1] / 2 + 4) - 2]) cube([L, 9, 4]);
+                translate([W / 2 - L / 2, WALL, DISP_Z + dz * (DISP_MOD[1] / 2 + 4) - 11]) cube([L, 0.5, 4]);
+            }
+        }
+        translate([W / 2 - DISP_VIEW[0] / 2, -1, DISP_Z - DISP_VIEW[1] / 2]) cube([DISP_VIEW[0], WALL + 2, DISP_VIEW[1]]);
+        for (sx = [-1, 1], dz = [-1, 1])
+            translate([W / 2 + sx * (DISP_MOD[0] / 2 - 15), WALL + 6, DISP_Z + dz * (DISP_MOD[1] / 2 + 4)]) cylinder(d = 2.6, h = 30, center = true);
     }
 }
 
-module pin() { cylinder(d = 4.8, h = 2 * PIN_DEPTH + PLATE - 2); }          // joins two sections through a floor plate
-module pin_short() { cylinder(d = 4.8, h = PIN_DEPTH + PLATE - 1); }    // base, roof and head joints
+// clip that screws to a ledge and holds the screen against the window
+module display_clip() {
+    difference() {
+        union() { cube([20, 14, 3]); cube([20, 3, 12]); }
+        translate([10, 8, -1]) cylinder(d = 3.2, h = 10);
+    }
+}
+
+module pin() { cylinder(d = 4.8, h = 2 * PIN_DEPTH + PLATE - 2); }
+module pin_short() { cylinder(d = 4.8, h = PIN_DEPTH + PLATE - 1); }
 
 module assembly() {
     color("dimgray") plate_base();
-    z1 = PLATE;
-    color("silver") translate([0, 0, z1]) misr();
-    color("black") translate([0, 0, z1 + H_MISR]) plate_floor();
-    z2 = z1 + H_MISR + PLATE;
-    color("silver") translate([0, 0, z2]) middle();
-    color("black") translate([0, 0, z2 + H_MID]) plate_floor(true);
-    z3 = z2 + H_MID + PLATE;
-    color("orange") translate([CRIB_X, CRIB_Y, z3]) pi_crib();
-    color("silver") translate([0, 0, z3]) pip();
-    color("black") translate([0, 0, z3 + H_PIP]) plate_roof();
-    color("white") translate([(W - HEAD_W) / 2, HEAD_FRONT, z3 + H_PIP + PLATE]) head();
-    // doors on the back (shown slightly pulled out)
-    color("gray", 0.6) {
-        translate([0, W + 20, z1]) door(H_MISR, true);
-        translate([0, W + 20, z2]) door(H_MID);
-        translate([0, W + 20, z3]) door(H_PIP);
-    }
+    color("silver") translate([0, 0, Z_MISR]) misr();
+    color("black") translate([0, 0, Z_MISR + H_MISR]) plate_floor();
+    color("silver") translate([0, 0, Z_MID]) middle();
+    color("black") translate([0, 0, Z_MID + H_MID]) plate_floor(true);
+    color("orange") translate([CRIB_X, CRIB_Y, Z_PIP]) pi_crib();
+    color("silver") translate([0, 0, Z_PIP]) pip();
+    color("deepskyblue") translate([W / 2 - DISP_VIEW[0] / 2, 0.5, Z_PIP + DISP_Z - DISP_VIEW[1] / 2]) cube([DISP_VIEW[0], 1, DISP_VIEW[1]]);
+    color("black") translate([0, 0, Z_ROOF]) plate_roof();
+    color("white") translate([(W - HEAD_W) / 2, HEAD_FRONT, Z_ROOF + PLATE]) head();
+    color("gray", 0.7) translate([0, W + 25, 0]) door_full();   // shown pulled back
 }
 
 if (part == "assembly") assembly();
 else if (part == "misr") misr();
 else if (part == "middle") middle();
 else if (part == "pip") pip();
-else if (part == "plate_base") rotate([180, 0, 0]) plate_base();      // print feet-up
+else if (part == "plate_base") rotate([180, 0, 0]) plate_base();   // print wheel-pads-up
 else if (part == "plate_floor") plate_floor();
 else if (part == "plate_floor_pi") plate_floor(true);
 else if (part == "plate_roof") plate_roof();
-else if (part == "head") rotate([180, 0, 0]) head();                  // print top-down, no supports
-else if (part == "door_misr") rotate([-90, 0, 0]) door(H_MISR, true);
-else if (part == "door_middle") rotate([-90, 0, 0]) door(H_MID);
-else if (part == "door_pip") rotate([-90, 0, 0]) door(H_PIP);
+else if (part == "head") rotate([180, 0, 0]) head();               // print top-down
+else if (part == "door_1") rotate([-90, 0, 0]) door_panel(0);
+else if (part == "door_2") rotate([90, 0, 0]) door_panel(1);        // inner face down
+else if (part == "door_3") rotate([-90, 0, 0]) door_panel(2);
 else if (part == "pi_crib") pi_crib();
+else if (part == "display_clip") display_clip();
 else if (part == "pin") pin();
 else if (part == "pin_short") pin_short();
+else if (part == "door_full") door_full();     // for checking only
