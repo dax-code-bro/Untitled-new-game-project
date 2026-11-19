@@ -98,7 +98,7 @@
 <div class="wrap">
   <header>
     <h1>PIP<span>001</span></h1>
-    <div class="tag">Tower case v4 &middot; Creality K2 Plus &middot; 4 &times; Dell Precision 3420</div>
+    <div class="tag">Tower case v5 &middot; Creality K2 Plus &middot; up to 5 slim Dells</div>
   </header>
 
   <div class="main">
@@ -118,18 +118,23 @@
       <section>
         <h2>Build</h2>
         <div class="specs">
-          <div class="spec"><b>84 cm</b><small>tall, about 2.75 ft</small></div>
-          <div class="spec"><b>32.6 cm</b><small>wide and deep</small></div>
-          <div class="spec"><b>~2.8 kg</b><small>filament</small></div>
-          <div class="spec"><b>15</b><small>printed part types</small></div>
+          <div class="spec"><b>89 cm</b><small>tall, about 2.9 ft</small></div>
+          <div class="spec"><b>41 cm</b><small>wide, 50 cm with feet</small></div>
+          <div class="spec"><b>5</b><small>pull-out Dell drawers</small></div>
+          <div class="spec"><b>~9 kg</b><small>push at the top to tip it, full</small></div>
         </div>
       </section>
 
       <section class="controls">
         <h2>Look inside</h2>
-        <div class="row"><label for="tDoor">Back door</label><span class="switch"><input type="checkbox" id="tDoor" checked><span></span></span></div>
+        <div class="row"><label for="tFront">Front door (screen)</label><span class="switch"><input type="checkbox" id="tFront" checked><span></span></span></div>
+        <div class="row"><label for="tDoor">Back door (service)</label><span class="switch"><input type="checkbox" id="tDoor" checked><span></span></span></div>
         <div class="row"><label for="tXray">See-through shell</label><span class="switch"><input type="checkbox" id="tXray"><span></span></span></div>
         <div class="row"><label for="tSpin">Auto-spin</label><span class="switch"><input type="checkbox" id="tSpin" checked><span></span></span></div>
+        <div>
+          <div class="row"><label for="drawers">Slide out drawers</label><span class="mat" id="drawersVal">0%</span></div>
+          <input type="range" id="drawers" min="0" max="100" value="0">
+        </div>
         <div>
           <div class="row"><label for="explode">Pull apart</label><span class="mat" id="explodeVal">0%</span></div>
           <input type="range" id="explode" min="0" max="100" value="0">
@@ -139,12 +144,12 @@
       <section>
         <h2>What's what</h2>
         <ul class="parts">
-          <li><span class="dot" style="background:#3a73c9"></span><span>Dell #4: PIP001's brain</span><span class="mat">~200 GB</span></li>
-          <li><span class="dot" style="background:#5a5d62"></span><span>Dells #1&ndash;#3: MISR001</span><span class="mat">3 computers</span></li>
-          <li><span class="dot" style="background:var(--screen)"></span><span>7" screen</span><span class="mat">HDMI</span></li>
-          <li><span class="dot" style="background:#1e1e20"></span><span>Base, ring, floors</span><span class="mat">PETG-CF</span></li>
-          <li><span class="dot" style="background:#262628"></span><span>MISR sections</span><span class="mat">PETG</span></li>
-          <li><span class="dot" style="background:#2a2a2c"></span><span>Middle, PIP, roof, head, door</span><span class="mat">PLA</span></li>
+          <li><span class="dot" style="background:#3a73c9"></span><span>Top Dell: PIP001's brain</span><span class="mat">~200 GB</span></li>
+          <li><span class="dot" style="background:#5a5d62"></span><span>Other Dells: MISR001</span><span class="mat">up to 4</span></li>
+          <li><span class="dot" style="background:#4a4c52"></span><span>Pull-out trays, one per Dell</span><span class="mat">PLA</span></li>
+          <li><span class="dot" style="background:#18181a"></span><span>Cable column, 3-inch holes</span><span class="mat">PLA</span></li>
+          <li><span class="dot" style="background:var(--screen)"></span><span>7" screen in the front door</span><span class="mat">HDMI</span></li>
+          <li><span class="dot" style="background:#6a6c72"></span><span>Anti-tip feet, rubber pads</span><span class="mat">PETG-CF</span></li>
           <li><span class="dot" style="background:var(--accent)"></span><span>Clips, pins, nameplate</span><span class="mat">Gold silk</span></li>
         </ul>
       </section>
@@ -199,8 +204,9 @@
 
   const root = new THREE.Group(); scene.add(root);
   // how far each piece lifts when pulled apart (levels of the stack)
-  const LEVEL = { base: 0, guides: 0, dells: 1, misr_a: 1, ring: 2, misr_b: 3, dell_pip: 3.6, floor1: 4, middle: 5, floor2: 6, pip: 7, screen: 7, roof: 8, head: 9, door: 0 };
-  const SHELL = new Set(['base', 'misr_a', 'ring', 'misr_b', 'floor1', 'middle', 'floor2', 'pip', 'roof', 'head', 'door']);
+  const LEVEL = { feet: 0, base: 0.4, ctrl: 6, roof: 7, head: 8, front: 0, back: 0, screen: 0 };
+  for (let i = 0; i < 5; i++) { LEVEL['bay' + i] = 1 + i; LEVEL['chase' + i] = 1 + i; LEVEL['tray' + i] = 1 + i; LEVEL['dell' + i] = 1 + i; }
+  const SHELL = new Set(['base', 'ctrl', 'roof', 'head', 'front', 'back', 'bay0', 'bay1', 'bay2', 'bay3', 'bay4', 'chase0', 'chase1', 'chase2', 'chase3', 'chase4']);
   const parts = {};
   let center = new THREE.Vector3(), size = new THREE.Vector3();
 
@@ -241,13 +247,13 @@
   }
 
   // camera views
-  const VIEWS = { front: [0.35, 0.55, 1.0], side: [1.1, 0.55, 0.0], back: [-0.35, 0.6, -1.0], top: [0.05, 1.3, 0.35] };
+  const VIEWS = { front: [0.35, 0.55, 1.0], side: [1.1, 0.55, 0.0], back: [-0.45, 0.6, -1.0], top: [0.05, 1.3, 0.35] };
   let anim = null;
   function setView(name, instant) {
     const h = size.y || 0.85;
     const target = new THREE.Vector3(0, h * 0.48, 0);
     const d = VIEWS[name];
-    const dist = h * 2.0;
+    const dist = h * 2.5;
     const pos = new THREE.Vector3(d[0], d[1], d[2]).normalize().multiplyScalar(dist).add(target);
     if (instant || reduceMotion) { camera.position.copy(pos); controls.target.copy(target); controls.update(); return; }
     anim = { t: 0, fromP: camera.position.clone(), toP: pos, fromT: controls.target.clone(), toT: target };
@@ -257,11 +263,16 @@
   }));
 
   // toggles
+  const tFront = document.getElementById('tFront'), drawers = document.getElementById('drawers'), drawersVal = document.getElementById('drawersVal');
   const tDoor = document.getElementById('tDoor'), tXray = document.getElementById('tXray'), spin = document.getElementById('tSpin');
   const explode = document.getElementById('explode'), explodeVal = document.getElementById('explodeVal');
   if (reduceMotion) spin.checked = false;
 
-  function applyDoor() { if (parts.door) parts.door.obj.visible = tDoor.checked; }
+  function applyDoor() {
+    if (parts.back) parts.back.obj.visible = tDoor.checked;
+    if (parts.front) parts.front.obj.visible = tFront.checked;
+    if (parts.screen) parts.screen.obj.visible = tFront.checked;
+  }
   function applyXray() {
     root.traverse((o) => {
       if (!o.isMesh || !SHELL.has(o.userData.part)) return;
@@ -275,13 +286,20 @@
   function applyExplode() {
     const e = explode.value / 100;
     explodeVal.textContent = Math.round(e * 100) + '%';
+    const dr = drawers.value / 100;
+    drawersVal.textContent = Math.round(dr * 100) + '%';
     for (const [name, p] of Object.entries(parts)) {
       p.obj.position.copy(p.home);
       p.obj.position.y += LEVEL[name] * e * 0.07;
-      if (name === 'door') p.obj.position.z -= e * 0.3;
+      if (name === 'back') p.obj.position.z -= e * 0.3;
+      if (name === 'front' || name === 'screen') p.obj.position.z += e * 0.3;
+      const m = name.match(/^(tray|dell)(\d)$/);
+      if (m) p.obj.position.z -= dr * (0.06 + (4 - Number(m[2])) * 0.05);   // staircase: lower drawers come out further
     }
   }
   tDoor.addEventListener('change', applyDoor);
+  tFront.addEventListener('change', applyDoor);
+  drawers.addEventListener('input', () => { if (drawers.value > 0 && tDoor.checked) { tDoor.checked = false; applyDoor(); } applyExplode(); });
   tXray.addEventListener('change', applyXray);
   explode.addEventListener('input', applyExplode);
   canvas.addEventListener('pointerdown', () => { spin.checked = false; anim = null; });
