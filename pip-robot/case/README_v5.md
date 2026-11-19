@@ -42,8 +42,8 @@ Below those numbers, gravity pulls it back down onto its feet. For real safety, 
 | `back_1/2/3.stl` | 1 each | Back door, glued at the overlaps |
 | `head.stl` | 1 | |
 | `display_clip.stl` | 4 | |
-| `pin.stl` | 4 per level joint | |
-| `pin_short.stl` | 8 | Roof and head |
+| `pin.stl` | 30 (4 Dells) | 6 per joint between levels: 4 in the bay side, 2 in the cable side |
+| `pin_short.stl` | 10 | Roof (6) and head (4) |
 
 **Filament:** about **7.6 kg** for all 5 bays, or **6.7 kg** for 4 bays. Print only as many bays as you
 have Dells, and add more later. Hidden parts (trays, base) can use white or gray to save black.
