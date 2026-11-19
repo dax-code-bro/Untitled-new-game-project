@@ -6,7 +6,7 @@ a **Creality K2 Plus** (350 mm bed). Ready-to-print files are in `stl/`. Sizes c
 `pip001_tower.scad` (open it in OpenSCAD).
 
 ```
-        ┌──────┐     HEAD: AI camera eye, speaker grille, cable hole out the back
+        ┌──────┐     HEAD: webcam eye, speaker grille, cable hole out the back
    ┌────┴──────┴────┐ ROOF: chimney vents behind the head
    │ PIP face [7" ] │ display window (screen plugs into Dell #4)
    ├────────────────┤ FLOOR (vented, 2 cord holes)
