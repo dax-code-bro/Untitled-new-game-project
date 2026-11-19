@@ -49,8 +49,8 @@ Below those numbers, gravity pulls it back down onto its feet. For real safety, 
 have Dells, and add more later. Hidden parts (trays, base) can use white or gray to save black.
 
 ## Also needed
-- 4 × M4 bolts + nuts per level (join `a` to `b`), 4 × M4 for the feet (nuts sit in the ballast box)
-- 8 × 3 mm round magnets (4 per level on each door side)
+- M4 bolts + nuts: 2 per level to join `a` to `b` (12 for base + 4 bays + top), plus 4 for the feet (their nuts sit in the ballast box)
+- Round magnets, 8 mm × 3 mm: 16 per level (4 front + 4 back in the tower, 4 + 4 in the doors), so 80 for 4 bays + top. Check that each pair attracts before gluing
 - 8 × 25 mm stick-on rubber pads, sand bags or weights for the ballast box
 - 7" HDMI LCD + DisplayPort-to-HDMI adapter, USB webcam, small network switch
 - Leave **about 30 cm of slack** on each Dell's cables, so its drawer can slide out the back.
