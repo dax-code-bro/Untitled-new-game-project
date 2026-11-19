@@ -1,0 +1,314 @@
+<title>PIP001 Tower</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  /* Layout: a print-shop inspection bench. Big model stage, spec sheet beside it (stacks under on phones). */
+  :root {
+    --bg: #e6e7ea;          /* bench grey, a little cool so the black tower reads */
+    --stage-top: #f3f4f6;
+    --stage-bottom: #cfd2d7;
+    --panel: #f7f8f9;
+    --line: #c5c9cf;
+    --fg: #17191c;
+    --muted: #5b6168;
+    --accent: #c9962b;      /* the gold silk PLA accent */
+    --accent-ink: #1b1406;
+    --screen: #1e8ae6;
+    --font-display: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+    --font-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #1c1e22; --stage-top: #4a4f57; --stage-bottom: #2a2d33; --panel: #23262b; --line: #3a3e45;
+      --fg: #eceef1; --muted: #a2a8b0; --accent: #e0b24a; --accent-ink: #1b1406; --screen: #3aa0ff;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #1c1e22; --stage-top: #4a4f57; --stage-bottom: #2a2d33; --panel: #23262b; --line: #3a3e45;
+    --fg: #eceef1; --muted: #a2a8b0; --accent: #e0b24a; --accent-ink: #1b1406; --screen: #3aa0ff;
+    color-scheme: dark;
+  }
+
+  html, body { height: 100%; }
+  body {
+    background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 15px; line-height: 1.5;
+    padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 16px; box-sizing: border-box;
+  }
+  * { box-sizing: border-box; }
+  .wrap { max-width: 1240px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; height: 100%; }
+
+  header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(26px, 4vw, 38px); letter-spacing: 0.04em; margin: 0; line-height: 1; }
+  h1 span { color: var(--accent); }
+  .tag { font-family: var(--font-mono); font-size: 12px; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; }
+
+  .main { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 14px; flex: 1; min-height: 0; }
+  @media (max-width: 860px) { .main { grid-template-columns: minmax(0, 1fr); } }
+
+  .stage {
+    position: relative; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; min-height: 420px;
+    background: linear-gradient(180deg, var(--stage-top), var(--stage-bottom));
+  }
+  @media (max-width: 860px) { .stage { height: 62vh; min-height: 380px; } }
+  #view { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+  .hint { position: absolute; left: 12px; bottom: 10px; font-family: var(--font-mono); font-size: 11px; color: var(--muted); pointer-events: none; }
+  [hidden] { display: none !important; }
+  .status { position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--font-mono); font-size: 13px; color: var(--muted); text-align: center; padding: 20px; }
+
+  .views { position: absolute; top: 10px; left: 10px; display: flex; gap: 6px; flex-wrap: wrap; }
+  .views button, .toggle, .reset {
+    font: 500 12px var(--font-body); color: var(--fg); background: var(--panel); border: 1px solid var(--line);
+    border-radius: 6px; padding: 6px 10px; cursor: pointer;
+  }
+  .views button:hover, .reset:hover { border-color: var(--accent); }
+  button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  aside { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 18px; min-width: 0; overflow: auto; }
+  aside h2 { font-family: var(--font-display); font-size: 13px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; margin: 0 0 8px; color: var(--muted); }
+
+  .specs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .spec b { display: block; font-family: var(--font-mono); font-weight: 500; font-size: 18px; font-variant-numeric: tabular-nums; }
+  .spec small { color: var(--muted); font-size: 12px; }
+
+  .controls { display: flex; flex-direction: column; gap: 10px; }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .row label { font-size: 14px; }
+  .switch { position: relative; width: 40px; height: 22px; flex: none; }
+  .switch input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+  .switch span { position: absolute; inset: 0; border-radius: 11px; background: var(--line); transition: background .15s; pointer-events: none; }
+  .switch span::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: var(--panel); transition: transform .15s; }
+  .switch input:checked + span { background: var(--accent); }
+  .switch input:checked + span::after { transform: translateX(18px); }
+  .switch input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+  input[type=range] { width: 100%; accent-color: var(--accent); }
+
+  .parts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+  .parts li { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 7px 0; border-top: 1px solid var(--line); font-size: 13px; }
+  .parts li:first-child { border-top: 0; }
+  .dot { width: 12px; height: 12px; border-radius: 3px; border: 1px solid var(--line); }
+  .mat { font-family: var(--font-mono); font-size: 11px; color: var(--muted); white-space: nowrap; }
+  .note { font-size: 12px; color: var(--muted); margin: 0; }
+  @media (prefers-reduced-motion: reduce) { .switch span, .switch span::after { transition: none; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>PIP<span>001</span></h1>
+    <div class="tag">Tower case v4 &middot; Creality K2 Plus &middot; 4 &times; Dell Precision 3420</div>
+  </header>
+
+  <div class="main">
+    <div class="stage" id="stage">
+      <canvas id="view" aria-label="3D model of the PIP001 tower. Drag to spin, pinch or scroll to zoom."></canvas>
+      <div class="views" role="group" aria-label="Camera views">
+        <button type="button" data-view="front">Front</button>
+        <button type="button" data-view="side">Side</button>
+        <button type="button" data-view="back">Back</button>
+        <button type="button" data-view="top">Top</button>
+      </div>
+      <div class="status" id="status">Loading the tower&hellip;</div>
+      <div class="hint">Drag to spin &middot; pinch or scroll to zoom &middot; right-drag to move</div>
+    </div>
+
+    <aside>
+      <section>
+        <h2>Build</h2>
+        <div class="specs">
+          <div class="spec"><b>84 cm</b><small>tall, about 2.75 ft</small></div>
+          <div class="spec"><b>32.6 cm</b><small>wide and deep</small></div>
+          <div class="spec"><b>~2.8 kg</b><small>filament</small></div>
+          <div class="spec"><b>15</b><small>printed part types</small></div>
+        </div>
+      </section>
+
+      <section class="controls">
+        <h2>Look inside</h2>
+        <div class="row"><label for="tDoor">Back door</label><span class="switch"><input type="checkbox" id="tDoor" checked><span></span></span></div>
+        <div class="row"><label for="tXray">See-through shell</label><span class="switch"><input type="checkbox" id="tXray"><span></span></span></div>
+        <div class="row"><label for="tSpin">Auto-spin</label><span class="switch"><input type="checkbox" id="tSpin" checked><span></span></span></div>
+        <div>
+          <div class="row"><label for="explode">Pull apart</label><span class="mat" id="explodeVal">0%</span></div>
+          <input type="range" id="explode" min="0" max="100" value="0">
+        </div>
+      </section>
+
+      <section>
+        <h2>What's what</h2>
+        <ul class="parts">
+          <li><span class="dot" style="background:#3a73c9"></span><span>Dell #4: PIP001's brain</span><span class="mat">~200 GB</span></li>
+          <li><span class="dot" style="background:#5a5d62"></span><span>Dells #1&ndash;#3: MISR001</span><span class="mat">3 computers</span></li>
+          <li><span class="dot" style="background:var(--screen)"></span><span>7" screen</span><span class="mat">HDMI</span></li>
+          <li><span class="dot" style="background:#1e1e20"></span><span>Base, ring, floors</span><span class="mat">PETG-CF</span></li>
+          <li><span class="dot" style="background:#262628"></span><span>MISR sections</span><span class="mat">PETG</span></li>
+          <li><span class="dot" style="background:#2a2a2c"></span><span>Middle, PIP, roof, head, door</span><span class="mat">PLA</span></li>
+          <li><span class="dot" style="background:var(--accent)"></span><span>Clips, pins, nameplate</span><span class="mat">Gold silk</span></li>
+        </ul>
+      </section>
+      <p class="note">Shown in your black color scheme. Real prints take their color from the roll the printer uses, not from the file.</p>
+    </aside>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script>
+(function () {
+  const status = document.getElementById('status');
+  if (!window.THREE || !THREE.GLTFLoader || !THREE.OrbitControls) {
+    status.textContent = "The 3D viewer couldn't load. Check your connection and reload the page.";
+    return;
+  }
+  const stage = document.getElementById('stage');
+  const canvas = document.getElementById('view');
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.0;
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(35, 1, 0.01, 20);
+  const controls = new THREE.OrbitControls(camera, canvas);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.08;
+  controls.minDistance = 0.4;
+  controls.maxDistance = 4;
+
+  // lights: soft studio setup so black plastic still shows its edges
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x5a5e66, 0.9));
+  const key = new THREE.DirectionalLight(0xffffff, 1.6); key.position.set(1.2, 2.2, 1.6); scene.add(key);
+  const rim = new THREE.DirectionalLight(0xdfe8ff, 1.0); rim.position.set(-1.6, 1.4, -1.4); scene.add(rim);
+  const fill = new THREE.DirectionalLight(0xfff3e0, 0.5); fill.position.set(-1.0, 0.4, 1.8); scene.add(fill);
+
+  // soft contact shadow on the floor
+  const shadowCanvas = document.createElement('canvas'); shadowCanvas.width = shadowCanvas.height = 128;
+  const sctx = shadowCanvas.getContext('2d');
+  const grad = sctx.createRadialGradient(64, 64, 4, 64, 64, 64);
+  grad.addColorStop(0, 'rgba(0,0,0,0.45)'); grad.addColorStop(1, 'rgba(0,0,0,0)');
+  sctx.fillStyle = grad; sctx.fillRect(0, 0, 128, 128);
+  const shadow = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 0.8),
+    new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(shadowCanvas), transparent: true, depthWrite: false }));
+  shadow.rotation.x = -Math.PI / 2; shadow.position.y = 0.001; scene.add(shadow);
+
+  const root = new THREE.Group(); scene.add(root);
+  // how far each piece lifts when pulled apart (levels of the stack)
+  const LEVEL = { base: 0, guides: 0, dells: 1, misr_a: 1, ring: 2, misr_b: 3, dell_pip: 3.6, floor1: 4, middle: 5, floor2: 6, pip: 7, screen: 7, roof: 8, head: 9, door: 0 };
+  const SHELL = new Set(['base', 'misr_a', 'ring', 'misr_b', 'floor1', 'middle', 'floor2', 'pip', 'roof', 'head', 'door']);
+  const parts = {};
+  let center = new THREE.Vector3(), size = new THREE.Vector3();
+
+  function topName(obj) {
+    let o = obj;
+    while (o && !(o.name in LEVEL)) o = o.parent;
+    return o ? o.name : null;
+  }
+
+  // the model ships as base64 text (artifacts don't serve .glb), decoded here
+  fetch('pip001-model.txt').then((r) => { if (!r.ok) throw new Error(r.status); return r.text(); }).then((b64) => {
+    const bin = atob(b64.trim()); const buf = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
+    new THREE.GLTFLoader().parse(buf.buffer, '', onModel, onFail);
+  }).catch(onFail);
+  function onFail() { status.hidden = false; status.textContent = "The tower model didn't load. Reload the page to try again."; }
+  function onModel(gltf) {
+    const model = gltf.scene;
+    model.traverse((o) => {
+      if (!o.isMesh) return;
+      const name = topName(o);
+      o.material = o.material.clone();
+      o.material.side = THREE.DoubleSide;
+      o.material.color.convertSRGBToLinear();   // file colours are sRGB; keep the black actually black
+      if (name === 'screen') { o.material.emissive = new THREE.Color(0x0b4f8f); o.material.emissiveIntensity = 0.6; }
+      o.userData.part = name;
+      o.userData.baseOpacity = 1;
+    });
+    // centre the model on the floor
+    const box = new THREE.Box3().setFromObject(model);
+    box.getCenter(center); box.getSize(size);
+    model.position.set(-center.x, -box.min.y, -center.z);
+    root.add(model);
+    model.traverse((o) => { if (o.name in LEVEL && !parts[o.name]) parts[o.name] = { obj: o, home: o.position.clone() }; });
+    status.hidden = true;
+    setView('front', true);
+    applyXray(); applyDoor(); applyExplode();
+  }
+
+  // camera views
+  const VIEWS = { front: [0.35, 0.55, 1.0], side: [1.1, 0.55, 0.0], back: [-0.35, 0.6, -1.0], top: [0.05, 1.3, 0.35] };
+  let anim = null;
+  function setView(name, instant) {
+    const h = size.y || 0.85;
+    const target = new THREE.Vector3(0, h * 0.48, 0);
+    const d = VIEWS[name];
+    const dist = h * 2.0;
+    const pos = new THREE.Vector3(d[0], d[1], d[2]).normalize().multiplyScalar(dist).add(target);
+    if (instant || reduceMotion) { camera.position.copy(pos); controls.target.copy(target); controls.update(); return; }
+    anim = { t: 0, fromP: camera.position.clone(), toP: pos, fromT: controls.target.clone(), toT: target };
+  }
+  document.querySelectorAll('[data-view]').forEach((b) => b.addEventListener('click', () => {
+    spin.checked = false; setView(b.dataset.view);
+  }));
+
+  // toggles
+  const tDoor = document.getElementById('tDoor'), tXray = document.getElementById('tXray'), spin = document.getElementById('tSpin');
+  const explode = document.getElementById('explode'), explodeVal = document.getElementById('explodeVal');
+  if (reduceMotion) spin.checked = false;
+
+  function applyDoor() { if (parts.door) parts.door.obj.visible = tDoor.checked; }
+  function applyXray() {
+    root.traverse((o) => {
+      if (!o.isMesh || !SHELL.has(o.userData.part)) return;
+      const on = tXray.checked;
+      o.material.transparent = on;
+      o.material.opacity = on ? 0.18 : 1;
+      o.material.depthWrite = !on;
+      o.material.needsUpdate = true;
+    });
+  }
+  function applyExplode() {
+    const e = explode.value / 100;
+    explodeVal.textContent = Math.round(e * 100) + '%';
+    for (const [name, p] of Object.entries(parts)) {
+      p.obj.position.copy(p.home);
+      p.obj.position.y += LEVEL[name] * e * 0.07;
+      if (name === 'door') p.obj.position.z -= e * 0.3;
+    }
+  }
+  tDoor.addEventListener('change', applyDoor);
+  tXray.addEventListener('change', applyXray);
+  explode.addEventListener('input', applyExplode);
+  canvas.addEventListener('pointerdown', () => { spin.checked = false; anim = null; });
+
+  function resize() {
+    const r = stage.getBoundingClientRect();
+    renderer.setSize(r.width, r.height, false);
+    camera.aspect = r.width / Math.max(r.height, 1);
+    camera.updateProjectionMatrix();
+  }
+  new ResizeObserver(resize).observe(stage); resize();
+
+  let last = performance.now();
+  function tick(now) {
+    const dt = Math.min((now - last) / 1000, 0.05); last = now;
+    if (anim) {
+      anim.t = Math.min(anim.t + dt / 0.6, 1);
+      const k = 1 - Math.pow(1 - anim.t, 3);
+      camera.position.lerpVectors(anim.fromP, anim.toP, k);
+      controls.target.lerpVectors(anim.fromT, anim.toT, k);
+      if (anim.t >= 1) anim = null;
+    }
+    if (spin.checked && !anim) root.rotation.y += dt * 0.35;
+    controls.update();
+    renderer.render(scene, camera);
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+})();
+</script>
