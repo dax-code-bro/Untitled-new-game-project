@@ -3,13 +3,14 @@
 //
 // Stack (bottom to top):
 //   base plate (caster pads)
-//   MISR-A section: Dell #1 and #2, lying flat, stacked on each other
+//   MISR-A section: Dell #1 and #2 (MISR), lying flat, stacked on each other
+//   -> MISR001 = Dells #1-#3, PIP001 = Dell #4. No Raspberry Pi.
 //   ring plate (open middle, so the Dells stack straight through)
-//   MISR-B section: Dell #3 and #4
+//   MISR-B section: Dell #3 (MISR) and Dell #4 (PIP001's brain, ~200 GB)
 //   floor plate
 //   middle section: network switch, power strip, extra stuff
-//   floor plate (Pi crib sits on it)
-//   PIP section: Raspberry Pi + front display
+//   floor plate
+//   PIP section: PIP001's face - front display (the screen plugs into Dell #4)
 //   roof plate (vents)
 //   head: camera + speaker grille
 //
@@ -18,8 +19,15 @@
 // The back is ONE magnetic door, printed as 3 panels with half-lap joints (glue them).
 //
 // Export one part:  openscad -D 'part="misr"' -o misr.stl pip001_tower.scad
-// parts: assembly misr middle pip plate_base plate_ring plate_floor plate_floor_pi plate_roof
-//        head door_1 door_2 door_3 pi_crib display_clip dell_guide pin pin_short door_full
+// parts: assembly misr middle pip plate_base plate_ring plate_floor plate_roof
+//        head door_1 door_2 door_3 display_clip dell_guide pin pin_short door_full
+//
+// AIRWAYS (the fans are inside the Dells):
+//   1. Front: diamond grille in front of each Dell -> cool air straight into their fronts.
+//   2. Air seals: fins in both front corners close the gap beside the Dells, so hot air from
+//      the back can't sneak around the sides and get sucked back in the front.
+//   3. Back: big grille in the door + side vents near the back -> hot air out.
+//   4. Chimney: vented floors + roof vents let leftover warm air rise out the top.
 
 part = "assembly";
 $fn = 64;
@@ -129,7 +137,7 @@ module plate_ring() {
     }
 }
 
-module plate_floor(pi = false) {
+module plate_floor() {
     difference() {
         cube([W, W, PLATE]);
         plate_holes();
@@ -138,7 +146,6 @@ module plate_floor(pi = false) {
             translate([30, 30, 0]) vent_grid(W - 60, W - 115);
         }
         floor_cord_holes();
-        if (pi) for (p = crib_screws()) translate([p[0], p[1], 0]) cylinder(d = 3.4, h = 50, center = true);
     }
 }
 
@@ -148,7 +155,7 @@ module plate_roof() {
         plate_holes();
         translate([W / 2 - 25, HEAD_FRONT + HEAD_D / 2 - 15, -1]) cube([50, 30, 10]);
         translate([(W - HEAD_W) / 2, HEAD_FRONT, 0]) corner_positions(HEAD_W, HEAD_D, HEAD_COL) cylinder(d = PIN_D, h = 50, center = true);
-        // passive vents behind the head (warm air from the Pi and screen rises out)
+        // chimney vents behind the head: warm air rises out here
         intersection() {
             translate([40, HEAD_FRONT + HEAD_D + 20, -1]) cube([W - 80, W - HEAD_FRONT - HEAD_D - 50, 10]);
             translate([40, HEAD_FRONT + HEAD_D + 20, 0]) vent_grid(W - 80, W - HEAD_FRONT - HEAD_D - 50);
@@ -213,7 +220,7 @@ module door_full() {
         for (z = [Z_MID + 40, Z_PIP + 60])                                // finger pulls
             translate([W / 2, DOOR_T + 1, z]) rotate([90, 0, 0]) cylinder(d = 34, h = 3.5);
         // big exhaust grille behind the Dells (their hot air and cables come out here)
-        translate([50, 0, Z_A + 26.3]) wall_grille(W - 100, 2 * H_MISR + PLATE - 50, 12, 17);
+        translate([40, 0, Z_A + 26.3]) wall_grille(W - 86, 2 * H_MISR + PLATE - 50, 12, 17);
     }
 }
 
@@ -242,35 +249,26 @@ module door_panel(k) {
     }
 }
 
-// ---------- Raspberry Pi crib ----------
-PI_L = 85; PI_W = 56; CRIB_GAP = 3; CRIB_WALL = 3; CRIB_H = 14;
-CRIB_X = COL + 12; CRIB_Y = W - COL - 12 - (PI_W + 2 * CRIB_GAP + 2 * CRIB_WALL) - 45;
-function crib_size() = [PI_L + 2 * CRIB_GAP + 2 * CRIB_WALL, PI_W + 2 * CRIB_GAP + 2 * CRIB_WALL];
-function crib_screws() = [[CRIB_X + 6, CRIB_Y + 6], [CRIB_X + crib_size()[0] - 6, CRIB_Y + crib_size()[1] - 6]];
-
-module pi_crib() {
-    s = crib_size();
-    difference() {
-        union() {
-            cube([s[0], s[1], 3]);
-            for (cx = [0, 1], cy = [0, 1]) translate([cx * (s[0] - 20), cy * (s[1] - CRIB_WALL), 0]) cube([20, CRIB_WALL, CRIB_H]);
-            for (cx = [0, 1], cy = [0, 1]) translate([cx * (s[0] - CRIB_WALL), cy * (s[1] - 16), 0]) cube([CRIB_WALL, 16, CRIB_H]);
-            for (p = [[3.5, 3.5], [61.5, 3.5], [3.5, 52.5], [61.5, 52.5]])
-                translate([CRIB_WALL + CRIB_GAP + p[0], CRIB_WALL + CRIB_GAP + p[1], 0]) cylinder(d = 6, h = 8);
-        }
-        for (p = [[3.5, 3.5], [61.5, 3.5], [3.5, 52.5], [61.5, 52.5]])
-            translate([CRIB_WALL + CRIB_GAP + p[0], CRIB_WALL + CRIB_GAP + p[1], -1]) cylinder(d = 2.4, h = 20);
-        for (p = crib_screws()) translate([p[0] - CRIB_X, p[1] - CRIB_Y, -1]) cylinder(d = 3.4, h = 10);
-        translate([22, 18, -1]) cube([s[0] - 44, s[1] - 36, 10]);
-    }
-}
-
 // ---------- sections ----------
 // MISR: hex grille across the front so the Dells can breathe in
+SEAL = [13, 11];   // air-seal fin size (x, y), front corners, stays clear of the Dells
 module misr() {
     difference() {
-        section(H_MISR);
+        union() {
+            section(H_MISR);
+            // air seals: fill the front corners beside the Dells
+            translate([WALL, WALL, 0]) cube([SEAL[0], SEAL[1], H_MISR]);
+            translate([W - WALL - SEAL[0], WALL, 0]) cube([SEAL[0], SEAL[1], H_MISR]);
+        }
+        // intake grille (front)
         translate([45, WALL / 2, 22]) wall_grille(W - 90, H_MISR - 44, 12, 17);
+        // exhaust vents on both sides, near the back
+        for (x = [WALL / 2, W - WALL / 2]) translate([x, W - 95, 30]) rotate([0, 0, 90]) wall_grille(70, H_MISR - 60, 12, 17);
+        // re-drill the front pin holes (the fins cover those columns)
+        for (x = [COL / 2, W - COL / 2]) translate([x, COL / 2, 0]) {
+            translate([0, 0, -1]) cylinder(d = PIN_D, h = PIN_DEPTH + 1);
+            translate([0, 0, H_MISR - PIN_DEPTH]) cylinder(d = PIN_D, h = PIN_DEPTH + 1);
+        }
     }
 }
 
@@ -302,24 +300,24 @@ module display_clip() {
 module pin() { cylinder(d = 4.8, h = 2 * PIN_DEPTH + PLATE - 2); }
 module pin_short() { cylinder(d = 4.8, h = PIN_DEPTH + PLATE - 1); }
 
+// render() keeps the on-screen preview fast (lots of grille holes)
 module assembly() {
-    color("dimgray") plate_base();
+    color("dimgray") render() plate_base();
     color("dimgray") for (g = dell_guides()) translate([g[0], g[1], BASE_T]) rotate([0, 0, g[2]]) dell_guide();
     // the 4 Dells (dark), stacked
-    color([0.12, 0.12, 0.12]) for (i = [0 : 3])
+    for (i = [0 : 3]) color(i == 3 ? [0.1, 0.25, 0.6] : [0.12, 0.12, 0.12])   // Dell #4 (blue) = PIP001
         translate([(W - DELL[0]) / 2, (W - DELL[1]) / 2, BASE_T + i * (DELL[2] + DELL_GAP)]) cube(DELL);
-    color("silver") translate([0, 0, Z_A]) misr();
-    color("black") translate([0, 0, Z_A + H_MISR]) plate_ring();
-    color("silver") translate([0, 0, Z_B]) misr();
-    color("black") translate([0, 0, Z_B + H_MISR]) plate_floor();
-    color("silver") translate([0, 0, Z_MID]) middle();
-    color("black") translate([0, 0, Z_MID + H_MID]) plate_floor(true);
-    color("orange") translate([CRIB_X, CRIB_Y, Z_PIP]) pi_crib();
-    color("silver") translate([0, 0, Z_PIP]) pip();
+    color("silver") translate([0, 0, Z_A]) render() misr();
+    color("black") translate([0, 0, Z_A + H_MISR]) render() plate_ring();
+    color("silver") translate([0, 0, Z_B]) render() misr();
+    color("black") translate([0, 0, Z_B + H_MISR]) render() plate_floor();
+    color("silver") translate([0, 0, Z_MID]) render() middle();
+    color("black") translate([0, 0, Z_MID + H_MID]) render() plate_floor();
+    color("silver") translate([0, 0, Z_PIP]) render() pip();
     color("deepskyblue") translate([W / 2 - DISP_VIEW[0] / 2, 0.5, Z_PIP + DISP_Z - DISP_VIEW[1] / 2]) cube([DISP_VIEW[0], 1, DISP_VIEW[1]]);
-    color("black") translate([0, 0, Z_ROOF]) plate_roof();
-    color("white") translate([(W - HEAD_W) / 2, HEAD_FRONT, Z_ROOF + PLATE]) head();
-    color("gray", 0.7) translate([0, W + 25, 0]) door_full();
+    color("black") translate([0, 0, Z_ROOF]) render() plate_roof();
+    color("white") translate([(W - HEAD_W) / 2, HEAD_FRONT, Z_ROOF + PLATE]) render() head();
+    color("gray", 0.7) translate([0, W + 25, 0]) render() door_full();
 }
 
 if (part == "assembly") assembly();
@@ -329,13 +327,11 @@ else if (part == "pip") pip();
 else if (part == "plate_base") rotate([180, 0, 0]) plate_base();   // print pads-up
 else if (part == "plate_ring") plate_ring();
 else if (part == "plate_floor") plate_floor();
-else if (part == "plate_floor_pi") plate_floor(true);
 else if (part == "plate_roof") plate_roof();
 else if (part == "head") rotate([180, 0, 0]) head();               // print top-down
 else if (part == "door_1") rotate([-90, 0, 0]) door_panel(0);
 else if (part == "door_2") rotate([90, 0, 0]) door_panel(1);        // inner face down
 else if (part == "door_3") rotate([-90, 0, 0]) door_panel(2);
-else if (part == "pi_crib") pi_crib();
 else if (part == "display_clip") display_clip();
 else if (part == "dell_guide") dell_guide();
 else if (part == "pin") pin();
