@@ -1431,7 +1431,9 @@ rain and storm, interiors, first person and in cars. Highlights:
 - [x] P1 townspeople react (flee or cower at gunfire, shootable, run down by cars, bodies stay a while) and the
       police come (Core/Wanted with the web game's rules and Core/LaneRoute, tested; cruisers with siren,
       officers who arrest or shoot, Busted and Wasted)
-- [ ] HUD, car damage and fuel, interiors and shops, missions and jobs, the rest of the web game's shaders
+- [x] H1 the HUD in UI Toolkit (built in code): minimap from a baked map of Calvera (Core/MapRaster, tested),
+      health, stamina, clock, money, stars, weapon and ammo, speedometer, prompts, BUSTED/WASTED
+- [ ] Car damage and fuel, interiors and shops, missions and jobs, the rest of the web game's shaders
 
 ## Phase 3 — Content catalogs (targets)
 

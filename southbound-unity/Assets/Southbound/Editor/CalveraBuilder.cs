@@ -73,6 +73,7 @@ namespace Southbound.EditorTools
                 EditorUtility.DisplayProgressBar("Southbound", "Traffic", 0.96f);
                 TrafficBuilder.Build(world);
                 PoliceBuilder.Build();
+                HudBuilder.Build(world);
 
                 EditorSceneManager.SaveScene(scene, ScenePath);
                 AddToBuildSettings(ScenePath);

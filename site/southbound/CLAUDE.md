@@ -226,6 +226,10 @@ the fewest additions next. Be honest in reports about what is and isn't done.
   `NearestLane`, `RandomPoint`; routes from `Core/LaneRoute`). Ground raycasts for people and cars use
   `Pedestrians.Ground`, which skips people (a Health in the parent) and moving cars (a Rigidbody).
   Busted/Wasted live in Police (respawn at the spawn point) until there's a station and a hospital.
+  HUD (H1, `Runtime/Hud.cs`): UI Toolkit built in code against the 2021.3 API (no `Length.Pixels`: use
+  `new Length(x, LengthUnit.Pixel)`; transforms via `style.translate/rotate/transformOrigin`). Dots on the
+  minimap: add a callback to `Hud.Sources` (OnEnable/OnDisable). Older OnGUI text stays as the fallback
+  behind `if (!Hud.Showing)`. Messages go through `game.Toast`, prompts through `Driving.Prompt`/`Police.Prompt`.
 - Commit one batch at a time: if the next batch's edits are already in the tree, commit only the
   finished batch's files (and an `index.js` without the next batch's `add(...)` line), with the
   `game.js` that was built and QA'd for it.

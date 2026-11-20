@@ -69,6 +69,9 @@ namespace Southbound
         public static double[] WebPos(Vector3 p) => new double[] { System.Math.Round(-p.x, 1), System.Math.Round(p.z, 1) };
 
         public void Toast(string msg, float seconds = 2f) { toast = msg; toastT = seconds; }
+        /// <summary>The message showing now (for the HUD), or null.</summary>
+        public string ToastText => toastT > 0 ? toast : null;
+        public bool Paused => paused;
 
         void Update()
         {
@@ -115,8 +118,8 @@ namespace Southbound
                 var w = gunplay.Weapon;
                 hud += $"\n{w.Name}  ·  {w.Caliber}" + (w.Melee ? "" : $"  ·  {gunplay.Clip}/{gunplay.Reserve}") + (gunplay.Reloading ? "  (reloading)" : "");
             }
-            GUI.Label(new Rect(18, Screen.height - 86, 900, 80), hud, s);
-            if (driving != null)
+            if (!Hud.Showing) GUI.Label(new Rect(18, Screen.height - 86, 900, 80), hud, s);
+            if (driving != null && !Hud.Showing)
             {
                 var car = driving.Car;
                 if (car != null)
@@ -129,12 +132,12 @@ namespace Southbound
                 if (driving.Prompt != null)
                     GUI.Label(new Rect(Screen.width / 2f - 300, Screen.height - 140, 600, 30), driving.Prompt, new GUIStyle(s) { alignment = TextAnchor.MiddleCenter });
             }
-            if (gunplay != null && gunplay.Aiming)
+            if (gunplay != null && gunplay.Aiming && !Hud.Showing)
             {
                 var c = new Vector2(Screen.width / 2f, Screen.height / 2f);
                 GUI.Label(new Rect(c.x - 6, c.y - 12, 20, 24), "+", s);
             }
-            if (toastT > 0) GUI.Label(new Rect(Screen.width / 2f - 300, 40, 600, 30), toast, new GUIStyle(s) { alignment = TextAnchor.MiddleCenter });
+            if (toastT > 0 && !Hud.Showing) GUI.Label(new Rect(Screen.width / 2f - 300, 40, 600, 30), toast, new GUIStyle(s) { alignment = TextAnchor.MiddleCenter });
             if (paused)
             {
                 GUI.Box(new Rect(Screen.width / 2f - 160, Screen.height / 2f - 90, 320, 180), "Paused");

@@ -5,7 +5,8 @@
 // arrest you (low heat, on foot, gun away: stand still and you're Busted) or open fire (a killing, an
 // officer shot, or a gun out in front of them). Break their line of sight and the stars cool off one at a
 // time. Busted: a fine and you're let go at the spawn. Wasted (health gone, from anything): a hospital
-// bill and you wake up at the spawn. The stars are drawn here with OnGUI until the UI Toolkit HUD exists.
+// bill and you wake up at the spawn. The HUD (Runtime/Hud) shows the stars, the prompts, the banner and the
+// cruisers on the minimap; without it they're drawn here with OnGUI.
 using System.Collections.Generic;
 using Southbound.Core;
 using UnityEngine;
@@ -44,14 +45,32 @@ namespace Southbound
         bool provoked; float spawnT, brandishT, bustT, resistT;
         string banner; float bannerUntil, pendingUntil; System.Action pending;
         string prompt;
-        AudioClip sirenClip; Texture2D star;
+        AudioClip sirenClip;
         bool warned;
         Transform range;   // the penetration range by the spawn: shooting there is allowed
 
         void Awake() => Instance = this;
 
-        void OnEnable() { Health.Hurt += OnHurt; Gunplay.Fired += OnShot; }
-        void OnDisable() { Health.Hurt -= OnHurt; Gunplay.Fired -= OnShot; }
+        void OnEnable() { Health.Hurt += OnHurt; Gunplay.Fired += OnShot; Hud.Sources.Add(Blips); }
+        void OnDisable() { Health.Hurt -= OnHurt; Gunplay.Fired -= OnShot; Hud.Sources.Remove(Blips); }
+
+        /// <summary>What an officer near you is saying (null if nothing).</summary>
+        public string Prompt => pending == null ? prompt : null;
+        /// <summary>BUSTED or WASTED while it's showing, else null.</summary>
+        public string Banner => banner != null && Time.unscaledTime < bannerUntil ? banner : null;
+
+        /// <summary>Cruisers on the minimap (flashing red and blue, kept on its edge), officers on foot.</summary>
+        void Blips(List<Hud.Blip> into)
+        {
+            bool red = Mathf.Repeat(Time.time, 0.5f) < 0.25f;
+            foreach (var u in units)
+            {
+                if (u.mode != Mode.Drive && u.mode != Mode.Stopped) continue;
+                into.Add(new Hud.Blip { at = u.go.transform.position, color = red ? new Color(0.95f, 0.2f, 0.2f) : new Color(0.25f, 0.45f, 1f), size = 12, keepOnEdge = true });
+                foreach (var c in u.cops)
+                    if (c != null && c.outside && !c.hp.Dead) into.Add(new Hud.Blip { at = c.go.transform.position, color = new Color(0.9f, 0.3f, 0.3f), size = 7 });
+            }
+        }
 
         void Start()
         {
@@ -65,7 +84,6 @@ namespace Southbound
             var r = GameObject.Find("Penetration range");
             if (r != null) range = r.transform;
             sirenClip = MakeSiren();
-            star = MakeStar(64);
             Wanted.Escaped += (most, kills) => { if (game != null) game.Toast(most >= 3 ? "You lost the police. Lie low for a while." : "You lost the police."); };
         }
 
@@ -598,10 +616,12 @@ namespace Southbound
             }
         }
 
-        // ------------------------------------------------------------------ the stars (until the HUD)
+        // ------------------------------------------------------------------ the stars (without the HUD)
         void OnGUI()
         {
-            if (Wanted.Stars > 0 && star != null)
+            if (Hud.Showing) return;
+            var star = HudArt.Star;
+            if (Wanted.Stars > 0)
             {
                 float size = 30, gap = 4, x0 = Screen.width - 18 - 5 * (size + gap);
                 bool blink = Wanted.Lost && Mathf.Repeat(Time.unscaledTime, 0.8f) < 0.4f;
@@ -627,7 +647,7 @@ namespace Southbound
             }
         }
 
-        // ------------------------------------------------------------------ made here: the siren, the star
+        // ------------------------------------------------------------------ made here: the siren
         /// <summary>A wail: up over two seconds and back down, a slightly square tone like a real electronic siren.</summary>
         static AudioClip MakeSiren()
         {
@@ -646,39 +666,6 @@ namespace Southbound
             var clip = AudioClip.Create("siren", n, 1, rate, false);
             clip.SetData(data, 0);
             return clip;
-        }
-
-        /// <summary>A five-pointed star, anti-aliased, white on clear (tinted when drawn).</summary>
-        static Texture2D MakeStar(int size)
-        {
-            var poly = new Vector2[10];
-            for (int k = 0; k < 10; k++)
-            {
-                float r = k % 2 == 0 ? 0.48f : 0.2f, a = Mathf.PI / 2 + k * Mathf.PI / 5;
-                poly[k] = new Vector2(0.5f + r * Mathf.Cos(a), 0.47f + r * Mathf.Sin(a));
-            }
-            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, name = "wanted star" };
-            var px = new Color32[size * size];
-            for (int y = 0; y < size; y++)
-                for (int x = 0; x < size; x++)
-                {
-                    int inside = 0;
-                    for (int sy = 0; sy < 4; sy++)
-                        for (int sx = 0; sx < 4; sx++)
-                            if (Inside(poly, new Vector2((x + (sx + 0.5f) / 4) / size, (y + (sy + 0.5f) / 4) / size))) inside++;
-                    px[y * size + x] = new Color32(255, 255, 255, (byte)(inside * 255 / 16));
-                }
-            tex.SetPixels32(px);
-            tex.Apply(false, true);
-            return tex;
-        }
-
-        static bool Inside(Vector2[] poly, Vector2 p)
-        {
-            bool c = false;
-            for (int i = 0, j = poly.Length - 1; i < poly.Length; j = i++)
-                if ((poly[i].y > p.y) != (poly[j].y > p.y) && p.x < (poly[j].x - poly[i].x) * (p.y - poly[i].y) / (poly[j].y - poly[i].y) + poly[i].x) c = !c;
-            return c;
         }
     }
 }
