@@ -115,6 +115,12 @@ namespace Southbound
             return null;
         }
 
+        /// <summary>Back on their feet (a person reused after the death clip held).</summary>
+        public void Revive() { onceUntil = 0; current = null; }
+
+        /// <summary>Does the animation library have this clip?</summary>
+        public bool Has(string clip) => anim != null && anim[clip] != null;
+
         /// <summary>Keep a looping clip going (cross-fades when it changes).</summary>
         public void Loop(string clip, float speed)
         {

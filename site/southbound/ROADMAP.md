@@ -1427,7 +1427,11 @@ rain and storm, interiors, first person and in cars. Highlights:
 - [x] I1 runs on Intel / built-in graphics (the owner, 2026-11-20): graphics tiers from the card (Core/GpuTier,
       tested), heavy HDRP passes off per camera, STP-upscaled dynamic resolution holding 30 fps, thinner crowds,
       grass, shadows, lights and decals, automatic step-down, F7; photo mode's path tracer only on RTX-class cards
-- [ ] People and police AI, interiors, missions and jobs, HUD, the rest of the web game's shaders
+- [x] D1 drivers in the cars: John and every traffic driver seated at the wheel behind the glass (Core/SeatPose, tested)
+- [x] P1 townspeople react (flee or cower at gunfire, shootable, run down by cars, bodies stay a while) and the
+      police come (Core/Wanted with the web game's rules and Core/LaneRoute, tested; cruisers with siren,
+      officers who arrest or shoot, Busted and Wasted)
+- [ ] HUD, car damage and fuel, interiors and shops, missions and jobs, the rest of the web game's shaders
 
 ## Phase 3 — Content catalogs (targets)
 

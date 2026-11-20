@@ -19,25 +19,30 @@ namespace Southbound
         public float headHeight = 1.55f;
         public bool Dead => hp <= 0;
         public string lastPart;
+        [Tooltip("Who this is, for the law: civilian, cop, or empty for targets and animals.")]
+        public string role = "";
+        /// <summary>Someone was hurt (still alive) or killed: (who, killed).</summary>
+        public static event System.Action<Health, bool> Hurt;
 
         public void Hit(Ballistics.PersonHit h)
         {
             if (Dead) return;
             hp -= (float)h.Damage;
             lastPart = h.Part + (h.Stopped ? " (stopped by armour)" : "");
-            if (hp <= 0) Die();
+            if (hp <= 0) Die(); else Hurt?.Invoke(this, false);
         }
 
         public void Damage(float amount)
         {
             if (Dead) return;
             hp -= amount;
-            if (hp <= 0) Die();
+            if (hp <= 0) Die(); else Hurt?.Invoke(this, false);
         }
 
         void Die()
         {
             hp = 0;
+            Hurt?.Invoke(this, true);
             var r = GetComponentInChildren<Retargeter>();
             if (r != null) { r.Play("Death01"); return; }
             // no animation: fall over

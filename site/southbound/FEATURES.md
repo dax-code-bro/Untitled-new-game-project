@@ -99,7 +99,13 @@ water, N3 50 photo-scanned surfaces + 3 300 wear decals, N4 road paint, real win
 every building, metallic flake in the car paint, 3D grass; N5 the rest of the street (26 400 pieces: sidewalks,
 lights that come on at dusk, poles and wires, palms, yards, signs, clutter); N6 weather (wet streets, puddles,
 rain, lightning, F8); street reflection probes, townspeople on the pavements, traffic, see-through car glass with
-cabins. Next: drivers in the seats, then U2/U3.
+cabins.
+2026-11-20 (the owner: "do everything else, and it keeps running on Intel graphics"): I1 graphics tiers for
+built-in Intel/AMD graphics (auto-detected, cheap HDRP passes, STP-upscaled 50-80% resolution at 30 fps, thinner
+world, F7); D1 John and the traffic's drivers seated at the wheel; P1 townspeople react (flee/cower, shootable,
+run down) and the police (wanted stars by the web game's rules, cruisers routed over the lanes, officers who
+arrest or shoot, Busted/Wasted). Next, in order: H1 UI Toolkit HUD, C1 car damage/doors/fuel, S1 interiors and
+shops, M1 missions and jobs.
 
 ## The owner's list after watching them play (2026-11-09) — do in this order
 

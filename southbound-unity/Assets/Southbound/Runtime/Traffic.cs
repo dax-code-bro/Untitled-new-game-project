@@ -64,6 +64,43 @@ namespace Southbound
         Vector2 P(int i) => new Vector2(points[i * 2], points[i * 2 + 1]);
         int Lanes => pointStart.Length - 1;
 
+        // ------------------------------------------------------------------ the lane graph, for the police
+        public bool Ready => cum != null;
+        public int LaneCount => Lanes;
+
+        /// <summary>The lane point nearest to p: which lane, and how far along it.</summary>
+        public int NearestLane(Vector3 p, out float s)
+        {
+            var c = new Vector2(p.x, p.z);
+            int best = 0; float bestD = float.MaxValue; s = 0;
+            for (int k = 0; k < Lanes; k++)
+                for (int i = pointStart[k]; i < pointStart[k + 1]; i++)
+                {
+                    float d = (P(i) - c).sqrMagnitude;
+                    if (d < bestD) { bestD = d; best = k; s = cum[i]; }
+                }
+            return best;
+        }
+
+        /// <summary>A random place on a lane between min and max metres from p.</summary>
+        public bool RandomPoint(Vector3 p, float min, float max, out int lane, out float s)
+        {
+            var c = new Vector2(p.x, p.z);
+            for (int attempt = 0; attempt < 200; attempt++)
+            {
+                int k = Random.Range(0, Lanes);
+                int a = pointStart[k], b = pointStart[k + 1] - 1;
+                if (b <= a) continue;
+                int i = Random.Range(a, b);
+                float d = Vector2.Distance(P(i), c);
+                if (d < min || d > max) continue;
+                lane = k; s = cum[i];
+                return true;
+            }
+            lane = 0; s = 0;
+            return false;
+        }
+
         void Place(Car c, bool start)
         {
             var cam = Camera.main != null ? Camera.main.transform.position : transform.position;
@@ -135,7 +172,7 @@ namespace Southbound
             }
         }
 
-        (Vector2 at, Vector2 dir) Sample(int lane, float s)
+        public (Vector2 at, Vector2 dir) Sample(int lane, float s)
         {
             int a = pointStart[lane], b = pointStart[lane + 1] - 1;
             s = Mathf.Clamp(s, 0, laneLength[lane]);
@@ -154,7 +191,7 @@ namespace Southbound
             float best = float.NaN, bestD = float.MaxValue;
             foreach (var h in hits)
             {
-                if (h.collider.attachedRigidbody != null) continue;
+                if (h.collider.attachedRigidbody != null || h.collider.GetComponentInParent<Health>() != null) continue;   // not cars, not people
                 if (h.distance < bestD) { bestD = h.distance; best = h.point.y; }
             }
             return float.IsNaN(best) ? (float.IsNaN(near) ? 0 : near) : best;

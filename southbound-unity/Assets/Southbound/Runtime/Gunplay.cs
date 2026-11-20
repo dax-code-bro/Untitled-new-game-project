@@ -30,11 +30,16 @@ namespace Southbound
         readonly System.Random rng = new System.Random();
 
         public Weapon Weapon { get; private set; }
+        /// <summary>A shot went off: (where, silenced). People panic, the police hear it.</summary>
+        public static event System.Action<Vector3, bool> Fired;
+        public static Gunplay Instance { get; private set; }
         public bool Drawn { get; private set; } = true;
         public bool Aiming => Drawn && SbInput.Aim;
         public bool Reloading => reloadT > 0;
         public int Clip => Weapon != null && clips.TryGetValue(Weapon.Id, out var c) ? c : 0;
         public int Reserve => Weapon != null && SouthboundGame.Instance != null && SouthboundGame.Instance.Profile.Ammo.TryGetValue(Weapon.Id, out var a) ? (int)a : 0;
+
+        void Awake() { Instance = this; }
 
         void Start()
         {
@@ -155,6 +160,7 @@ namespace Southbound
             }
             if (audioSource != null && shotClip != null) audioSource.PlayOneShot(shotClip, Weapon.Silent ? 0.25f : 1f);
             player?.animator?.Play("Pistol_Shoot", 0.05f);
+            Fired?.Invoke(origin, Weapon.Silent);
         }
 
         void Trace(Vector3 origin, Vector3 dir, double range, Round round, Ammo am)

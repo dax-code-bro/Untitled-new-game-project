@@ -32,6 +32,8 @@ namespace Southbound.EditorTools
         public static CarCatalog Catalog => cat ??= CarCatalog.Load(CarCatalog.DefaultFile(Paths.ProjectRoot));
         public static WheelSet Wheels => wheels ??= WheelSet.Load(WheelSet.DefaultFile(Paths.ProjectRoot));
 
+        public static bool HasData() => File.Exists(CarCatalog.DefaultFile(Paths.ProjectRoot)) && File.Exists(WheelSet.DefaultFile(Paths.ProjectRoot));
+
         static bool HaveData()
         {
             if (File.Exists(CarCatalog.DefaultFile(Paths.ProjectRoot)) && File.Exists(WheelSet.DefaultFile(Paths.ProjectRoot))) return true;

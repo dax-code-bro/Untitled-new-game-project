@@ -220,6 +220,12 @@ the fewest additions next. Be honest in reports about what is and isn't done.
   src/world/*.js and names surface textures as they load); its MODULES/SKIP lists say what goes. A new world
   module needs adding there; a surface the web game draws in its own shader needs a line in
   StreetData.SurfaceFor. Unity front faces: `Vector3.Cross(b - a, c - a)` points out of them.
+  People and the law (P1): anything shootable has `Health` (role "civilian"/"cop"/""); `Health.Hurt`
+  (who, killed) and `Gunplay.Fired` (origin, silenced) are the static events the police listen to;
+  `Police.Crime(kind)` reports anything else. Cruisers drive the traffic's lanes (`Traffic.Sample`,
+  `NearestLane`, `RandomPoint`; routes from `Core/LaneRoute`). Ground raycasts for people and cars use
+  `Pedestrians.Ground`, which skips people (a Health in the parent) and moving cars (a Rigidbody).
+  Busted/Wasted live in Police (respawn at the spawn point) until there's a station and a hospital.
 - Commit one batch at a time: if the next batch's edits are already in the tree, commit only the
   finished batch's files (and an `index.js` without the next batch's `add(...)` line), with the
   `game.js` that was built and QA'd for it.
