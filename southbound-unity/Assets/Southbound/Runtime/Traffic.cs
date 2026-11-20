@@ -12,6 +12,9 @@ namespace Southbound
     {
         [Tooltip("Car prefabs (Southbound > Cars) to fill the roads with.")]
         public GameObject[] cars;
+        [Tooltip("Townspeople to drive them (Art/Models/people/mh_*.glb) and the animation skeleton.")]
+        public GameObject[] drivers;
+        public GameObject skeleton;
         public int count = 26;
         public float nearest = 60f, farthest = 220f, recycle = 260f;
         [HideInInspector] public int[] pointStart;
@@ -43,6 +46,16 @@ namespace Southbound
                 var cc = go.GetComponent<CarController>();
                 if (cc != null) cc.enabled = false;
                 var c = new Car { go = go, cc = cc, body = go.GetComponent<CarBody>() };
+                // someone at the wheel, behind the see-through glass
+                if (cc != null && drivers != null && drivers.Length > 0 && skeleton != null && Seating.HasCabin(go.transform))
+                {
+                    var who = new GameObject("driver").transform;
+                    var model = Instantiate(drivers[Random.Range(0, drivers.Length)], who);
+                    var skel = Instantiate(skeleton, who);
+                    var rt = who.gameObject.AddComponent<Retargeter>();
+                    rt.sourceRoot = skel.transform; rt.targetRoot = model.transform; rt.startClip = "Driving_Loop";
+                    Seating.Sit(who, cc, null);
+                }
                 pool.Add(c);
                 Place(c, true);
             }

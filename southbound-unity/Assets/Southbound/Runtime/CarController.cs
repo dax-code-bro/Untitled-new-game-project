@@ -43,6 +43,7 @@ namespace Southbound
         /// <summary>The controls this physics step (the player's, or an AI driver's later).</summary>
         public DriveInput Controls;
         public DriveModel Model { get; } = new DriveModel();
+        Transform rim; bool rimLooked;
         public DriveTuning Tuning { get; private set; }
         public float SpeedMph => (float)Model.Mph;
         public float ForwardSpeed => (float)Model.Forward;
@@ -149,6 +150,9 @@ namespace Southbound
             // wheels: suspension travel, rolling, steering
             spin = (spin + (float)Model.Forward / Mathf.Max(0.1f, wheelRadius) * Time.deltaTime * Mathf.Rad2Deg) % 360f;
             float steer = -(float)Model.Steer * Mathf.Rad2Deg;
+            // the steering wheel in the cabin turns 5.2 times the road wheels' angle, as in the web game
+            if (rim == null && !rimLooked) { rim = transform.Find("Body/Steering wheel/Steering wheel rim"); rimLooked = true; }
+            if (rim != null) rim.localRotation = Quaternion.Euler(0, 0, (float)Model.Steer * 5.2f * Mathf.Rad2Deg);
             for (int i = 0; i < 4; i++)
             {
                 var w = wheels[i];

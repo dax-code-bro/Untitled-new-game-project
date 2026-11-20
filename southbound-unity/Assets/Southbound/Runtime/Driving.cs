@@ -68,10 +68,18 @@ namespace Southbound
             cc.enabled = false;
             if (gun != null) gun.enabled = false;
             modelRenderers = player.model != null ? player.model.GetComponentsInChildren<Renderer>() : new Renderer[0];
-            // (the glass is the tinted shell for now: John is hidden in the seat until the car interiors come over)
-            foreach (var r in modelRenderers) r.enabled = false;
-            transform.SetParent(car.seat != null ? car.seat : car.transform, false);
-            transform.localPosition = Vector3.zero; transform.localRotation = Quaternion.identity;
+            if (Seating.HasCabin(car.transform))
+            {
+                // behind see-through glass: John sits at the wheel, seated
+                Seating.Sit(transform, car, player.animator);
+            }
+            else
+            {
+                // an older car prefab with the tinted shell: John is hidden in the seat
+                foreach (var r in modelRenderers) r.enabled = false;
+                transform.SetParent(car.seat != null ? car.seat : car.transform, false);
+                transform.localPosition = Vector3.zero; transform.localRotation = Quaternion.identity;
+            }
             if (cameraRig != null) cameraRig.vehicle = car;
             var game = SouthboundGame.Instance;
             if (game != null) game.Toast(car.displayName);

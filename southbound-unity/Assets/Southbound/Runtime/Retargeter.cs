@@ -16,6 +16,8 @@ namespace Southbound
         public Transform sourceRoot;
         [Tooltip("An instance of the character model (Art/Models/people/hero.glb).")]
         public Transform targetRoot;
+        [Tooltip("The clip to start on (a driver starts seated).")]
+        public string startClip = "Idle_Loop";
 
         // Quaternius UAL (Rigify DEF-*) -> MakeHuman default skeleton; names with . : / [ ] and spaces removed
         static readonly Dictionary<string, string> Map = BuildMap();
@@ -96,7 +98,7 @@ namespace Southbound
             dstHipsRest = targetRoot.InverseTransformPoint(hips.d.position);
             ratio = dstHipsRest.y / Mathf.Max(1e-3f, srcHipsRest.y);
             foreach (var r in sourceRoot.GetComponentsInChildren<Renderer>(true)) r.enabled = false;
-            Loop("Idle_Loop", 1);
+            Loop(startClip, 1);
         }
 
         static Quaternion RelRot(Transform root, Transform t) => Quaternion.Inverse(root.rotation) * t.rotation;

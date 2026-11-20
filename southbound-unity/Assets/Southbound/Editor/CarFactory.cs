@@ -170,7 +170,12 @@ namespace Southbound.EditorTools
             // seat (hip point) and the driver's door
             var seat = new GameObject("Driver seat").transform;
             seat.SetParent(root.transform, false);
-            if (car.Seat != null) seat.localPosition = new Vector3((float)-car.Seat[0], (float)car.Seat[1], (float)car.Seat[2]);
+            if (car.Seat != null)
+            {
+                seat.localPosition = new Vector3((float)-car.Seat[0], (float)car.Seat[1], (float)car.Seat[2]);
+                // the seat back's recline (the person leans with it: SeatPose)
+                if (car.Seat.Length > 3) seat.localRotation = Quaternion.Euler((float)(-car.Seat[3] * 180 / System.Math.PI), 0, 0);
+            }
             else seat.localPosition = new Vector3((float)-s.Hwc * 0.44f, belt - 0.25f, (float)(s.ZA0 + s.ZC0) / 2);
             var door = new GameObject("Driver door").transform;
             door.SetParent(root.transform, false);

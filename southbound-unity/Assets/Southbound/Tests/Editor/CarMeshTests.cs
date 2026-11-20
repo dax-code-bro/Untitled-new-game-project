@@ -276,3 +276,30 @@ namespace Southbound.Tests
         }
     }
 }
+
+namespace Southbound.Tests
+{
+    public class SeatPoseTests
+    {
+        [Test]
+        public void The_driver_sits_on_the_cushion()
+        {
+            // the pelvis (root + recline * pelvis offset) lands on the seat's hip point, for any recline
+            foreach (double th in new[] { 0.0, 0.2, 0.45 })
+            {
+                var (x, y, z, a) = SeatPose.Root(-0.38, 0.62, 0.15, th);
+                double py = SeatPose.PelvisUp, pz = SeatPose.PelvisBack;
+                double wy = py * Math.Cos(a) - pz * Math.Sin(a), wz = py * Math.Sin(a) + pz * Math.Cos(a);
+                Assert.That(y + wy, Is.EqualTo(0.62).Within(1e-9));
+                Assert.That(z + wz, Is.EqualTo(0.15).Within(1e-9));
+                Assert.That(x, Is.EqualTo(-0.38));
+                Assert.That(y, Is.LessThan(0.62), "feet below the hips");
+            }
+            var cat = CarCatalog.Load(CarCatalog.DefaultFile(TestFiles.ProjectRoot));
+            var s = cat["sedan"];
+            Assert.That(s.Seat, Is.Not.Null); Assert.That(s.Seat.Length, Is.EqualTo(4));
+            var (_, fy, _, _) = SeatPose.Root(-s.Seat[0], s.Seat[1], s.Seat[2], s.Seat[3]);
+            Assert.That(fy, Is.InRange(s.Spec.Ride - 0.2, s.Seat[1]), "feet in the footwell, above the road");
+        }
+    }
+}

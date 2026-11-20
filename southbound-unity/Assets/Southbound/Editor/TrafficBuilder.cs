@@ -35,6 +35,10 @@ namespace Southbound.EditorTools
             var go = new GameObject("Traffic");
             var t = go.AddComponent<Traffic>();
             t.cars = prefabs.ToArray();
+            // drivers: the web game's townspeople, retargeted from the shared animation skeleton
+            t.drivers = new[] { "mh_m1", "mh_f1", "mh_m2", "mh_f2", "mh_m3", "mh_m4" }
+                .Select(n => UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>($"{Paths.Models}/people/{n}.glb")).Where(g => g != null).ToArray();
+            t.skeleton = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>($"{Paths.Models}/anims/ual.glb");
             t.pointStart = starts.ToArray(); t.points = pts.ToArray(); t.laneLength = lens.ToArray(); t.laneSpeed = speeds.ToArray();
             t.nextStart = nextStart.ToArray(); t.next = next.ToArray();
             Debug.Log($"Southbound: traffic: {t.count} cars ({prefabs.Count} models) on {lanes.Count} lanes ({lens.Sum() / 1000:F1} km).");
