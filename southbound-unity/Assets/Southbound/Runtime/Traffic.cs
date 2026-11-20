@@ -22,7 +22,7 @@ namespace Southbound
         [HideInInspector] public float[] laneLength, laneSpeed;
         [HideInInspector] public int[] nextStart, next; // lane k carries on into next[nextStart[k] .. nextStart[k + 1] - 1]
 
-        sealed class Car { public GameObject go; public CarController cc; public CarBody body; public int lane; public float s, v, target, wheelAngle, y; }
+        sealed class Car { public GameObject go; public CarController cc; public CarBody body; public CarHealth health; public int lane; public float s, v, target, wheelAngle, y; }
         readonly List<Car> pool = new List<Car>();
         float[] cum;
 
@@ -45,7 +45,7 @@ namespace Southbound
                 if (rb != null) { rb.isKinematic = true; rb.interpolation = RigidbodyInterpolation.None; }
                 var cc = go.GetComponent<CarController>();
                 if (cc != null) cc.enabled = false;
-                var c = new Car { go = go, cc = cc, body = go.GetComponent<CarBody>() };
+                var c = new Car { go = go, cc = cc, body = go.GetComponent<CarBody>(), health = CarHealth.Of(cc) };
                 // someone at the wheel, behind the see-through glass
                 if (cc != null && drivers != null && drivers.Length > 0 && skeleton != null && Seating.HasCabin(go.transform))
                 {
@@ -118,6 +118,7 @@ namespace Southbound
                 foreach (var o in pool) if (o != c && o.go.activeSelf && o.lane == k && Mathf.Abs(o.s - cum[i]) < 15) { clash = true; break; }
                 if (clash) continue;
                 c.lane = k; c.s = cum[i]; c.target = laneSpeed[k] * Random.Range(0.8f, 1.08f); c.v = c.target; c.y = float.NaN;
+                if (c.health != null) c.health.Restore(Random.Range(0.35f, 0.95f));
                 if (c.body != null && c.body.look != null) { var col = Random.ColorHSV(0, 1, 0, 0.6f, 0.08f, 0.85f); c.body.Paint(col, Random.value); }
                 c.go.SetActive(true);
                 Pose(c, 0);
@@ -139,6 +140,15 @@ namespace Southbound
                 // a lighter graphics tier drives fewer of the pool
                 if (n >= active) { if (c.go.activeSelf) c.go.SetActive(false); continue; }
                 if (!c.go.activeSelf) { Place(c, false); continue; }
+                // wrecked, burning or burnt out: it stays where it stopped until you're well away
+                if (c.health != null && c.health.State.Wrecked)
+                {
+                    c.v = 0;
+                    if (c.body != null) { c.body.Brake = 0; c.body.HeadlightsOn = false; }
+                    var wp = c.go.transform.position;
+                    if ((wp.x - cam.x) * (wp.x - cam.x) + (wp.z - cam.z) * (wp.z - cam.z) > recycle * recycle) Place(c, false);
+                    continue;
+                }
                 // the gap to whatever's ahead: the next car in this lane, or anything solid in front
                 float gap = float.MaxValue;
                 foreach (var o in pool) if (o != c && o.go.activeSelf && o.lane == c.lane && o.s > c.s) gap = Mathf.Min(gap, o.s - c.s);

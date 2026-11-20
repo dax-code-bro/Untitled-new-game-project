@@ -35,7 +35,7 @@ namespace Southbound
 
         UIDocument doc;
         bool ready;
-        VisualElement root, mapClip, mapImage, arrow, north, blipLayer, healthFill, staminaFill, stars, crosshair, weaponBox, speedBox, bannerBand;
+        VisualElement root, mapClip, mapImage, arrow, north, blipLayer, healthFill, staminaFill, stars, crosshair, weaponBox, speedBox, bannerBand, fuelFill, engineFill;
         Label clock, money, moneyDelta, weaponName, weaponAmmo, speed, carName, prompt, toast, banner, needs;
         readonly VisualElement[] starIcons = new VisualElement[5];
         readonly List<VisualElement> blipPool = new List<VisualElement>();
@@ -155,6 +155,8 @@ namespace Southbound
             speed = Text(speedBox, 56, Ink);
             speed.style.unityFontStyleAndWeight = FontStyle.Bold;
             carName = Text(speedBox, 16, Ink);
+            fuelFill = BarRow(speedBox, "Fuel", new Color(0.91f, 0.69f, 0.29f));
+            engineFill = BarRow(speedBox, "Engine", new Color(0.36f, 0.8f, 0.34f));
 
             // ---- prompts, messages, crosshair, banner
             prompt = Centered(root, 20, 170, true);
@@ -223,6 +225,23 @@ namespace Southbound
             back.style.height = height; back.style.marginTop = gap;
             back.style.backgroundColor = new Color(0, 0, 0, 0.55f);
             Round(back, height / 2);
+            back.style.overflow = Overflow.Hidden;
+            var f = El(back);
+            f.style.height = Length.Percent(100); f.style.width = Length.Percent(100);
+            f.style.backgroundColor = fill;
+            return f;
+        }
+
+        /// <summary>A small captioned gauge, right-aligned: returns its fill.</summary>
+        static VisualElement BarRow(VisualElement parent, string caption, Color fill)
+        {
+            var row = El(parent);
+            row.style.flexDirection = FlexDirection.Row; row.style.alignItems = Align.Center; row.style.marginTop = 5; row.style.width = 230;
+            var l = Text(row, 13, Ink); l.text = caption; l.style.width = 58; l.style.unityTextAlign = TextAnchor.MiddleRight; l.style.marginRight = 8;
+            var back = El(row);
+            back.style.flexGrow = 1; back.style.height = 6;
+            back.style.backgroundColor = new Color(0, 0, 0, 0.55f);
+            Round(back, 3);
             back.style.overflow = Overflow.Hidden;
             var f = El(back);
             f.style.height = Length.Percent(100); f.style.width = Length.Percent(100);
@@ -323,6 +342,17 @@ namespace Southbound
                 if (mph != shownSpeed) { shownSpeed = mph; speed.text = mph + " mph"; }
                 string nm = car.displayName + (car.Controls.Nitro ? "   NOS" : "") + (car.Controls.Handbrake ? "   HANDBRAKE" : "");
                 if (nm != shownCar) { shownCar = nm; carName.text = nm; }
+                // the tank and the engine (CarHealth)
+                var ch = car.GetComponent<CarHealth>();
+                Show(fuelFill.parent.parent, ch != null); Show(engineFill.parent.parent, ch != null);
+                if (ch != null)
+                {
+                    float fuel = Mathf.Clamp01((float)ch.State.Fuel), eng = Mathf.Clamp01((float)(ch.State.Health / ch.State.MaxHealth));
+                    fuelFill.style.width = Length.Percent(fuel * 100);
+                    fuelFill.style.backgroundColor = fuel < 0.15f ? Bad : new Color(0.91f, 0.69f, 0.29f);
+                    engineFill.style.width = Length.Percent(eng * 100);
+                    engineFill.style.backgroundColor = ch.State.OnFire ? new Color(1f, 0.45f, 0.1f) : eng < 0.25f ? Bad : eng < 0.5f ? new Color(0.92f, 0.78f, 0.3f) : new Color(0.36f, 0.8f, 0.34f);
+                }
             }
 
             // prompt (the police's first), message, crosshair, banner

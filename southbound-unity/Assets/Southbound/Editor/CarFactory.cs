@@ -21,6 +21,8 @@ namespace Southbound.EditorTools
     public static class CarFactory
     {
         public const string PrefabDir = Paths.Prefabs + "/Cars";
+        /// <summary>Raised when a car prefab gains something (2: doors that open, damage, fuel); older prefabs are rebuilt.</summary>
+        public const int BuildVersion = 2;
         public const string MeshDir = Paths.Generated + "/Cars";
         const string WheelDir = MeshDir + "/Wheels";
         const string MaterialPath = Paths.Materials + "/CarPalette.mat";
@@ -66,7 +68,9 @@ namespace Southbound.EditorTools
             if (!rebuild)
             {
                 var have = AssetDatabase.LoadAssetAtPath<GameObject>(path);
-                if (have != null) return have;
+                // built by an older CarFactory (no doors, no damage): build it again
+                var hc = have != null ? have.GetComponent<CarController>() : null;
+                if (hc != null && hc.buildVersion >= BuildVersion) return have;
             }
             var car = Catalog[id];
             if (car == null) { Debug.LogWarning($"Southbound: no car '{id}' in the catalogue."); return null; }
@@ -93,6 +97,7 @@ namespace Southbound.EditorTools
             var body = new GameObject("Body").transform;
             body.SetParent(root.transform, false);
             CarMeshData coarse = null;
+            Transform[] doorPivots = null; float[] doorOpen = null;
             for (int lod = 0; lod < CarMeshBuilder.Levels; lod++)
             {
                 bool glass = lod < 2 && Cabins.Cars.ContainsKey(car.Id);   // up close: see-through glass with the cabin behind it
@@ -102,6 +107,8 @@ namespace Southbound.EditorTools
                 var r = Part($"Body LOD{lod}", mesh, mat, body, lod < 3);
                 if (mesh.subMeshCount > 1) r.sharedMaterials = new[] { mat, GlassMaterial() };
                 palette.Add(r); lodRenderers[lod].Add(r);
+                // up close the front doors are their own pieces, so they can swing open
+                if (lod == 0) doorPivots = CutDoors(mesh, s, dir, car.Id, body, mat, palette, lodRenderers[0], out doorOpen);
             }
 
             // the cabin behind the glass: dash and dials, console, seats, bench, belts, visors, mirror, steering wheel
@@ -188,6 +195,8 @@ namespace Southbound.EditorTools
             var lights = new GameObject("Lights").transform;
             lights.SetParent(root.transform, false);
             float hx = (float)s.Head[0], hy = (float)s.Head[1], tx = (float)s.Tail4[0], ty = (float)s.Tail4[1];
+            // the fire's glow and the explosion's flash (CarHealth switches it on)
+            var fireLight = Lamp(lights, "Fire light", LightType.Point, new Vector3(0, (float)s.Roof * 0.6f, 0), Quaternion.identity, new Color(1f, 0.55f, 0.2f), 400000f, 30f);
             var heads = new[] { -1, 1 }.Select(side => Lamp(lights, side < 0 ? "Headlight left" : "Headlight right", LightType.Spot,
                 new Vector3(side * hx, hy, L / 2 - 0.08f), Quaternion.Euler(4, 0, 0), new Color(1f, 0.95f, 0.86f), 1300f, 70f)).ToArray();
             var tails = new[] { -1, 1 }.Select(side => Lamp(lights, side < 0 ? "Brake light left" : "Brake light right", LightType.Point,
@@ -210,7 +219,146 @@ namespace Southbound.EditorTools
             cb.renderers = palette.ToArray();
             cb.headlights = heads; cb.brakeLights = tails;
             cb.hasSiren = cc.hasSiren;
+            cc.buildVersion = BuildVersion;
+            // damage, fire and fuel; the doors
+            var ch = root.AddComponent<CarHealth>();
+            ch.smokeMaterial = ParticleMaterial("CarSmoke", false); ch.fireMaterial = ParticleMaterial("CarFire", true);
+            ch.crackedGlass = CrackedGlassMaterial(); ch.fireLight = fireLight;
+            if (doorPivots != null)
+            {
+                var sw = root.AddComponent<CarDoorSwing>();
+                sw.doors = doorPivots; sw.openDegrees = doorOpen;
+            }
             return root;
+        }
+
+        /// <summary>Cut the front doors out of the near body mesh (Core/CarDoors) into their own pieces on hinges.</summary>
+        static Transform[] CutDoors(Mesh mesh, CarSpec s, string dir, string id, Transform body, Material mat, List<Renderer> palette, List<Renderer> lod0, out float[] open)
+        {
+            open = null;
+            var v = mesh.vertices; var n = mesh.normals;
+            var P = new float[v.Length * 3]; var N = new float[v.Length * 3];
+            for (int i = 0; i < v.Length; i++) { P[i * 3] = v[i].x; P[i * 3 + 1] = v[i].y; P[i * 3 + 2] = v[i].z; N[i * 3] = n[i].x; N[i * 3 + 1] = n[i].y; N[i * 3 + 2] = n[i].z; }
+            var subs = new int[mesh.subMeshCount][];
+            for (int k = 0; k < subs.Length; k++) subs[k] = mesh.GetTriangles(k);
+            var doors = CarDoors.Split(s, P, N, subs, out var rest);
+            if (doors == null) return null;
+            for (int k = 0; k < rest.Length; k++) mesh.SetTriangles(rest[k], k, true);
+            EditorUtility.SetDirty(mesh);
+            var pivots = new Transform[doors.Length]; open = new float[doors.Length];
+            var uv = mesh.uv; var uv2 = mesh.uv2;
+            for (int d = 0; d < doors.Length; d++)
+            {
+                var door = doors[d];
+                var dm = Compact(v, n, uv, uv2, door.Triangles, $"{id} {door.Name}");
+                string path = $"{dir}/{id}_{door.Name.Replace(' ', '_').ToLowerInvariant()}.asset";
+                AssetDatabase.DeleteAsset(path);
+                AssetDatabase.CreateAsset(dm, path);
+                var pivot = new GameObject(door.Name).transform;
+                pivot.SetParent(body, false);
+                pivot.localPosition = new Vector3((float)door.HingeX, 0, (float)door.HingeZ);
+                var r = Part(door.Name + " skin", dm, mat, pivot, true);
+                r.transform.localPosition = new Vector3(-(float)door.HingeX, 0, -(float)door.HingeZ);
+                if (dm.subMeshCount > 1) r.sharedMaterials = new[] { mat, GlassMaterial() };
+                palette.Add(r); lod0.Add(r);
+                pivots[d] = pivot; open[d] = (float)door.OpenDegrees;
+            }
+            return pivots;
+        }
+
+        /// <summary>A mesh of just these triangles (per sub-mesh), with only the vertices they use.</summary>
+        static Mesh Compact(Vector3[] v, Vector3[] n, Vector2[] uv, Vector2[] uv2, int[][] subs, string name)
+        {
+            var map = new Dictionary<int, int>();
+            var nv = new List<Vector3>(); var nn = new List<Vector3>(); var nuv = new List<Vector2>(); var nuv2 = new List<Vector2>();
+            var outSubs = new List<int[]>();
+            foreach (var tri in subs)
+            {
+                if (tri.Length == 0 && outSubs.Count > 0) continue;
+                var o = new int[tri.Length];
+                for (int i = 0; i < tri.Length; i++)
+                {
+                    if (!map.TryGetValue(tri[i], out int k))
+                    {
+                        k = nv.Count; map[tri[i]] = k;
+                        nv.Add(v[tri[i]]); nn.Add(n[tri[i]]);
+                        nuv.Add(uv.Length > 0 ? uv[tri[i]] : Vector2.zero); nuv2.Add(uv2.Length > 0 ? uv2[tri[i]] : Vector2.zero);
+                    }
+                    o[i] = k;
+                }
+                outSubs.Add(o);
+            }
+            var m = new Mesh { name = name, indexFormat = nv.Count > 65000 ? IndexFormat.UInt32 : IndexFormat.UInt16 };
+            m.SetVertices(nv); m.SetNormals(nn); m.SetUVs(0, nuv); m.SetUVs(1, nuv2);
+            m.subMeshCount = outSubs.Count;
+            for (int k = 0; k < outSubs.Count; k++) m.SetTriangles(outSubs[k], k, true);
+            m.UploadMeshData(false);
+            return m;
+        }
+
+        /// <summary>Engine smoke (soft grey puffs, alpha-blended) or flames (additive), unlit particles.</summary>
+        static Material ParticleMaterial(string name, bool fire)
+        {
+            string texPath = $"{Paths.Materials}/{name}.png", matPath = $"{Paths.Materials}/{name}.mat";
+            var have = AssetDatabase.LoadAssetAtPath<Material>(matPath);
+            if (have != null) return have;
+            Paths.Ensure(Paths.Materials);
+            const int S = 64;
+            var px = new Color32[S * S];
+            var rnd = new System.Random(fire ? 11 : 5);
+            var blobs = new Vector3[7];
+            for (int b = 0; b < blobs.Length; b++) blobs[b] = new Vector3((float)rnd.NextDouble() * 0.5f + 0.25f, (float)rnd.NextDouble() * 0.5f + 0.25f, (float)rnd.NextDouble() * 0.12f + 0.12f);
+            for (int y = 0; y < S; y++)
+                for (int x = 0; x < S; x++)
+                {
+                    float u = (x + 0.5f) / S, w = (y + 0.5f) / S;
+                    float r = Vector2.Distance(new Vector2(u, w), new Vector2(0.5f, 0.5f)) * 2;
+                    float a = Mathf.Clamp01(1 - r); a = a * a * (3 - 2 * a);
+                    if (!fire)
+                    {
+                        // billowy: a few soft lumps inside the round
+                        float lumps = 0;
+                        foreach (var b in blobs) lumps = Mathf.Max(lumps, Mathf.Clamp01(1 - Vector2.Distance(new Vector2(u, w), new Vector2(b.x, b.y)) / (b.z * 2)));
+                        a *= 0.55f + 0.45f * lumps;
+                    }
+                    else a = Mathf.Pow(a, 1.6f);
+                    px[y * S + x] = new Color32(255, 255, 255, (byte)(a * 255));
+                }
+            Surfaces.Write(px, S, S, Paths.Abs(texPath));
+            AssetDatabase.ImportAsset(texPath);
+            if (AssetImporter.GetAtPath(texPath) is TextureImporter imp) { imp.alphaIsTransparency = true; imp.wrapMode = TextureWrapMode.Clamp; imp.SaveAndReimport(); }
+            var sh = Shader.Find("HDRP/Unlit") ?? Shader.Find("Particles/Standard Unlit") ?? Shader.Find("Unlit/Transparent");
+            var m = new Material(sh) { name = name };
+            var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(texPath);
+            if (m.shader.name == "HDRP/Unlit")
+            {
+                m.SetTexture("_UnlitColorMap", tex);
+                m.SetColor("_UnlitColor", fire ? new Color(4f, 1.8f, 0.5f, 1f) : new Color(0.5f, 0.5f, 0.5f, 1f));
+                m.SetFloat("_SurfaceType", 1);
+                m.SetFloat("_BlendMode", fire ? 1 : 0);   // additive flames, alpha-blended smoke
+                m.SetFloat("_ZWrite", 0);
+                Hdrp.ResetKeywords(m);
+            }
+            else m.mainTexture = tex;
+            AssetDatabase.CreateAsset(m, matPath);
+            return m;
+        }
+
+        /// <summary>Cracked safety glass: a white, frosted, less see-through version of the car glass.</summary>
+        static Material CrackedGlassMaterial()
+        {
+            string path = $"{Paths.Materials}/CarGlassCracked.mat";
+            var m = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (m != null) return m;
+            m = new Material(GlassMaterial()) { name = "Car glass (cracked)" };
+            if (Hdrp.IsHdrpShader(m))
+            {
+                m.SetColor("_BaseColor", new Color(0.72f, 0.75f, 0.76f, 0.62f));
+                m.SetFloat("_Smoothness", 0.55f);
+                Hdrp.ResetKeywords(m);
+            }
+            AssetDatabase.CreateAsset(m, path);
+            return m;
         }
 
         static MeshRenderer Part(string name, Mesh mesh, Material mat, Transform parent, bool shadows)

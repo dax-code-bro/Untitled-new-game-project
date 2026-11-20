@@ -27,6 +27,7 @@ namespace Southbound
         public float axleFront = 1.4f, axleRear = -1.4f;
         public float wheelRadius = 0.33f, length = 4.8f, width = 1.9f, roof = 1.45f, rideHeight = 0.18f;
         public bool hasSiren, isTaxi;
+        [HideInInspector] public int buildVersion;   // CarFactory.BuildVersion when the prefab was made
 
         [Header("Parts")]
         [Tooltip("Front-left, front-right, rear-left, rear-right wheel pivots (at the axle, rest height).")]
@@ -51,6 +52,7 @@ namespace Southbound
 
         Rigidbody rb;
         CarBody body;
+        CarHealth health;
         Vector3[] mounts = new Vector3[4];
         readonly float[] compression = new float[4], lastCompression = new float[4];
         readonly bool[] contact = new bool[4];
@@ -176,7 +178,7 @@ namespace Southbound
                     float rev = Mathf.Clamp01(Mathf.Abs((float)Model.Forward) / Mathf.Max(1, topSpeed)), load = (float)Controls.Throttle;
                     // a few gears: the note climbs, drops at each shift, climbs again
                     float gear = Mathf.Repeat(rev * 4.2f, 1f) * 0.55f + rev * 0.45f;
-                    body.EngineSound(true, gear, load);
+                    body.EngineSound(health == null || health.State.Runs, gear, load);
                 }
                 else { body.EngineSound(false, 0, 0); body.HornSound(false); }
                 body.HeadlightsOn = lightsOverride ? lightsOn : (night && Driver != null) || (night && isTaxi);
@@ -192,6 +194,15 @@ namespace Southbound
                 Steer = -SbInput.Steer, // the model steers left for +
                 Handbrake = SbInput.Handbrake, Nitro = SbInput.Nitro,
             };
+            // the engine's state (CarHealth): down on power when hurt, nothing with it wrecked or the tank empty
+            if (health == null) health = CarHealth.Of(this);
+            if (health != null)
+            {
+                float p = (float)health.State.Power;
+                Controls.Throttle *= p;
+                if (p < 1) Controls.Nitro = false;
+                if (p <= 0 && Model.Forward < 0.3) Controls.Brake = 0;   // no engine, no reversing
+            }
             if (rb != null && rb.IsSleeping()) rb.WakeUp();
         }
 

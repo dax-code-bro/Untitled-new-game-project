@@ -34,7 +34,7 @@ namespace Southbound
         sealed class Cop { public GameObject go; public Retargeter rt; public Health hp; public bool outside; public float y = float.NaN, shotT, stuckT; }
         sealed class Unit
         {
-            public GameObject go; public CarController cc; public CarBody body; public AudioSource siren;
+            public GameObject go; public CarController cc; public CarBody body; public CarHealth health; public AudioSource siren;
             public readonly List<int> route = new List<int>(); public int leg; public float s, v, y = float.NaN, rerouteT, wheelAngle, stillT, goalS; public int goalLane;
             public readonly Cop[] cops = new Cop[2]; public Mode mode;
         }
@@ -165,7 +165,7 @@ namespace Southbound
             int want = Wanted.CarsPerStar[Mathf.Clamp(Wanted.Stars, 0, 5)];
             if (PerformanceTier.Budget.Tier == Tier.Integrated) want = Mathf.Min(want, 3);
             int active = 0;
-            foreach (var u in units) if (u.mode == Mode.Drive || u.mode == Mode.Stopped) active++;
+            foreach (var u in units) if ((u.mode == Mode.Drive || u.mode == Mode.Stopped) && (u.health == null || !u.health.State.Wrecked)) active++;
             spawnT -= dt;
             if (active < want && spawnT <= 0) { Spawn(pp); spawnT = 3.5f; }
 
@@ -228,6 +228,7 @@ namespace Southbound
             u.v = traffic.laneSpeed[lane];
             u.mode = Mode.Drive;
             u.go.SetActive(true);
+            if (u.health != null) u.health.Restore(1);
             foreach (var c in u.cops) Reset(c);
             Board(u);
             if (u.body != null) u.body.Siren = true;
@@ -243,7 +244,7 @@ namespace Southbound
             if (rb != null) { rb.isKinematic = true; rb.interpolation = RigidbodyInterpolation.None; }
             var cc = go.GetComponent<CarController>();
             if (cc != null) cc.enabled = false;
-            var u = new Unit { go = go, cc = cc, body = go.GetComponent<CarBody>() };
+            var u = new Unit { go = go, cc = cc, body = go.GetComponent<CarBody>(), health = cc != null ? CarHealth.Of(cc) : null };
             var src = go.AddComponent<AudioSource>();
             src.clip = sirenClip; src.loop = true; src.spatialBlend = 1; src.minDistance = 10; src.maxDistance = 300; src.volume = 0.55f; src.dopplerLevel = 0.6f;
             u.siren = src;
@@ -316,18 +317,21 @@ namespace Southbound
             bool anyAlive = false;
             foreach (var c in u.cops) if (c != null && !c.hp.Dead) anyAlive = true;
 
+            // the cruiser wrecked or burning: everyone out, and it stays put
+            bool dead = u.health != null && u.health.State.Wrecked;
+            if (dead && u.mode == Mode.Drive) { Deploy(u); if (u.siren != null) u.siren.Stop(); }
             // the driver shot at the wheel: the partner gets out
             if (u.mode == Mode.Drive && u.cops[0] != null && u.cops[0].hp.Dead && u.cops[1] != null && !u.cops[1].hp.Dead) Deploy(u);
             if (Wanted.Stars == 0 && (u.mode == Mode.Drive || u.mode == Mode.Stopped)) { u.mode = Mode.Leave; if (u.body != null) u.body.Siren = false; if (u.siren != null) u.siren.Stop(); }
             // gone: too far off, or abandoned (both officers down) once you're away from it
             var cam = Camera.main != null ? Camera.main.transform.position : pp;
             float camD = Vector3.Distance(me, cam);
-            if ((u.mode == Mode.Leave && camD > 160f) || (!anyAlive && camD > 120f) || camD > 400f) { Retire(u); return; }
+            if ((u.mode == Mode.Leave && camD > 160f) || ((!anyAlive || dead) && camD > 120f) || camD > 400f) { Retire(u); return; }
 
             if (u.mode == Mode.Stopped)
             {
                 if (u.body != null) u.body.Brake = 1;
-                bool getaway = !OnFoot ? far > 40f && PlayerSpeed > 4f : far > 70f;
+                bool getaway = !dead && (!OnFoot ? far > 40f && PlayerSpeed > 4f : far > 70f);   // a wrecked cruiser isn't going anywhere
                 bool allIn = true;
                 foreach (var c in u.cops)
                 {
@@ -336,6 +340,11 @@ namespace Southbound
                     else { Officer(u, c, dt, pp); allIn = false; }
                 }
                 if (getaway && allIn && anyAlive) { u.mode = Mode.Drive; u.rerouteT = 0; Board(u); }
+                return;
+            }
+            if (u.mode == Mode.Leave && dead)
+            {
+                foreach (var c in u.cops) if (c != null && c.outside && !c.hp.Dead) c.rt.Loop("Idle_Loop", 1);
                 return;
             }
             if (u.mode == Mode.Leave)

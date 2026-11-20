@@ -81,6 +81,9 @@ namespace Southbound
                 transform.localPosition = Vector3.zero; transform.localRotation = Quaternion.identity;
             }
             if (cameraRig != null) cameraRig.vehicle = car;
+            CarHealth.Of(car);
+            var sw = car.GetComponent<CarDoorSwing>();
+            if (sw != null) sw.Open(0, 1.0f);   // in by the driver's door, and shut it
             var game = SouthboundGame.Instance;
             if (game != null) game.Toast(car.displayName);
         }
@@ -93,6 +96,8 @@ namespace Southbound
             car.Controls = new Core.DriveInput { Handbrake = !bail };
             Car = null;
             transform.SetParent(null, true);
+            var sw = car.GetComponent<CarDoorSwing>();
+            if (sw != null) sw.Open(0, 0.9f);
             // out on the driver's side, on whatever is under the door (or on top of the car if the door is blocked)
             Vector3 at = car.DoorPoint + Vector3.up * 1.5f;
             if (Physics.Raycast(at, Vector3.down, out var hit, 6f, ~0, QueryTriggerInteraction.Ignore) && !hit.collider.transform.IsChildOf(car.transform)) at = hit.point + Vector3.up * 0.05f;

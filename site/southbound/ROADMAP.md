@@ -1433,7 +1433,9 @@ rain and storm, interiors, first person and in cars. Highlights:
       officers who arrest or shoot, Busted and Wasted)
 - [x] H1 the HUD in UI Toolkit (built in code): minimap from a baked map of Calvera (Core/MapRaster, tested),
       health, stamina, clock, money, stars, weapon and ammo, speedometer, prompts, BUSTED/WASTED
-- [ ] Car damage and fuel, interiors and shops, missions and jobs, the rest of the web game's shaders
+- [x] C1 car damage (dents in the mesh, glass per side, smoke, fire, explosions), front doors cut out of the body that
+      swing open, fuel use and pumps, HUD gauges (Core/CarDamage + CarDoors, tested); prefabs rebuild when outdated
+- [ ] Interiors and shops, missions and jobs, the rest of the web game's shaders
 
 ## Phase 3 — Content catalogs (targets)
 

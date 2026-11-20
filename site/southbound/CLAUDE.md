@@ -230,6 +230,10 @@ the fewest additions next. Be honest in reports about what is and isn't done.
   `new Length(x, LengthUnit.Pixel)`; transforms via `style.translate/rotate/transformOrigin`). Dots on the
   minimap: add a callback to `Hud.Sources` (OnEnable/OnDisable). Older OnGUI text stays as the fallback
   behind `if (!Hud.Showing)`. Messages go through `game.Toast`, prompts through `Driving.Prompt`/`Police.Prompt`.
+  Cars (C1): `CarHealth.Of(anything on a car)` gets or adds its damage/fuel component; `CarHealth.Pumps` takes
+  fuel pump positions; `CarHealth.Explosion(at, damage, radius)` is the shared blast. Bump
+  `CarFactory.BuildVersion` whenever a car prefab gains parts: older prefabs are rebuilt on next use. The LOD0
+  body has the front doors cut out (`Body/Door driver|passenger` pivots, `CarDoorSwing`).
 - Commit one batch at a time: if the next batch's edits are already in the tree, commit only the
   finished batch's files (and an `index.js` without the next batch's `add(...)` line), with the
   `game.js` that was built and QA'd for it.
