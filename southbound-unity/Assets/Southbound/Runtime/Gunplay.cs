@@ -83,6 +83,20 @@ namespace Southbound
             return clip;
         }
 
+        /// <summary>Read the owned guns again (after buying one): a new gun is equipped if you only had your fists.</summary>
+        public void Refresh()
+        {
+            var p = SouthboundGame.Instance != null ? SouthboundGame.Instance.Profile : null;
+            if (p == null) return;
+            string cur = index >= 0 && index < owned.Count ? owned[index] : null;
+            owned.Clear();
+            owned.AddRange(p.OwnedWeapons.Where(id => Arsenal.Get(id) != null).Distinct());
+            if (!owned.Contains("fists")) owned.Insert(0, "fists");
+            int keep = cur != null && cur != "fists" ? owned.IndexOf(cur) : -1;
+            if (keep >= 0) index = keep;
+            else Equip(Mathf.Max(0, owned.FindIndex(id => id != "fists")));
+        }
+
         void Equip(int i)
         {
             if (owned.Count == 0) return;

@@ -137,7 +137,7 @@ namespace Southbound.Tests
         public void NoSciFi()
         {
             // a real-world game: every weapon is a real action type and calibre
-            var real = new[] { "9mm", ".357", ".22", "5.56", "7.62", "4.6mm", "12 gauge", "84mm", "40mm", "Arrow", ".308", ".338", ".30-30", "cm" };
+            var real = new[] { "9mm", ".357", ".38 Special", "5.56", "7.62", "4.6×30mm", "12 gauge", "84mm", "40mm", "Arrow", ".308", ".338", ".30-30", "cm" };
             foreach (var w in Arsenal.All.Where(x => x.Id != "fists"))
                 Assert.IsTrue(real.Any(c => w.Caliber.Contains(c)), $"{w.Id} {w.Caliber}");
         }

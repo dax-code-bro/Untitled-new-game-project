@@ -27,6 +27,9 @@ namespace Southbound
         public readonly Wanted Wanted = new Wanted();
         public int Stars => Wanted.Stars;
 
+        /// <summary>Put the police on you with at least this many stars (a mission's "lose the police").</summary>
+        public void Force(int stars) { Wanted.Force(stars); lastSeen = PlayerPos; }
+
         /// <summary>Report a crime to the law (from anywhere: shops, missions, the car code).</summary>
         public static void Crime(string kind) { if (Instance != null) Instance.Report(kind); }
 
@@ -576,7 +579,7 @@ namespace Southbound
             {
                 double paid = System.Math.Min(game.Profile.Money, fine);
                 game.Profile.Money -= paid;
-                Release();
+                Release(Outside("precinct", "sheriff"));
                 game.Toast($"Released. Fined ${paid:N0}.", 4f);
             });
             if (game.player != null) game.player.enabled = false;
@@ -599,7 +602,7 @@ namespace Southbound
                 game.Health = game.Needs.MaxHealth;
                 double bill = System.Math.Min(game.Profile.Money, 500);
                 game.Profile.Money -= bill;
-                Release();
+                Release(Outside("hospital", "clinic"));
                 game.Toast($"Hospital bill: ${bill:N0}", 4f);
             });
         }
@@ -609,8 +612,24 @@ namespace Southbound
             banner = text; bannerUntil = Time.unscaledTime + seconds; pendingUntil = bannerUntil; pending = then;
         }
 
-        /// <summary>Back on your feet at the spawn, the slate wiped, the police gone home.</summary>
-        void Release()
+        /// <summary>Just outside the door of the nearest of these buildings (the precinct or the sheriff's office; the hospital
+        /// or the clinic: Shops), or the spawn if there's none.</summary>
+        Vector3 Outside(params string[] ids)
+        {
+            Shops.Shop b = null; float best = float.MaxValue;
+            var me = PlayerPos;
+            if (Shops.Instance != null)
+                foreach (var s in Shops.Instance.shops)
+                    if (System.Array.IndexOf(ids, s.id) >= 0 && (s.door - me).sqrMagnitude < best) { best = (s.door - me).sqrMagnitude; b = s; }
+            if (b == null) return home;
+            var front = b.door - b.keeperAt; front.y = 0;
+            var at = b.door + front.normalized * 2.5f;
+            at.y = Pedestrians.Ground(at + Vector3.up * 20f, 40f, b.door.y) + 0.05f;
+            return at;
+        }
+
+        /// <summary>Back on your feet (outside the station, the hospital or at the spawn), the slate wiped, the police gone home.</summary>
+        void Release(Vector3 where)
         {
             Wanted.Clear(); provoked = false; bustT = 0;
             foreach (var u in units) if (u.mode != Mode.Idle) Retire(u);
@@ -619,7 +638,7 @@ namespace Southbound
             {
                 var ch = p.GetComponent<CharacterController>();
                 if (ch != null) ch.enabled = false;
-                p.transform.position = home;
+                p.transform.position = where;
                 if (ch != null) ch.enabled = true;
                 p.enabled = true;
             }

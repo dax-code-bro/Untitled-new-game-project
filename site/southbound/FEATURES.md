@@ -104,8 +104,10 @@ cabins.
 built-in Intel/AMD graphics (auto-detected, cheap HDRP passes, STP-upscaled 50-80% resolution at 30 fps, thinner
 world, F7); D1 John and the traffic's drivers seated at the wheel; P1 townspeople react (flee/cower, shootable,
 run down) and the police (wanted stars by the web game's rules, cruisers routed over the lanes, officers who
-arrest or shoot, Busted/Wasted); H1 the UI Toolkit HUD with a baked minimap; C1 car damage, opening doors and fuel.
-Next, in order: S1 interiors and shops (with the fuel pumps), M1 missions and jobs.
+arrest or shoot, Busted/Wasted); H1 the UI Toolkit HUD with a baked minimap; C1 car damage, opening doors and fuel; S1 the 17 walk-in buildings
+whole with keepers, store screens and fuel pumps; M1 the story, side jobs and road/on-foot jobs. Not in Unity yet:
+boats and aircraft (so their mission steps are skipped), fishing and hunting, house interiors and property, clothes,
+the phone.
 
 ## The owner's list after watching them play (2026-11-09) — do in this order
 

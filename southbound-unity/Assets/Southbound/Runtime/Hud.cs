@@ -30,13 +30,17 @@ namespace Southbound
         /// <summary>Is the HUD up (so the OnGUI fallbacks stay quiet)?</summary>
         public static bool Showing => Instance != null && Instance.ready;
 
+        static string bigTitle, bigSub; static float bigUntil;
+        /// <summary>A big title across the middle for a few seconds (MISSION PASSED, a shift's name...).</summary>
+        public static void Big(string title, string sub, float seconds) { bigTitle = title; bigSub = sub; bigUntil = Time.unscaledTime + seconds; }
+
         const float MapPx = 240;
         static readonly Color Ink = new Color(0.95f, 0.93f, 0.88f), Panel = new Color(0, 0, 0, 0.45f), Money = new Color(0.45f, 0.86f, 0.42f), Bad = new Color(0.93f, 0.3f, 0.25f);
 
         UIDocument doc;
         bool ready;
         VisualElement root, mapClip, mapImage, arrow, north, blipLayer, healthFill, staminaFill, stars, crosshair, weaponBox, speedBox, bannerBand, fuelFill, engineFill;
-        Label clock, money, moneyDelta, weaponName, weaponAmmo, speed, carName, prompt, toast, banner, needs;
+        Label clock, money, moneyDelta, weaponName, weaponAmmo, speed, carName, prompt, toast, banner, needs, bannerSub, objective;
         readonly VisualElement[] starIcons = new VisualElement[5];
         readonly List<VisualElement> blipPool = new List<VisualElement>();
         readonly List<Blip> blips = new List<Blip>();
@@ -45,7 +49,7 @@ namespace Southbound
         double lastMoney = double.NaN; float deltaUntil;
         // what's on screen, so text is only rebuilt when it changes
         int shownMinute = -1, shownMoney = int.MinValue, shownClip = -1, shownReserve = -1, shownSpeed = -1;
-        string shownWeapon, shownCar, shownPrompt, shownToast, shownBanner, shownNeeds;
+        string shownWeapon, shownCar, shownPrompt, shownToast, shownBanner, shownNeeds, shownObjective, shownSub;
 
         void Awake() => Instance = this;
 
@@ -177,6 +181,14 @@ namespace Southbound
             banner = Text(bannerBand, 96, Ink);
             banner.style.unityTextAlign = TextAnchor.MiddleCenter;
             banner.style.unityFontStyleAndWeight = FontStyle.Bold;
+            bannerSub = Text(bannerBand, 22, Ink);
+            bannerSub.style.unityTextAlign = TextAnchor.MiddleCenter;
+            // the objective (mission step, shift stop) top left
+            var obj = Box(root, 32, null, 28, null);
+            objective = Text(obj, 18, new Color(1f, 0.86f, 0.45f));
+            objective.style.unityFontStyleAndWeight = FontStyle.Bold;
+            objective.style.backgroundColor = Panel; Round(objective, 6);
+            objective.style.paddingLeft = 12; objective.style.paddingRight = 12; objective.style.paddingTop = 6; objective.style.paddingBottom = 6;
         }
 
         static VisualElement El(VisualElement parent)
@@ -271,8 +283,8 @@ namespace Southbound
         void LateUpdate()
         {
             if (!ready || root == null) return;
-            Show(root, !PhotoMode.Active);
-            if (PhotoMode.Active || game == null) return;
+            Show(root, !PhotoMode.Active && !StoreScreen.Showing);
+            if (PhotoMode.Active || StoreScreen.Showing || game == null) return;
             float dt = Time.unscaledDeltaTime;
             var car = driving != null ? driving.Car : null;
             var me = car != null ? car.transform : game.player != null ? game.player.transform : null;
@@ -356,17 +368,21 @@ namespace Southbound
             }
 
             // prompt (the police's first), message, crosshair, banner
-            string p = police != null && police.Prompt != null ? police.Prompt : driving != null ? driving.Prompt : null;
+            string p = police != null && police.Prompt != null ? police.Prompt : Shops.Instance != null && Shops.Instance.Prompt != null ? Shops.Instance.Prompt
+                : Missions.Instance != null && Missions.Instance.Prompt != null ? Missions.Instance.Prompt : driving != null ? driving.Prompt : null;
+            SetText(objective, ref shownObjective, Missions.Instance != null && !string.IsNullOrEmpty(Missions.Instance.Objective) ? Missions.Instance.Objective : null);
             SetText(prompt, ref shownPrompt, p);
             SetText(toast, ref shownToast, game.ToastText);
             Show(crosshair, gun != null && gun.Aiming && car == null);
-            string b = police != null ? police.Banner : null;
+            string b = police != null ? police.Banner : null, bsub = null;
+            if (b == null && Time.unscaledTime < bigUntil) { b = bigTitle; bsub = bigSub; }
             if (b != shownBanner)
             {
                 shownBanner = b;
                 banner.text = b ?? "";
-                banner.style.color = b == "WASTED" ? new Color(0.85f, 0.1f, 0.08f) : Ink;
+                banner.style.color = b == "WASTED" || b == "MISSION FAILED" ? new Color(0.85f, 0.1f, 0.08f) : b == "MISSION PASSED" || b == "SHIFT COMPLETE" ? new Color(1f, 0.82f, 0.35f) : Ink;
             }
+            SetText(bannerSub, ref shownSub, bsub);
             Show(bannerBand, b != null);
         }
 

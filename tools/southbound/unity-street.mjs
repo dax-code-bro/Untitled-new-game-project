@@ -10,6 +10,11 @@
 // camera visits each 150 m square the roads run through. The result is geometry, materials, textures and
 // instance transforms in the web game's space (Data/World/calvera-street.json + street-tex/*.png); the
 // Unity side (Core/StreetData.cs, Editor/StreetBuilder.cs) mirrors it into the scene.
+// Every walk-in building made by systems/gunstores.js buildShop (gun stores, clothing stores, Gulf Marts, armour
+// shops, the auction house, the police station and the hospital) comes whole, inside and out, with its doors
+// propped open, and Data/World/calvera-shops.json says what each one is (keeper, counter, prices, the door).
+// The story missions, the side jobs, the named places they send you (snapped to roads as the game does), the
+// job boards where they ended up and the town layout the jobs' stops are drawn from go to calvera-missions.json.
 import fs from 'node:fs';
 import path from 'node:path';
 import http from 'node:http';
@@ -42,6 +47,22 @@ export async function exportStreet({ repo, game, unity }) {
       }).join('\n');
       return { contents: src, loader: 'js' };
     });
+    // every walk-in shop building, remembered as it's made (exported whole, and listed in calvera-shops.json)
+    b.onLoad({ filter: /src[\\/]systems[\\/]gunstores\.js$/ }, async (a) => {
+      const src = (await fs.promises.readFile(a.path, 'utf8')).replace('return { g, y, keeper, keeperFace: g.rotation.y,', '(globalThis.__sbShops = globalThis.__sbShops || []).push({ g, st, keeper, doorAt }); return { g, y, keeper, keeperFace: g.rotation.y,');
+      if (!src.includes('__sbShops')) throw new Error('street: buildShop changed; update the shop hook in unity-street.mjs');
+      return { contents: src, loader: 'js' };
+    });
+    // the missions, side jobs and jobs, with the places the game worked out for them
+    const hook = (rx, edits) => b.onLoad({ filter: rx }, async (a) => {
+      let src = await fs.promises.readFile(a.path, 'utf8');
+      for (const [from, to] of edits) { if (!src.includes(from)) throw new Error(`street: ${path.basename(a.path)} changed; update the hook in unity-street.mjs (${from.slice(0, 40)})`); src = src.replace(from, to); }
+      return { contents: src, loader: 'js' };
+    });
+    hook(/src[\\/]systems[\\/]missions\.js$/, [['  // armed mission enemies: close in and shoot at the player', '  globalThis.__sbPlaces = places;\n  // armed mission enemies: close in and shoot at the player'],
+      ['export function installMissions(game) {', 'globalThis.__sbMissions = MISSIONS;\nexport function installMissions(game) {']]);
+    hook(/src[\\/]systems[\\/]missionsplus\.js$/, [['const sideMissions = SIDE.map(', 'const sideMissions = globalThis.__sbSide = SIDE.map(']]);
+    hook(/src[\\/]systems[\\/]jobs\.js$/, [['  for (const def of JOBS) {\n    const at = where(def);', '  globalThis.__sbLayout = { CITY, TOWN, LAKE, PLAINS, FOREST, AIRFIELD, BAYOU };\n  for (const def of JOBS) {\n    const at = where(def); (globalThis.__sbJobs = globalThis.__sbJobs || []).push({ ...def, at: [at[0], at[1]], board: undefined });']]);
     // surface textures carry their set's name (the KTX2 loader leaves them nameless)
     b.onLoad({ filter: /src[\\/]assets[\\/]textures\.js$/ }, async (a) => {
       const src = (await fs.promises.readFile(a.path, 'utf8')).replace('out[key][k] = t;', 'out[key][k] = t; t.name = name + "|" + k;');
@@ -78,7 +99,11 @@ export async function exportStreet({ repo, game, unity }) {
     const keepNamed = Object.fromEntries(Object.entries(KEEP_NAMED).map(([k, s]) => [k, new RegExp(s.slice(1, s.lastIndexOf('/')))]));
     const G = window.SB.game, SB = window.SB;
     SB.freeze(true); SB.skipRender(true);
+    // the shop buildings, whole (their own parts and everything put in them: counters, racks, the guns on the wall)
+    const shopParts = new Set();
+    for (const s of window.__sbShops || []) s.g.traverse((o) => { if (o.isMesh || o.isInstancedMesh) { shopParts.add(o); if (!o.__sbTag) o.__sbTag = 'shops.js:' + (s.st.id || 'shop'); } });
     const wanted = (o) => {
+      if (shopParts.has(o)) { const ms = Array.isArray(o.material) ? o.material : [o.material]; return !ms.some((m) => !m || m.isShaderMaterial); }
       const t = o.__sbTag; if (!t) return false;
       const file = t.split(':')[0];
       if (!MODULES.includes(file)) return false;
@@ -108,6 +133,9 @@ export async function exportStreet({ repo, game, unity }) {
     }
     grab();
     for (const [, [x, z]] of stops) { SB.teleport(x, z); SB.step(1, 1 / 30); grab(); }
+
+    // the shop doors stand open (Unity bakes the street's pieces in place)
+    for (const d of G.shopDoors || []) for (const l of d.leaves || []) { l.pivot.rotation.y = l.s * 1.35; l.pivot.updateMatrixWorld(true); }
 
     const b64 = (ta) => { const u8 = new Uint8Array(ta.buffer, ta.byteOffset, ta.byteLength); let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); };
     const out = { geometries: [], materials: [], textures: [], objects: [], lines: [], stops: stops.size };
@@ -180,6 +208,20 @@ export async function exportStreet({ repo, game, unity }) {
       }
       out.objects.push(rec);
     }
+    // what each shop is: who keeps it, where the counter and the door are, prices; the civic buildings
+    const keeperOf = new Map((G.storeKeepers || []).map((k) => [k.st, k]));
+    out.shops = (window.__sbShops || []).map((s) => {
+      const k = keeperOf.get(s.st), st = s.st;
+      return { id: st.id || '', name: st.name || '', kind: k ? k.kind : (st.id || 'building'), keeper: st.keeper || '', blurb: st.blurb || '', priceK: st.priceK || 1,
+        look: (st.look && st.look.base) || '', lines: (st.look && st.look.lines) || [], hours: st.hours || '',
+        keeperAt: [s.keeper.x, s.keeper.y, s.keeper.z], face: s.g.rotation.y, door: [s.doorAt.x, s.doorAt.z], y: s.g.position.y, at: [s.g.position.x, s.g.position.z] };
+    });
+    const plain = (o) => JSON.parse(JSON.stringify(o, (k, v) => (typeof v === 'function' ? undefined : v)));
+    out.missions = {
+      story: (window.__sbMissions || []).map((m) => ({ id: m.id, act: m.act, who: m.who, title: m.title, brief: m.brief, steps: m.steps, reward: m.reward })),
+      side: (window.__sbSide || []).map((m) => ({ id: m.id, who: m.who, title: m.title, brief: m.brief, steps: m.steps, reward: m.reward, need: m.need ?? null })),
+      places: window.__sbPlaces || {}, jobs: plain(window.__sbJobs || []), layout: plain(window.__sbLayout || {}),
+    };
     return out;
   }, { MODULES, SKIP: SKIP.map(String), KEEP_NAMED: Object.fromEntries(Object.entries(KEEP_NAMED).map(([k, v]) => [k, String(v)])) });
   await browser.close();
@@ -193,6 +235,12 @@ export async function exportStreet({ repo, game, unity }) {
     fs.writeFileSync(path.join(texDir, `t${i}.png`), Buffer.from(t.png.split(',')[1], 'base64'));
     t.file = `street-tex/t${i}.png`; delete t.png;
   });
+  fs.writeFileSync(path.join(outDir, 'calvera-shops.json'), JSON.stringify({ shops: data.shops }, null, 1));
+  console.log(`street: ${data.shops.length} walk-in buildings (${data.shops.map((s) => s.id).join(', ')})`);
+  delete data.shops;
+  fs.writeFileSync(path.join(outDir, 'calvera-missions.json'), JSON.stringify(data.missions, null, 1));
+  console.log(`street: ${data.missions.story.length} story missions, ${data.missions.side.length} side jobs, ${data.missions.jobs.length} jobs, ${Object.keys(data.missions.places).length} places`);
+  delete data.missions;
   fs.writeFileSync(path.join(outDir, 'calvera-street.json'), JSON.stringify(data));
   const inst = data.objects.reduce((s, o) => s + (o.count || 1), 0);
   const byFile = {};

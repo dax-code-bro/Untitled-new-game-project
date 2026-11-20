@@ -63,6 +63,15 @@ namespace Southbound.Core
 
         public bool CanArrest(bool onFoot, bool gunDrawn, double speed, double nearestOfficer) => Stars > 0 && HeatLevel <= 2 && onFoot && !gunDrawn && speed < 1.2 && nearestOfficer < 2.4;
 
+        /// <summary>At least this many stars, now (a mission's "lose the police"): heat to match, the search fresh.</summary>
+        public void Force(int stars)
+        {
+            Stars = Math.Min(5, Math.Max(Stars, stars));
+            HeatLevel = Math.Max(HeatLevel, Math.Min(2, stars));
+            MaxStars = Math.Max(MaxStars, Stars);
+            Cool = 0;
+        }
+
         public void Clear() { Stars = 0; HeatLevel = 0; Kills = 0; MaxStars = 0; CopKills = 0; Cool = 0; }
     }
 

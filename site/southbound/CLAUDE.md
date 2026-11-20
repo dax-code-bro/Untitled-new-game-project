@@ -234,6 +234,13 @@ the fewest additions next. Be honest in reports about what is and isn't done.
   fuel pump positions; `CarHealth.Explosion(at, damage, radius)` is the shared blast. Bump
   `CarFactory.BuildVersion` whenever a car prefab gains parts: older prefabs are rebuilt on next use. The LOD0
   body has the front doors cut out (`Body/Door driver|passenger` pivots, `CarDoorSwing`).
+  Shops, missions (S1/M1): the street export hooks the web bundle (unity-street.mjs `hook(...)`: buildShop pushes
+  each shop group to `__sbShops`, missions.js `__sbPlaces`/`__sbMissions`, missionsplus.js `__sbSide`, jobs.js
+  `__sbJobs`/`__sbLayout`); it throws if those source lines change, so update the hook strings with them. It writes
+  `calvera-shops.json` (kinds: guns, clothes, mart; civic ids precinct, sheriff, hospital, clinic, firehouse) and
+  `calvera-missions.json`. Missions run on `Core/MissionRunner` against `IMissionWorld` (Runtime/Missions);
+  `Hud.Big(title, sub, s)` is the big banner, `Missions.Instance.Objective` the top-left line. When the web
+  arsenal changes, regenerate the parity fixture: `node tools/southbound/export-unity.mjs catalog`.
 - Commit one batch at a time: if the next batch's edits are already in the tree, commit only the
   finished batch's files (and an `index.js` without the next batch's `add(...)` line), with the
   `game.js` that was built and QA'd for it.

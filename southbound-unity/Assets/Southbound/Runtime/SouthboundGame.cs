@@ -75,7 +75,7 @@ namespace Southbound
 
         void Update()
         {
-            if (SbInput.PauseDown)
+            if (SbInput.PauseDown && !StoreScreen.Showing)
             {
                 paused = !paused;
                 Cursor.lockState = paused ? CursorLockMode.None : CursorLockMode.Locked;

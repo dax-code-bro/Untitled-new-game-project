@@ -27,6 +27,10 @@ namespace Southbound.Core
         public string Home;
         public Dictionary<string, double> Tools = new Dictionary<string, double>();
         public List<string> MissionsDone = new List<string>();
+        /// <summary>Side jobs done (web P.side.done).</summary>
+        public List<string> SideDone = new List<string>();
+        /// <summary>Per job: level, xp toward the next (3 shifts a level), shifts worked (web P.jobs[id]).</summary>
+        public Dictionary<string, double[]> Jobs = new Dictionary<string, double[]>();
         public Needs Needs = new Needs();
         public Dictionary<string, double> Stats = new Dictionary<string, double>();
         public int Garage;
@@ -64,6 +68,11 @@ namespace Southbound.Core
             p.Home = root.Text("home");
             p.Tools = Numbers(root.Obj("tools"));
             p.MissionsDone = Strings(root.Obj("missions")?.Arr("done"));
+            p.SideDone = Strings(root.Obj("side")?.Arr("done"));
+            var jobs = root.Obj("jobs");
+            if (jobs != null)
+                foreach (var kv in jobs)
+                    if (kv.Value is Dictionary<string, object> j) p.Jobs[kv.Key] = new[] { j.Num("level", 1), j.Num("xp"), j.Num("runs") };
             p.Stats = Numbers(root.Obj("stats"));
             p.Garage = root.Arr("garage")?.Count ?? 0;
             var n = root.Obj("needs");
@@ -92,6 +101,17 @@ namespace Southbound.Core
             var missions = Raw.Obj("missions") != null ? new Dictionary<string, object>(Raw.Obj("missions")) : new Dictionary<string, object> { ["active"] = null };
             missions["done"] = MissionsDone.Cast<object>().ToList();
             r["missions"] = missions;
+            var side = Raw.Obj("side") != null ? new Dictionary<string, object>(Raw.Obj("side")) : new Dictionary<string, object>();
+            side["done"] = SideDone.Cast<object>().ToList();
+            r["side"] = side;
+            var jobsOut = Raw.Obj("jobs") != null ? new Dictionary<string, object>(Raw.Obj("jobs")) : new Dictionary<string, object>();
+            foreach (var kv in Jobs)
+            {
+                var j = jobsOut.Obj(kv.Key) != null ? new Dictionary<string, object>(jobsOut.Obj(kv.Key)) : new Dictionary<string, object>();
+                j["level"] = kv.Value[0]; j["xp"] = kv.Value[1]; j["runs"] = kv.Value[2];
+                jobsOut[kv.Key] = j;
+            }
+            r["jobs"] = jobsOut;
             return MiniJson.Write(r);
         }
 

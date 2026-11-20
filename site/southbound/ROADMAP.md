@@ -1435,7 +1435,13 @@ rain and storm, interiors, first person and in cars. Highlights:
       health, stamina, clock, money, stars, weapon and ammo, speedometer, prompts, BUSTED/WASTED
 - [x] C1 car damage (dents in the mesh, glass per side, smoke, fire, explosions), front doors cut out of the body that
       swing open, fuel use and pumps, HUD gauges (Core/CarDamage + CarDoors, tested); prefabs rebuild when outdated
-- [ ] Interiors and shops, missions and jobs, the rest of the web game's shaders
+- [x] S1 the walk-in buildings whole (17: gun, clothing and armour stores, Gulf Marts, the auction, precinct, sheriff,
+      hospital, clinic, firehouse) from the street export, keepers, store screens (guns, ammunition, food), fuel pumps,
+      Busted/Wasted at the nearest station/hospital (Core/ShopCatalog, tested)
+- [x] M1 63 story missions, 12 side jobs and the road and on-foot jobs with the web game's rules and places
+      (Core/Missions: runner and shifts, tested); targets that fight back, the marker, the objective line
+- [ ] Boats and aircraft, fishing and hunting, house interiors and buying property, clothes and the wardrobe, the
+      phone, the web game's crowd and remaining shaders
 
 ## Phase 3 — Content catalogs (targets)
 

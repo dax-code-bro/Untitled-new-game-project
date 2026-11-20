@@ -1,0 +1,470 @@
+{
+ "shops": [
+  {
+   "id": "precinct",
+   "name": "Calvera PD · Central Precinct",
+   "kind": "precinct",
+   "keeper": "",
+   "blurb": "",
+   "priceK": 1,
+   "look": "",
+   "lines": [],
+   "hours": "Open|24 hours",
+   "keeperAt": [
+    238.7,
+    7.070000109672546,
+    856
+   ],
+   "face": 1.5707963267948966,
+   "door": [
+    246.5,
+    856
+   ],
+   "y": 7.070000109672546,
+   "at": [
+    241.5,
+    856
+   ]
+  },
+  {
+   "id": "hospital",
+   "name": "Port Calvera Medical Center",
+   "kind": "hospital",
+   "keeper": "",
+   "blurb": "",
+   "priceK": 1,
+   "look": "",
+   "lines": [],
+   "hours": "EMERGENCY|24 hours",
+   "keeperAt": [
+    1049.3,
+    7.070000109672546,
+    992
+   ],
+   "face": -1.5707963267948966,
+   "door": [
+    1041.5,
+    992
+   ],
+   "y": 7.070000109672546,
+   "at": [
+    1046.5,
+    992
+   ]
+  },
+  {
+   "id": "firehouse",
+   "name": "Calvera Fire Dept · Station 1",
+   "kind": "firehouse",
+   "keeper": "",
+   "blurb": "",
+   "priceK": 1,
+   "look": "",
+   "lines": [],
+   "hours": "Station 1|Always staffed",
+   "keeperAt": [
+    884,
+    7.070000109672546,
+    738.7
+   ],
+   "face": 0,
+   "door": [
+    884,
+    746.5
+   ],
+   "y": 7.070000109672546,
+   "at": [
+    884,
+    741.5
+   ]
+  },
+  {
+   "id": "sheriff",
+   "name": "Mill Creek Sheriff's Office",
+   "kind": "sheriff",
+   "keeper": "",
+   "blurb": "",
+   "priceK": 1,
+   "look": "",
+   "lines": [],
+   "hours": "Mon–Sun|7 AM – 11 PM",
+   "keeperAt": [
+    -1072,
+    26.06,
+    -338.7
+   ],
+   "face": -3.141592653589793,
+   "door": [
+    -1072,
+    -346.5
+   ],
+   "y": 26.06,
+   "at": [
+    -1072,
+    -341.5
+   ]
+  },
+  {
+   "id": "clinic",
+   "name": "Mill Creek Clinic",
+   "kind": "clinic",
+   "keeper": "",
+   "blurb": "",
+   "priceK": 1,
+   "look": "",
+   "lines": [],
+   "hours": "Every day|8 AM – 8 PM",
+   "keeperAt": [
+    -1005.6580641102883,
+    24.4235409497752,
+    -102.05806867574702
+   ],
+   "face": -1.5707963267948966,
+   "door": [
+    -1013.4580641102882,
+    -102.05806867574702
+   ],
+   "y": 24.4235409497752,
+   "at": [
+    -1008.4580641102882,
+    -102.05806867574702
+   ]
+  },
+  {
+   "id": "city",
+   "name": "Calvera Arms Exchange",
+   "kind": "guns",
+   "keeper": "Walt Ferreira",
+   "blurb": "The biggest selection in the state. City prices.",
+   "priceK": 1.25,
+   "look": "mh_m3",
+   "lines": [
+    "Look all you want. Touch with your eyes.",
+    "Everything in here is legal. Mostly."
+   ],
+   "hours": "Mon–Sat 9–7|Sunday 12–5",
+   "keeperAt": [
+    238.7,
+    7.040772972106933,
+    1184
+   ],
+   "face": 1.5707963267948966,
+   "door": [
+    246.5,
+    1184
+   ],
+   "y": 7.040772972106933,
+   "at": [
+    241.5,
+    1184
+   ]
+  },
+  {
+   "id": "town",
+   "name": "Mill Creek Guns & Tackle",
+   "kind": "guns",
+   "keeper": "June Albright",
+   "blurb": "Hunting, home defence and fishing line.",
+   "priceK": 1,
+   "look": "mh_f2",
+   "lines": [
+    "Deer season's coming. You hunt?",
+    "Don't point that at my window."
+   ],
+   "hours": "Mon–Sat 6–6|Closed Sunday",
+   "keeperAt": [
+    -1212.9153841442742,
+    26.003639389299654,
+    -261.6942379824511
+   ],
+   "face": -3.141592653589793,
+   "door": [
+    -1212.9153841442742,
+    -269.4942379824511
+   ],
+   "y": 26.003639389299654,
+   "at": [
+    -1212.9153841442742,
+    -264.4942379824511
+   ]
+  },
+  {
+   "id": "bayou",
+   "name": "Boudreaux Trading Post",
+   "kind": "guns",
+   "keeper": "Pierre Boudreaux",
+   "blurb": "Rifles, bows and shells for the swamp. Cash only.",
+   "priceK": 0.92,
+   "look": "mh_m1",
+   "lines": [
+    "Gator got my last customer. Kidding. He paid first.",
+    "Shells are by the box, cher."
+   ],
+   "hours": "Open 5am|till the fish quit",
+   "keeperAt": [
+    -1119.4509747883226,
+    1.5647176887229552,
+    1252.356186846759
+   ],
+   "face": -3.141592653589793,
+   "door": [
+    -1119.4509747883226,
+    1244.5561868467591
+   ],
+   "y": 1.5647176887229552,
+   "at": [
+    -1119.4509747883226,
+    1249.5561868467591
+   ]
+  },
+  {
+   "id": "c-city",
+   "name": "Calvera Outfitters",
+   "kind": "clothes",
+   "keeper": "Dolores Vidrine",
+   "blurb": "Everything, in every colour. City prices.",
+   "priceK": 1.3,
+   "look": "mh_f1",
+   "lines": [
+    "That shirt has seen things, baby. Let's fix you up.",
+    "Fitting room's in the back. Mirror doesn't lie."
+   ],
+   "hours": "Every day|10am – 9pm",
+   "keeperAt": [
+    500,
+    6.06,
+    781.3
+   ],
+   "face": -3.141592653589793,
+   "door": [
+    500,
+    773.5
+   ],
+   "y": 6.06,
+   "at": [
+    500,
+    778.5
+   ]
+  },
+  {
+   "id": "c-town",
+   "name": "Mill Creek Dry Goods",
+   "kind": "clothes",
+   "keeper": "Earl Thibodeaux",
+   "blurb": "Workwear, boots and hats. Fair prices.",
+   "priceK": 1,
+   "look": "mh_m4",
+   "lines": [
+    "Boots are by the door. Try 'em on, they don't bite.",
+    "Mama made half these shirts. The good half."
+   ],
+   "hours": "Mon–Sat 8–6|Sunday closed",
+   "keeperAt": [
+    -1036,
+    25.873162326812743,
+    -381.3
+   ],
+   "face": 0,
+   "door": [
+    -1036,
+    -373.5
+   ],
+   "y": 25.873162326812743,
+   "at": [
+    -1036,
+    -378.5
+   ]
+  },
+  {
+   "id": "c-bayou",
+   "name": "Bayou Bait & Boots",
+   "kind": "clothes",
+   "keeper": "Clotile Guidry",
+   "blurb": "Rubber boots, fishing shirts, hats. Cheap.",
+   "priceK": 0.9,
+   "look": "mh_f2",
+   "lines": [
+    "White boots are half off. Everybody needs white boots.",
+    "You smell like gun oil, cher."
+   ],
+   "hours": "Every day|6am – 7pm",
+   "keeperAt": [
+    -1203.4332359515245,
+    1.0503315891088698,
+    1242.8837987707607
+   ],
+   "face": -3.141592653589793,
+   "door": [
+    -1203.4332359515245,
+    1235.0837987707607
+   ],
+   "y": 1.0503315891088698,
+   "at": [
+    -1203.4332359515245,
+    1240.0837987707607
+   ]
+  },
+  {
+   "id": "m-city",
+   "name": "Gulf Mart",
+   "kind": "mart",
+   "keeper": "Pete",
+   "blurb": "",
+   "priceK": 1.2,
+   "look": "mh_m2",
+   "lines": [],
+   "hours": "OPEN|24 HOURS",
+   "keeperAt": [
+    692,
+    6.06,
+    781.3
+   ],
+   "face": -3.141592653589793,
+   "door": [
+    692,
+    773.5
+   ],
+   "y": 6.06,
+   "at": [
+    692,
+    778.5
+   ]
+  },
+  {
+   "id": "m-town",
+   "name": "Gulf Mart",
+   "kind": "mart",
+   "keeper": "Lynette",
+   "blurb": "",
+   "priceK": 1,
+   "look": "mh_f1",
+   "lines": [],
+   "hours": "OPEN|24 HOURS",
+   "keeperAt": [
+    -1108,
+    25.885031995773314,
+    -122.7
+   ],
+   "face": -3.141592653589793,
+   "door": [
+    -1108,
+    -130.5
+   ],
+   "y": 25.885031995773314,
+   "at": [
+    -1108,
+    -125.5
+   ]
+  },
+  {
+   "id": "m-bayou",
+   "name": "Gulf Mart",
+   "kind": "mart",
+   "keeper": "Boo",
+   "blurb": "",
+   "priceK": 0.95,
+   "look": "mh_m1",
+   "lines": [],
+   "hours": "OPEN|24 HOURS",
+   "keeperAt": [
+    -1286.0045573482353,
+    1.194093932997698,
+    1230.385449257257
+   ],
+   "face": -3.141592653589793,
+   "door": [
+    -1286.0045573482353,
+    1222.585449257257
+   ],
+   "y": 1.194093932997698,
+   "at": [
+    -1286.0045573482353,
+    1227.585449257257
+   ]
+  },
+  {
+   "id": "a-city",
+   "name": "Gulf Coast Tactical",
+   "kind": "a-city",
+   "keeper": "Reggie Batiste",
+   "blurb": "Body armour, packs, holsters, medical. Law enforcement discounts.",
+   "priceK": 1.15,
+   "look": "mh_m4",
+   "lines": [
+    "Plates, packs, patches. What are we protecting today?",
+    "Level IV will stop a lot. Not everything. Remember that."
+   ],
+   "hours": "Mon–Sat 9–7|LE/Mil discount",
+   "keeperAt": [
+    213.0300342367007,
+    7.733612782107304,
+    1278.6915011950516
+   ],
+   "face": -3.141592653589793,
+   "door": [
+    213.0300342367007,
+    1270.8915011950517
+   ],
+   "y": 7.733612782107304,
+   "at": [
+    213.0300342367007,
+    1275.8915011950517
+   ]
+  },
+  {
+   "id": "a-town",
+   "name": "Sabine Army Surplus",
+   "kind": "a-town",
+   "keeper": "Dot Fontenot",
+   "blurb": "Surplus gear and first aid. Cash, no questions.",
+   "priceK": 0.95,
+   "look": "mh_f2",
+   "lines": [
+    "My husband brought half this home from Germany. Don't ask.",
+    "Tourniquets are by the register. Buy two."
+   ],
+   "hours": "Thu–Sun 9–5|Cash only",
+   "keeperAt": [
+    -964,
+    25.80776244163513,
+    -122.7
+   ],
+   "face": -3.141592653589793,
+   "door": [
+    -964,
+    -130.5
+   ],
+   "y": 25.80776244163513,
+   "at": [
+    -964,
+    -125.5
+   ]
+  },
+  {
+   "id": "auction",
+   "name": "Calvera Property Auction",
+   "kind": "auction",
+   "keeper": "Auctioneer Lionel Robichaux",
+   "blurb": "Foreclosures & seized vehicles · daily 9 AM – 7 PM",
+   "priceK": 1,
+   "look": "mh_m3",
+   "lines": [],
+   "hours": "Sales daily|9 AM – 7 PM",
+   "keeperAt": [
+    596,
+    5.976848719120025,
+    1357.3
+   ],
+   "face": -3.141592653589793,
+   "door": [
+    596,
+    1349.5
+   ],
+   "y": 5.976848719120025,
+   "at": [
+    596,
+    1354.5
+   ]
+  }
+ ]
+}

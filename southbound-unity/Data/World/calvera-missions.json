@@ -1,0 +1,1999 @@
+{
+ "story": [
+  {
+   "id": "m01",
+   "act": "Act I · Homecoming",
+   "who": "June Navarro",
+   "title": "Home Again",
+   "brief": "Your mother asks you to come straight to the house. Danny's things are still in his room.",
+   "steps": [
+    [
+     "goto",
+     "millcreek"
+    ]
+   ],
+   "reward": 500
+  },
+  {
+   "id": "m02",
+   "act": "Act I · Homecoming",
+   "who": "June Navarro",
+   "title": "Danny's Truck",
+   "brief": "Danny's pickup is still in the impound lot downtown. Bring it home.",
+   "steps": [
+    [
+     "steal",
+     "pickup_03",
+     "impound"
+    ],
+    [
+     "deliver",
+     "millcreek"
+    ]
+   ],
+   "reward": 800
+  },
+  {
+   "id": "m03",
+   "act": "Act I · Homecoming",
+   "who": "Tía Lupe",
+   "title": "Lupe's Garage",
+   "brief": "Lupe knew Danny. Meet her at Calvera Customs.",
+   "steps": [
+    [
+     "drive",
+     "customs"
+    ],
+    [
+     "talk"
+    ]
+   ],
+   "reward": 600
+  },
+  {
+   "id": "m04",
+   "act": "Act I · Homecoming",
+   "who": "Tía Lupe",
+   "title": "Test Drive",
+   "brief": "A customer's car needs a road test before it goes back. Don't scratch it.",
+   "steps": [
+    [
+     "steal",
+     "coupe_03",
+     "customs"
+    ],
+    [
+     "drive",
+     "airfield"
+    ],
+    [
+     "deliver",
+     "customs"
+    ]
+   ],
+   "reward": 1200
+  },
+  {
+   "id": "m05",
+   "act": "Act I · Homecoming",
+   "who": "Mara Quint",
+   "title": "The Reporter",
+   "brief": "A reporter has been asking about Danny. She wants to meet at the harbor.",
+   "steps": [
+    [
+     "drive",
+     "harbor"
+    ],
+    [
+     "talk"
+    ]
+   ],
+   "reward": 500
+  },
+  {
+   "id": "m06",
+   "act": "Act I · Homecoming",
+   "who": "Mara Quint",
+   "title": "Paper Trail",
+   "brief": "Mara needs files from a Delacroix shipping office. Get in and out.",
+   "steps": [
+    [
+     "goto",
+     "downtown"
+    ],
+    [
+     "survive",
+     25
+    ],
+    [
+     "escape",
+     1
+    ]
+   ],
+   "reward": 1500
+  },
+  {
+   "id": "m07",
+   "act": "Act I · Homecoming",
+   "who": "Otis Thibodeaux",
+   "title": "Bayou Bait",
+   "brief": "Old Otis ran shrimp with Danny. He'll talk if you help him fill the cooler.",
+   "steps": [
+    [
+     "drive",
+     "bayou"
+    ],
+    [
+     "fish",
+     2
+    ]
+   ],
+   "reward": 900
+  },
+  {
+   "id": "m08",
+   "act": "Act I · Homecoming",
+   "who": "Otis Thibodeaux",
+   "title": "Gator Country",
+   "brief": "Something has been hitting Otis's traps. Deal with it.",
+   "steps": [
+    [
+     "goto",
+     "bayou"
+    ],
+    [
+     "hunt",
+     1
+    ]
+   ],
+   "reward": 1100
+  },
+  {
+   "id": "m09",
+   "act": "Act I · Homecoming",
+   "who": "Otis Thibodeaux",
+   "title": "Where Danny Went",
+   "brief": "Otis saw Danny's skiff go out the night he died. Take a boat and look.",
+   "steps": [
+    [
+     "boat",
+     "lakemid"
+    ]
+   ],
+   "reward": 1300
+  },
+  {
+   "id": "m10",
+   "act": "Act I · Homecoming",
+   "who": "Skeeter Boudreaux",
+   "title": "The Duster",
+   "brief": "Skeeter Boudreaux flies crops out of Redgrass. He saw lights over the bayou that night.",
+   "steps": [
+    [
+     "drive",
+     "airfield"
+    ],
+    [
+     "talk"
+    ]
+   ],
+   "reward": 600
+  },
+  {
+   "id": "m11",
+   "act": "Act I · Homecoming",
+   "who": "Skeeter Boudreaux",
+   "title": "Low and Slow",
+   "brief": "Ride along: fly the duster over the plains and photograph the landing strip nobody owns.",
+   "steps": [
+    [
+     "fly",
+     "plainsfar"
+    ],
+    [
+     "fly",
+     "airfield"
+    ]
+   ],
+   "reward": 2000
+  },
+  {
+   "id": "m12",
+   "act": "Act I · Homecoming",
+   "who": "Mara Quint",
+   "title": "Tailing Remy",
+   "brief": "Remy Delacroix drives a gold coupe. Follow him to his meeting.",
+   "steps": [
+    [
+     "drive",
+     "downtown"
+    ],
+    [
+     "drive",
+     "harbor"
+    ]
+   ],
+   "reward": 1400
+  },
+  {
+   "id": "m13",
+   "act": "Act I · Homecoming",
+   "who": "Capt. Harlan Voss",
+   "title": "A Friendly Warning",
+   "brief": "Captain Voss wants a word at the precinct. Go — it's worse if you don't.",
+   "steps": [
+    [
+     "goto",
+     "precinct"
+    ],
+    [
+     "talk"
+    ]
+   ],
+   "reward": 300
+  },
+  {
+   "id": "m14",
+   "act": "Act I · Homecoming",
+   "who": "Capt. Harlan Voss",
+   "title": "Errand for Voss",
+   "brief": "Voss says a favor clears the air. Pick up a \"package\" from a car on the east side.",
+   "steps": [
+    [
+     "steal",
+     "sedan_05",
+     "eastside"
+    ],
+    [
+     "deliver",
+     "precinct"
+    ]
+   ],
+   "reward": 2500
+  },
+  {
+   "id": "m15",
+   "act": "Act I · Homecoming",
+   "who": "Tía Lupe",
+   "title": "Parts Run",
+   "brief": "Lupe's supplier in Mill Creek is short. Bring the engine parts back before close.",
+   "steps": [
+    [
+     "drive",
+     "millcreek"
+    ],
+    [
+     "drive",
+     "customs"
+    ]
+   ],
+   "reward": 1000
+  },
+  {
+   "id": "m16",
+   "act": "Act I · Homecoming",
+   "who": "Tomas Ríos",
+   "title": "Tomas Ríos",
+   "brief": "Tomas Ríos sends a car for you. He says he knows who killed Danny.",
+   "steps": [
+    [
+     "goto",
+     "riverbend"
+    ],
+    [
+     "talk"
+    ]
+   ],
+   "reward": 800
+  },
+  {
+   "id": "m17",
+   "act": "Act I · Homecoming",
+   "who": "Tomas Ríos",
+   "title": "Proof of Trust",
+   "brief": "Ríos wants a Delacroix van taken off the road.",
+   "steps": [
+    [
+     "steal",
+     "delivery",
+     "harbor"
+    ],
+    [
+     "deliver",
+     "riverbend"
+    ],
+    [
+     "escape",
+     2
+    ]
+   ],
+   "reward": 3500
+  },
+  {
+   "id": "m18",
+   "act": "Act I · Homecoming",
+   "who": "Mara Quint",
+   "title": "The Ledger",
+   "brief": "Mara's office was broken into. Get there before whoever did it gets away.",
+   "steps": [
+    [
+     "drive",
+     "downtown"
+    ],
+    [
+     "kill",
+     2,
+     "downtown"
+    ]
+   ],
+   "reward": 2200
+  },
+  {
+   "id": "m19",
+   "act": "Act I · Homecoming",
+   "who": "June Navarro",
+   "title": "Sunday Dinner",
+   "brief": "Your mother insists. Bring something from the lake.",
+   "steps": [
+    [
+     "drive",
+     "lake"
+    ],
+    [
+     "fish",
+     1
+    ],
+    [
+     "drive",
+     "millcreek"
+    ]
+   ],
+   "reward": 700
+  },
+  {
+   "id": "m20",
+   "act": "Act I · Homecoming",
+   "who": "Otis Thibodeaux",
+   "title": "The Burned Dock",
+   "brief": "Otis shows you where the fire started years ago. It wasn't an accident.",
+   "steps": [
+    [
+     "boat",
+     "harborwater"
+    ],
+    [
+     "goto",
+     "harbor"
+    ]
+   ],
+   "reward": 1500
+  },
+  {
+   "id": "m21",
+   "act": "Act I · Homecoming",
+   "who": "Ana Delacroix",
+   "title": "Ana Delacroix",
+   "brief": "Remy's sister wants to meet in private. She says her family didn't kill Danny.",
+   "steps": [
+    [
+     "drive",
+     "lakehouse"
+    ],
+    [
+     "talk"
+    ]
+   ],
+   "reward": 2000
+  },
+  {
+   "id": "m22",
+   "act": "Act II · The Harbor War",
+   "who": "Ana Delacroix",
+   "title": "Family Business",
+   "brief": "Ana wants proof Voss is double-dealing. Watch his drop at the airfield.",
+   "steps": [
+    [
+     "drive",
+     "airfield"
+    ],
+    [
+     "survive",
+     30
+    ]
+   ],
+   "reward": 2500
+  },
+  {
+   "id": "m23",
+   "act": "Act II · The Harbor War",
+   "who": "Skeeter Boudreaux",
+   "title": "Night Flight",
+   "brief": "Follow the unmarked plane in Skeeter's duster and see where it lands.",
+   "steps": [
+    [
+     "fly",
+     "plainsfar"
+    ],
+    [
+     "fly",
+     "sierra"
+    ],
+    [
+     "fly",
+     "airfield"
+    ]
+   ],
+   "reward": 4000
+  },
+  {
+   "id": "m24",
+   "act": "Act II · The Harbor War",
+   "who": "Tomas Ríos",
+   "title": "Shipment",
+   "brief": "Ríos needs a boat run from the bayou to the harbor. No police.",
+   "steps": [
+    [
+     "boat",
+     "harborwater"
+    ],
+    [
+     "escape",
+     1
+    ]
+   ],
+   "reward": 4500
+  },
+  {
+   "id": "m25",
+   "act": "Act II · The Harbor War",
+   "who": "Remy Delacroix",
+   "title": "Remy's Offer",
+   "brief": "Remy Delacroix offers money to walk away. Hear him out.",
+   "steps": [
+    [
+     "drive",
+     "downtown"
+    ],
+    [
+     "talk"
+    ]
+   ],
+   "reward": 5000
+  },
+  {
+   "id": "m26",
+   "act": "Act II · The Harbor War",
+   "who": "Remy Delacroix",
+   "title": "Collateral",
+   "brief": "Remy wants a Ríos car burned. You only have to bring it to the lot.",
+   "steps": [
+    [
+     "steal",
+     "muscle_04",
+     "riverbend"
+    ],
+    [
+     "deliver",
+     "impound"
+    ],
+    [
+     "escape",
+     2
+    ]
+   ],
+   "reward": 5000
+  },
+  {
+   "id": "m27",
+   "act": "Act II · The Harbor War",
+   "who": "Tía Lupe",
+   "title": "Armor Up",
+   "brief": "Lupe can armor a car if you bring her one worth armoring.",
+   "steps": [
+    [
+     "steal",
+     "suv_06",
+     "eastside"
+    ],
+    [
+     "deliver",
+     "customs"
+    ]
+   ],
+   "reward": 3000
+  },
+  {
+   "id": "m28",
+   "act": "Act II · The Harbor War",
+   "who": "Mara Quint",
+   "title": "Source",
+   "brief": "A dockworker will talk, but men are watching him. Get him clear.",
+   "steps": [
+    [
+     "drive",
+     "harbor"
+    ],
+    [
+     "kill",
+     3,
+     "harbor"
+    ],
+    [
+     "escape",
+     2
+    ]
+   ],
+   "reward": 6000
+  },
+  {
+   "id": "m29",
+   "act": "Act II · The Harbor War",
+   "who": "Otis Thibodeaux",
+   "title": "Hunter's Moon",
+   "brief": "Otis takes you into the forest to talk where no one listens.",
+   "steps": [
+    [
+     "drive",
+     "forest"
+    ],
+    [
+     "hunt",
+     2
+    ]
+   ],
+   "reward": 2500
+  },
+  {
+   "id": "m30",
+   "act": "Act II · The Harbor War",
+   "who": "Capt. Harlan Voss",
+   "title": "Squeeze",
+   "brief": "Voss sends a cruiser to pick you up. Don't get in it.",
+   "steps": [
+    [
+     "escape",
+     3
+    ]
+   ],
+   "reward": 4000
+  },
+  {
+   "id": "m31",
+   "act": "Act II · The Harbor War",
+   "who": "Tomas Ríos",
+   "title": "Lake Drop",
+   "brief": "Pick up a waterproof case dropped in Lake Arden.",
+   "steps": [
+    [
+     "boat",
+     "lakemid"
+    ],
+    [
+     "boat",
+     "lakeshore"
+    ]
+   ],
+   "reward": 4500
+  },
+  {
+   "id": "m32",
+   "act": "Act II · The Harbor War",
+   "who": "Ana Delacroix",
+   "title": "The Accountant",
+   "brief": "Ana's accountant has the books on Voss. He's hiding in Mill Creek.",
+   "steps": [
+    [
+     "drive",
+     "millcreek"
+    ],
+    [
+     "survive",
+     20
+    ],
+    [
+     "drive",
+     "lakehouse"
+    ]
+   ],
+   "reward": 5500
+  },
+  {
+   "id": "m33",
+   "act": "Act II · The Harbor War",
+   "who": "Skeeter Boudreaux",
+   "title": "Crash Site",
+   "brief": "A plane went down in the Sierra Norte. Get there first.",
+   "steps": [
+    [
+     "fly",
+     "sierra"
+    ],
+    [
+     "goto",
+     "sierra"
+    ]
+   ],
+   "reward": 6000
+  },
+  {
+   "id": "m34",
+   "act": "Act II · The Harbor War",
+   "who": "Mara Quint",
+   "title": "Front Page",
+   "brief": "Mara publishes. Keep her safe until the paper hits the street.",
+   "steps": [
+    [
+     "drive",
+     "downtown"
+    ],
+    [
+     "survive",
+     40
+    ],
+    [
+     "escape",
+     2
+    ]
+   ],
+   "reward": 7000
+  },
+  {
+   "id": "m35",
+   "act": "Act II · The Harbor War",
+   "who": "Tomas Ríos",
+   "title": "Turncoat",
+   "brief": "Ríos thinks you sold him out. Convince him otherwise — or don't.",
+   "steps": [
+    [
+     "drive",
+     "riverbend"
+    ],
+    [
+     "kill",
+     3,
+     "riverbend"
+    ]
+   ],
+   "reward": 6500
+  },
+  {
+   "id": "m36",
+   "act": "Act II · The Harbor War",
+   "who": "Tía Lupe",
+   "title": "Burned Out",
+   "brief": "Someone torched Calvera Customs. Find out who was seen running.",
+   "steps": [
+    [
+     "drive",
+     "customs"
+    ],
+    [
+     "drive",
+     "eastside"
+    ],
+    [
+     "kill",
+     1,
+     "eastside"
+    ]
+   ],
+   "reward": 5000
+  },
+  {
+   "id": "m37",
+   "act": "Act II · The Harbor War",
+   "who": "June Navarro",
+   "title": "Leave Town",
+   "brief": "Get your mother out to the lake house until things cool down.",
+   "steps": [
+    [
+     "drive",
+     "millcreek"
+    ],
+    [
+     "drive",
+     "lakehouse"
+    ]
+   ],
+   "reward": 2000
+  },
+  {
+   "id": "m38",
+   "act": "Act II · The Harbor War",
+   "who": "Remy Delacroix",
+   "title": "Gold Coupe",
+   "brief": "Remy's car is the key to his storage unit. Take it.",
+   "steps": [
+    [
+     "steal",
+     "super_04",
+     "downtown"
+    ],
+    [
+     "deliver",
+     "customs"
+    ],
+    [
+     "escape",
+     3
+    ]
+   ],
+   "reward": 9000
+  },
+  {
+   "id": "m39",
+   "act": "Act II · The Harbor War",
+   "who": "Otis Thibodeaux",
+   "title": "Low Tide",
+   "brief": "The smugglers use the bayou channels at low tide. Run them by airboat.",
+   "steps": [
+    [
+     "boat",
+     "bayouwater"
+    ],
+    [
+     "boat",
+     "harborwater"
+    ]
+   ],
+   "reward": 6000
+  },
+  {
+   "id": "m40",
+   "act": "Act II · The Harbor War",
+   "who": "Ana Delacroix",
+   "title": "Ana's Choice",
+   "brief": "Ana asks you to meet her brother with her. It could be a trap.",
+   "steps": [
+    [
+     "drive",
+     "harbor"
+    ],
+    [
+     "kill",
+     4,
+     "harbor"
+    ]
+   ],
+   "reward": 9000
+  },
+  {
+   "id": "m41",
+   "act": "Act II · The Harbor War",
+   "who": "Capt. Harlan Voss",
+   "title": "The Badge",
+   "brief": "Voss's second-in-command will testify if you get her to the courthouse alive.",
+   "steps": [
+    [
+     "drive",
+     "precinct"
+    ],
+    [
+     "drive",
+     "downtown"
+    ],
+    [
+     "escape",
+     3
+    ]
+   ],
+   "reward": 10000
+  },
+  {
+   "id": "m42",
+   "act": "Act II · The Harbor War",
+   "who": "Mara Quint",
+   "title": "What Danny Knew",
+   "brief": "Danny's notebook is in a safe deposit box. Mara has the key.",
+   "steps": [
+    [
+     "drive",
+     "downtown"
+    ],
+    [
+     "talk"
+    ]
+   ],
+   "reward": 5000
+  },
+  {
+   "id": "m43",
+   "act": "Act III · Southbound",
+   "who": "Father Ambrose",
+   "title": "Confession",
+   "brief": "Father Ambrose buried Danny. He has something he never told the police.",
+   "steps": [
+    [
+     "drive",
+     "millcreek"
+    ],
+    [
+     "talk"
+    ]
+   ],
+   "reward": 3000
+  },
+  {
+   "id": "m44",
+   "act": "Act III · Southbound",
+   "who": "Skeeter Boudreaux",
+   "title": "Wings",
+   "brief": "You'll need to move fast. Skeeter teaches you to fly a helicopter.",
+   "steps": [
+    [
+     "drive",
+     "airfield"
+    ],
+    [
+     "fly",
+     "lakemid"
+    ],
+    [
+     "fly",
+     "airfield"
+    ]
+   ],
+   "reward": 8000
+  },
+  {
+   "id": "m45",
+   "act": "Act III · Southbound",
+   "who": "Tía Lupe",
+   "title": "Rebuild",
+   "brief": "Lupe is back in business. Buy her a new work truck.",
+   "steps": [
+    [
+     "pay",
+     25000
+    ],
+    [
+     "steal",
+     "pickup_07",
+     "customs"
+    ],
+    [
+     "deliver",
+     "customs"
+    ]
+   ],
+   "reward": 30000
+  },
+  {
+   "id": "m46",
+   "act": "Act III · Southbound",
+   "who": "Tomas Ríos",
+   "title": "Last Deal",
+   "brief": "Tomas Ríos wants out of Calvera. Get his family to the airfield.",
+   "steps": [
+    [
+     "drive",
+     "riverbend"
+    ],
+    [
+     "drive",
+     "airfield"
+    ],
+    [
+     "escape",
+     2
+    ]
+   ],
+   "reward": 12000
+  },
+  {
+   "id": "m47",
+   "act": "Act III · Southbound",
+   "who": "Ana Delacroix",
+   "title": "The Storage Unit",
+   "brief": "Remy's unit holds the harbor fire evidence. Get it before he moves it.",
+   "steps": [
+    [
+     "drive",
+     "eastside"
+    ],
+    [
+     "kill",
+     3,
+     "eastside"
+    ],
+    [
+     "escape",
+     3
+    ]
+   ],
+   "reward": 12000
+  },
+  {
+   "id": "m48",
+   "act": "Act III · Southbound",
+   "who": "Mara Quint",
+   "title": "Broadcast",
+   "brief": "Channel 9 will air the story if the tape reaches them by helicopter.",
+   "steps": [
+    [
+     "fly",
+     "downtownair"
+    ],
+    [
+     "fly",
+     "airfield"
+    ]
+   ],
+   "reward": 10000
+  },
+  {
+   "id": "m49",
+   "act": "Act III · Southbound",
+   "who": "Otis Thibodeaux",
+   "title": "Old Friends",
+   "brief": "Otis is taken by Voss's men. They're holding him at the bayou landing.",
+   "steps": [
+    [
+     "drive",
+     "bayou"
+    ],
+    [
+     "kill",
+     4,
+     "bayou"
+    ]
+   ],
+   "reward": 14000
+  },
+  {
+   "id": "m50",
+   "act": "Act III · Southbound",
+   "who": "Capt. Harlan Voss",
+   "title": "Cornered",
+   "brief": "Voss puts every cruiser in the state on you.",
+   "steps": [
+    [
+     "escape",
+     4
+    ]
+   ],
+   "reward": 15000
+  },
+  {
+   "id": "m51",
+   "act": "Act III · Southbound",
+   "who": "June Navarro",
+   "title": "Mother's Ring",
+   "brief": "Your mother asks for one thing: her ring, sold by Danny to pay a debt. Buy it back.",
+   "steps": [
+    [
+     "pay",
+     15000
+    ],
+    [
+     "drive",
+     "lakehouse"
+    ]
+   ],
+   "reward": 5000
+  },
+  {
+   "id": "m52",
+   "act": "Act III · Southbound",
+   "who": "Remy Delacroix",
+   "title": "Remy Runs",
+   "brief": "Remy is making a run for the Gulf by speedboat. Catch him.",
+   "steps": [
+    [
+     "boat",
+     "harborwater"
+    ],
+    [
+     "boat",
+     "gulf"
+    ]
+   ],
+   "reward": 18000
+  },
+  {
+   "id": "m53",
+   "act": "Act III · Southbound",
+   "who": "Ana Delacroix",
+   "title": "Family Ties",
+   "brief": "Ana turns on Voss in public. Stay close and keep her alive.",
+   "steps": [
+    [
+     "drive",
+     "downtown"
+    ],
+    [
+     "survive",
+     45
+    ]
+   ],
+   "reward": 15000
+  },
+  {
+   "id": "m54",
+   "act": "Act III · Southbound",
+   "who": "Tía Lupe",
+   "title": "Getaway Car",
+   "brief": "Lupe builds you the fastest thing in Calvera. Pick it up.",
+   "steps": [
+    [
+     "steal",
+     "super_06",
+     "customs"
+    ],
+    [
+     "drive",
+     "airfield"
+    ],
+    [
+     "deliver",
+     "customs"
+    ]
+   ],
+   "reward": 20000
+  },
+  {
+   "id": "m55",
+   "act": "Act III · Southbound",
+   "who": "Skeeter Boudreaux",
+   "title": "Air Drop",
+   "brief": "Drop supplies to Otis's people in the bayou.",
+   "steps": [
+    [
+     "fly",
+     "bayouair"
+    ],
+    [
+     "fly",
+     "airfield"
+    ]
+   ],
+   "reward": 16000
+  },
+  {
+   "id": "m56",
+   "act": "Act III · Southbound",
+   "who": "Father Ambrose",
+   "title": "Sanctuary",
+   "brief": "Witnesses are hiding at the church. Move them to the lake house.",
+   "steps": [
+    [
+     "drive",
+     "millcreek"
+    ],
+    [
+     "drive",
+     "lakehouse"
+    ],
+    [
+     "escape",
+     2
+    ]
+   ],
+   "reward": 14000
+  },
+  {
+   "id": "m57",
+   "act": "Act III · Southbound",
+   "who": "Mara Quint",
+   "title": "Hearing",
+   "brief": "The state hearing starts tomorrow. Get Mara's evidence there.",
+   "steps": [
+    [
+     "drive",
+     "downtown"
+    ],
+    [
+     "goto",
+     "precinct"
+    ]
+   ],
+   "reward": 12000
+  },
+  {
+   "id": "m58",
+   "act": "Act III · Southbound",
+   "who": "Capt. Harlan Voss",
+   "title": "The Fire",
+   "brief": "You know who set the dock fire now. So does Voss. He wants to meet at the burned dock.",
+   "steps": [
+    [
+     "drive",
+     "harbor"
+    ],
+    [
+     "kill",
+     5,
+     "harbor"
+    ]
+   ],
+   "reward": 25000
+  },
+  {
+   "id": "m59",
+   "act": "Act III · Southbound",
+   "who": "Tomas Ríos",
+   "title": "Debts Paid",
+   "brief": "Ríos leaves one last thing for you: the plane that brought it all in. Burn it.",
+   "steps": [
+    [
+     "drive",
+     "plainsfar"
+    ],
+    [
+     "survive",
+     20
+    ],
+    [
+     "escape",
+     3
+    ]
+   ],
+   "reward": 20000
+  },
+  {
+   "id": "m60",
+   "act": "Act III · Southbound",
+   "who": "Ana Delacroix",
+   "title": "New Harbor",
+   "brief": "Ana wants the harbor run clean. Clear the last of Remy's crew.",
+   "steps": [
+    [
+     "drive",
+     "harbor"
+    ],
+    [
+     "kill",
+     4,
+     "harbor"
+    ]
+   ],
+   "reward": 22000
+  },
+  {
+   "id": "m61",
+   "act": "Act III · Southbound",
+   "who": "June Navarro",
+   "title": "Danny's Boat",
+   "brief": "The family shrimp boat is yours. Take her out on the Gulf one more time.",
+   "steps": [
+    [
+     "boat",
+     "gulf"
+    ],
+    [
+     "fish",
+     2
+    ]
+   ],
+   "reward": 15000
+  },
+  {
+   "id": "m62",
+   "act": "Act III · Southbound",
+   "who": "Otis Thibodeaux",
+   "title": "Gulf Coast",
+   "brief": "Otis wants a ride along the coast at sunset.",
+   "steps": [
+    [
+     "boat",
+     "harborwater"
+    ]
+   ],
+   "reward": 10000
+  },
+  {
+   "id": "m63",
+   "act": "Act III · Southbound",
+   "who": "June Navarro",
+   "title": "Southbound",
+   "brief": "Everyone you saved is waiting at the lake house.",
+   "steps": [
+    [
+     "drive",
+     "lakehouse"
+    ],
+    [
+     "talk"
+    ]
+   ],
+   "reward": 50000
+  }
+ ],
+ "side": [
+  {
+   "id": "s1",
+   "who": "Mrs. Hebert",
+   "title": "The Lost Retriever",
+   "brief": "Her old retriever, Biscuit, ran off chasing deer into Pinewood Hollow. Find him before dark.",
+   "steps": [
+    [
+     "goto",
+     "forest"
+    ],
+    [
+     "survive",
+     20
+    ],
+    [
+     "goto",
+     "millcreek"
+    ]
+   ],
+   "reward": 450,
+   "need": 2
+  },
+  {
+   "id": "s2",
+   "who": "Old Man Guidry",
+   "title": "Grandpa's Skiff",
+   "brief": "His skiff slipped its rope and drifted out on the lake. Bring it back to the shore.",
+   "steps": [
+    [
+     "boat",
+     "lakemid"
+    ],
+    [
+     "boat",
+     "lakeshore"
+    ]
+   ],
+   "reward": 700,
+   "need": 4
+  },
+  {
+   "id": "s3",
+   "who": "Rosalie Fontenot",
+   "title": "Wedding Run",
+   "brief": "The groom's car died. Get the bride from Mill Creek to the church downtown.",
+   "steps": [
+    [
+     "drive",
+     "millcreek"
+    ],
+    [
+     "drive",
+     "downtown"
+    ]
+   ],
+   "reward": 650,
+   "need": 6
+  },
+  {
+   "id": "s4",
+   "who": "Uncle Pierre",
+   "title": "Crawfish Boil",
+   "brief": "The boil's tonight and he's short. Catch three fish and bring them out to the bayou.",
+   "steps": [
+    [
+     "fish",
+     3
+    ],
+    [
+     "drive",
+     "bayou"
+    ]
+   ],
+   "reward": 650,
+   "need": 8
+  },
+  {
+   "id": "s5",
+   "who": "Delphine at the motel",
+   "title": "Gator in the Pool",
+   "brief": "Something big crawled out of the bayou and won't leave the motel pool. Deal with it.",
+   "steps": [
+    [
+     "goto",
+     "bayou"
+    ],
+    [
+     "hunt",
+     1
+    ]
+   ],
+   "reward": 800,
+   "need": 10
+  },
+  {
+   "id": "s6",
+   "who": "Felix at Calvera Customs",
+   "title": "Repo Man",
+   "brief": "A customer stopped paying for his sedan. It's parked on the east side. Bring it in.",
+   "steps": [
+    [
+     "steal",
+     "sedan_05",
+     "eastside"
+    ],
+    [
+     "deliver",
+     "customs"
+    ]
+   ],
+   "reward": 900,
+   "need": 12
+  },
+  {
+   "id": "s7",
+   "who": "Professor Landry",
+   "title": "Storm Chaser",
+   "brief": "He wants readings from the open plains, and a fast ride out and back.",
+   "steps": [
+    [
+     "drive",
+     "plainsfar"
+    ],
+    [
+     "survive",
+     30
+    ],
+    [
+     "drive",
+     "airfield"
+    ]
+   ],
+   "reward": 750,
+   "need": 14
+  },
+  {
+   "id": "s8",
+   "who": "Earl at the bait shop",
+   "title": "Night Fishing",
+   "brief": "Earl's got an order for the fish market and a bad back. Two fish from the lake.",
+   "steps": [
+    [
+     "drive",
+     "lake"
+    ],
+    [
+     "fish",
+     2
+    ]
+   ],
+   "reward": 520,
+   "need": 16
+  },
+  {
+   "id": "s9",
+   "who": "Marcel the collector",
+   "title": "The Collector",
+   "brief": "A rare record turned up at a pawn shop. Front the money; he pays you back double.",
+   "steps": [
+    [
+     "pay",
+     500
+    ],
+    [
+     "goto",
+     "downtown"
+    ]
+   ],
+   "reward": 1500,
+   "need": 18
+  },
+  {
+   "id": "s10",
+   "who": "The Broussard twins",
+   "title": "Moving Day",
+   "brief": "Their moving van is stuck at the impound. Get it out and take it home to Mill Creek.",
+   "steps": [
+    [
+     "steal",
+     "delivery",
+     "impound"
+    ],
+    [
+     "deliver",
+     "millcreek"
+    ]
+   ],
+   "reward": 750,
+   "need": 20
+  },
+  {
+   "id": "s11",
+   "who": "Skeeter's cousin Lou",
+   "title": "Air Mail",
+   "brief": "Lou needs a parcel flown out to the far plains strip and back before the mail plane.",
+   "steps": [
+    [
+     "fly",
+     "plainsfar"
+    ],
+    [
+     "fly",
+     "airfield"
+    ]
+   ],
+   "reward": 1200,
+   "need": 24
+  },
+  {
+   "id": "s12",
+   "who": "Big Earl at the Rusty Anchor",
+   "title": "Closing Time",
+   "brief": "Two drunks are tearing up the bar and they've got friends. Help Earl throw them out.",
+   "steps": [
+    [
+     "kill",
+     2,
+     "downtown"
+    ]
+   ],
+   "reward": 600,
+   "need": 28
+  }
+ ],
+ "places": {
+  "millcreek": [
+   -1036,
+   -250
+  ],
+  "customs": [
+   452,
+   1328
+  ],
+  "impound": [
+   932,
+   1240
+  ],
+  "downtown": [
+   644,
+   1000
+  ],
+  "harbor": [
+   548,
+   1522.2077350310403
+  ],
+  "precinct": [
+   260,
+   856
+  ],
+  "eastside": [
+   1018,
+   952
+  ],
+  "riverbend": [
+   -160,
+   280
+  ],
+  "lake": [
+   110,
+   -1150
+  ],
+  "lakehouse": [
+   -697.5578785707494,
+   -1106.805238493714
+  ],
+  "bayou": [
+   -1150,
+   950
+  ],
+  "airfield": [
+   1328.1348234094203,
+   -513.2726003905797
+  ],
+  "forest": [
+   -1100,
+   -1070
+  ],
+  "plainsfar": [
+   1500,
+   -1000
+  ],
+  "sierra": [
+   400,
+   -1700
+  ],
+  "lakemid": [
+   -250,
+   -1150
+  ],
+  "lakeshore": [
+   14,
+   -1150
+  ],
+  "harborwater": [
+   548,
+   1612.2509498398506
+  ],
+  "bayouwater": [
+   -1108.1999999999998,
+   1096.5999999999997
+  ],
+  "gulf": [
+   760,
+   1750
+  ],
+  "downtownair": [
+   640,
+   1000
+  ],
+  "bayouair": [
+   -1350,
+   1150
+  ]
+ },
+ "jobs": [
+  {
+   "id": "taxi",
+   "name": "Taxi Driver",
+   "at": [
+    356,
+    1048
+   ],
+   "veh": "taxi",
+   "area": "city",
+   "stops": 4,
+   "pay": 90,
+   "timer": 300,
+   "text": "Pick up and drop off fares"
+  },
+  {
+   "id": "bus",
+   "name": "Bus Driver",
+   "at": [
+    260,
+    856
+   ],
+   "veh": "bus_01",
+   "area": "city",
+   "stops": 6,
+   "wait": 3,
+   "pay": 60,
+   "timer": 420,
+   "text": "Run the downtown loop and stop at every shelter"
+  },
+  {
+   "id": "parcel",
+   "name": "Parcel Courier",
+   "at": [
+    -1108,
+    -144
+   ],
+   "veh": "delivery",
+   "area": "town",
+   "stops": 5,
+   "wait": 2,
+   "pay": 70,
+   "timer": 360,
+   "text": "Drop parcels around Mill Creek"
+  },
+  {
+   "id": "pizza",
+   "name": "Pizza Delivery",
+   "at": [
+    -1036,
+    -288
+   ],
+   "veh": "compact_02",
+   "area": "town",
+   "stops": 3,
+   "pay": 55,
+   "timer": 150,
+   "text": "Hot pizza for Mill Creek, tight clock"
+  },
+  {
+   "id": "trucker",
+   "name": "Long-haul Trucker",
+   "at": [
+    -1180,
+    -144
+   ],
+   "veh": "truck_02",
+   "area": "far",
+   "stops": 2,
+   "wait": 4,
+   "pay": 420,
+   "timer": 600,
+   "text": "Haul freight between the city, the town and the airfield"
+  },
+  {
+   "id": "paramedic",
+   "name": "Paramedic",
+   "at": [
+    1039,
+    992
+   ],
+   "veh": "ambulance",
+   "area": "city",
+   "stops": 3,
+   "wait": 4,
+   "back": true,
+   "pay": 160,
+   "timer": 240,
+   "siren": true,
+   "text": "Reach the patient, then get them to Medical Center"
+  },
+  {
+   "id": "fire",
+   "name": "Firefighter",
+   "at": [
+    884,
+    749
+   ],
+   "veh": "firetruck",
+   "area": "city",
+   "stops": 2,
+   "wait": 8,
+   "back": true,
+   "pay": 220,
+   "timer": 300,
+   "siren": true,
+   "text": "Put out fires around the city"
+  },
+  {
+   "id": "police",
+   "name": "Police Patrol",
+   "at": [
+    253,
+    856
+   ],
+   "veh": "police",
+   "area": "city",
+   "stops": 5,
+   "pay": 110,
+   "timer": 400,
+   "siren": true,
+   "text": "Patrol the checkpoints"
+  },
+  {
+   "id": "tow",
+   "name": "Tow Truck Operator",
+   "at": [
+    932,
+    1240
+   ],
+   "veh": "tow-truck",
+   "area": "city",
+   "stops": 2,
+   "wait": 5,
+   "back": true,
+   "pay": 180,
+   "timer": 360,
+   "text": "Hook up breakdowns and haul them to the impound"
+  },
+  {
+   "id": "garbage",
+   "name": "Garbage Collector",
+   "at": [
+    -964,
+    -360
+   ],
+   "veh": "garbage-truck",
+   "area": "town",
+   "stops": 6,
+   "wait": 2,
+   "pay": 50,
+   "timer": 420,
+   "text": "Empty the bins around Mill Creek"
+  },
+  {
+   "id": "roadcrew",
+   "name": "Road Crew",
+   "at": [
+    740,
+    1336
+   ],
+   "veh": "pickup_02",
+   "area": "city",
+   "stops": 3,
+   "wait": 6,
+   "pay": 120,
+   "timer": 400,
+   "text": "Fix potholes at the work sites",
+   "tool": "build"
+  },
+  {
+   "id": "mechanic",
+   "name": "Mechanic",
+   "at": [
+    -1180,
+    -216
+   ],
+   "veh": null,
+   "area": "near",
+   "stops": 3,
+   "wait": 6,
+   "pay": 140,
+   "timer": 300,
+   "tool": "mech",
+   "text": "Fix customer cars around the Mill Creek garage"
+  },
+  {
+   "id": "messenger",
+   "name": "Bike Messenger",
+   "at": [
+    740,
+    1048
+   ],
+   "veh": null,
+   "area": "downtown",
+   "stops": 4,
+   "pay": 45,
+   "timer": 200,
+   "text": "Run envelopes between offices on foot"
+  },
+  {
+   "id": "security",
+   "name": "Security Guard",
+   "at": [
+    836,
+    1144
+   ],
+   "veh": null,
+   "area": "near",
+   "stops": 5,
+   "wait": 3,
+   "pay": 50,
+   "timer": 360,
+   "text": "Check every door on your round"
+  },
+  {
+   "id": "charter",
+   "name": "Fishing Charter Captain",
+   "at": [
+    145.70000000000027,
+    -1083.6
+   ],
+   "boat": "center-console",
+   "area": "lake",
+   "stops": 1,
+   "wait": 20,
+   "back": true,
+   "pay": 600,
+   "timer": 600,
+   "text": "Take clients out to the fishing grounds and back"
+  },
+  {
+   "id": "fisherman",
+   "name": "Commercial Fisherman",
+   "at": [
+    -1170,
+    1030
+   ],
+   "kind": "catch",
+   "need": 3,
+   "pay": 150,
+   "timer": 900,
+   "text": "Land three fish from the bayou for the market"
+  },
+  {
+   "id": "guide",
+   "name": "Hunting Guide",
+   "at": [
+    1030,
+    -630
+   ],
+   "kind": "hunt",
+   "need": 2,
+   "pay": 300,
+   "timer": 900,
+   "text": "Bag and skin two animals for your clients"
+  },
+  {
+   "id": "duster",
+   "name": "Crop Duster Pilot",
+   "at": [
+    1480,
+    -490
+   ],
+   "air": "crop-duster",
+   "area": "plains",
+   "stops": 5,
+   "fly": true,
+   "pay": 260,
+   "timer": 420,
+   "text": "Spray the fields (fly low through the markers)"
+  },
+  {
+   "id": "tours",
+   "name": "Air Tour Pilot",
+   "at": [
+    1470,
+    -490
+   ],
+   "air": "tour-heli",
+   "area": "landmarks",
+   "stops": 4,
+   "fly": true,
+   "back": true,
+   "pay": 380,
+   "timer": 600,
+   "text": "Show tourists the lake, downtown and the coast"
+  },
+  {
+   "id": "medevac",
+   "name": "Medevac Pilot",
+   "at": [
+    1460,
+    -490
+   ],
+   "air": "medevac",
+   "area": "far",
+   "stops": 1,
+   "fly": true,
+   "land": true,
+   "back": true,
+   "pay": 700,
+   "timer": 480,
+   "text": "Fly to the accident, land, and bring the patient back"
+  },
+  {
+   "id": "lumber",
+   "name": "Lumberjack",
+   "at": [
+    -1070,
+    -1060
+   ],
+   "veh": null,
+   "area": "forest",
+   "stops": 4,
+   "wait": 6,
+   "pay": 110,
+   "timer": 500,
+   "tool": "yard",
+   "text": "Fell the marked trees (needs a chainsaw)"
+  },
+  {
+   "id": "landscaper",
+   "name": "Landscaper",
+   "at": [
+    -1108,
+    -288
+   ],
+   "veh": "pickup_04",
+   "area": "town",
+   "stops": 4,
+   "wait": 5,
+   "pay": 95,
+   "timer": 480,
+   "tool": "yard",
+   "text": "Mow and trim yards around Mill Creek"
+  },
+  {
+   "id": "construction",
+   "name": "Construction Worker",
+   "at": [
+    932,
+    856
+   ],
+   "veh": null,
+   "area": "near",
+   "stops": 4,
+   "wait": 6,
+   "pay": 120,
+   "timer": 420,
+   "tool": "build",
+   "text": "Frame, drill and fasten at the site"
+  },
+  {
+   "id": "electrician",
+   "name": "Electrician",
+   "at": [
+    548,
+    1240
+   ],
+   "veh": "van_02",
+   "area": "city",
+   "stops": 3,
+   "wait": 6,
+   "pay": 160,
+   "timer": 480,
+   "tool": "elec",
+   "text": "Service calls: wiring and panels"
+  },
+  {
+   "id": "plumber",
+   "name": "Plumber",
+   "at": [
+    -964,
+    -216
+   ],
+   "veh": "van_03",
+   "area": "town",
+   "stops": 3,
+   "wait": 6,
+   "pay": 150,
+   "timer": 480,
+   "tool": "plumb",
+   "text": "Service calls around Mill Creek: leaks and clogs"
+  },
+  {
+   "id": "paper",
+   "name": "Paper Route",
+   "at": [
+    -1036,
+    -144
+   ],
+   "veh": null,
+   "area": "town",
+   "stops": 7,
+   "pay": 18,
+   "timer": 540,
+   "text": "The Calvera Courier, door to door around Mill Creek"
+  },
+  {
+   "id": "ranch",
+   "name": "Ranch Hand",
+   "at": [
+    1350,
+    -840
+   ],
+   "veh": "offroad_01",
+   "area": "plains",
+   "stops": 5,
+   "pay": 85,
+   "timer": 480,
+   "text": "Check fences and round up strays across the plains"
+  },
+  {
+   "id": "bounty",
+   "name": "Bounty Hunter",
+   "at": [
+    245,
+    856
+   ],
+   "kind": "bounty",
+   "pay": 900,
+   "timer": 600,
+   "text": "Track down the fugitive and take them out"
+  }
+ ],
+ "layout": {
+  "CITY": {
+   "name": "Port Calvera",
+   "x0": 260,
+   "z0": 760,
+   "nx": 8,
+   "nz": 6,
+   "pitch": 96,
+   "street": 16,
+   "height": 6,
+   "downtown": [
+    640,
+    1000
+   ]
+  },
+  "TOWN": {
+   "name": "Mill Creek",
+   "x0": -1180,
+   "z0": -360,
+   "nx": 4,
+   "nz": 3,
+   "pitch": 72,
+   "street": 12,
+   "height": 26
+  },
+  "LAKE": {
+   "name": "Lake Arden",
+   "x": -250,
+   "z": -1150,
+   "r": 330,
+   "level": 45
+  },
+  "PLAINS": {
+   "x": 1150,
+   "z": -700,
+   "r": 800
+  },
+  "FOREST": {
+   "x": -1350,
+   "z": -1300,
+   "r": 760
+  },
+  "AIRFIELD": {
+   "name": "Redgrass Airfield",
+   "x0": 880,
+   "x1": 1500,
+   "z": -440,
+   "w": 34,
+   "height": 27
+  },
+  "BAYOU": {
+   "x": -1350,
+   "z": 1150,
+   "r": 480
+  }
+ }
+}

@@ -75,6 +75,13 @@ namespace Southbound
         public static bool PhotoDown => Pressed(UnityEngine.InputSystem.Key.F10) || (Gamepad.current?.selectButton.wasPressedThisFrame ?? false);
         public static bool WeatherDown => Pressed(UnityEngine.InputSystem.Key.F8);
         public static bool TierDown => Pressed(UnityEngine.InputSystem.Key.F7);
+        // menus (store screens): arrows or W/S, Enter or Space, Esc or Backspace, Tab or A/D between tabs
+        public static bool MenuUp => Pressed(UnityEngine.InputSystem.Key.UpArrow) || Pressed(UnityEngine.InputSystem.Key.W) || (Gamepad.current?.dpad.up.wasPressedThisFrame ?? false);
+        public static bool MenuDown => Pressed(UnityEngine.InputSystem.Key.DownArrow) || Pressed(UnityEngine.InputSystem.Key.S) || (Gamepad.current?.dpad.down.wasPressedThisFrame ?? false);
+        public static bool MenuNext => Pressed(UnityEngine.InputSystem.Key.Tab) || Pressed(UnityEngine.InputSystem.Key.RightArrow) || Pressed(UnityEngine.InputSystem.Key.D) || (Gamepad.current?.rightShoulder.wasPressedThisFrame ?? false);
+        public static bool MenuPrev => Pressed(UnityEngine.InputSystem.Key.LeftArrow) || Pressed(UnityEngine.InputSystem.Key.A) || (Gamepad.current?.leftShoulder.wasPressedThisFrame ?? false);
+        public static bool MenuConfirm => Pressed(UnityEngine.InputSystem.Key.Enter) || Pressed(UnityEngine.InputSystem.Key.Space) || (Gamepad.current?.buttonSouth.wasPressedThisFrame ?? false);
+        public static bool MenuBack => Pressed(UnityEngine.InputSystem.Key.Escape) || Pressed(UnityEngine.InputSystem.Key.Backspace) || (Gamepad.current?.buttonEast.wasPressedThisFrame ?? false);
         public static int NumberDown
         {
             get
@@ -105,6 +112,12 @@ namespace Southbound
         public static bool PhotoDown => Input.GetKeyDown(KeyCode.F10);
         public static bool WeatherDown => Input.GetKeyDown(KeyCode.F8);
         public static bool TierDown => Input.GetKeyDown(KeyCode.F7);
+        public static bool MenuUp => Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.W);
+        public static bool MenuDown => Input.GetKeyDown(KeyCode.DownArrow) || Input.GetKeyDown(KeyCode.S);
+        public static bool MenuNext => Input.GetKeyDown(KeyCode.Tab) || Input.GetKeyDown(KeyCode.RightArrow) || Input.GetKeyDown(KeyCode.D);
+        public static bool MenuPrev => Input.GetKeyDown(KeyCode.LeftArrow) || Input.GetKeyDown(KeyCode.A);
+        public static bool MenuConfirm => Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.Space);
+        public static bool MenuBack => Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.Backspace);
         public static int NumberDown
         {
             get
