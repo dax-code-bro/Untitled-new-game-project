@@ -44,7 +44,10 @@ namespace Southbound.EditorTools
                 ("supportSSR", true), ("supportSSRTransparent", true), ("supportSSAO", true), ("supportSSGI", true),
                 ("supportDecals", true), ("supportDecalLayers", true), ("supportLightLayers", true), ("supportSubsurfaceScattering", true),
                 ("supportMotionVectors", true), ("supportScreenSpaceLensFlare", true), ("supportDataDrivenLensFlare", true),
-                ("supportTerrainHole", true), ("supportTransparentDepthPrepass", true), ("supportDitheringCrossFade", true));
+                ("supportTerrainHole", true), ("supportTransparentDepthPrepass", true), ("supportDitheringCrossFade", true),
+                // dynamic resolution, upscaled (STP, or DLSS / FSR 2 where the card has them): how built-in graphics keep up
+                ("dynamicResolutionSettings.enabled", true), ("dynamicResolutionSettings.dynResType", 0),
+                ("dynamicResolutionSettings.minPercentage", 50f), ("dynamicResolutionSettings.maxPercentage", 100f));
             Debug.Log($"Southbound: {n} HDRP features switched on in {asset.name}.");
         }
 

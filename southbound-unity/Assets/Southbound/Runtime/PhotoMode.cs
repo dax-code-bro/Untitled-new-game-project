@@ -17,7 +17,8 @@ namespace Southbound
             Active = !Active;
             if (Active) { before = Time.timeScale; Time.timeScale = 0; }
             else Time.timeScale = before > 0 ? before : 1;
-            int n = PathTracing(Active);
+            // the path tracer needs a ray-tracing card (RTX / RX 6000 and up): elsewhere photo mode is a still frame
+            int n = SystemInfo.supportsRayTracing ? PathTracing(Active) : 0;
             if (Active && n == 0) Debug.Log("Southbound: photo mode without path tracing (no PathTracing override in the scene's Volume: run Southbound > Look > Make it photoreal).");
         }
 
@@ -30,7 +31,8 @@ namespace Southbound
             foreach (var c in Object.FindObjectsByType<Behaviour>(FindObjectsSortMode.None))
             {
                 if (c == null || c.GetType().FullName != "UnityEngine.Rendering.Volume") continue;
-                var profile = c.GetType().GetProperty("sharedProfile")?.GetValue(c);
+                // the volume's own copy (the weather and the graphics tier work on it too; the shared asset isn't what's drawn once there's a copy)
+                var profile = c.GetType().GetProperty("profile")?.GetValue(c);
                 if (!(profile?.GetType().GetField("components")?.GetValue(profile) is System.Collections.IList list)) continue;
                 foreach (var comp in list)
                 {
@@ -50,7 +52,8 @@ namespace Southbound
             if (!Active) return;
             var s = new GUIStyle(GUI.skin.label) { fontSize = 14, alignment = TextAnchor.UpperCenter };
             s.normal.textColor = new Color(1, 1, 1, 0.85f);
-            GUI.Label(new Rect(Screen.width / 2f - 300, 14, 600, 24), "PHOTO MODE  ·  path traced (RTX)  ·  mouse to orbit, hold still to refine  ·  F10 to play", s);
+            string what = SystemInfo.supportsRayTracing ? "path traced  ·  hold still to refine" : "paused (path tracing needs a ray-tracing card)";
+            GUI.Label(new Rect(Screen.width / 2f - 320, 14, 640, 24), $"PHOTO MODE  ·  {what}  ·  mouse to orbit  ·  F10 to play", s);
         }
     }
 }

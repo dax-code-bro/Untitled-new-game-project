@@ -86,7 +86,7 @@ namespace Southbound
         {
             if (cum == null) return;
             var cam = Camera.main != null ? Camera.main.transform.position : transform.position;
-            int active = Mathf.RoundToInt(count * (1 - 0.65f * DayNight.Night));
+            int active = Mathf.RoundToInt(count * (1 - 0.65f * DayNight.Night) * PerformanceTier.Budget.CrowdScale);
             Positions.Clear();
             foreach (var w0 in walkers) if (w0.go.activeSelf) Positions.Add(w0.go.transform.position);
             for (int n = 0; n < walkers.Count; n++)

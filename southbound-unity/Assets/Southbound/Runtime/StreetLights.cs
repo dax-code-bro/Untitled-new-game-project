@@ -62,9 +62,13 @@ namespace Southbound
         void Apply(bool lit, bool force)
         {
             // each light switches a few seconds apart from its neighbours
+            var cam = Camera.main != null ? Camera.main.transform : null;
+            float range = PerformanceTier.Budget.LightDistance;
             for (int i = 0; i < lights.Length; i++)
             {
                 bool s = force ? lit : lit ? since > delay[i] : since <= delay[i] * 0.3f ? lights[i].enabled : false;
+                // only the lights near the camera (the tier's range): far ones are just their glowing glass
+                if (s && cam != null && (lights[i].transform.position - cam.position).sqrMagnitude > range * range) s = false;
                 if (lights[i].enabled != s) lights[i].enabled = s;
             }
             if (copies == null) return;

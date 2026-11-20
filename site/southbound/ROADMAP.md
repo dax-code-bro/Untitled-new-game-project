@@ -1424,6 +1424,9 @@ rain and storm, interiors, first person and in cars. Highlights:
 - [x] N8 ambient townspeople: 40 MakeHuman people walking 30 km of town pavements round the player (no AI yet)
 - [x] N9 ambient traffic: 26 catalogue cars on 316 linked right-hand lanes, following, braking for you and for pedestrians, lights
 - [x] N10 see-through car glass with the web game's cabins behind it (exported per body) and the shell lined inside; shop signs and billboards lit at night
+- [x] I1 runs on Intel / built-in graphics (the owner, 2026-11-20): graphics tiers from the card (Core/GpuTier,
+      tested), heavy HDRP passes off per camera, STP-upscaled dynamic resolution holding 30 fps, thinner crowds,
+      grass, shadows, lights and decals, automatic step-down, F7; photo mode's path tracer only on RTX-class cards
 - [ ] People and police AI, interiors, missions and jobs, HUD, the rest of the web game's shaders
 
 ## Phase 3 — Content catalogs (targets)

@@ -560,6 +560,7 @@ namespace Southbound.EditorTools
             game.sun = sun; game.player = pc; game.gunplay = gun; game.driving = drive;
             game.dayNight = Object.FindFirstObjectByType<DayNight>();
             game.gameObject.AddComponent<PhotoMode>();
+            game.gameObject.AddComponent<PerformanceTier>();   // fits the look to the graphics card (built-in Intel graphics included)
             return john;
         }
 

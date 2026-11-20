@@ -126,7 +126,7 @@ namespace Southbound
             var cam = Camera.main;
             if (cam != null) rain.transform.position = cam.transform.position + Vector3.up * 14f;
             var em = rain.emission;
-            em.rateOverTime = (float)(Model.Rain * 14000);
+            em.rateOverTime = (float)(Model.Rain * PerformanceTier.Budget.RainParticles);
             if (Model.Rain > 0.01 && !rain.isPlaying) rain.Play();
             if (Model.Rain <= 0.01 && rain.isPlaying) rain.Stop();
         }

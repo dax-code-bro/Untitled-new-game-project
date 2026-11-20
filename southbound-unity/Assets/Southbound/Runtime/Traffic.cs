@@ -82,8 +82,12 @@ namespace Southbound
             float dt = Time.deltaTime;
             var cam = Camera.main != null ? Camera.main.transform.position : transform.position;
             bool night = DayNight.Night > 0.35f;
-            foreach (var c in pool)
+            int active = Mathf.RoundToInt(pool.Count * PerformanceTier.Budget.TrafficScale);
+            for (int n = 0; n < pool.Count; n++)
             {
+                var c = pool[n];
+                // a lighter graphics tier drives fewer of the pool
+                if (n >= active) { if (c.go.activeSelf) c.go.SetActive(false); continue; }
                 if (!c.go.activeSelf) { Place(c, false); continue; }
                 // the gap to whatever's ahead: the next car in this lane, or anything solid in front
                 float gap = float.MaxValue;

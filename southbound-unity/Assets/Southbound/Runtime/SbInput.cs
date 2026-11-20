@@ -74,6 +74,7 @@ namespace Southbound
         public static bool SirenDown => Pressed(UnityEngine.InputSystem.Key.B) || (Gamepad.current?.dpad.down.wasPressedThisFrame ?? false);
         public static bool PhotoDown => Pressed(UnityEngine.InputSystem.Key.F10) || (Gamepad.current?.selectButton.wasPressedThisFrame ?? false);
         public static bool WeatherDown => Pressed(UnityEngine.InputSystem.Key.F8);
+        public static bool TierDown => Pressed(UnityEngine.InputSystem.Key.F7);
         public static int NumberDown
         {
             get
@@ -103,6 +104,7 @@ namespace Southbound
         public static bool SirenDown => Input.GetKeyDown(KeyCode.B);
         public static bool PhotoDown => Input.GetKeyDown(KeyCode.F10);
         public static bool WeatherDown => Input.GetKeyDown(KeyCode.F8);
+        public static bool TierDown => Input.GetKeyDown(KeyCode.F7);
         public static int NumberDown
         {
             get
