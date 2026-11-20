@@ -45,7 +45,7 @@ BASE_H = 40;
 FOOT_T = 8;
 BOSS = 12;                  // corner bosses (pins + magnets)
 PIN_D = 5.2; PIN_DEPTH = 12;
-MAG_D = 8.4; MAG_T = 3.2;   // 8 x 3 mm round magnets
+MAG_D = 6.4; MAG_T = 3.2;   // 6 x 3 mm round magnets
 DOOR_T = 6; LAP = 20;
 HOLE3 = 76;                 // "3 inch" cable holes
 
@@ -76,10 +76,15 @@ module vent_grid(w, d, hole = 8, gap = 14) {
 }
 
 // pin / magnet positions (boss centres) in each piece, x relative to the piece
-function pins_a() = [[WS + BOSS / 2, BOSS / 2], [WS + BOSS / 2, D - BOSS / 2], [XA - WS - BOSS / 2, BOSS / 2], [XA - WS - BOSS / 2, D - BOSS / 2]];
+// Front: corner bosses (they also stop the Dell sliding out the front).
+// Back: NO bosses, so the tray and Dell can slide out the back. Back pins sit inside the walls.
+function pins_front() = [[WS + BOSS / 2, BOSS / 2], [XA - WS - BOSS / 2, BOSS / 2]];
+function pins_back() = [[WS / 2, D - 6], [XA - WS / 2, D - 6]];
+function pins_a() = concat(pins_front(), pins_back());
 function pins_b() = [[XB - WS - BOSS / 2, BOSS / 2], [XB - WS - BOSS / 2, D - BOSS / 2]];
-// magnets sit on the front and back faces of the "a" bosses (the doors cover the "a" column)
+// door magnets: front ones in the front bosses, back ones in the back ends of the walls
 function mag_x() = [WS + BOSS / 2, XA - WS - BOSS / 2];
+function mag_x_back() = [WS / 2, XA - WS / 2];
 function mag_z(h) = [22, h - 22];
 
 module bosses(list, h) { for (p = list) translate([p[0] - BOSS / 2, p[1] - BOSS / 2, 0]) cube([BOSS, BOSS, h]); }
@@ -90,10 +95,8 @@ module pin_holes(list, h) {
     }
 }
 module mag_pockets(h) {
-    for (x = mag_x(), z = mag_z(h)) {
-        translate([x, -0.01, z]) rotate([-90, 0, 0]) cylinder(d = MAG_D, h = MAG_T);
-        translate([x, D - MAG_T, z]) rotate([-90, 0, 0]) cylinder(d = MAG_D, h = MAG_T + 0.01);
-    }
+    for (x = mag_x(), z = mag_z(h)) translate([x, -0.01, z]) rotate([-90, 0, 0]) cylinder(d = MAG_D, h = MAG_T);
+    for (x = mag_x_back(), z = mag_z(h)) translate([x, D - MAG_T, z]) rotate([-90, 0, 0]) cylinder(d = MAG_D, h = MAG_T + 0.01);
 }
 // bolt holes joining "a" to "b" through the divider (M4)
 JOIN_Y = [60, D - 60];
@@ -107,7 +110,7 @@ module piece_a(h, divider_port = true, floor_on = true) {
             if (floor_on) cube([XA, D, FLOOR]);
             cube([WS, D, h]);                                  // left wall
             translate([XA - WS, 0, 0]) cube([WS, D, h]);       // divider (shared with cable column)
-            bosses(pins_a(), h);
+            bosses(pins_front(), h);
         }
         pin_holes(pins_a(), h);
         mag_pockets(h);
@@ -267,10 +270,10 @@ module head() {
 function door_mags() = [for (i = [0 : N_BAYS - 1]) for (z = mag_z(BAY_H)) i * BAY_H + z, for (z = mag_z(CTRL_H)) N_BAYS * BAY_H + z];
 DISP_Z = N_BAYS * BAY_H + CTRL_H / 2;    // LCD centre height on the front door
 
-module door_common() {
+module door_common(front = true) {
     difference() {
         cube([XA, DOOR_T, H_DOORS]);
-        for (x = mag_x(), z = door_mags()) translate([x, -0.01, z]) rotate([-90, 0, 0]) cylinder(d = MAG_D, h = MAG_T);
+        for (x = front ? mag_x() : mag_x_back(), z = door_mags()) translate([x, -0.01, z]) rotate([-90, 0, 0]) cylinder(d = MAG_D, h = MAG_T);
         // grille in front of / behind every Dell
         for (i = [0 : N_BAYS - 1]) translate([40, 0, i * BAY_H + 20.3]) diamond_grille(XA - 80, BAY_H - 40, 11, 16);
     }
@@ -279,7 +282,7 @@ module front_full() {
     L = DISP_MOD[0] + 10;
     difference() {
         union() {
-            door_common();
+            door_common(true);
             // LCD ledges on the inside face (angled underneath, no supports)
             for (dz = [-1, 1]) hull() {
                 translate([XA / 2 - L / 2, -9, DISP_Z + dz * (DISP_MOD[1] / 2 + 4) - 2]) cube([L, 9, 4]);
@@ -294,7 +297,7 @@ module front_full() {
 }
 module back_full() {
     difference() {
-        door_common();
+        door_common(false);
         translate([XA / 2, DOOR_T + 1, N_BAYS * BAY_H + CTRL_H / 2]) rotate([90, 0, 0]) cylinder(d = 30, h = 3.5);
         translate([40, 0, N_BAYS * BAY_H + 25.3]) diamond_grille(XA - 80, CTRL_H - 50, 11, 16);   // control-level exhaust
     }

@@ -17,6 +17,11 @@ Interactive viewer: https://claude.ai/artifact/XErTgp5ppaZv5aGz2LVJsW
 - **Anti-tip base:** 4 outrigger feet stick 4.5 cm past the tower, with rubber pads. A **ballast box**
   in the base takes sand bags or steel weights to keep the weight low.
 
+## Fix log
+- **v5.1:** removed the two back corner posts inside each bay. They blocked the tray and Dell from
+  sliding out the back. Back pins now sit inside the walls, and magnets are 6 × 3 mm. Checked by sliding the
+  drawer 40 cm out in the model: no contact.
+
 ## Tip-over numbers (5 Dells, ~5.3 kg each)
 | | Without ballast | With 5 kg ballast |
 |---|---|---|
@@ -50,7 +55,7 @@ have Dells, and add more later. Hidden parts (trays, base) can use white or gray
 
 ## Also needed
 - M4 bolts + nuts: 2 per level to join `a` to `b` (12 for base + 4 bays + top), plus 4 for the feet (their nuts sit in the ballast box)
-- Round magnets, 8 mm × 3 mm: 16 per level (4 front + 4 back in the tower, 4 + 4 in the doors), so 80 for 4 bays + top. Check that each pair attracts before gluing
+- Round magnets, 6 mm × 3 mm: 16 per level (4 front + 4 back in the tower, 4 + 4 in the doors), so 80 for 4 bays + top. Check that each pair attracts before gluing
 - 8 × 25 mm stick-on rubber pads, sand bags or weights for the ballast box
 - 7" HDMI LCD + DisplayPort-to-HDMI adapter, USB webcam, small network switch
 - Leave **about 30 cm of slack** on each Dell's cables, so its drawer can slide out the back.
