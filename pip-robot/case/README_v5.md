@@ -22,6 +22,9 @@ Interactive viewer: https://claude.ai/artifact/XErTgp5ppaZv5aGz2LVJsW
   sliding out the back. Back pins now sit inside the walls, and magnets are 6 × 3 mm. Checked by sliding the
   drawer 40 cm out in the model: no contact.
 
+- **v5.2:** the bolt blocks in `bay_b` and `ctrl_b` started halfway up with nothing under them, so the printer
+  printed them in mid-air. They're now ribs that grow up from the floor. Every file is now checked for floating pieces.
+
 ## Tip-over numbers (5 Dells, ~5.3 kg each)
 | | Without ballast | With 5 kg ballast |
 |---|---|---|

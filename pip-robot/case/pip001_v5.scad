@@ -140,9 +140,10 @@ module piece_b(h, floor_on = true) {
         // a slim light slot on the front panel (LED strip behind it, optional)
         translate([CHASE_IN / 2 - 3, -1, 20]) cube([6, 6, h - 40]);
     }
-    // flange the bolts go through (sits against the divider)
+    // flange the bolts go through (sits against the divider).
+    // It's a rib from the floor up, so it never prints in mid-air.
     difference() {
-        for (y = JOIN_Y) translate([0, y - 15, h / 2 - 15]) cube([6, 30, 30]);
+        for (y = JOIN_Y) translate([0, y - 15, 0]) cube([6, 30, h / 2 + 15]);
         for (y = JOIN_Y) translate([-1, y, h / 2]) rotate([0, 90, 0]) cylinder(d = 4.4, h = 20);
     }
 }
