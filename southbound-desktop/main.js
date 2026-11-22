@@ -6,7 +6,20 @@ const { app, BrowserWindow, protocol, net, shell, Menu } = require('electron');
 const path = require('path');
 const { pathToFileURL } = require('url');
 
-// the discrete GPU, always; never slow the game down when the window loses focus
+// the discrete GPU, always; never slow the game down when the window loses focus.
+// On Windows laptops (NVIDIA Optimus, AMD switchable graphics) Chromium's switch isn't enough: Windows picks the
+// GPU per program, from Settings > System > Display > Graphics. So the first time it runs, Southbound sets itself
+// to "High performance" there (the same registry value that page writes, for this user only), before the
+// graphics process starts. A choice already made on that page is left alone.
+if (process.platform === 'win32' && !process.env.SOUTHBOUND_SMOKE) {
+  try {
+    const { execFileSync } = require('child_process');
+    const key = 'HKCU\\Software\\Microsoft\\DirectX\\UserGpuPreferences';
+    let set = false;
+    try { set = /GpuPreference=\d/.test(execFileSync('reg', ['query', key, '/v', process.execPath], { encoding: 'utf8', windowsHide: true, stdio: ['ignore', 'pipe', 'ignore'] })); } catch (e) { /* no value yet */ }
+    if (!set) execFileSync('reg', ['add', key, '/v', process.execPath, '/t', 'REG_SZ', '/d', 'GpuPreference=2;', '/f'], { windowsHide: true, stdio: 'ignore' });
+  } catch (e) { /* no reg.exe or no access: Chromium's own switch below still asks for the fast GPU */ }
+}
 app.commandLine.appendSwitch('force_high_performance_gpu');
 app.commandLine.appendSwitch('ignore-gpu-blocklist');
 app.commandLine.appendSwitch('enable-gpu-rasterization');

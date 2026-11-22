@@ -177,7 +177,11 @@ the fewest additions next. Be honest in reports about what is and isn't done.
   Playwright: a lock taken just before Esc stays on unless that guard is there; use `{ force: true }`
   clicks in-game (the SwiftShader frames keep elements from ever counting as "stable").
 - G14 (graphics toward the owner's "look like GTA 6"): the owner plays on Low, built-in Intel graphics,
-  CPU-bound (~25 ms of game work a frame). `dynamicResolution` (main.js) probes resolution back up when
+  CPU-bound (~25 ms of game work a frame). **But the owner's machine has an NVIDIA RTX 5070** (2026-11-22): the
+  game has been running on the Intel chip by mistake ("it keeps running on Intel graphics"). The browser fix is
+  theirs to make (Windows Graphics settings / chrome://flags; the start screen's red box says how); the desktop
+  app sets its own per-app "High performance" GPU preference on Windows (HKCU DirectX UserGpuPreferences,
+  southbound-desktop/main.js); Unity players pick the NVIDIA card themselves. `dynamicResolution` (main.js) probes resolution back up when
   CPU-bound (`S.resProbe`, kept if fps holds within 7%, else a 30 s ban). Survey/compare screenshots:
   `tools/southbound/view-shots.mjs <tag> <view>` (views street/downtown/field/pave...; `PRESET=low VW=1024
   VH=559` = the owner's picture; `SHOTS_OUT` = where) with `ROOT=<site copy>`: build into a copy (symlinks + its own game.js) so a stash
