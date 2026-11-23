@@ -100,7 +100,7 @@ namespace Southbound
             title = Text(left, 30, new Color(0.96f, 0.92f, 0.84f)); title.style.unityFontStyleAndWeight = FontStyle.Bold;
             keeper = Text(left, 15, new Color(0.8f, 0.76f, 0.68f)); keeper.style.whiteSpace = WhiteSpace.Normal; keeper.style.maxWidth = 520;
             money = Text(head, 26, new Color(0.45f, 0.86f, 0.42f)); money.style.unityFontStyleAndWeight = FontStyle.Bold;
-            tabsRow = new VisualElement { style = { flexDirection = FlexDirection.Row, marginTop = 14, marginBottom = 8 } };
+            tabsRow = new VisualElement { style = { flexDirection = FlexDirection.Row, flexWrap = Wrap.Wrap, marginTop = 14, marginBottom = 8 } };
             card.Add(tabsRow);
             var scroll = new ScrollView(ScrollViewMode.Vertical);
             scroll.style.flexGrow = 1; scroll.style.maxHeight = 560;
@@ -197,7 +197,7 @@ namespace Southbound
             {
                 int kk = k;
                 var b = new Button(() => { tab = kk; sel = 0; Refresh(); }) { text = tabs[k] };
-                b.style.fontSize = 16; b.style.marginRight = 8;
+                b.style.fontSize = tabs.Length > 6 ? 13 : 16; b.style.marginRight = 6; b.style.marginBottom = 4;
                 b.style.backgroundColor = k == tab ? new Color(0.85f, 0.7f, 0.42f) : new Color(0.25f, 0.23f, 0.21f);
                 b.style.color = k == tab ? new Color(0.1f, 0.08f, 0.06f) : new Color(0.9f, 0.86f, 0.78f);
                 tabsRow.Add(b);

@@ -98,9 +98,13 @@ namespace Southbound
         bool GunOut => OnFoot && gun != null && gun.enabled && gun.Drawn && gun.Weapon != null && !gun.Weapon.Melee;
         float PlayerSpeed => PlayerCar != null ? Mathf.Abs(PlayerCar.ForwardSpeed) : Piloting.Active ? Mathf.Abs(Piloting.Instance.Craft.Speed) : game != null && game.player != null ? game.player.Speed : 0;
 
+        /// <summary>A crime reported (the kind): the paper hears about it (the phone's news).</summary>
+        public static event System.Action<string> Reported;
+
         void Report(string kind)
         {
             if (pending != null) return;
+            Reported?.Invoke(kind);
             int before = Wanted.Stars;
             Wanted.Crime(kind, PoliceNear(PlayerPos, 60f));
             if (Wanted.Stars > before)

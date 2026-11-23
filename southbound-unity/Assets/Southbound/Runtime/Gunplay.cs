@@ -97,6 +97,11 @@ namespace Southbound
             else Equip(Mathf.Max(0, owned.FindIndex(id => id != "fists")));
         }
 
+        /// <summary>The weapons you can switch between (fists first).</summary>
+        public System.Collections.Generic.IReadOnlyList<string> Owned => owned;
+        /// <summary>Take this one out (the phone's Weapons tab).</summary>
+        public void EquipId(string id) { int i = owned.IndexOf(id); if (i >= 0) { Equip(i); Drawn = true; } }
+
         void Equip(int i)
         {
             if (owned.Count == 0) return;

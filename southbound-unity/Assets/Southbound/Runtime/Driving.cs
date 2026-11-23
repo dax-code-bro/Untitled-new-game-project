@@ -15,6 +15,8 @@ namespace Southbound
 
         public CarController Car { get; private set; }
         public CarController Near { get; private set; }
+        /// <summary>The car you last got out of (Runr tows it to you).</summary>
+        public CarController Last { get; private set; }
         /// <summary>The key hint to show (null: none).</summary>
         public string Prompt { get; private set; }
 
@@ -94,7 +96,7 @@ namespace Southbound
             if (car == null) return;
             car.Driver = null;
             car.Controls = new Core.DriveInput { Handbrake = !bail };
-            Car = null;
+            Car = null; Last = car;
             transform.SetParent(null, true);
             var sw = car.GetComponent<CarDoorSwing>();
             if (sw != null) sw.Open(0, 0.9f);

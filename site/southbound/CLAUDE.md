@@ -273,6 +273,11 @@ the fewest additions next. Be honest in reports about what is and isn't done.
   `customDeath` so the animal plays its own Death clip, legacy `Animation` clips matched by name suffix, skinning,
   K = call, trading posts, crows, ducks, blood drops; registers `Missions.Extras["hunt"]`). `Police.Seen(at, r)` is the
   witness check for anyone. OutdoorsBuilder sets the animal glbs to Legacy animation import.
+  Phone (PH1): `Core/Phone.cs` (PhoneBook: texts/news in Profile lists "texts"/"news", cab fare, interest, clock,
+  forecast words, Runr prices), `Runtime/Phone.cs` (I; a StoreScreen.IStore with 13 tabs; `Phone.MoreTabs` and
+  `Phone.MorePlaces` for other systems; GPS `SetWaypoint`; couriers; cab teleport to the kerb; flashlight on L).
+  `Police.Reported` (static event per reported crime), `Driving.Last` (last car), `Gunplay.Owned`/`EquipId`,
+  `Profile.List(key)`. StoreScreen tabs wrap.
 - Commit one batch at a time: if the next batch's edits are already in the tree, commit only the
   finished batch's files (and an `index.js` without the next batch's `add(...)` line), with the
   `game.js` that was built and QA'd for it.

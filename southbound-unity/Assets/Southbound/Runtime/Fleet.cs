@@ -162,6 +162,13 @@ namespace Southbound
 
         static bool Near(Vector3 me, double x, double z, float r) { var d = new Vector2(me.x + (float)x, me.z - (float)z); return d.sqrMagnitude < r * r; }
 
+        /// <summary>Make the marina nearest a Unity position the one boats are launched at.</summary>
+        public void NearestMarina(Vector3 at)
+        {
+            if (Marinas.Count == 0) return;
+            activeMarina = Marinas.OrderBy(m => (U(m.LandX, m.LandZ) - at).sqrMagnitude).First();
+        }
+
         /// <summary>Launch a boat from storage, or a bought one, at the marina you're at (aircraft: the runway or the pad).</summary>
         public CraftBody Launch(Dictionary<string, object> entry)
         {

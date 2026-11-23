@@ -115,7 +115,9 @@ charter, crop duster, air tour and medevac jobs); F1 fishing and the 245 tools (
 market at every marina, 21 species and 4 legends, the bite and the fight, the catch on ice and the log, the fishing
 mission steps and the Commercial Fisherman); HU1 hunting and wildlife (7 species and 3 legends by region and hour,
 senses and wind, charging, bleeding, pelt grades, skinning, calls, 3 trading posts, crows, ducks, poaching, the
-hunting steps and the Hunting Guide: every mission and job now runs in Unity). Next: PH1 phone, E1 property, W1 clothes.
+hunting steps and the Hunting Guide: every mission and job now runs in Unity); PH1 the phone (inventory with usable
+items, garage delivery, weapons, jobs, story, places with GPS, Runr couriers, cabs, bank, texts, news, weather, stats and
+save, the flashlight). Next: E1 property, W1 clothes.
 
 ## The owner's list after watching them play (2026-11-09) — do in this order
 

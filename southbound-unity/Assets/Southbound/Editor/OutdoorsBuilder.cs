@@ -17,6 +17,7 @@ namespace Southbound.EditorTools
 
         public static void Build()
         {
+            foreach (var old in Object.FindObjectsByType<Phone>(FindObjectsSortMode.None)) Object.DestroyImmediate(old.gameObject);
             string dataDir = CalveraWorld.DefaultFolder(Paths.ProjectRoot);
             string missionsFile = MissionData.DefaultFile(Paths.ProjectRoot);
             if (!File.Exists(Path.Combine(dataDir, "calvera-world.json")) || !File.Exists(missionsFile)) return;
@@ -57,6 +58,7 @@ namespace Southbound.EditorTools
                 CraftBuilder.Block(name + " counter", new Vector3(3.2f, 1.05f, 0.6f), Surfaces.Get("WoodFloor007"), root, at + new Vector3(0, 0.52f, -0.7f), Quaternion.identity, 1f).AddComponent<BoxCollider>();
                 CraftBuilder.Block(name + " sign", new Vector3(5, 0.8f, 0.08f), CraftBuilder.Paint(new Color(0.42f, 0.26f, 0.12f)), root, back + new Vector3(0, 4.1f, 2.25f), Quaternion.identity, 0);
             }
+            new GameObject("Phone (I)").AddComponent<Phone>();
             var wild = go.AddComponent<Wildlife>();
             var paths = Hunting.All.Values.Select(sp => sp.Model).Distinct().ToArray();
             foreach (var path in paths) Legacy($"{Paths.Models}/open/{path}.glb");

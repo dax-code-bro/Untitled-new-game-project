@@ -47,6 +47,12 @@ namespace Southbound.Core
             if (Raw.TryGetValue(key, out var v) && v is Dictionary<string, object> d) return d;
             d = new Dictionary<string, object>(); Raw[key] = d; return d;
         }
+        /// <summary>A list in the web save kept as it is (texts, news...), made if it isn't there.</summary>
+        public List<object> List(string key)
+        {
+            if (Raw.TryGetValue(key, out var v) && v is List<object> l) return l;
+            l = new List<object>(); Raw[key] = l; return l;
+        }
         /// <summary>A number at the top of the web save (baitCount...), 0 if it isn't there.</summary>
         public double Number(string key) => Raw.TryGetValue(key, out var v) && v is double d ? d : 0;
         public void SetNumber(string key, double v) => Raw[key] = v;

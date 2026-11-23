@@ -117,12 +117,7 @@ namespace Southbound
                 Panel = $"Wind {arrow} {Mathf.RoundToInt((float)wind.Kmh)} km/h" + (quiet < 1 ? " · moving quietly" : "");
             }
             // your call
-            if (afoot && SbInput.LetterDown('K'))
-            {
-                string call = Tools.Call(p.Tools);
-                if (call == null) game.Toast("You need a hunting call (Bayou Outfitters)", 2f);
-                else Call(call, region, phase);
-            }
+            if (afoot && SbInput.LetterDown('K')) Blow();
             Skinning(afoot);
             TradingPosts(afoot);
         }
@@ -241,6 +236,16 @@ namespace Southbound
             game.Toast($"Skinned: {s.Name} pelt {Hunting.Stars(q)} ({Hunting.Quality[q]})" + (lb > 0 ? $" · {lb:0} lb of meat" : ""), 2.2f);
             Remove(c);
             game.Save();
+        }
+
+        /// <summary>Blow the hunting call you carry (K, or the phone's inventory).</summary>
+        public void Blow()
+        {
+            if (game == null || Fleet.Instance == null || !Fleet.Instance.Ready) return;
+            string call = Tools.Call(game.Profile.Tools);
+            if (call == null) { game.Toast("You need a hunting call (Bayou Outfitters)", 2f); return; }
+            var (px, pz) = MeWeb;
+            Call(call, Regions.At(px, pz, Fleet.Instance.Layout), Hunting.Phase(game.Profile.Hour));
         }
 
         void Call(string kind, string region, string phase)
