@@ -21,11 +21,11 @@ namespace Southbound.EditorTools
         public static void AddToOpenScene()
         {
             if (Object.FindFirstObjectByType<SouthboundGame>() == null) { EditorUtility.DisplayDialog("Southbound", "Open the Calvera scene first (or build it: Southbound > Build Calvera scene).", "OK"); return; }
-            try { Build(); OutdoorsBuilder.Build(); }
+            try { Build(); OutdoorsBuilder.Build(); EstateBuilder.Build(); }
             finally { EditorUtility.ClearProgressBar(); }
             EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
             EditorSceneManager.SaveOpenScenes();
-            Debug.Log("Southbound: the new features are in this scene (boats and aircraft, fishing and the tool stores). Press Play.");
+            Debug.Log("Southbound: the new features are in this scene (boats and aircraft, fishing, hunting, the phone, property). Press Play.");
         }
 
         public static void Build()

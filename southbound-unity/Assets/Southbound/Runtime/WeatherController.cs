@@ -28,6 +28,8 @@ namespace Southbound
         public uint seed = 2026;
 
         public Weather Model { get; private set; }
+        /// <summary>Under a roof (a building's interior): no rain round the camera.</summary>
+        public static bool Indoors { get; set; }
         public static float SunScale { get; private set; } = 1;
 
         readonly Dictionary<Material, (Material copy, Color baseColor, float smooth, float rmin, float rmax, bool mask)> wet = new Dictionary<Material, (Material, Color, float, float, float, bool)>();
@@ -126,9 +128,11 @@ namespace Southbound
             var cam = Camera.main;
             if (cam != null) rain.transform.position = cam.transform.position + Vector3.up * 14f;
             var em = rain.emission;
-            em.rateOverTime = (float)(Model.Rain * PerformanceTier.Budget.RainParticles);
-            if (Model.Rain > 0.01 && !rain.isPlaying) rain.Play();
-            if (Model.Rain <= 0.01 && rain.isPlaying) rain.Stop();
+            // (indoors, the roof keeps it off: no streaks round the camera)
+            double r = Indoors ? 0 : Model.Rain;
+            em.rateOverTime = (float)(r * PerformanceTier.Budget.RainParticles);
+            if (r > 0.01 && !rain.isPlaying) rain.Play();
+            if (r <= 0.01 && rain.isPlaying) rain.Stop(true, Indoors ? ParticleSystemStopBehavior.StopEmittingAndClear : ParticleSystemStopBehavior.StopEmitting);
         }
 
         void ApplyLightning()

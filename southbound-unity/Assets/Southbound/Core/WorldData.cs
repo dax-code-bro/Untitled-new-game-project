@@ -18,7 +18,7 @@ namespace Southbound.Core
     public sealed class CalveraWorld : ICraftGround
     {
         public sealed class Road { public string Kind; public double Width; public List<(double x, double z)> Points = new List<(double, double)>(); }
-        public sealed class Building { public double X, Z, W, D, H, Y; public int Style; public int Color; public int Street = 15; /* walls that face a street: bit k = wall k (+z, -z, +x, -x) */ }
+        public sealed class Building { public double X, Z, W, D, H, Y; public int Style; public int Color; public int Street = 15; /* walls that face a street: bit k = wall k (+z, -z, +x, -x) */ public bool Extra; /* the outer neighbourhoods, appended after everything else */ }
         public sealed class Roof { public double X, Z, W, D, H, Y, Rot; public int Color; }
         public sealed class Plant { public string Kind; public double X, Y, Z, Rot, Scale; }
 
@@ -36,10 +36,24 @@ namespace Southbound.Core
 
         public static string DefaultFolder(string projectRoot) => Path.Combine(projectRoot, "Data", "World");
 
-        public static CalveraWorld Load(string folder)
+        /// <summary>Just the world header, the roads and the buildings (from calvera-world.json, or the builder's light copy of it).</summary>
+        public static CalveraWorld ParseLite(string json)
         {
             var w = new CalveraWorld();
-            var j = MiniJson.Parse(File.ReadAllText(Path.Combine(folder, "calvera-world.json"))) as Dictionary<string, object>;
+            var j = MiniJson.Parse(json) as Dictionary<string, object>;
+            ReadHeaderRoadsBuildings(w, j);
+            return w;
+        }
+
+        /// <summary>The light copy: header, roads, buildings (no heights, plants or roofs) as JSON.</summary>
+        public static string LiteJson(string fullJson)
+        {
+            var j = MiniJson.Parse(fullJson) as Dictionary<string, object>;
+            return MiniJson.Write(new Dictionary<string, object> { ["world"] = j.Obj("world"), ["roads"] = j.Arr("roads"), ["buildings"] = j.Arr("buildings") });
+        }
+
+        static void ReadHeaderRoadsBuildings(CalveraWorld w, Dictionary<string, object> j)
+        {
             var info = j.Obj("world");
             w.Half = info.Num("half"); w.Size = info.Num("size"); w.Cell = info.Num("cell"); w.N = (int)info.Num("n");
             w.HMin = info.Num("hMin"); w.HMax = info.Num("hMax"); w.WaterMin = info.Num("waterMin"); w.WaterMax = info.Num("waterMax"); w.SeaLevel = info.Num("seaLevel");
@@ -50,7 +64,14 @@ namespace Southbound.Core
                 w.Roads.Add(road);
             }
             foreach (Dictionary<string, object> b in j.Arr("buildings"))
-                w.Buildings.Add(new Building { X = b.Num("x"), Z = b.Num("z"), W = b.Num("w"), D = b.Num("d"), H = b.Num("h"), Y = b.Num("y"), Style = (int)b.Num("style"), Color = (int)b.Num("color"), Street = (int)b.Num("street", 15) });
+                w.Buildings.Add(new Building { X = b.Num("x"), Z = b.Num("z"), W = b.Num("w"), D = b.Num("d"), H = b.Num("h"), Y = b.Num("y"), Style = (int)b.Num("style"), Color = (int)b.Num("color"), Street = (int)b.Num("street", 15), Extra = b.Num("extra") > 0 });
+        }
+
+        public static CalveraWorld Load(string folder)
+        {
+            var w = new CalveraWorld();
+            var j = MiniJson.Parse(File.ReadAllText(Path.Combine(folder, "calvera-world.json"))) as Dictionary<string, object>;
+            ReadHeaderRoadsBuildings(w, j);
             foreach (Dictionary<string, object> b in j.Arr("roofs") ?? new List<object>())
                 w.Roofs.Add(new Roof { X = b.Num("x"), Z = b.Num("z"), W = b.Num("w"), D = b.Num("d"), H = b.Num("h"), Y = b.Num("y"), Rot = b.Num("rot"), Color = (int)b.Num("color") });
             foreach (List<object> p in j.Arr("veg") ?? new List<object>())

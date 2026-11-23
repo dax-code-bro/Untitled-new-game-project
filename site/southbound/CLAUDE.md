@@ -278,6 +278,15 @@ the fewest additions next. Be honest in reports about what is and isn't done.
   `Phone.MorePlaces` for other systems; GPS `SetWaypoint`; couriers; cab teleport to the kerb; flashlight on L).
   `Police.Reported` (static event per reported crime), `Driving.Last` (last car), `Gunplay.Owned`/`EquipId`,
   `Profile.List(key)`. StoreScreen tabs wrap.
+  Property (E1): `Core/Estate.cs` (Doors by NearestRoad over the exported road graph, Properties in the browser's order and
+  dice: Mulberry32, ids prop_NNN; Kind; Open hours; Settle the day; Buy/Sell/Upgrades). `Building.Extra` (the outer
+  neighbourhoods; calvera-world.json now carries "extra":1, the exporter writes it). The Unity world export is older than
+  the live web game (buildings 344+ differ; fixture `estate-parity.json` from the live game: matches up to there):
+  `export-unity.mjs world` (+ street etc.) would re-sync. Runtime `Homes` (doors, F in / knock, G kick, trespass, buy,
+  sleep, realtor, daily accounts, `Homes.AtWardrobe` hook, phone tab and places) and `Interior` (the room built INSIDE the
+  building: its BoxCollider in "Building colliders" (child i = building i) is disabled while you're in, so police, the
+  minimap and missions keep working; `WeatherController.Indoors` stops the rain). Editor `EstateBuilder` (lite world json
+  TextAsset, furniture by name, realtor sign).
 - Commit one batch at a time: if the next batch's edits are already in the tree, commit only the
   finished batch's files (and an `index.js` without the next batch's `add(...)` line), with the
   `game.js` that was built and QA'd for it.

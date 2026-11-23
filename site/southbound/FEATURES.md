@@ -117,7 +117,9 @@ mission steps and the Commercial Fisherman); HU1 hunting and wildlife (7 species
 senses and wind, charging, bleeding, pelt grades, skinning, calls, 3 trading posts, crows, ducks, poaching, the
 hunting steps and the Hunting Guide: every mission and job now runs in Unity); PH1 the phone (inventory with usable
 items, garage delivery, weapons, jobs, story, places with GPS, Runr couriers, cabs, bank, texts, news, weather, stats and
-save, the flashlight). Next: E1 property, W1 clothes.
+save, the flashlight); E1 property (every building enterable with furnished interiors built in place, knock/kick in,
+trespass, 246 properties with the browser's ids and prices, buy, sleep and save at home, the realtor with selling and
+upgrades, daily income/rent/tax/burglaries/market). Next: W1 clothes and the barber.
 
 ## The owner's list after watching them play (2026-11-09) — do in this order
 
