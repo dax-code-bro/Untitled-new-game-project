@@ -287,6 +287,13 @@ the fewest additions next. Be honest in reports about what is and isn't done.
   building: its BoxCollider in "Building colliders" (child i = building i) is disabled while you're in, so police, the
   minimap and missions keep working; `WeatherController.Indoors` stops the rain). Editor `EstateBuilder` (lite world json
   TextAsset, furniture by name, realtor sign).
+  Clothes (W1): `Core/Clothing.cs` (catalogue generated from clothing.js: keys slot:style:pat:col, Name, Price,
+  DefaultOutfit, Profile "wardrobe"/"outfit"/"groom", barbers), `Core/OutfitCut.cs` (which part of the suit a point
+  becomes, in John's normalised rest pose: y -1 soles .. 1 crown, +z front; arms beyond |x| 0.27, belt 0.08).
+  Runtime `Wardrobe` (clothing stores via `StoreScreen.ClothesFor`, the closet via `Homes.AtWardrobe`, barbers) and
+  `Outfitter` (on John's model: copies the SkinnedMesh, empties the suit submesh and adds 5: top, outer, bottom, bare
+  skin, gloved hands; needs a readable mesh, else it tints the suit; accessories follow the head/neck bones with
+  offsets from the bind poses). Offline check: scratchpad craftdump renders hero.glb split by the C# rule.
 - Commit one batch at a time: if the next batch's edits are already in the tree, commit only the
   finished batch's files (and an `index.js` without the next batch's `add(...)` line), with the
   `game.js` that was built and QA'd for it.

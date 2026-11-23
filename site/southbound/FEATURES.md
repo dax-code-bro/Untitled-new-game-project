@@ -119,7 +119,10 @@ hunting steps and the Hunting Guide: every mission and job now runs in Unity); P
 items, garage delivery, weapons, jobs, story, places with GPS, Runr couriers, cabs, bank, texts, news, weather, stats and
 save, the flashlight); E1 property (every building enterable with furnished interiors built in place, knock/kick in,
 trespass, 246 properties with the browser's ids and prices, buy, sleep and save at home, the realtor with selling and
-upgrades, daily income/rent/tax/burglaries/market). Next: W1 clothes and the barber.
+upgrades, daily income/rent/tax/burglaries/market); W1 clothes (13,500 pieces, John's suit cut into shirt/jacket/
+trousers/skin with patterns, gloves, hats, glasses, neckwear; clothing stores, the wardrobe at home) and the barbers.
+Still not in Unity: the residents' AI, the gang and hideout, police helicopters/roadblocks, workplace careers, beards
+drawn on the face; and the world export is older than the live web game (re-export to re-sync).
 
 ## The owner's list after watching them play (2026-11-09) — do in this order
 

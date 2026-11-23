@@ -39,8 +39,12 @@ namespace Southbound
         bool open; int openedFrame, closedFrame = -1; float timeBefore = 1;
         SouthboundGame game;
 
+        /// <summary>The clothing stores' own screen (the Wardrobe sets it).</summary>
+        public static System.Func<Shops.Shop, IStore> ClothesFor;
+
         public static void Show(Shops.Shop s)
         {
+            if (s != null && s.kind == "clothes" && ClothesFor != null) { Show(ClothesFor(s)); return; }
             if (instance == null)
             {
                 var go = new GameObject("Store screen");
@@ -190,7 +194,7 @@ namespace Southbound
             else if (t == "Guns") Guns(p);
             else if (t == "Ammunition") Ammunition(p);
             else if (t == "Eat here") Menu(p);
-            else note.text = "Clothes come with the wardrobe, which isn't in the Unity version yet. You can look around.";
+            else note.text = "";
             if (custom == null && t != "Clothes") note.text = t == "Eat here" ? $"Health {game.Health:0} / {game.Needs.MaxHealth:0} · Food: {game.Needs.FoodWord}" : t == "Ammunition" ? "Boxes only. The law says no more than 500 rounds of a caliber, 50 rockets or grenades, 20 arrows." : "Prices at this shop. New guns come with a box of their ammunition.";
             tabsRow.Clear();
             for (int k = 0; k < tabs.Length; k++)

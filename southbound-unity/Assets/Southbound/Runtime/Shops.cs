@@ -2,8 +2,8 @@
 // counter while it's open (the web game's people, idling, turning to face you as you come in), "F  talk to
 // ..." at the counter, and the store screen (StoreScreen): guns and ammunition at the gun stores, food and
 // drink at the Gulf Marts. A Gulf Mart has a fuel pump out front (CarHealth.Pumps). The shops, the police
-// station and the hospital are on the minimap. Clothing stores are there to walk into; buying clothes waits
-// for the wardrobe (the outfits aren't in the Unity version yet).
+// station and the hospital are on the minimap. The clothing stores open the clothes screen (Wardrobe): all 13,500
+// pieces, on as you buy them.
 using System;
 using System.Collections.Generic;
 using Southbound.Core;

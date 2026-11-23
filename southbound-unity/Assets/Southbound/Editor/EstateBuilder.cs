@@ -46,6 +46,19 @@ namespace Southbound.EditorTools
             var n = new Vector3(-(float)d.Nx, 0, (float)d.Nz);
             var at = new Vector3(-(float)d.X, (float)d.B.Y + 3.4f, (float)d.Z) - n * 0.75f;
             CraftBuilder.Block("Gulf Coast Realty sign", new Vector3(3.4f, 0.8f, 0.1f), CraftBuilder.Paint(new Color(0.12f, 0.45f, 0.25f)), null, at, Quaternion.LookRotation(n), 0);
+            // the clothes and the barbers: a pole and a chair at each barbershop
+            foreach (var old in Object.FindObjectsByType<Wardrobe>(FindObjectsSortMode.None)) Object.DestroyImmediate(old.gameObject);
+            var oldPoles = GameObject.Find("Barbershops"); if (oldPoles != null) Object.DestroyImmediate(oldPoles);
+            new GameObject("Wardrobe (clothes, barbers)").AddComponent<Wardrobe>();
+            var poles = new GameObject("Barbershops").transform;
+            foreach (var (bx, bz, bname) in Clothing.Barbers(L))
+            {
+                var bp = new Vector3(-(float)bx, (float)w.HeightAt(bx, bz), (float)bz);
+                var colors = new[] { new Color(0.8f, 0.12f, 0.12f), Color.white, new Color(0.14f, 0.2f, 0.75f), Color.white, new Color(0.8f, 0.12f, 0.12f) };
+                for (int k = 0; k < colors.Length; k++) CraftBuilder.Block(bname + " pole", new Vector3(0.18f, 0.18f, 0.18f), CraftBuilder.Paint(colors[k]), poles, bp + new Vector3(1.2f, 1.55f + k * 0.18f, 0), Quaternion.Euler(0, 45, 0), 0);
+                CraftBuilder.Block(bname + " post", new Vector3(0.06f, 1.5f, 0.06f), CraftBuilder.Paint(new Color(0.6f, 0.6f, 0.62f)), poles, bp + new Vector3(1.2f, 0.75f, 0), Quaternion.identity, 0);
+                CraftBuilder.Block(bname + " chair", new Vector3(0.7f, 0.9f, 0.7f), CraftBuilder.Paint(new Color(0.45f, 0.1f, 0.1f)), poles, bp + new Vector3(0, 0.45f, -1.2f), Quaternion.identity, 0).AddComponent<BoxCollider>();
+            }
             Debug.Log($"Southbound: property: {w.Buildings.Count} doors, {Estate.Properties(Estate.Doors(w), L).Count} for sale, {h.furniture.Length} kinds of furniture.");
         }
     }

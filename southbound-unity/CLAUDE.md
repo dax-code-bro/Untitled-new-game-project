@@ -27,7 +27,9 @@ folder is on its own.
 - 2026-11-23 (the owner: "make it fully playable"): the parts the Unity version was missing are being carried over
   one batch at a time. B1 boats and aircraft (marinas, Redgrass Airfield, flight school, the boat/flying mission
   steps and jobs); F1 fishing and the 245 tools (hardware stores, bait & tackle, fish market); HU1 hunting and wildlife (animals
-  by region and hour, legends, skinning, trading posts, crows, ducks, poaching); PH1 the phone (I); E1 every building enterable, 246 properties, the realtor. A scene built before a
+  by region and hour, legends, skinning, trading posts, crows, ducks, poaching); PH1 the phone (I); E1 every building enterable, 246 properties, the realtor; W1 clothes (13,500 pieces drawn on John) and the
+  barbers. Nothing of this has run in Unity yet (written and checked here: compile check, 161 rules tests, offline
+  renders of the craft and the outfit cut). These commits are on branch `claude/jolly-pascal-zwz6yx`. A scene built before a
   batch gets it from the Southbound menu (**Add the new features to this scene**) or by building the scene again.
 
 ## Next steps (the Southbound window, Southbound > Setup)
