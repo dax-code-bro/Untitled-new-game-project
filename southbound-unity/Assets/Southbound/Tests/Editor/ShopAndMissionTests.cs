@@ -66,6 +66,10 @@ namespace Southbound.Tests
             Assert.That(Data.OpenSide(new List<string> { "m01" }, new List<string>()).Count(), Is.EqualTo(0), "side jobs open after enough story");
             Assert.That(Data.OpenSide(new List<string> { "m01", "m02" }, new List<string>()).Select(m => m.Id), Does.Contain("s1"));
             Assert.That(Data.Jobs.Count(j => j.Supported), Is.GreaterThanOrEqualTo(20), "most jobs run without boats or aircraft");
+            Assert.That(Data.Jobs.First(j => j.Id == "charter").Needs, Is.EqualTo("boat")); Assert.That(Data.Jobs.First(j => j.Id == "duster").Needs, Is.EqualTo("fly"));
+            Assert.That(Data.Jobs.First(j => j.Id == "fisherman").Needs, Is.EqualTo("fish")); Assert.That(Data.Jobs.First(j => j.Id == "guide").Needs, Is.EqualTo("hunt"));
+            Assert.That(Data.Jobs.All(j => j.RunsIn(k => true)), "with boats, aircraft, fishing and hunting every job runs");
+            Assert.That(Data.AirfieldX0, Is.EqualTo(880)); Assert.That(Data.AirfieldW, Is.EqualTo(34)); Assert.That(Data.BayouR, Is.EqualTo(480)); Assert.That(Data.LakeLevel, Is.EqualTo(45));
             Assert.That(Data.CityPitch, Is.EqualTo(96));
         }
 
@@ -92,6 +96,11 @@ namespace Southbound.Tests
             public void Earn(double amount) => Money += amount;
             public void Say(string who, string line) => Said.Add(line);
             public void Big(string title, string sub) => Bigs.Add(title);
+            public HashSet<string> Has = new HashSet<string>(); public string Ride; public int Fish, Animals;
+            public bool Can(string what) => Has.Contains(what);
+            public string Riding => Ride;
+            public int FishCaught => Fish;
+            public int AnimalsTaken => Animals;
         }
 
         [Test]
@@ -144,6 +153,42 @@ namespace Southbound.Tests
             w = new World(); r = new MissionRunner(1); why = null; r.Failed += (mm, s) => why = s;
             r.Begin(Data.Story[0], w); w.Dead = true; r.Update(0.1, w);
             Assert.That(why, Is.EqualTo("You died"));
+        }
+
+        [Test]
+        public void Boat_flying_fishing_and_hunting_steps_run_when_the_game_has_them()
+        {
+            var m = new Mission { Id = "c", Title = "Craft", Who = "Otis", Reward = 50, Steps = { new MissionStep { Kind = "boat", Place = "lakemid" }, new MissionStep { Kind = "fly", Place = "airfield" }, new MissionStep { Kind = "fish", N = 2 }, new MissionStep { Kind = "hunt", N = 1 } } };
+            var w = new World { Has = new HashSet<string> { "boat", "fly", "fish", "hunt" }, Fish = 5, Animals = 2 };
+            var r = new MissionRunner(1);
+            r.Begin(m, w);
+            Assert.That(w.Marked.Value.Item3, Is.EqualTo(22), "a wide marker on the water");
+            Assert.That(r.Update(0.1, w), Does.Contain("get a boat"));
+            w.MePos = Data.Place("lakemid"); w.Ride = "car"; r.Update(0.1, w);
+            Assert.That(r.Step, Is.EqualTo(0), "a car doesn't count");
+            w.Ride = "boat"; Assert.That(r.Update(0.1, w), Does.Contain("take the boat")); 
+            Assert.That(r.Step, Is.EqualTo(1));
+            Assert.That(w.Marked.Value.Item3, Is.EqualTo(60), "a big marker in the sky");
+            Assert.That(r.Update(0.1, w), Does.Contain("get an aircraft"));
+            w.MePos = Data.Place("airfield"); w.Ride = "air"; r.Update(0.1, w);
+            Assert.That(r.Step, Is.EqualTo(2));
+            Assert.That(r.Update(0.1, w), Does.Contain("catch fish 0/2"), "fish caught before the step don't count");
+            w.Fish = 7; r.Update(0.1, w);
+            Assert.That(r.Step, Is.EqualTo(3));
+            Assert.That(r.Update(0.1, w), Does.Contain("hunt and skin 0/1"));
+            w.Animals = 3; r.Update(0.1, w);
+            Assert.That(r.Active, Is.Null); Assert.That(w.Bigs.Last(), Is.EqualTo("MISSION PASSED"));
+            // the flying jobs' stops: the landmarks in turn, the lake for the charter, the hospital after a medevac
+            var tours = Data.Jobs.First(j => j.Id == "tours");
+            var d = JobShift.StopDraws(tours, Data, new Random(2));
+            Assert.That(d.Count, Is.EqualTo(5)); Assert.That((d[0].x, d[0].z), Is.EqualTo((Data.LakeX, Data.LakeZ))); Assert.That((d[1].x, d[1].z), Is.EqualTo((Data.DowntownX, Data.DowntownZ)));
+            var charter = Data.Jobs.First(j => j.Id == "charter");
+            var c = JobShift.StopDraws(charter, Data, new Random(2))[0];
+            Assert.That(Math.Sqrt((c.x - Data.LakeX) * (c.x - Data.LakeX) + (c.z - Data.LakeZ) * (c.z - Data.LakeZ)), Is.EqualTo(Data.LakeR * 0.45).Within(1e-6));
+            var medevac = Data.Jobs.First(j => j.Id == "medevac");
+            var md = JobShift.StopDraws(medevac, Data, new Random(2));
+            Assert.That(md.Last().x, Is.EqualTo(Data.CityX0 + Data.CityNx * Data.CityPitch + 24));
+            Assert.That(new JobShift(medevac, 1, md.Select(q => (q.x, q.z)).ToList()).Reach, Is.EqualTo(26), "a flying stop is a wide one");
         }
 
         [Test]

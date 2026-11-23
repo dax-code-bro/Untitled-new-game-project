@@ -24,6 +24,11 @@ folder is on its own.
   container (compiled against Unity's reference assemblies, Core tested with NUnit), so expect the first runs to
   turn up problems. Find them in the Console, or in the log: `%LOCALAPPDATA%\Unity\Editor\Editor.log`.
 
+- 2026-11-23 (the owner: "make it fully playable"): the parts the Unity version was missing are being carried over
+  one batch at a time. B1 boats and aircraft (marinas, Redgrass Airfield, flight school, the boat/flying mission
+  steps and jobs). A scene built before a batch gets it from the Southbound menu (**Add boats and aircraft to this
+  scene**) or by building the scene again.
+
 ## Next steps (the Southbound window, Southbound > Setup)
 
 Press **Set up everything** at the top (Editor/AutoSetup.cs; if this copy predates it, the window has no such

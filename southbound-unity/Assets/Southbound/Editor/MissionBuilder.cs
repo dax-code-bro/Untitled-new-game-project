@@ -39,7 +39,7 @@ namespace Southbound.EditorTools
                 .Select(n => AssetDatabase.LoadAssetAtPath<GameObject>($"{Paths.Models}/people/{n}.glb")).Where(g => g != null).ToArray();
             m.skeleton = AssetDatabase.LoadAssetAtPath<GameObject>($"{Paths.Models}/anims/ual.glb");
             m.markerMaterial = MarkerMaterial();
-            Debug.Log($"Southbound: {data.Story.Count} story missions, {data.Side.Count} side jobs, {data.Jobs.Count(j => j.Supported)} of {data.Jobs.Count} jobs (the rest need boats, aircraft, fishing or hunting), {m.carPrefabs?.Length ?? 0} mission and job cars.");
+            Debug.Log($"Southbound: {data.Story.Count} story missions, {data.Side.Count} side jobs, {data.Jobs.Count} jobs ({data.Jobs.Count(j => j.Supported)} on the road or on foot, the rest on boats, aircraft, fishing or hunting), {m.carPrefabs?.Length ?? 0} mission and job cars.");
         }
 
         /// <summary>The marker: a red glow you can see through (unlit, additive).</summary>

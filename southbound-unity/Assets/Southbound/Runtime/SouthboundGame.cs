@@ -58,7 +58,8 @@ namespace Southbound
         {
             try
             {
-                if (player != null) Profile.Pos = WebPos(player.transform.position);
+                // (aboard a boat or an aircraft: where you'd step off, so you don't wake up in the middle of the lake)
+                if (player != null) Profile.Pos = WebPos(Piloting.Active ? Piloting.OffPoint(Piloting.Instance.Craft, out _) : player.transform.position);
                 File.WriteAllText(SavePath, Profile.ToJson());
                 Toast("Saved");
             }

@@ -17,13 +17,25 @@ namespace Southbound
         /// <summary>Is a store screen up (or did one close this very frame, so its Esc doesn't also pause)?</summary>
         public static bool Showing => instance != null && (instance.open || instance.closedFrame == Time.frameCount);
 
-        sealed class Row { public string Name, Sub, Price; public bool Enabled; public System.Action Buy; }
+        /// <summary>One line on the screen: what it is, a line under it, the button, and what the button does.</summary>
+        public sealed class Row { public string Name, Sub, Price; public bool Enabled = true; public System.Action Buy; }
+
+        /// <summary>Any other counter (the marinas, the airfield, the fish market, the estate agent): its own tabs and rows.</summary>
+        public interface IStore
+        {
+            string Title { get; }
+            /// <summary>Who's serving and what they say.</summary>
+            string Keeper { get; }
+            string[] Tabs { get; }
+            void Fill(string tab, List<Row> rows, Profile p);
+            string Note(string tab);
+        }
 
         UIDocument doc; VisualElement root, list, tabsRow;
         Label title, keeper, money, note;
         readonly List<Row> rows = new List<Row>();
         readonly List<VisualElement> rowEls = new List<VisualElement>();
-        Shops.Shop shop; string[] tabs = new string[0]; int tab, sel;
+        Shops.Shop shop; IStore custom; string[] tabs = new string[0]; int tab, sel;
         bool open; int openedFrame, closedFrame = -1; float timeBefore = 1;
         SouthboundGame game;
 
@@ -37,6 +49,20 @@ namespace Southbound
             }
             instance.Open(s);
         }
+
+        public static void Show(IStore s, int startTab = 0)
+        {
+            if (instance == null)
+            {
+                var go = new GameObject("Store screen");
+                instance = go.AddComponent<StoreScreen>();
+                instance.Build();
+            }
+            instance.OpenCustom(s, startTab);
+        }
+
+        /// <summary>Close whatever's showing (a counter that sends you off somewhere: a boat launched, a lesson begun).</summary>
+        public static void Hide() { if (instance != null && instance.open) instance.Close(); }
 
         void Build()
         {
@@ -92,10 +118,26 @@ namespace Southbound
 
         static void Round(VisualElement e, float r) { e.style.borderTopLeftRadius = r; e.style.borderTopRightRadius = r; e.style.borderBottomLeftRadius = r; e.style.borderBottomRightRadius = r; }
 
+        void OpenCustom(IStore s, int startTab)
+        {
+            game = SouthboundGame.Instance;
+            shop = null; custom = s;
+            tabs = s.Tabs ?? new string[0];
+            tab = Mathf.Clamp(startTab, 0, Mathf.Max(0, tabs.Length - 1)); sel = 0;
+            open = true; openedFrame = Time.frameCount;
+            timeBefore = Time.timeScale > 0 ? Time.timeScale : 1;
+            Time.timeScale = 0;
+            UnityEngine.Cursor.lockState = CursorLockMode.None; UnityEngine.Cursor.visible = true;
+            root.style.display = DisplayStyle.Flex;
+            title.text = s.Title;
+            keeper.text = s.Keeper ?? "";
+            Refresh();
+        }
+
         void Open(Shops.Shop s)
         {
             game = SouthboundGame.Instance;
-            shop = s;
+            shop = s; custom = null;
             tabs = s.kind == "guns" ? new[] { "Guns", "Ammunition" } : s.kind == "mart" ? new[] { "Eat here" } : new[] { "Clothes" };   // clothes: browsing only for now
             tab = 0; sel = 0;
             open = true; openedFrame = Time.frameCount;
@@ -144,11 +186,12 @@ namespace Southbound
             if (p == null) return;
             money.text = "$" + System.Math.Floor(p.Money).ToString("N0");
             string t = tabs.Length > 0 ? tabs[tab] : "";
-            if (t == "Guns") Guns(p);
+            if (custom != null) { custom.Fill(t, rows, p); note.text = custom.Note(t) ?? ""; title.text = custom.Title; }
+            else if (t == "Guns") Guns(p);
             else if (t == "Ammunition") Ammunition(p);
             else if (t == "Eat here") Menu(p);
             else note.text = "Clothes come with the wardrobe, which isn't in the Unity version yet. You can look around.";
-            if (t != "Clothes") note.text = t == "Eat here" ? $"Health {game.Health:0} / {game.Needs.MaxHealth:0} · Food: {game.Needs.FoodWord}" : t == "Ammunition" ? "Boxes only. The law says no more than 500 rounds of a caliber, 50 rockets or grenades, 20 arrows." : "Prices at this shop. New guns come with a box of their ammunition.";
+            if (custom == null && t != "Clothes") note.text = t == "Eat here" ? $"Health {game.Health:0} / {game.Needs.MaxHealth:0} · Food: {game.Needs.FoodWord}" : t == "Ammunition" ? "Boxes only. The law says no more than 500 rounds of a caliber, 50 rockets or grenades, 20 arrows." : "Prices at this shop. New guns come with a box of their ammunition.";
             tabsRow.Clear();
             for (int k = 0; k < tabs.Length; k++)
             {

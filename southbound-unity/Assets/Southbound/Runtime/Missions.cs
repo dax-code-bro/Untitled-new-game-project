@@ -32,7 +32,7 @@ namespace Southbound
         public bool Busy => runner.Active != null || shift != null;
 
         readonly MissionRunner runner = new MissionRunner();
-        JobShift shift; CarController jobCar; Vector3 jobBoard; GameObject bounty; Health bountyHp;
+        JobShift shift; CarController jobCar; CraftBody jobCraft; Vector3 jobBoard; GameObject bounty; Health bountyHp; int jobCount0;
         SouthboundGame game; Driving driving; Traffic traffic;
         GameObject marker, giver; Retargeter giverRt; Mission giverFor; Vector3 giverAt; bool giverPlaced;
         CarController missionCar;
@@ -66,7 +66,7 @@ namespace Southbound
 
         static Vector3 U(double x, double z) { var (ux, uz) = CalveraWorld.ToUnity(x, z); return new Vector3((float)ux, 0, (float)uz); }
         static Vector3 OnGround(Vector3 p) { p.y = Pedestrians.Ground(new Vector3(p.x, 400, p.z), 800, 0); return p; }
-        Vector3 PlayerPos => driving != null && driving.Car != null ? driving.Car.transform.position : game.player != null ? game.player.transform.position : Vector3.zero;
+        Vector3 PlayerPos => driving != null && driving.Car != null ? driving.Car.transform.position : Piloting.Active ? Piloting.Instance.Craft.transform.position : game.player != null ? game.player.transform.position : Vector3.zero;
 
         void Update()
         {
@@ -84,7 +84,7 @@ namespace Southbound
         {
             var next = Data.NextStory(game.Profile.MissionsDone);
             var me = game.player.transform.position;
-            bool onFoot = driving == null || driving.Car == null;
+            bool onFoot = OnFoot;
             if (next != null)
             {
                 if (!giverPlaced || giverFor != next) { giverAt = Kerbside(U(Data.Place(next.StartPlace).x, Data.Place(next.StartPlace).z), 30f, 120f); giverFor = next; giverPlaced = true; }
@@ -126,7 +126,7 @@ namespace Southbound
         // ------------------------------------------------------------------ IMissionWorld
         public (double x, double z) Place(string name) { var p = Data.Place(name); var u = U(p.x, p.z); return (u.x, u.z); }
         public (double x, double z) Me { get { var p = PlayerPos; return (p.x, p.z); } }
-        public bool OnFoot => driving == null || driving.Car == null;
+        public bool OnFoot => (driving == null || driving.Car == null) && !Piloting.Active;
         public bool InMissionVehicle => missionCar != null && driving != null && driving.Car == missionCar;
         public bool MissionVehicleWrecked { get { if (missionCar == null) return false; var h = missionCar.GetComponent<CarHealth>(); return h != null && h.State.Health < 0; } }
         public (double x, double z)? MissionVehiclePos => missionCar != null ? ((double)missionCar.transform.position.x, (double)missionCar.transform.position.z) : ((double, double)?)null;
@@ -134,6 +134,12 @@ namespace Southbound
         public int Wanted => Police.Instance != null ? Police.Instance.Stars : 0;
         public int FoesLeft => foes.Count(f => f.hp != null && !f.hp.Dead);
         public bool PlayerDead => game.Health <= 0;
+        public bool Can(string what) => what == "boat" || what == "fly" ? Fleet.Instance != null && Fleet.Instance.Ready : Extras.TryGetValue(what, out var f) && f();
+        public string Riding => driving != null && driving.Car != null ? "car" : Piloting.Active ? (Piloting.Instance.Craft.IsBoat ? "boat" : "air") : null;
+        public int FishCaught => (int)game.Profile.Stat("fishCaught");
+        public int AnimalsTaken => (int)game.Profile.Stat("animals");
+        /// <summary>Other systems say what they bring (fishing: "fish", hunting: "hunt").</summary>
+        public static readonly Dictionary<string, System.Func<bool>> Extras = new Dictionary<string, System.Func<bool>>();
 
         public void Mark(double x, double z, double r)
         {
@@ -147,8 +153,11 @@ namespace Southbound
                 mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             }
             var p = OnGround(new Vector3((float)x, 0, (float)z));
-            marker.transform.position = p + Vector3.up * 3f;
-            marker.transform.localScale = new Vector3((float)r * 2, 3f, (float)r * 2);
+            // on the water (a boat's marker) it stands on the surface; a flying marker is a tall column you fly through
+            if (Fleet.Ground != null) { double wl = Fleet.Ground.WaterLevel(-x, z); if (wl > p.y) p.y = (float)wl; }
+            float h = r >= 50 ? 80f : r >= 20 ? 12f : 3f;
+            marker.transform.position = p + Vector3.up * h;
+            marker.transform.localScale = new Vector3((float)r * 2, h, (float)r * 2);
             marker.SetActive(true);
         }
 
@@ -271,7 +280,7 @@ namespace Southbound
             if (!OnFoot) return;
             foreach (var j in Data.Jobs)
             {
-                if (!j.Supported) continue;
+                if (!j.RunsIn(Can)) continue;
                 var at = U(j.X, j.Z);
                 if ((new Vector2(me.x - at.x, me.z - at.z)).sqrMagnitude > 2.5f * 2.5f) continue;
                 int level = Level(j.Id);
@@ -295,15 +304,34 @@ namespace Southbound
                 else { float a = Random.Range(0, Mathf.PI * 2), r = Random.Range((float)r0, (float)r1); p = c + new Vector3(Mathf.Cos(a) * r, 0, Mathf.Sin(a) * r); }
                 stops.Add((p.x, p.z));
             }
-            shift = new JobShift(def, Level(def.Id), stops);
+            var fleet = Fleet.Instance;
+            // a boat job comes back to the marina's pier, not the dockside office
+            if (def.Boat != null && def.Back && fleet != null && fleet.Marinas.Count > 0 && stops.Count > 0)
+            {
+                var m = fleet.Marinas.OrderBy(q => (U(q.LandX, q.LandZ) - board).sqrMagnitude).First();
+                var (bx, bz, _) = Harbours.BoatSpot(m); var bu = U(bx, bz);
+                stops[stops.Count - 1] = (bu.x, bu.z);
+            }
+            shift = new JobShift(def, Level(def.Id), stops, def.Air != null && game.Profile.PilotLicence ? 1.15 : 1);
             jobBoard = board;
-            jobCar = null;
+            jobCar = null; jobCraft = null;
+            jobCount0 = def.Kind == "catch" ? FishCaught : AnimalsTaken;
             if (def.Kind == "bounty")
             {
                 // the fugitive: somewhere in town, armed
                 var at = Kerbside(board, 200f, 600f);
                 bounty = Person(at, Quaternion.identity, "fugitive", out var rt, out bountyHp);
                 if (bounty != null) { bountyHp.role = "foe"; bountyHp.hp = 120; foes.Add(new Foe { go = bounty, rt = rt, hp = bountyHp }); }
+            }
+            else if ((def.Boat != null || def.Air != null) && fleet != null && fleet.Ready)
+            {
+                // the job's boat at the nearest marina, the aircraft on the runway (helicopters on the pad), and aboard
+                var e = CraftCatalog.Find(def.Boat ?? def.Air);
+                (double x, double z, double h) at;
+                if (e.Boat) { var m = fleet.Marinas.OrderBy(q => (U(q.LandX, q.LandZ) - board).sqrMagnitude).First(); at = (m.WaterX, m.WaterZ, m.Dir); }
+                else at = e.Heli ? Harbours.HeliPad(fleet.Layout) : Harbours.AirSpawn(fleet.Layout);
+                jobCraft = fleet.Spawn(e, at.x, at.z, at.h);
+                if (jobCraft != null && Piloting.Instance != null) Piloting.Instance.Board(jobCraft);
             }
             else if (def.Veh != null)
             {
@@ -334,6 +362,34 @@ namespace Southbound
                 if (shift.Over) { EndShift("Out of time"); return; }
                 Mark(bounty.transform.position.x, bounty.transform.position.z, 3);
                 Objective = $"BOUNTY · fugitive on the map · {clock}";
+                return;
+            }
+            if (d.Kind == "catch" || d.Kind == "hunt")
+            {
+                int got = (d.Kind == "catch" ? FishCaught : AnimalsTaken) - jobCount0;
+                shift.Update(dt, double.MaxValue, false);
+                if (got >= d.Need) { double pay = System.Math.Round(shift.Base * d.Need); Earn(pay); shift.Quit(); Done(true, pay); return; }
+                if (shift.Over) { EndShift("Out of time"); return; }
+                Objective = $"{d.Name.ToUpperInvariant()} · {got}/{d.Need} · {clock}";
+                return;
+            }
+            // the job's boat or aircraft: wreck it and you're sent home; climb back aboard to carry on
+            if (jobCraft != null)
+            {
+                if (jobCraft.Wrecked || jobCraft.Health < jobCraft.MaxHealth * 0.3) { shift.Quit(); EndShift($"You wrecked the {d.Name.ToLowerInvariant()}'s {(jobCraft.IsBoat ? "boat" : "aircraft")}. Sent home for today."); return; }
+                if (!Piloting.Active || Piloting.Instance.Craft != jobCraft) { Objective = $"{d.Name.ToUpperInvariant()} · get back aboard · {clock}"; shift.Update(dt, double.MaxValue, false); if (shift.Over) EndShift("Out of time"); return; }
+                var (sx, sz) = shift.Stops[shift.Stop];
+                var cp = jobCraft.transform.position;
+                double cd = Vector2.Distance(new Vector2(cp.x, cp.z), new Vector2((float)sx, (float)sz));
+                bool low = !d.Fly || jobCraft.Air == null || (d.Land && shift.Stop == 0 ? jobCraft.Air.Alt < 2.5 : jobCraft.Air.Alt < (d.Area == "plains" ? 30 : 120));
+                bool stopped = jobCraft.IsAir || Mathf.Abs(jobCraft.Speed) < 1.5f;
+                int was = shift.Stop;
+                double got = shift.Update(dt, low ? cd : double.MaxValue, stopped);
+                if (got > 0) { Earn(got); game.Toast($"+${got:N0}", 1.5f); }
+                if (shift.Over) { if (shift.Ok) Done(true, shift.Earned); else EndShift("Out of time"); return; }
+                if (shift.Stop != was) { var (nx, nz) = shift.Stops[shift.Stop]; Mark(nx, nz, shift.Reach); }
+                string what = d.Fly ? (d.Land && shift.Stop == 0 ? " · land here" : d.Area == "plains" ? " · fly low (under 100 ft)" : " · under 400 ft") : "";
+                Objective = cd < shift.Reach && shift.Waiting > 0 && stopped && low ? $"{d.Name.ToUpperInvariant()} · working… {Mathf.CeilToInt((float)shift.Waiting)}s" : $"{d.Name.ToUpperInvariant()} · stop {shift.Stop + 1}/{shift.Stops.Count}{what} · {Mathf.RoundToInt((float)cd)} m · {clock}";
                 return;
             }
             // the work vehicle: wreck it and you're sent home
@@ -375,7 +431,7 @@ namespace Southbound
         void Finish()
         {
             if (jobCar != null && jobCar.GetComponent<CarBody>() is CarBody b) b.Siren = false;
-            jobCar = null; shift = null; bounty = null; bountyHp = null;
+            jobCar = null; jobCraft = null; shift = null; bounty = null; bountyHp = null;
             CleanUp();
         }
 
@@ -392,7 +448,7 @@ namespace Southbound
             if (Busy || game == null) return;
             if (giverPlaced) into.Add(new Hud.Blip { at = giverAt, color = new Color(1f, 0.85f, 0.3f), size = 11, keepOnEdge = true });
             foreach (var kv in sideAt) into.Add(new Hud.Blip { at = kv.Value, color = new Color(1f, 0.6f, 0.2f), size = 8 });
-            foreach (var j in Data.Jobs) if (j.Supported) into.Add(new Hud.Blip { at = U(j.X, j.Z), color = new Color(1f, 0.88f, 0.25f), size = 6 });
+            foreach (var j in Data.Jobs) if (j.RunsIn(Can)) into.Add(new Hud.Blip { at = U(j.X, j.Z), color = new Color(1f, 0.88f, 0.25f), size = 6 });
         }
     }
 }

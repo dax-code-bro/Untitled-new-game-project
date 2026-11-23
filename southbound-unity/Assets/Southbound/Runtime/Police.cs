@@ -94,9 +94,9 @@ namespace Southbound
         Transform Player => game != null && game.player != null ? game.player.transform : null;
         CarController PlayerCar => driving != null ? driving.Car : null;
         Vector3 PlayerPos => PlayerCar != null ? PlayerCar.transform.position : Player != null ? Player.position : transform.position;
-        bool OnFoot => PlayerCar == null;
+        bool OnFoot => PlayerCar == null && !Piloting.Active;
         bool GunOut => OnFoot && gun != null && gun.enabled && gun.Drawn && gun.Weapon != null && !gun.Weapon.Melee;
-        float PlayerSpeed => PlayerCar != null ? Mathf.Abs(PlayerCar.ForwardSpeed) : game != null && game.player != null ? game.player.Speed : 0;
+        float PlayerSpeed => PlayerCar != null ? Mathf.Abs(PlayerCar.ForwardSpeed) : Piloting.Active ? Mathf.Abs(Piloting.Instance.Craft.Speed) : game != null && game.player != null ? game.player.Speed : 0;
 
         void Report(string kind)
         {
@@ -589,6 +589,7 @@ namespace Southbound
         {
             var car = PlayerCar;
             if (car != null) driving.Exit(true);
+            if (Piloting.Active) Piloting.Instance.GetOff(true);
             if (game.player != null)
             {
                 game.player.enabled = false;

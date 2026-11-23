@@ -82,6 +82,16 @@ namespace Southbound
         public static bool MenuPrev => Pressed(UnityEngine.InputSystem.Key.LeftArrow) || Pressed(UnityEngine.InputSystem.Key.A) || (Gamepad.current?.leftShoulder.wasPressedThisFrame ?? false);
         public static bool MenuConfirm => Pressed(UnityEngine.InputSystem.Key.Enter) || Pressed(UnityEngine.InputSystem.Key.Space) || (Gamepad.current?.buttonSouth.wasPressedThisFrame ?? false);
         public static bool MenuBack => Pressed(UnityEngine.InputSystem.Key.Escape) || Pressed(UnityEngine.InputSystem.Key.Backspace) || (Gamepad.current?.buttonEast.wasPressedThisFrame ?? false);
+        /// <summary>A letter key pressed this frame (A-Z).</summary>
+        public static bool LetterDown(char c)
+        {
+            if (Keyboard.current == null) return false;
+            c = char.ToUpperInvariant(c);
+            if (c < 'A' || c > 'Z') return false;
+            return Keyboard.current[UnityEngine.InputSystem.Key.A + (c - 'A')].wasPressedThisFrame;
+        }
+        public static bool GearDown => LetterDown('G') || (Gamepad.current?.dpad.left.wasPressedThisFrame ?? false);
+        public static bool FlapsDown => LetterDown('J') || (Gamepad.current?.dpad.right.wasPressedThisFrame ?? false);
         public static int NumberDown
         {
             get
@@ -118,6 +128,10 @@ namespace Southbound
         public static bool MenuPrev => Input.GetKeyDown(KeyCode.LeftArrow) || Input.GetKeyDown(KeyCode.A);
         public static bool MenuConfirm => Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.Space);
         public static bool MenuBack => Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.Backspace);
+        /// <summary>A letter key pressed this frame (A-Z).</summary>
+        public static bool LetterDown(char c) { c = char.ToUpperInvariant(c); return c >= 'A' && c <= 'Z' && Input.GetKeyDown(KeyCode.A + (c - 'A')); }
+        public static bool GearDown => LetterDown('G');
+        public static bool FlapsDown => LetterDown('J');
         public static int NumberDown
         {
             get

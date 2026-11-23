@@ -15,6 +15,8 @@ namespace Southbound
         public LayerMask collideWith = ~0;
         [Tooltip("The car being driven (set by Driving); null on foot.")]
         public CarController vehicle;
+        [Tooltip("The boat or aircraft aboard (set by Piloting); null otherwise.")]
+        public CraftBody craft;
 
         float yaw, pitch = 10f, dist, curFov, lastLook;
         Camera cam;
@@ -38,7 +40,7 @@ namespace Southbound
             yaw += look.x;
             pitch = Mathf.Clamp(pitch - look.y, minPitch, maxPitch);
             if (look.sqrMagnitude > 0.01f) lastLook = Time.time;
-            if (vehicle != null) { Chase(); return; }
+            if (vehicle != null || craft != null) { Chase(); return; }
             bool aiming = SbInput.Aim;
             float want = aiming ? aimDistance : distance;
             var rot = Quaternion.Euler(pitch, yaw, 0);
@@ -58,19 +60,21 @@ namespace Southbound
         void Chase()
         {
             float dt = Time.timeScale == 0 ? Time.unscaledDeltaTime : Time.deltaTime;
-            var car = vehicle.transform;
-            float speed = Mathf.Abs(vehicle.ForwardSpeed);
-            // swing in behind the car (behind the way it's going when it reverses)
-            if (Time.time - lastLook > 1.2f && speed > 2f)
+            var car = vehicle != null ? vehicle.transform : craft.transform;
+            float fwdSpeed = vehicle != null ? vehicle.ForwardSpeed : craft.Speed;
+            float speed = Mathf.Abs(fwdSpeed), length = vehicle != null ? vehicle.length : craft.Length, roof = vehicle != null ? vehicle.roof : Mathf.Min(craft.Top, 4.5f);
+            bool flying = craft != null && craft.IsAir;
+            // swing in behind the car (behind the way it's going when it reverses); an aircraft's camera follows its nose
+            if (Time.time - lastLook > 1.2f && (speed > 2f || flying))
             {
-                float carYaw = car.eulerAngles.y + (vehicle.ForwardSpeed < -1 ? 180 : 0);
-                float k = 1 - Mathf.Exp(-Mathf.Clamp(speed * 0.12f, 0.8f, 3.5f) * dt);
+                float carYaw = car.eulerAngles.y + (fwdSpeed < -1 ? 180 : 0);
+                float k = 1 - Mathf.Exp(-Mathf.Clamp(speed * 0.12f, flying ? 1.5f : 0.8f, 3.5f) * dt);
                 yaw = Mathf.LerpAngle(yaw, carYaw, k);
-                pitch = Mathf.Lerp(pitch, 9f, k);
+                pitch = Mathf.Lerp(pitch, flying ? 12f : 9f, k);
             }
-            float want = vehicle.length * 0.9f + 2.4f + speed * 0.04f;
+            float want = length * (flying ? 1.25f : 0.9f) + 2.4f + speed * (flying ? 0.08f : 0.04f);
             var rot = Quaternion.Euler(pitch, yaw, 0);
-            Vector3 pivot = car.position + Vector3.up * (vehicle.roof + 0.45f);
+            Vector3 pivot = car.position + Vector3.up * (roof + 0.45f);
             if (Physics.SphereCast(pivot, 0.25f, rot * Vector3.back, out var hit, want, collideWith, QueryTriggerInteraction.Ignore) && !hit.transform.IsChildOf(car))
                 want = Mathf.Max(1f, hit.distance - 0.05f);
             dist = Mathf.Lerp(dist, want, 1 - Mathf.Exp(-(want < dist ? 25f : 4f) * dt));

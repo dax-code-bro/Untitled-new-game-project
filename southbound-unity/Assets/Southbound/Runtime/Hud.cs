@@ -26,6 +26,10 @@ namespace Southbound
         public struct Blip { public Vector3 at; public Color color; public float size; public bool keepOnEdge; }
         /// <summary>Systems that put dots on the minimap (police, missions, shops): called every frame.</summary>
         public static readonly List<Action<List<Blip>>> Sources = new List<Action<List<Blip>>>();
+        /// <summary>Other systems' lines (boats and aircraft, fishing, hunting, the phone...): the first prompt and objective
+        /// any of them has, a panel line over the prompt (the flight panel), and a warning in red.</summary>
+        public static readonly List<Func<string>> Prompts = new List<Func<string>>(), Objectives = new List<Func<string>>(), Panels = new List<Func<string>>(), Warnings = new List<Func<string>>();
+        static string First(List<Func<string>> from) { foreach (var f in from) { try { var t = f(); if (!string.IsNullOrEmpty(t)) return t; } catch (Exception e) { Debug.LogException(e); } } return null; }
         public static Hud Instance { get; private set; }
         /// <summary>Is the HUD up (so the OnGUI fallbacks stay quiet)?</summary>
         public static bool Showing => Instance != null && Instance.ready;
@@ -40,7 +44,7 @@ namespace Southbound
         UIDocument doc;
         bool ready;
         VisualElement root, mapClip, mapImage, arrow, north, blipLayer, healthFill, staminaFill, stars, crosshair, weaponBox, speedBox, bannerBand, fuelFill, engineFill;
-        Label clock, money, moneyDelta, weaponName, weaponAmmo, speed, carName, prompt, toast, banner, needs, bannerSub, objective;
+        Label clock, money, moneyDelta, weaponName, weaponAmmo, speed, carName, prompt, toast, banner, needs, bannerSub, objective, panelLine, warning;
         readonly VisualElement[] starIcons = new VisualElement[5];
         readonly List<VisualElement> blipPool = new List<VisualElement>();
         readonly List<Blip> blips = new List<Blip>();
@@ -49,7 +53,7 @@ namespace Southbound
         double lastMoney = double.NaN; float deltaUntil;
         // what's on screen, so text is only rebuilt when it changes
         int shownMinute = -1, shownMoney = int.MinValue, shownClip = -1, shownReserve = -1, shownSpeed = -1;
-        string shownWeapon, shownCar, shownPrompt, shownToast, shownBanner, shownNeeds, shownObjective, shownSub;
+        string shownWeapon, shownCar, shownPrompt, shownToast, shownBanner, shownNeeds, shownObjective, shownSub, shownPanel, shownWarning;
 
         void Awake() => Instance = this;
 
@@ -164,7 +168,10 @@ namespace Southbound
 
             // ---- prompts, messages, crosshair, banner
             prompt = Centered(root, 20, 170, true);
+            panelLine = Centered(root, 16, 120, true);
             toast = Centered(root, 22, 64, false);
+            warning = Centered(root, 30, 190, false);
+            warning.style.color = new Color(1f, 0.29f, 0.23f); warning.style.unityFontStyleAndWeight = FontStyle.Bold;
             crosshair = El(root);
             crosshair.style.position = Position.Absolute; crosshair.style.left = Length.Percent(50); crosshair.style.top = Length.Percent(50);
             foreach (var (x, y, w, h) in new[] { (-1f, -12f, 2f, 7f), (-1f, 5f, 2f, 7f), (-12f, -1f, 7f, 2f), (5f, -1f, 7f, 2f), (-1.5f, -1.5f, 3f, 3f) })
@@ -287,9 +294,10 @@ namespace Southbound
             if (PhotoMode.Active || StoreScreen.Showing || game == null) return;
             float dt = Time.unscaledDeltaTime;
             var car = driving != null ? driving.Car : null;
-            var me = car != null ? car.transform : game.player != null ? game.player.transform : null;
+            var craft = Piloting.Instance != null ? Piloting.Instance.Craft : null;
+            var me = car != null ? car.transform : craft != null ? craft.transform : game.player != null ? game.player.transform : null;
 
-            Minimap(me, car, dt);
+            Minimap(me, car, craft, dt);
 
             // health and stamina
             float hp = Mathf.Clamp01((float)(game.Health / Math.Max(1, game.Needs.MaxHealth)));
@@ -347,7 +355,19 @@ namespace Southbound
             }
 
             // the speedometer
-            Show(speedBox, car != null);
+            Show(speedBox, car != null || craft != null);
+            if (craft != null && car == null)
+            {
+                int kn = Mathf.RoundToInt(Mathf.Abs(craft.Speed) * 1.944f);
+                if (kn != shownSpeed) { shownSpeed = kn; speed.text = kn + " kn"; }
+                if (craft.DisplayName != shownCar) { shownCar = craft.DisplayName; carName.text = craft.DisplayName; }
+                bool air = craft.IsAir;
+                Show(fuelFill.parent.parent, air); Show(engineFill.parent.parent, true);
+                if (air) { float fuel = Mathf.Clamp01((float)craft.Air.Fuel); fuelFill.style.width = Length.Percent(fuel * 100); fuelFill.style.backgroundColor = fuel < 0.15f ? Bad : new Color(0.91f, 0.69f, 0.29f); }
+                float eng = Mathf.Clamp01((float)(craft.Health / craft.MaxHealth));
+                engineFill.style.width = Length.Percent(eng * 100);
+                engineFill.style.backgroundColor = eng < 0.25f ? Bad : eng < 0.5f ? new Color(0.92f, 0.78f, 0.3f) : new Color(0.36f, 0.8f, 0.34f);
+            }
             if (car != null)
             {
                 int mph = Mathf.RoundToInt(Mathf.Abs(car.SpeedMph));
@@ -369,11 +389,13 @@ namespace Southbound
 
             // prompt (the police's first), message, crosshair, banner
             string p = police != null && police.Prompt != null ? police.Prompt : Shops.Instance != null && Shops.Instance.Prompt != null ? Shops.Instance.Prompt
-                : Missions.Instance != null && Missions.Instance.Prompt != null ? Missions.Instance.Prompt : driving != null ? driving.Prompt : null;
-            SetText(objective, ref shownObjective, Missions.Instance != null && !string.IsNullOrEmpty(Missions.Instance.Objective) ? Missions.Instance.Objective : null);
+                : Missions.Instance != null && Missions.Instance.Prompt != null ? Missions.Instance.Prompt : First(Prompts) ?? (driving != null && driving.enabled ? driving.Prompt : null);
+            SetText(objective, ref shownObjective, Missions.Instance != null && !string.IsNullOrEmpty(Missions.Instance.Objective) ? Missions.Instance.Objective : First(Objectives));
+            SetText(panelLine, ref shownPanel, First(Panels));
+            SetText(warning, ref shownWarning, First(Warnings));
             SetText(prompt, ref shownPrompt, p);
             SetText(toast, ref shownToast, game.ToastText);
-            Show(crosshair, gun != null && gun.Aiming && car == null);
+            Show(crosshair, gun != null && gun.Aiming && car == null && craft == null);
             string b = police != null ? police.Banner : null, bsub = null;
             if (b == null && Time.unscaledTime < bigUntil) { b = bigTitle; bsub = bigSub; }
             if (b != shownBanner)
@@ -386,11 +408,12 @@ namespace Southbound
             Show(bannerBand, b != null);
         }
 
-        void Minimap(Transform me, CarController car, float dt)
+        void Minimap(Transform me, CarController car, CraftBody craft, float dt)
         {
             if (me == null) return;
-            // zoom out with speed, so there's road ahead to see
-            float want = car != null ? Mathf.Lerp(minimapNear, minimapFar, Mathf.Clamp01(Mathf.Abs(car.ForwardSpeed) / 35f)) : minimapNear;
+            // zoom out with speed, so there's road ahead to see (further still in the air)
+            float want = car != null ? Mathf.Lerp(minimapNear, minimapFar, Mathf.Clamp01(Mathf.Abs(car.ForwardSpeed) / 35f))
+                : craft != null ? Mathf.Lerp(minimapNear, minimapFar * (craft.IsAir ? 2.2f : 1f), Mathf.Clamp01(Mathf.Abs(craft.Speed) / (craft.IsAir ? 60f : 25f))) : minimapNear;
             zoom = zoom <= 0 ? want : Mathf.Lerp(zoom, want, Mathf.Clamp01(dt * 1.5f));
             float scale = MapPx / zoom;   // UI pixels per metre
             var p = me.position;

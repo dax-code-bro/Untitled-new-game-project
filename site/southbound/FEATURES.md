@@ -108,6 +108,10 @@ arrest or shoot, Busted/Wasted); H1 the UI Toolkit HUD with a baked minimap; C1 
 whole with keepers, store screens and fuel pumps; M1 the story, side jobs and road/on-foot jobs. Not in Unity yet:
 boats and aircraft (so their mission steps are skipped), fishing and hunting, house interiors and property, clothes,
 the phone.
+2026-11-23 (the owner: "make it fully playable", Unity chosen): B1 boats and aircraft (16 boats, 11 aircraft, the
+browser's shapes and physics checked step for step, 3 marinas with dealers and 98 upgrades, Redgrass Airfield with
+17 upgrades, flight panel and warnings, flight school and licence, refuelling, the boat/flying mission steps and the
+charter, crop duster, air tour and medevac jobs). Next: F1 fishing, HU1 hunting, PH1 phone, E1 property, W1 clothes.
 
 ## The owner's list after watching them play (2026-11-09) — do in this order
 

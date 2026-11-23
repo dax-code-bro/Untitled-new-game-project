@@ -245,6 +245,21 @@ the fewest additions next. Be honest in reports about what is and isn't done.
   `calvera-missions.json`. Missions run on `Core/MissionRunner` against `IMissionWorld` (Runtime/Missions);
   `Hud.Big(title, sub, s)` is the big banner, `Missions.Instance.Objective` the top-left line. When the web
   arsenal changes, regenerate the parity fixture: `node tools/southbound/export-unity.mjs catalog`.
+  Boats and aircraft (B1): `Core/Craft.cs` is craft.js/marine-air.js/aviation.js in web space (x, z, heading h,
+  + turns left): BoatModel/AirModel physics, CraftShape (the browser's SDF parts through SurfaceNets; colour per
+  triangle by the nearest part), Harbours (marinas by the shoreline search, airfield spots), FlightSchool.
+  Parity fixture `Tools/CoreTests/fixtures/craft-parity.json` from `node tools/southbound/craft-parity.mjs` (bundles
+  craft.js for node; needs `site/southbound/vendor/three/build/three.module.js`, which `.gitignore`'s `build/` leaves
+  out: `npm pack three@0.170.0` and copy build/three.module.js in). `CalveraWorld` is an `ICraftGround`
+  (`WaterLevel` = web waterLevel: nearest grid point, never below 0). Runtime: `CraftBody` (one per craft, kinematic,
+  John is parented to it while aboard, so "where's the player" code finds the craft), `Piloting` (on John: board/get
+  off, `Piloting.Active`, `OffPoint`), `Fleet` (marinas, dealers via `StoreScreen.IStore`, flight school, fuel pad;
+  `Fleet.Ground` is Calvera's heights/water for anyone). HUD lines from other systems: `Hud.Prompts/Objectives/
+  Panels/Warnings` (lists of Func<string>). Missions: `IMissionWorld.Can(kind)/Riding/FishCaught/AnimalsTaken`;
+  `JobDef.Needs`/`RunsIn(can)`; `Missions.Extras["fish"|"hunt"]` is where fishing/hunting say they're there.
+  Editor: `CraftBuilder` (piers, airfield, baked craft meshes, ground .bytes, Piloting on John), also on its own as
+  Southbound > Add boats and aircraft to this scene. Save: `Profile.GarageList` (web P.garage: cars, boats, air),
+  `FlightSchool`, `PilotLicence`, `Stats` now written back.
 - Commit one batch at a time: if the next batch's edits are already in the tree, commit only the
   finished batch's files (and an `index.js` without the next batch's `add(...)` line), with the
   `game.js` that was built and QA'd for it.

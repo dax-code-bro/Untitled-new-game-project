@@ -15,7 +15,7 @@ using System.Linq;
 
 namespace Southbound.Core
 {
-    public sealed class CalveraWorld
+    public sealed class CalveraWorld : ICraftGround
     {
         public sealed class Road { public string Kind; public double Width; public List<(double x, double z)> Points = new List<(double, double)>(); }
         public sealed class Building { public double X, Z, W, D, H, Y; public int Style; public int Color; public int Street = 15; /* walls that face a street: bit k = wall k (+z, -z, +x, -x) */ }
@@ -96,6 +96,35 @@ namespace Southbound.Core
             double a = Heights[k] + (Heights[k + 1] - Heights[k]) * fx;
             double b = Heights[k + N] + (Heights[k + N + 1] - Heights[k + N]) * fx;
             return a + (b - a) * fz;
+        }
+
+        /// <summary>The water's surface at a web-game position, the web game's Heightmap.waterLevel: the nearest grid
+        /// point's level, never below the sea (0), so it's the sea level wherever there's no lake or river.</summary>
+        public double WaterLevel(double x, double z)
+        {
+            int res = N - 1;
+            int gx = (int)JsMath.Clamp(JsMath.Round((x + Half) / Cell), 0, res), gz = (int)JsMath.Clamp(JsMath.Round((z + Half) / Cell), 0, res);
+            float w = Water[gz * N + gx];
+            return float.IsNaN(w) ? Math.Max(0, SeaLevel) : Math.Max(0, w);
+        }
+
+        double ICraftGround.Height(double x, double z) => HeightAt(x, z);
+        double ICraftGround.Water(double x, double z) => WaterLevel(x, z);
+
+        /// <summary>Just the heights and water of Calvera, from the two .r16 files and the world header (for the game
+        /// at runtime, where Data/ isn't there: the builder copies them into the project as binary text assets).</summary>
+        public static CalveraWorld FromGrids(byte[] heights, byte[] water, double half, double cell, int n, double hMin, double hMax, double waterMin, double waterMax, double seaLevel)
+        {
+            var w = new CalveraWorld { Half = half, Cell = cell, N = n, Size = half * 2, HMin = hMin, HMax = hMax, WaterMin = waterMin, WaterMax = waterMax, SeaLevel = seaLevel };
+            w.Heights = new float[n * n]; w.Water = new float[n * n];
+            for (int i = 0; i < n * n; i++)
+            {
+                int h16 = heights[i * 2] | (heights[i * 2 + 1] << 8);
+                w.Heights[i] = (float)(hMin + h16 / 65535.0 * (hMax - hMin));
+                int w16 = water != null && water.Length >= n * n * 2 ? water[i * 2] | (water[i * 2 + 1] << 8) : 0;
+                w.Water[i] = w16 == 0 ? float.NaN : (float)(waterMin + (w16 - 1) / 65534.0 * (waterMax - waterMin));
+            }
+            return w;
         }
 
         /// <summary>Heights for Unity's TerrainData.SetHeights: [row = z, column = x], 0..1, mirrored to Unity space.</summary>

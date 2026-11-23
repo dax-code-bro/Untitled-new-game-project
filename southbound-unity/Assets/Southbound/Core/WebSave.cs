@@ -33,7 +33,40 @@ namespace Southbound.Core
         public Dictionary<string, double[]> Jobs = new Dictionary<string, double[]>();
         public Needs Needs = new Needs();
         public Dictionary<string, double> Stats = new Dictionary<string, double>();
-        public int Garage;
+        /// <summary>Everything you own that's kept in storage (web P.garage): cars, boats ("boat") and aircraft ("air"),
+        /// each { uid, cat, type, up: { upgrade group: tier } }.</summary>
+        public List<Dictionary<string, object>> GarageList = new List<Dictionary<string, object>>();
+        public int Garage => GarageList.Count;
+        /// <summary>Flight school medals by lesson number ("1": "gold"...), and the licence they lead to.</summary>
+        public Dictionary<string, string> FlightSchool = new Dictionary<string, string>();
+        public bool PilotLicence;
+
+        /// <summary>A stat (web P.stats: fishCaught, animals, flightTime, maxAlt, landings...).</summary>
+        public double Stat(string k) => Stats.TryGetValue(k, out var v) ? v : 0;
+        public void AddStat(string k, double n = 1) => Stats[k] = Stat(k) + n;
+
+        /// <summary>Your boats ("boat") or aircraft ("air").</summary>
+        public IEnumerable<Dictionary<string, object>> Fleet(string cat) => GarageList.Where(g => g.Text("cat") == cat);
+
+        /// <summary>Into storage: a new boat or aircraft (returns its entry).</summary>
+        public Dictionary<string, object> AddToFleet(string cat, string type)
+        {
+            int n = 50000 + GarageList.Count;
+            string uid;
+            do uid = "c" + n++; while (GarageList.Any(g => g.Text("uid") == uid));
+            var e = new Dictionary<string, object> { ["uid"] = uid, ["cat"] = cat, ["type"] = type, ["up"] = new Dictionary<string, object>() };
+            GarageList.Add(e);
+            return e;
+        }
+
+        /// <summary>A fleet entry's upgrades as group -> tier.</summary>
+        public static Dictionary<string, int> Upgrades(Dictionary<string, object> entry)
+        {
+            var o = new Dictionary<string, int>();
+            var up = entry?.Obj("up");
+            if (up != null) foreach (var kv in up) if (kv.Value is double t) o[kv.Key] = (int)t;
+            return o;
+        }
 
         public static Profile New() => FromJson("{\"v\":1}");
 
@@ -74,7 +107,10 @@ namespace Southbound.Core
                 foreach (var kv in jobs)
                     if (kv.Value is Dictionary<string, object> j) p.Jobs[kv.Key] = new[] { j.Num("level", 1), j.Num("xp"), j.Num("runs") };
             p.Stats = Numbers(root.Obj("stats"));
-            p.Garage = root.Arr("garage")?.Count ?? 0;
+            p.GarageList = (root.Arr("garage") ?? new List<object>()).OfType<Dictionary<string, object>>().ToList();
+            var fs = root.Obj("flightSchool");
+            if (fs != null) foreach (var kv in fs) if (kv.Value is string medal) p.FlightSchool[kv.Key] = medal;
+            p.PilotLicence = root.TryGetValue("pilotLicence", out var lic) && lic is bool lb && lb;
             var n = root.Obj("needs");
             if (n != null) p.Needs = new Needs { Energy = n.Num("energy", 90), Food = n.Num("food", 70), Weight = n.Num("weight", 78) };
             return p;
@@ -89,6 +125,10 @@ namespace Southbound.Core
                 ["pos"] = Pos == null ? null : new List<object> { Pos[0], Pos[1] },
                 ["properties"] = Properties.Cast<object>().ToList(), ["home"] = Home,
                 ["tools"] = Tools.ToDictionary(k => k.Key, k => (object)k.Value),
+                ["stats"] = Stats.ToDictionary(k => k.Key, k => (object)k.Value),
+                ["garage"] = GarageList.Cast<object>().ToList(),
+                ["flightSchool"] = FlightSchool.ToDictionary(k => k.Key, k => (object)k.Value),
+                ["pilotLicence"] = PilotLicence,
                 ["needs"] = new Dictionary<string, object> { ["energy"] = Needs.Energy, ["food"] = Needs.Food, ["weight"] = Needs.Weight },
             };
             var W = Raw.Obj("weapons") != null ? new Dictionary<string, object>(Raw.Obj("weapons")) : new Dictionary<string, object>();

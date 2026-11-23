@@ -39,7 +39,8 @@ Unity Personal is free, and there are no royalties.
 | **Runs on Intel graphics** | Four graphics tiers picked from the card at start (Integrated, Medium, High, Ultra). On a laptop's built-in Intel or AMD graphics the heaviest HDRP passes are off per camera (volumetric clouds and fog, screen-space reflections and GI, contact shadows), it draws at 50-80% resolution upscaled with STP, and it thins the world (fewer people and cars, close grass, trees, shadows, lights and decals); resolution then moves to hold 30 fps, and a tier that still can't keep up drops to the one below. **F7** picks a tier by hand. Photo mode's path tracer only on ray-tracing cards | `Core/GpuTier.cs`, `Runtime/PerformanceTier.cs` |
 | **Car damage, doors, fuel** | The web game's numbers (tested): a crash dents the body where it hit (the mesh is pushed in and its shading bent to match), cracks or knocks out the windows on that side and hurts you in a bad one; bullets wear the car down and break the glass they hit; crashed to nothing the engine dies, shot or blown up to nothing it burns and explodes (fireball, flash, the blast hurts people and cars nearby, the wreck is thrown and charred). Smoke from the bonnet as it gets worse, less power when it's hurt. The front doors are cut out of the body (the web game's rule, tested) and swing open when you get in and out; a battered side leaves its door hanging. Fuel drains as you drive and fills at a pump for what's missing (pumps come with the shops). Fuel and engine gauges on the HUD. Car prefabs from older builds are rebuilt automatically | `Core/CarDamage.cs`, `Runtime/CarHealth.cs`, `CarDoorSwing.cs`, `Editor/CarFactory.cs` |
 | **Shops and walk-in buildings** | Every walk-in building the web game builds comes over whole, inside and out, doors propped open: the three gun stores (the guns on the wall too), three clothing stores, the Gulf Marts, two armour shops, the property auction, the police precinct and the sheriff's office, the hospital and the clinic, the firehouse. A keeper behind each counter while it's open (the web game's hours); at the counter **F** opens the store screen (time stops; arrows or W/S, Enter, Tab, Esc, or the mouse): every gun at that shop's prices (city dearer, the bayou cheaper) and boxes of ammunition up to the legal limit at the gun stores, the menu at the Gulf Marts (health back, hunger fed). A fuel pump in front of every Gulf Mart. BUSTED puts you outside the nearest station, WASTED outside the nearest hospital or clinic. Clothing stores are browse-only until the wardrobe comes over | `Core/ShopCatalog.cs`, `Runtime/Shops.cs`, `StoreScreen.cs`, `Editor/ShopBuilder.cs`, `Data/World/calvera-shops.json` |
-| **Missions and jobs** | The web game's 63 story missions in three acts, 12 side jobs (open after enough story) and its jobs, with the places it sends you (tested). The next contact waits near where their mission starts: walk up, **F**. Go here, drive there, take the marked car (parked at the kerb) and deliver it, take out the targets (they close in and shoot), lose the police, hold on, pay up; MISSION PASSED pays the reward and saves. Job boards on the map: **F** starts a shift (the work vehicle appears, sirens on for the emergency ones), stops drawn the web game's way and snapped to the roads, pay per stop rising 15% a level, a bonus for time left, a level every three shifts; wreck the vehicle and you're sent home. Steps and jobs that need boats, aircraft, fishing or hunting aren't in the Unity version yet: those steps are skipped with a note, those jobs aren't offered | `Core/Missions.cs`, `Runtime/Missions.cs`, `Editor/MissionBuilder.cs`, `Data/World/calvera-missions.json` |
+| **Missions and jobs** | The web game's 63 story missions in three acts, 12 side jobs (open after enough story) and its jobs, with the places it sends you (tested). The next contact waits near where their mission starts: walk up, **F**. Go here, drive there, take the marked car (parked at the kerb) and deliver it, take out the targets (they close in and shoot), lose the police, hold on, pay up; MISSION PASSED pays the reward and saves. Job boards on the map: **F** starts a shift (the work vehicle appears, sirens on for the emergency ones), stops drawn the web game's way and snapped to the roads, pay per stop rising 15% a level, a bonus for time left, a level every three shifts; wreck the vehicle and you're sent home. Boat and flying steps need a boat or an aircraft; the boat and flying jobs (fishing charter, crop duster, air tours, medevac) put you aboard one. Fishing and hunting steps and jobs come with those (until then they're skipped with a note) | `Core/Missions.cs`, `Runtime/Missions.cs`, `Editor/MissionBuilder.cs`, `Data/World/calvera-missions.json` |
+| **Boats and aircraft** | The web game's 16 boats and 11 aircraft, shaped from the browser's own parts and meshed the same way (a test checks every one vertex for vertex), with its physics line for line (tested step by step against the browser): boats plane, lean into turns, rock on the waves and run aground at the shore; planes need flying speed, stall when too slow, have flaps (**J**) and landing gear (**G**), burn fuel, drift with the wind and buck in storms; helicopters hover on the collective and autorotate with the engine dead. Three marinas (Lake Arden, Port Calvera Harbor, Bayou Verde Landing; piers found by the web game's shoreline search) sell boats and 98 upgrades and launch the ones you own; Redgrass Airfield (runway, hangar, helipad, fuel pad, windsock) sells aircraft and 17 upgrades. A speedboat and a Skylark wait from the start. The flight panel (knots, feet, heading, climb, fuel, gear, flaps), warnings (STALL, PULL UP, LOW FUEL, ENGINE OUT), landings rated, the tower on the radio, refuelling on the pad, low flying over the city is a crime, the flight school (three lessons, medals, a pilot's licence: +15% on flying jobs). Bullets and crashes wear them down; wrecked, they blow up | `Core/Craft.cs`, `Core/Wind.cs`, `Runtime/CraftBody.cs`, `Piloting.cs`, `Fleet.cs`, `Editor/CraftBuilder.cs` |
 | **HUD** | UI Toolkit, built in code: a round minimap of Calvera baked from the world data (hill-shaded land, sea, lakes and rivers, every road, the buildings; tested) that turns with the camera and zooms out as you drive faster, with your arrow, north, and police cruisers flashing red and blue (kept on the rim when they're off the map); health and stamina under it; the clock, money (with what just changed it), wanted stars, the weapon and its ammunition top right; the speedometer in a car; prompts, messages, a crosshair while aiming, BUSTED / WASTED. Hidden in photo mode | `Core/MapRaster.cs`, `Runtime/Hud.cs`, `Editor/HudBuilder.cs` |
 | **Grass** | Real 3D tufts of thin, leaning strands (the web game's shape) as instanced terrain detail: meadow green, tall dry straw and short verges along the roads, planted from the web game's ground cover, never on roads, buildings, water or rock | `Core/GroundCover.cs`, `Editor/GrassBuilder.cs` |
 
@@ -80,6 +81,10 @@ with targets behind them (the one behind the drywall wears a level III plate).
 **Controls:** WASD move · Shift sprint · Space jump · C crouch · right mouse aim ·
 left mouse shoot · R reload · 1-9 or mouse wheel switch weapon · H holster ·
 Esc pause / save. A gamepad works once the Input System is installed.
+
+**A boat** (F beside it to go aboard or step off): W throttle · S astern · A/D steer.
+**A plane**: W/S throttle lever · A/D bank and turn · Space nose up · Shift nose down · G gear · J flaps · F on the ground to get out (high up: bail out).
+**A helicopter**: Space climb · Shift descend · W/S tilt forward/back · A/D turn.
 
 **In a car** (F at the driver's door to get in or out): W throttle · S brake, then
 reverse · A/D steer · Space handbrake · Shift nitrous · H horn · L headlights ·
@@ -125,21 +130,20 @@ ambientCG and Poly Haven set to prove the downloader still works.
 
 ## Next to carry over
 
-1. **Cars**: John and the traffic's drivers seated at the wheel (the cabins are there now),
-   doors that open, Rico riding along, damage, fuel; traffic that obeys signals and the
-   web game's driver AI.
-2. **People**: the web game's AI for the townspeople (reactions, panic, cover), police and
-   the gang on a NavMesh (AI Navigation is installed), with the wound model and armour.
-3. **Interiors**: shops, houses and the hideout, with HDRP decals for the holes.
-4. **Missions, jobs, shops and the phone** on top of the save, which already carries over.
-5. **HUD** in UI Toolkit.
-6. **The rest of the web game's shaders** in HDRP: panel gaps, dirt and rain beads on
-   the cars; wet roads and puddles; the far crowd.
-7. **Street props as real models**: the street pieces are the web game's own simple
-   shapes; photo-scanned or modelled hydrants, mailboxes, benches and poles would be next.
+1. **Fishing** (rods, bait, the bite and the reel, the fish market) and **hunting** (the wildlife, tracking,
+   skinning, the pelt trader): their mission steps and jobs are waiting on them.
+2. **The phone**: contacts, texts, the map and waypoints, the bank, calling a taxi.
+3. **Houses and property**: buying, walk-in interiors, sleeping and saving at home, the garage.
+4. **Clothes and the barber**: the wardrobe, buying outfits at the clothing stores.
+5. **People**: the web game's AI for the townspeople, police and the gang on a NavMesh, the
+   gang and the hideout.
+6. **The rest of the web game's shaders** in HDRP: panel gaps, dirt and rain beads on the cars;
+   the far crowd. **Street props as real models.**
 
 ## Troubleshooting
 
+- **No boats or planes** (a scene built before they came): **Southbound > Add boats and aircraft to this scene**,
+  or build the scene again.
 - **Pink materials**: HDRP wasn't set up when they were built. Run the HDRP
   Wizard (Fix All), then **Southbound > Materials > Build all materials**.
 - **John in a T-pose**: do step 5 (*Fix animation import*), then build the scene again.

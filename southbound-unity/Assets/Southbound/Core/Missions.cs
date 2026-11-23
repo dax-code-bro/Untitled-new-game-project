@@ -5,8 +5,9 @@
 // MissionRunner steps through a mission (go here, drive there, take that car, deliver it, take out the
 // targets, lose the police, hold on, talk, pay) against an IMissionWorld the game provides; JobShift runs a
 // shift (stops against the clock, pay per stop growing with your level, a time bonus, levels every 3 shifts).
-// Steps that need a boat, an aircraft, fishing or hunting aren't in the Unity version yet: they're skipped
-// with a word to say so, and jobs that need them aren't offered.
+// Boat and flying steps need a boat (the marinas) or an aircraft (Redgrass Airfield); fishing and hunting steps
+// count the fish landed and the animals skinned since the step began (the web game's stats). A step the game
+// can't run (IMissionWorld.Can says no) is skipped with a word to say so, and jobs it can't run aren't offered.
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -18,8 +19,8 @@ namespace Southbound.Core
     {
         public string Kind, Place, Car;
         public double N;
-        public static readonly HashSet<string> NotHere = new HashSet<string> { "boat", "fly", "fish", "hunt" };
-        public bool Supported => !NotHere.Contains(Kind);
+        /// <summary>Step kinds a game may not have yet (the world says with IMissionWorld.Can).</summary>
+        public static readonly HashSet<string> Optional = new HashSet<string> { "boat", "fly", "fish", "hunt" };
     }
 
     public sealed class Mission
@@ -40,8 +41,12 @@ namespace Southbound.Core
         public double X, Z, Wait, Pay, Timer;
         public int Stops, Need;
         public bool Back, Siren, Fly, Land;
-        /// <summary>Jobs the Unity version can run: on the road or on foot (no boats, aircraft, fishing or hunting yet).</summary>
-        public bool Supported => Boat == null && Air == null && !Fly && Kind != "catch" && Kind != "hunt" && Area != "lake";
+        /// <summary>What a job needs beyond a road vehicle: "boat", "fly", "fish" or "hunt" (null: nothing).</summary>
+        public string Needs => Boat != null || Area == "lake" ? "boat" : Air != null || Fly ? "fly" : Kind == "catch" ? "fish" : Kind == "hunt" ? "hunt" : null;
+        /// <summary>Road and on-foot jobs, which every version runs.</summary>
+        public bool Supported => Needs == null;
+        /// <summary>Can this game run the job (boats, aircraft, fishing, hunting as the game has them)?</summary>
+        public bool RunsIn(Func<string, bool> can) => Needs == null || (can != null && can(Needs));
     }
 
     public sealed class MissionData
@@ -49,7 +54,8 @@ namespace Southbound.Core
         public List<Mission> Story = new List<Mission>(), Side = new List<Mission>();
         public Dictionary<string, (double x, double z)> Places = new Dictionary<string, (double, double)>();
         public List<JobDef> Jobs = new List<JobDef>();
-        public double CityX0, CityZ0, CityPitch, DowntownX, DowntownZ, TownX0, TownZ0, TownPitch, LakeX, LakeZ, LakeR, PlainsX, PlainsZ, ForestX, ForestZ, AirfieldX1, AirfieldZ;
+        public double CityX0, CityZ0, CityPitch, DowntownX, DowntownZ, TownX0, TownZ0, TownPitch, LakeX, LakeZ, LakeR, LakeLevel, PlainsX, PlainsZ, PlainsR, ForestX, ForestZ, ForestR,
+            AirfieldX0, AirfieldX1, AirfieldZ, AirfieldW, AirfieldHeight, BayouX, BayouZ, BayouR;
         public int CityNx, CityNz;
 
         public static string DefaultFile(string projectRoot) => Path.Combine(projectRoot, "Data", "World", "calvera-missions.json");
@@ -79,13 +85,14 @@ namespace Southbound.Core
             var L = root.Obj("layout");
             if (L != null)
             {
-                var c = L.Obj("CITY"); var t = L.Obj("TOWN"); var lk = L.Obj("LAKE"); var pl = L.Obj("PLAINS"); var fo = L.Obj("FOREST"); var af = L.Obj("AIRFIELD");
+                var c = L.Obj("CITY"); var t = L.Obj("TOWN"); var lk = L.Obj("LAKE"); var pl = L.Obj("PLAINS"); var fo = L.Obj("FOREST"); var af = L.Obj("AIRFIELD"); var by = L.Obj("BAYOU");
                 if (c != null) { d.CityX0 = c.Num("x0"); d.CityZ0 = c.Num("z0"); d.CityNx = (int)c.Num("nx"); d.CityNz = (int)c.Num("nz"); d.CityPitch = c.Num("pitch"); var dt = c.Arr("downtown"); if (dt != null) { d.DowntownX = (double)dt[0]; d.DowntownZ = (double)dt[1]; } }
                 if (t != null) { d.TownX0 = t.Num("x0"); d.TownZ0 = t.Num("z0"); d.TownPitch = t.Num("pitch"); }
-                if (lk != null) { d.LakeX = lk.Num("x"); d.LakeZ = lk.Num("z"); d.LakeR = lk.Num("r"); }
-                if (pl != null) { d.PlainsX = pl.Num("x"); d.PlainsZ = pl.Num("z"); }
-                if (fo != null) { d.ForestX = fo.Num("x"); d.ForestZ = fo.Num("z"); }
-                if (af != null) { d.AirfieldX1 = af.Num("x1"); d.AirfieldZ = af.Num("z"); }
+                if (lk != null) { d.LakeX = lk.Num("x"); d.LakeZ = lk.Num("z"); d.LakeR = lk.Num("r"); d.LakeLevel = lk.Num("level"); }
+                if (pl != null) { d.PlainsX = pl.Num("x"); d.PlainsZ = pl.Num("z"); d.PlainsR = pl.Num("r"); }
+                if (fo != null) { d.ForestX = fo.Num("x"); d.ForestZ = fo.Num("z"); d.ForestR = fo.Num("r"); }
+                if (af != null) { d.AirfieldX0 = af.Num("x0"); d.AirfieldX1 = af.Num("x1"); d.AirfieldZ = af.Num("z"); d.AirfieldW = af.Num("w"); d.AirfieldHeight = af.Num("height"); }
+                if (by != null) { d.BayouX = by.Num("x"); d.BayouZ = by.Num("z"); d.BayouR = by.Num("r"); }
             }
             return d;
         }
@@ -134,6 +141,13 @@ namespace Southbound.Core
         int Wanted { get; }
         int FoesLeft { get; }
         bool PlayerDead { get; }
+        /// <summary>Does this game have it: "boat", "fly", "fish", "hunt"?</summary>
+        bool Can(string what);
+        /// <summary>What you're riding: "boat", "air", "car", or null on foot.</summary>
+        string Riding { get; }
+        /// <summary>Fish landed and animals skinned so far (the web game's stats.fishCaught, stats.animals).</summary>
+        int FishCaught { get; }
+        int AnimalsTaken { get; }
         void Mark(double x, double z, double r);
         void Unmark();
         void SpawnVehicle(string carId, double x, double z);
@@ -153,7 +167,7 @@ namespace Southbound.Core
         public (double x, double z, double r)? Marker { get; private set; }
         public event Action<Mission, int> Completed;
         public event Action<Mission, string> Failed;
-        double waitT;
+        double waitT; int count0;
         static readonly string[] TalkLines = { "We'll talk more soon.", "Keep your head down.", "Danny trusted you. So do I.", "This town has a long memory." };
         readonly Random rnd;
 
@@ -177,15 +191,18 @@ namespace Southbound.Core
             if (Step >= Active.Steps.Count) { Complete(w); return; }
             var s = Active.Steps[Step];
             T = 0; waitT = 0;
-            if (!s.Supported)
+            count0 = s.Kind == "fish" ? w.FishCaught : w.AnimalsTaken;
+            if (MissionStep.Optional.Contains(s.Kind) && !w.Can(s.Kind))
             {
-                w.Say(Active.Who, $"(This part needs {(s.Kind == "boat" ? "a boat" : s.Kind == "fly" ? "an aircraft" : s.Kind == "fish" ? "fishing" : "hunting")}, which isn't in the Unity version yet: skipped.)");
+                w.Say(Active.Who, $"(This part needs {(s.Kind == "boat" ? "a boat" : s.Kind == "fly" ? "an aircraft" : s.Kind == "fish" ? "fishing" : "hunting")}, which isn't in this version yet: skipped.)");
                 waitT = 3;
                 return;
             }
             switch (s.Kind)
             {
                 case "goto": case "drive": case "deliver": { var (x, z) = w.Place(s.Place); Mark(w, x, z, s.Kind == "goto" ? 4 : 8); break; }
+                case "boat": { var (x, z) = w.Place(s.Place); Mark(w, x, z, 22); break; }
+                case "fly": { var (x, z) = w.Place(s.Place); Mark(w, x, z, 60); break; }
                 case "steal": { var (x, z) = w.Place(s.Place); w.SpawnVehicle(s.Car, x, z); var p = w.MissionVehiclePos ?? (x, z); Mark(w, p.x, p.z, 3); break; }
                 case "kill": { var (x, z) = w.Place(s.Place); w.SpawnFoes(Math.Max(1, (int)s.N), x, z); Mark(w, x, z, 25); break; }
                 case "escape": w.RaiseWanted(Math.Max(1, (int)s.N)); break;
@@ -241,6 +258,10 @@ namespace Southbound.Core
                 case "kill": { int left = w.FoesLeft; if (left == 0) Advance(w); return label + $"take out the targets ({left} left)"; }
                 case "escape": if (w.Wanted == 0 && T > 2) Advance(w); return label + "lose the police";
                 case "survive": if (T >= s.N) Advance(w); return label + $"hold on {Math.Ceiling(s.N - T)}s";
+                case "boat": { bool b = w.Riding == "boat"; if (inMarker && b) Advance(w); return label + (b ? "take the boat to the marker" : "get a boat (marina) and reach the marker"); }
+                case "fly": { bool a = w.Riding == "air"; if (inMarker && a) Advance(w); return label + (a ? "fly through the marker" : "get an aircraft (airfield)"); }
+                case "fish": { int got = w.FishCaught - count0; if (got >= s.N) Advance(w); return label + $"catch fish {got}/{s.N}"; }
+                case "hunt": { int got = w.AnimalsTaken - count0; if (got >= s.N) Advance(w); return label + $"hunt and skin {got}/{s.N}"; }
             }
             return label;
         }
@@ -259,9 +280,10 @@ namespace Southbound.Core
         public bool Ok { get; private set; }
         double waitT;
 
-        public JobShift(JobDef def, int level, List<(double x, double z)> stops)
+        /// <param name="payMult">Extra pay (a pilot's licence: 1.15 on the flying jobs).</param>
+        public JobShift(JobDef def, int level, List<(double x, double z)> stops, double payMult = 1)
         {
-            Def = def; Stops = stops; T = def.Timer; Base = PayBase(def, level); waitT = def.Wait;
+            Def = def; Stops = stops; T = def.Timer; Base = PayBase(def, level) * payMult; waitT = def.Wait;
         }
 
         /// <summary>Pay per stop: 15% more for every level in that job.</summary>
@@ -292,6 +314,8 @@ namespace Southbound.Core
                     case "near": o.Add((d.X, d.Z, 15, 60, false)); break;
                     case "forest": o.Add((L.ForestX + 200, L.ForestZ + 180, 40, 200, false)); break;
                     case "plains": o.Add((L.PlainsX, L.PlainsZ, 80, 460, false)); break;
+                    case "lake": { double a = rnd.NextDouble() * Math.PI * 2; o.Add((L.LakeX + Math.Cos(a) * L.LakeR * 0.45, L.LakeZ + Math.Sin(a) * L.LakeR * 0.45, 0, 0, false)); break; }
+                    case "landmarks": { var lm = new[] { (L.LakeX, L.LakeZ), (L.DowntownX, L.DowntownZ), (L.CityX0 + 400, 1500.0), (L.TownX0 + 144, L.TownZ0 + 108) }[i % 4]; o.Add((lm.Item1, lm.Item2, 0, 0, false)); break; }
                     default:
                         {
                             var far = new[] { (L.TownX0 + 144, L.TownZ0 + 120), (L.CityX0 + 200, L.CityZ0 + 200), (L.AirfieldX1 - 100, L.AirfieldZ - 40), (L.PlainsX, L.PlainsZ) };
@@ -300,7 +324,7 @@ namespace Southbound.Core
                             break;
                         }
                 }
-            if (d.Back) o.Add(d.Id == "paramedic" ? (L.CityX0 + L.CityNx * L.CityPitch + 24, L.CityZ0 + 2 * L.CityPitch, 0, 20, true) : (d.X, d.Z, 0, 6, false));
+            if (d.Back) o.Add(d.Id == "paramedic" || d.Id == "medevac" ? (L.CityX0 + L.CityNx * L.CityPitch + 24, L.CityZ0 + 2 * L.CityPitch, 0, 20, true) : (d.X, d.Z, 0, 6, false));
             return o;
         }
 
@@ -326,7 +350,7 @@ namespace Southbound.Core
         }
 
         /// <summary>How close counts as at the stop (a vehicle needs a little more room than someone on foot).</summary>
-        public double Reach => Def.Veh != null ? 8 : 4;
+        public double Reach => Def.Fly ? 26 : Def.Veh != null || Def.Boat != null ? 8 : 4;
         public double Waiting => Math.Max(0, waitT);
 
         public void Quit() { Over = true; Ok = false; }

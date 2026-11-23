@@ -182,6 +182,7 @@ namespace Southbound
             double travelled = 0;
             var me = player != null ? player.transform : transform;
             CarController shotCar = null;
+            CraftBody shotCraft = null;
             for (int wall = 0; wall <= Ballistics.MaxWalls; wall++)
             {
                 var hits = Physics.RaycastAll(origin, dir, (float)(range - travelled), shootable, QueryTriggerInteraction.Ignore);
@@ -205,6 +206,8 @@ namespace Southbound
                 // a car: its health and the window on that side (once per car along the shot)
                 var car = hit.collider.GetComponentInParent<CarController>();
                 if (car != null && car != shotCar) { shotCar = car; var ch = CarHealth.Of(car); if (ch != null) ch.Shot(hit.point, Weapon.Damage, am.Vehicle); }
+                var craft = hit.collider.GetComponentInParent<CraftBody>();
+                if (craft != null && craft != shotCraft) { shotCraft = craft; craft.Shot(Weapon.Damage); }
                 var tag = SurfaceTag.Of(hit.collider);
                 string surf = tag != null ? tag.surface : "masonry";
                 var s = Ballistics.Get(surf);
