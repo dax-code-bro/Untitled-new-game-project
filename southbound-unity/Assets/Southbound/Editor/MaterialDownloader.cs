@@ -27,6 +27,18 @@ namespace Southbound.EditorTools
         [MenuItem("Southbound/Materials/Download full-resolution textures...", priority = 21)]
         public static void Open() => GetWindow<MaterialDownloader>(true, "Southbound textures", true).minSize = new Vector2(520, 360);
 
+        Action<int> onDone;
+        /// <summary>Start a download at this resolution (0 = 2K, 1 = 4K, 2 = 8K) with nobody pressing the button; onDone gets how many sets installed.</summary>
+        public static void StartUnattended(int resolution, Action<int> done)
+        {
+            var w = GetWindow<MaterialDownloader>(true, "Southbound textures", true);
+            w.minSize = new Vector2(520, 360);
+            if (w.job != null) { w.onDone += done; return; }
+            w.res = Mathf.Clamp(resolution, 0, Resolutions.Length - 1);
+            w.onDone = done;
+            w.Start();
+        }
+
         void OnGUI()
         {
             EditorGUILayout.LabelField("Full-resolution surfaces", EditorStyles.boldLabel);
@@ -116,6 +128,8 @@ namespace Southbound.EditorTools
                 foreach (var s in manual) log.Add("   " + s.Page);
             }
             Debug.Log($"Southbound: {ok} texture sets downloaded and installed.");
+            var cb = onDone; onDone = null;
+            cb?.Invoke(ok);
         }
 
         /// <summary>Copies a set's maps into Art/Downloaded and packs its HDRP masks.</summary>

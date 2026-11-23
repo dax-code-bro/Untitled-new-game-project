@@ -57,7 +57,10 @@ with targets behind them (the one behind the drywall wears a level III plate).
    branch `claude/ultimate-ai-legend-KhpoT`). In Hub: **Projects > Add > Add
    project from disk** and pick the `southbound-unity` folder. Open it. If Hub
    says the project was made with a different 6000.x version, open it with yours.
-4. The **Southbound** window opens by itself (or **Southbound > Setup**). Go top to bottom:
+4. The **Southbound** window opens by itself (or **Southbound > Setup**). Press **Set up everything** at the top
+   and walk away: it runs steps 1 to 6 below one after another (packages, HDRP, materials, the 4K textures,
+   animations, the Calvera scene), carrying on by itself when Unity reloads or restarts on the way (say **Yes** if
+   it asks to enable the new input backends). Or go top to bottom by hand:
    1. **Install packages**: glTFast, Input System, AI Navigation. If Unity asks
       to enable the new input backends and restart, say **Yes**.
    2. **Open HDRP Wizard** and press **Fix All**. For ray tracing on an RTX

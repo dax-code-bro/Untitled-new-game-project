@@ -46,7 +46,24 @@ namespace Southbound.EditorTools
         {
             scroll = EditorGUILayout.BeginScrollView(scroll);
             EditorGUILayout.LabelField("Southbound for Unity", new GUIStyle(EditorStyles.boldLabel) { fontSize = 16 });
-            EditorGUILayout.LabelField("Calvera, carried over from the web game. Do these in order.", EditorStyles.wordWrappedMiniLabel);
+            EditorGUILayout.LabelField("Calvera, carried over from the web game. Do these in order, or let it do them all.", EditorStyles.wordWrappedMiniLabel);
+            GUILayout.Space(6);
+            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+            {
+                if (AutoSetup.Running)
+                {
+                    EditorGUILayout.LabelField(AutoSetup.Status, EditorStyles.boldLabel);
+                    EditorGUILayout.LabelField("Leave Unity to it. It may reload or ask to restart (say Yes); it carries on by itself. The Console shows each step.", EditorStyles.wordWrappedMiniLabel);
+                    if (GUILayout.Button("Stop", GUILayout.Height(22))) AutoSetup.Stop();
+                    Repaint();
+                }
+                else
+                {
+                    EditorGUILayout.LabelField("Set up everything (steps 1 to 6)", EditorStyles.boldLabel);
+                    EditorGUILayout.LabelField("Installs the packages, switches HDRP on, builds the materials, downloads the 4K textures (about 2 GB), fixes the animations and builds Calvera, one after another. Takes a while; you can walk away.", EditorStyles.wordWrappedMiniLabel);
+                    if (GUILayout.Button("Set up everything", GUILayout.Height(34))) EditorApplication.delayCall += AutoSetup.Start;
+                }
+            }
             GUILayout.Space(8);
 
             Step(1, "Packages", GltfInstalled && InputSystemInstalled,
@@ -132,7 +149,7 @@ namespace Southbound.EditorTools
             return p != null && p.enumNames.Length > p.enumValueIndex && p.enumValueIndex >= 0 && p.enumNames[p.enumValueIndex] == "Legacy";
         }
 
-        static void FixAnimationImport()
+        public static void FixAnimationImport()
         {
             var imp = AssetImporter.GetAtPath(UalPath);
             if (imp == null) { EditorUtility.DisplayDialog("Southbound", "ual.glb isn't imported yet: install the packages (step 1) first.", "OK"); return; }
