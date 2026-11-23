@@ -260,6 +260,13 @@ the fewest additions next. Be honest in reports about what is and isn't done.
   Editor: `CraftBuilder` (piers, airfield, baked craft meshes, ground .bytes, Piloting on John), also on its own as
   Southbound > Add boats and aircraft to this scene. Save: `Profile.GarageList` (web P.garage: cars, boats, air),
   `FlightSchool`, `PilotLicence`, `Stats` now written back.
+  Fishing (F1): `Core/Tools.cs` (245 tools generated from tools.js RAW: keep the slug ids), `Core/Fishing.cs` (species,
+  legends, WaterKind, BiteMul, `FishingLine` state machine, `FishStore` on Profile sections "fish"/"fishLog"/
+  "legendFish", `Regions.At`). `Profile.Section(key)` / `Number(key)` reach any part of the web save kept as-is.
+  `SbInput.InteractDown` is now claimed by the first reader each frame (one F press never does two things);
+  `InteractHeld` for reeling. Runtime `Outfitters` (tool stores, bait & tackle, fish market; `Outfitters.Places`),
+  `Angling` (cast/strike/reel; registers `Missions.Extras["fish"]`). Editor `OutdoorsBuilder` (booths, components,
+  fish models); the menu item is now Southbound > Add the new features to this scene (CraftBuilder + OutdoorsBuilder).
 - Commit one batch at a time: if the next batch's edits are already in the tree, commit only the
   finished batch's files (and an `index.js` without the next batch's `add(...)` line), with the
   `game.js` that was built and QA'd for it.

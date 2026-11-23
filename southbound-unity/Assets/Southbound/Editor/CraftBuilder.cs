@@ -17,15 +17,15 @@ namespace Southbound.EditorTools
     {
         const string RootName = "Boats and aircraft";
 
-        [MenuItem("Southbound/Add boats and aircraft to this scene", priority = 46)]
+        [MenuItem("Southbound/Add the new features to this scene", priority = 46)]
         public static void AddToOpenScene()
         {
             if (Object.FindFirstObjectByType<SouthboundGame>() == null) { EditorUtility.DisplayDialog("Southbound", "Open the Calvera scene first (or build it: Southbound > Build Calvera scene).", "OK"); return; }
-            try { Build(); }
+            try { Build(); OutdoorsBuilder.Build(); }
             finally { EditorUtility.ClearProgressBar(); }
             EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
             EditorSceneManager.SaveOpenScenes();
-            Debug.Log("Southbound: boats and aircraft added. Press Play: the speedboat waits at Lake Arden Marina, the Skylark on Redgrass Airfield's runway.");
+            Debug.Log("Southbound: the new features are in this scene (boats and aircraft, fishing and the tool stores). Press Play.");
         }
 
         public static void Build()
@@ -187,7 +187,7 @@ namespace Southbound.EditorTools
         }
 
         /// <summary>A box with its texture at real-world scale (tile metres per repeat; 0: plain).</summary>
-        static GameObject Block(string name, Vector3 size, Material m, Transform parent, Vector3 at, Quaternion rot, float tile)
+        public static GameObject Block(string name, Vector3 size, Material m, Transform parent, Vector3 at, Quaternion rot, float tile)
         {
             var go = new GameObject(name);
             go.transform.SetParent(parent, false);
@@ -225,7 +225,7 @@ namespace Southbound.EditorTools
         }
 
         static readonly System.Collections.Generic.Dictionary<Color, Material> paints = new System.Collections.Generic.Dictionary<Color, Material>();
-        static Material Paint(Color c)
+        public static Material Paint(Color c)
         {
             if (paints.TryGetValue(c, out var m) && m != null) return m;
             string path = $"{Paths.Materials}/Paint_{ColorUtility.ToHtmlStringRGB(c)}.mat";

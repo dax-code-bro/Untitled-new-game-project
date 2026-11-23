@@ -111,7 +111,9 @@ the phone.
 2026-11-23 (the owner: "make it fully playable", Unity chosen): B1 boats and aircraft (16 boats, 11 aircraft, the
 browser's shapes and physics checked step for step, 3 marinas with dealers and 98 upgrades, Redgrass Airfield with
 17 upgrades, flight panel and warnings, flight school and licence, refuelling, the boat/flying mission steps and the
-charter, crop duster, air tour and medevac jobs). Next: F1 fishing, HU1 hunting, PH1 phone, E1 property, W1 clothes.
+charter, crop duster, air tour and medevac jobs); F1 fishing and the 245 tools (3 tool stores, bait & tackle and a fish
+market at every marina, 21 species and 4 legends, the bite and the fight, the catch on ice and the log, the fishing
+mission steps and the Commercial Fisherman). Next: HU1 hunting, PH1 phone, E1 property, W1 clothes.
 
 ## The owner's list after watching them play (2026-11-09) — do in this order
 

@@ -54,7 +54,7 @@ namespace Southbound.Core
         public List<Mission> Story = new List<Mission>(), Side = new List<Mission>();
         public Dictionary<string, (double x, double z)> Places = new Dictionary<string, (double, double)>();
         public List<JobDef> Jobs = new List<JobDef>();
-        public double CityX0, CityZ0, CityPitch, DowntownX, DowntownZ, TownX0, TownZ0, TownPitch, LakeX, LakeZ, LakeR, LakeLevel, PlainsX, PlainsZ, PlainsR, ForestX, ForestZ, ForestR,
+        public double CityX0, CityZ0, CityPitch, DowntownX, DowntownZ, TownX0, TownZ0, TownPitch, TownNx, TownNz, LakeX, LakeZ, LakeR, LakeLevel, PlainsX, PlainsZ, PlainsR, ForestX, ForestZ, ForestR,
             AirfieldX0, AirfieldX1, AirfieldZ, AirfieldW, AirfieldHeight, BayouX, BayouZ, BayouR;
         public int CityNx, CityNz;
 
@@ -87,7 +87,7 @@ namespace Southbound.Core
             {
                 var c = L.Obj("CITY"); var t = L.Obj("TOWN"); var lk = L.Obj("LAKE"); var pl = L.Obj("PLAINS"); var fo = L.Obj("FOREST"); var af = L.Obj("AIRFIELD"); var by = L.Obj("BAYOU");
                 if (c != null) { d.CityX0 = c.Num("x0"); d.CityZ0 = c.Num("z0"); d.CityNx = (int)c.Num("nx"); d.CityNz = (int)c.Num("nz"); d.CityPitch = c.Num("pitch"); var dt = c.Arr("downtown"); if (dt != null) { d.DowntownX = (double)dt[0]; d.DowntownZ = (double)dt[1]; } }
-                if (t != null) { d.TownX0 = t.Num("x0"); d.TownZ0 = t.Num("z0"); d.TownPitch = t.Num("pitch"); }
+                if (t != null) { d.TownX0 = t.Num("x0"); d.TownZ0 = t.Num("z0"); d.TownPitch = t.Num("pitch"); d.TownNx = t.Num("nx"); d.TownNz = t.Num("nz"); }
                 if (lk != null) { d.LakeX = lk.Num("x"); d.LakeZ = lk.Num("z"); d.LakeR = lk.Num("r"); d.LakeLevel = lk.Num("level"); }
                 if (pl != null) { d.PlainsX = pl.Num("x"); d.PlainsZ = pl.Num("z"); d.PlainsR = pl.Num("r"); }
                 if (fo != null) { d.ForestX = fo.Num("x"); d.ForestZ = fo.Num("z"); d.ForestR = fo.Num("r"); }

@@ -77,6 +77,7 @@ namespace Southbound.EditorTools
                 MissionBuilder.Build();
                 EditorUtility.DisplayProgressBar("Southbound", "Boats and aircraft", 0.97f);
                 CraftBuilder.Build();
+                OutdoorsBuilder.Build();
                 HudBuilder.Build(world);
 
                 EditorSceneManager.SaveScene(scene, ScenePath);

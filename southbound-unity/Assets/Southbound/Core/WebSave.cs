@@ -41,6 +41,26 @@ namespace Southbound.Core
         public Dictionary<string, string> FlightSchool = new Dictionary<string, string>();
         public bool PilotLicence;
 
+        /// <summary>A part of the web save kept as it is (fish on ice, the fishing log, pelts...), made if it isn't there.</summary>
+        public Dictionary<string, object> Section(string key)
+        {
+            if (Raw.TryGetValue(key, out var v) && v is Dictionary<string, object> d) return d;
+            d = new Dictionary<string, object>(); Raw[key] = d; return d;
+        }
+        /// <summary>A number at the top of the web save (baitCount...), 0 if it isn't there.</summary>
+        public double Number(string key) => Raw.TryGetValue(key, out var v) && v is double d ? d : 0;
+        public void SetNumber(string key, double v) => Raw[key] = v;
+        /// <summary>Bait in the bucket (web P.baitCount).</summary>
+        public int BaitCount { get => (int)Number("baitCount"); set => SetNumber("baitCount", value); }
+        /// <summary>A tool bought (web career.addTool): one more of it; bait also fills the bucket.</summary>
+        public void AddTool(Tool t)
+        {
+            Tools[t.Id] = (Tools.TryGetValue(t.Id, out var n) ? n : 0) + 1;
+            if (t.Fx.TryGetValue("bait", out var b)) BaitCount += (int)b;
+        }
+        /// <summary>Use one up (a bandage, a repair kit): false if you have none.</summary>
+        public bool UseTool(string id) { if (!Tools.TryGetValue(id, out var n) || n <= 0) return false; Tools[id] = n - 1; return true; }
+
         /// <summary>A stat (web P.stats: fishCaught, animals, flightTime, maxAlt, landings...).</summary>
         public double Stat(string k) => Stats.TryGetValue(k, out var v) ? v : 0;
         public void AddStat(string k, double n = 1) => Stats[k] = Stat(k) + n;

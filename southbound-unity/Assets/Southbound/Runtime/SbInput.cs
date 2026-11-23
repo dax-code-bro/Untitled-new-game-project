@@ -10,6 +10,18 @@ namespace Southbound
 {
     public static class SbInput
     {
+        static int interactTaken = -1;
+        /// <summary>F (Enter, Y on a pad) pressed this frame, and nobody's taken it yet: the first system to ask gets it, so one
+        /// press never does two things (the boat dealer and a fishing line at the same pier).</summary>
+        public static bool InteractDown
+        {
+            get
+            {
+                if (interactTaken == Time.frameCount || !InteractRaw) return false;
+                interactTaken = Time.frameCount;
+                return true;
+            }
+        }
         /// <summary>Move stick / WASD, x = right, y = forward.</summary>
         public static Vector2 Move
         {
@@ -64,7 +76,9 @@ namespace Southbound
         public static float Scroll => (Mouse.current?.scroll.ReadValue().y ?? 0) / 120f + ((Gamepad.current?.rightShoulder.wasPressedThisFrame ?? false) ? 1 : 0) - ((Gamepad.current?.leftShoulder.wasPressedThisFrame ?? false) ? 1 : 0);
         public static bool PauseDown => Pressed(UnityEngine.InputSystem.Key.Escape) || (Gamepad.current?.startButton.wasPressedThisFrame ?? false);
         // driving (the web game's keys: W/S, A/D, Space handbrake, Shift nitrous, F in/out, H horn)
-        public static bool InteractDown => Pressed(UnityEngine.InputSystem.Key.F) || Pressed(UnityEngine.InputSystem.Key.Enter) || (Gamepad.current?.buttonNorth.wasPressedThisFrame ?? false);
+        static bool InteractRaw => Pressed(UnityEngine.InputSystem.Key.F) || Pressed(UnityEngine.InputSystem.Key.Enter) || (Gamepad.current?.buttonNorth.wasPressedThisFrame ?? false);
+        /// <summary>F (or Enter, or Y on a pad) held: reeling in.</summary>
+        public static bool InteractHeld => Held(UnityEngine.InputSystem.Key.F) || (Gamepad.current?.buttonNorth.isPressed ?? false);
         public static float Throttle => Mathf.Clamp01(Mathf.Max(Move.y, Gamepad.current?.rightTrigger.ReadValue() ?? 0));
         public static float Brake => Mathf.Clamp01(Mathf.Max(-Move.y, Gamepad.current?.leftTrigger.ReadValue() ?? 0));
         public static bool Handbrake => Held(UnityEngine.InputSystem.Key.Space) || (Gamepad.current?.buttonSouth.isPressed ?? false) || (Gamepad.current?.rightShoulder.isPressed ?? false);
@@ -111,7 +125,8 @@ namespace Southbound
         public static bool CrouchDown => Input.GetKeyDown(KeyCode.C);
         public static float Scroll => Input.mouseScrollDelta.y;
         public static bool PauseDown => Input.GetKeyDown(KeyCode.Escape);
-        public static bool InteractDown => Input.GetKeyDown(KeyCode.F) || Input.GetKeyDown(KeyCode.Return);
+        static bool InteractRaw => Input.GetKeyDown(KeyCode.F) || Input.GetKeyDown(KeyCode.Return);
+        public static bool InteractHeld => Input.GetKey(KeyCode.F);
         public static float Throttle => Mathf.Clamp01(Move.y);
         public static float Brake => Mathf.Clamp01(-Move.y);
         public static bool Handbrake => Input.GetKey(KeyCode.Space);
