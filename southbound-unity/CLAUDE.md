@@ -26,7 +26,8 @@ folder is on its own.
 
 - 2026-11-23 (the owner: "make it fully playable"): the parts the Unity version was missing are being carried over
   one batch at a time. B1 boats and aircraft (marinas, Redgrass Airfield, flight school, the boat/flying mission
-  steps and jobs); F1 fishing and the 245 tools (hardware stores, bait & tackle, fish market). A scene built before a
+  steps and jobs); F1 fishing and the 245 tools (hardware stores, bait & tackle, fish market); HU1 hunting and wildlife (animals
+  by region and hour, legends, skinning, trading posts, crows, ducks, poaching). A scene built before a
   batch gets it from the Southbound menu (**Add the new features to this scene**) or by building the scene again.
 
 ## Next steps (the Southbound window, Southbound > Setup)

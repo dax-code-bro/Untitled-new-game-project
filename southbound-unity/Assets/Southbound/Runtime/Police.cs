@@ -124,6 +124,9 @@ namespace Southbound
         }
 
         /// <summary>Did anyone see or hear it: a townsperson nearby, or the police?</summary>
+        /// <summary>Would anyone (a townsperson, an officer) see something here?</summary>
+        public static bool Seen(Vector3 at, float radius) => Instance != null && Instance.Witnessed(at, radius);
+
         bool Witnessed(Vector3 at, float radius)
         {
             foreach (var p in Pedestrians.Positions) if ((p - at).sqrMagnitude < radius * radius) return true;

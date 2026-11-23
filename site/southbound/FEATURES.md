@@ -113,7 +113,9 @@ browser's shapes and physics checked step for step, 3 marinas with dealers and 9
 17 upgrades, flight panel and warnings, flight school and licence, refuelling, the boat/flying mission steps and the
 charter, crop duster, air tour and medevac jobs); F1 fishing and the 245 tools (3 tool stores, bait & tackle and a fish
 market at every marina, 21 species and 4 legends, the bite and the fight, the catch on ice and the log, the fishing
-mission steps and the Commercial Fisherman). Next: HU1 hunting, PH1 phone, E1 property, W1 clothes.
+mission steps and the Commercial Fisherman); HU1 hunting and wildlife (7 species and 3 legends by region and hour,
+senses and wind, charging, bleeding, pelt grades, skinning, calls, 3 trading posts, crows, ducks, poaching, the
+hunting steps and the Hunting Guide: every mission and job now runs in Unity). Next: PH1 phone, E1 property, W1 clothes.
 
 ## The owner's list after watching them play (2026-11-09) — do in this order
 

@@ -267,6 +267,12 @@ the fewest additions next. Be honest in reports about what is and isn't done.
   `InteractHeld` for reeling. Runtime `Outfitters` (tool stores, bait & tackle, fish market; `Outfitters.Places`),
   `Angling` (cast/strike/reel; registers `Missions.Extras["fish"]`). Editor `OutdoorsBuilder` (booths, components,
   fish models); the menu item is now Southbound > Add the new features to this scene (CraftBuilder + OutdoorsBuilder).
+  Hunting (HU1): `Core/Hunting.cs` (Species/legends, Pick, `Animal` brain in web space: Update(dt, player, noise, windK,
+  ground, afoot) sets Bit/Drip/Anim; Hurt grades the pelt; `Hunting.Skin` on Profile sections pelts/peltVal/legends,
+  numbers meat, huntLicence). `Core/Wind.cs` is shared (Fleet.Wind). Runtime `Wildlife` (spawns by region, Health with
+  `customDeath` so the animal plays its own Death clip, legacy `Animation` clips matched by name suffix, skinning,
+  K = call, trading posts, crows, ducks, blood drops; registers `Missions.Extras["hunt"]`). `Police.Seen(at, r)` is the
+  witness check for anyone. OutdoorsBuilder sets the animal glbs to Legacy animation import.
 - Commit one batch at a time: if the next batch's edits are already in the tree, commit only the
   finished batch's files (and an `index.js` without the next batch's `add(...)` line), with the
   `game.js` that was built and QA'd for it.

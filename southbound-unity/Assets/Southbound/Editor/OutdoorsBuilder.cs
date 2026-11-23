@@ -1,4 +1,5 @@
-// Fishing and the tool stores in the Calvera scene: a booth with a sign for Calvera Hardware, Mill Creek Feed &
+// Fishing, hunting and the tool stores in the Calvera scene: the trading posts and the wildlife (with the animal
+// models set to import their clips as Legacy animations), and a booth with a sign for Calvera Hardware, Mill Creek Feed &
 // Hardware and Bayou Outfitters, a bait & tackle counter and a fish market beside every marina's booth (where the web
 // game puts them), the Outfitters (the counters) and Angling (the rod, the line, the bite) with the fish models to hold
 // up. Runs after CraftBuilder (it needs the marinas), as part of Build Calvera scene or Add the new features.
@@ -12,7 +13,7 @@ namespace Southbound.EditorTools
 {
     public static class OutdoorsBuilder
     {
-        const string RootName = "Outfitters and fishing";
+        const string RootName = "Outfitters, fishing and hunting";
 
         public static void Build()
         {
@@ -46,7 +47,38 @@ namespace Southbound.EditorTools
             fishing.fishModels = new[] { "khronos/BarramundiFish", "quaternius/fish_pack/Fish1", "quaternius/fish_pack/Fish2", "quaternius/fish_pack/Fish3" }
                 .Select(n => AssetDatabase.LoadAssetAtPath<GameObject>($"{Paths.Models}/open/{n}.glb")).Where(g => g != null).ToArray();
             fishing.sharkModel = AssetDatabase.LoadAssetAtPath<GameObject>($"{Paths.Models}/open/quaternius/fish_pack/Shark.glb");
-            Debug.Log($"Southbound: 3 tool stores and {marinas.Count * 2} marina counters; fishing with {fishing.fishModels.Length} fish models.");
+            // the trading posts, and the wildlife (the animal models import their clips as Legacy animations to play them)
+            foreach (var (x, z, name) in Hunting.Posts(L))
+            {
+                var at = new Vector3(-(float)x, (float)w.HeightAt(x, z), (float)z);
+                var back = at + new Vector3(0, 0, -3.1f);
+                CraftBuilder.Block(name, new Vector3(7, 3.4f, 4.4f), Surfaces.Get("WoodSiding009"), root, back + Vector3.up * 1.7f, Quaternion.identity, 2f).AddComponent<BoxCollider>();
+                CraftBuilder.Block(name + " porch roof", new Vector3(7.6f, 0.2f, 6.4f), Surfaces.Get("CorrugatedSteel005"), root, back + new Vector3(0, 3.5f, 1f), Quaternion.identity, 2f);
+                CraftBuilder.Block(name + " counter", new Vector3(3.2f, 1.05f, 0.6f), Surfaces.Get("WoodFloor007"), root, at + new Vector3(0, 0.52f, -0.7f), Quaternion.identity, 1f).AddComponent<BoxCollider>();
+                CraftBuilder.Block(name + " sign", new Vector3(5, 0.8f, 0.08f), CraftBuilder.Paint(new Color(0.42f, 0.26f, 0.12f)), root, back + new Vector3(0, 4.1f, 2.25f), Quaternion.identity, 0);
+            }
+            var wild = go.AddComponent<Wildlife>();
+            var paths = Hunting.All.Values.Select(sp => sp.Model).Distinct().ToArray();
+            foreach (var path in paths) Legacy($"{Paths.Models}/open/{path}.glb");
+            var found = paths.Select(path => (path, g: AssetDatabase.LoadAssetAtPath<GameObject>($"{Paths.Models}/open/{path}.glb"))).Where(x => x.g != null).ToList();
+            wild.modelIds = found.Select(x => x.path).ToArray();
+            wild.models = found.Select(x => x.g).ToArray();
+            Debug.Log($"Southbound: 3 tool stores and {marinas.Count * 2} marina counters; fishing with {fishing.fishModels.Length} fish models; 3 trading posts and {wild.models.Length} kinds of animal.");
+        }
+
+        /// <summary>Have a model's animations import as Legacy clips (an Animation component the game can play).</summary>
+        static void Legacy(string path)
+        {
+            var imp = AssetImporter.GetAtPath(path);
+            if (imp == null) return;
+            var so = new SerializedObject(imp);
+            var p = so.FindProperty("importSettings.animationMethod");
+            if (p == null) return;
+            int legacy = System.Array.IndexOf(p.enumNames, "Legacy");
+            if (legacy < 0 || p.enumValueIndex == legacy) return;
+            p.enumValueIndex = legacy;
+            so.ApplyModifiedPropertiesWithoutUndo();
+            imp.SaveAndReimport();
         }
     }
 }

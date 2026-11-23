@@ -19,6 +19,8 @@ namespace Southbound
         public float headHeight = 1.55f;
         public bool Dead => hp <= 0;
         public string lastPart;
+        [Tooltip("The owner plays the death itself (an animal's own clip): don't tip it over.")]
+        public bool customDeath;
         [Tooltip("Who this is, for the law: civilian, cop, or empty for targets and animals.")]
         public string role = "";
         /// <summary>Someone was hurt (still alive) or killed: (who, killed).</summary>
@@ -43,6 +45,7 @@ namespace Southbound
         {
             hp = 0;
             Hurt?.Invoke(this, true);
+            if (customDeath) return;
             var r = GetComponentInChildren<Retargeter>();
             if (r != null) { r.Play("Death01"); return; }
             // no animation: fall over
